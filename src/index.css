@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-white min-h-screen;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(6, 182, 212, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(16, 185, 129, 0.03) 0%, transparent 70%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background: rgba(139, 92, 246, 0.4);
+    color: white;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/[0.03] backdrop-blur-glass border border-white/[0.08] rounded-2xl;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300;
+  }
+
+  .glass-card-hover:hover {
+    @apply bg-white/[0.06] border-white/[0.12];
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-button {
+    @apply bg-white/[0.08] backdrop-blur-glass border border-white/[0.12] rounded-xl
+           text-white font-medium transition-all duration-200
+           hover:bg-white/[0.12] hover:border-white/[0.18] hover:shadow-glow
+           active:scale-[0.97];
+  }
+
+  .glass-button-primary {
+    @apply bg-primary/20 backdrop-blur-glass border border-primary/30 rounded-xl
+           text-primary-light font-semibold transition-all duration-200
+           hover:bg-primary/30 hover:border-primary/50 hover:shadow-glow
+           active:scale-[0.97];
+  }
+
+  .glass-button-accent {
+    @apply bg-accent/20 backdrop-blur-glass border border-accent/30 rounded-xl
+           text-accent-light font-semibold transition-all duration-200
+           hover:bg-accent/30 hover:border-accent/50 hover:shadow-glow-accent
+           active:scale-[0.97];
+  }
+
+  .glass-input {
+    @apply bg-white/[0.04] backdrop-blur-glass border border-white/[0.08] rounded-xl
+           text-white placeholder-muted-dark px-4 py-3
+           focus:outline-none focus:border-primary/40 focus:bg-white/[0.06]
+           transition-all duration-200;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #A78BFA 0%, #67E8F9 100%);
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
