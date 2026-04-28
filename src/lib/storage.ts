@@ -1,15 +1,41 @@
 import { generateId } from './utils';
 
 const DB_NAME = 'VitalFiDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 interface DBSchema {
+  accounts: Account;
   transactions: Transaction;
+  budgets: Budget;
   workouts: Workout;
   meals: Meal;
   bodyMetrics: BodyMetric;
   goals: Goal;
   settings: AppSettings;
+}
+
+export interface Account {
+  id: string;
+  name: string;
+  type: 'checking' | 'savings' | 'credit' | 'investment' | 'cash';
+  balance: number;
+  currency: string;
+  color: string;
+  isArchived: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Budget {
+  id: string;
+  name: string;
+  category: string;
+  limit: number;
+  spent: number;
+  period: 'weekly' | 'monthly' | 'yearly';
+  color: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Transaction {
@@ -119,8 +145,14 @@ class Storage {
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
 
+        if (!db.objectStoreNames.contains('accounts')) {
+          db.createObjectStore('accounts', { keyPath: 'id' });
+        }
         if (!db.objectStoreNames.contains('transactions')) {
           db.createObjectStore('transactions', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('budgets')) {
+          db.createObjectStore('budgets', { keyPath: 'id' });
         }
         if (!db.objectStoreNames.contains('workouts')) {
           db.createObjectStore('workouts', { keyPath: 'id' });
@@ -254,7 +286,9 @@ class Storage {
     const data: Record<string, unknown> = {};
 
     const storeNames: (keyof DBSchema)[] = [
+      'accounts',
       'transactions',
+      'budgets',
       'workouts',
       'meals',
       'bodyMetrics',
@@ -275,7 +309,9 @@ class Storage {
 
   async importAll(data: Record<string, unknown>): Promise<void> {
     const storeNames: (keyof DBSchema)[] = [
+      'accounts',
       'transactions',
+      'budgets',
       'workouts',
       'meals',
       'bodyMetrics',

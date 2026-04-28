@@ -69,7 +69,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   resetApp: async () => {
+    await storage.clear('accounts');
     await storage.clear('transactions');
+    await storage.clear('budgets');
     await storage.clear('workouts');
     await storage.clear('meals');
     await storage.clear('bodyMetrics');
