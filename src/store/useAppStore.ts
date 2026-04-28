@@ -73,8 +73,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     await storage.clear('transactions');
     await storage.clear('budgets');
     await storage.clear('workouts');
+    await storage.clear('workoutTemplates');
     await storage.clear('meals');
     await storage.clear('bodyMetrics');
+    await storage.clear('hydration');
+    await storage.clear('sleep');
     await storage.clear('goals');
     await storage.clear('settings');
     localStorage.clear();

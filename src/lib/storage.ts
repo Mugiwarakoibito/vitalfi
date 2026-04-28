@@ -1,15 +1,18 @@
 import { generateId } from './utils';
 
 const DB_NAME = 'VitalFiDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 interface DBSchema {
   accounts: Account;
   transactions: Transaction;
   budgets: Budget;
   workouts: Workout;
+  workoutTemplates: WorkoutTemplate;
   meals: Meal;
   bodyMetrics: BodyMetric;
+  hydration: HydrationEntry;
+  sleep: SleepEntry;
   goals: Goal;
   settings: AppSettings;
 }
@@ -53,12 +56,29 @@ export interface Transaction {
 export interface Workout {
   id: string;
   date: string;
+  name: string;
   type: 'strength' | 'cardio' | 'hiit' | 'flexibility';
   exercises: WorkoutExercise[];
   duration: number;
-  notes: string;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface WorkoutTemplate {
+  id: string;
+  name: string;
+  type: 'strength' | 'cardio' | 'hiit' | 'flexibility';
+  exercises: TemplateExercise[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TemplateExercise {
+  exerciseId: string;
+  name: string;
+  targetSets: number;
+  targetReps?: number;
 }
 
 export interface WorkoutExercise {
@@ -66,6 +86,7 @@ export interface WorkoutExercise {
   exerciseId: string;
   name: string;
   sets: ExerciseSet[];
+  notes?: string;
 }
 
 export interface ExerciseSet {
@@ -73,16 +94,19 @@ export interface ExerciseSet {
   weight?: number;
   duration?: number;
   distance?: number;
+  completed?: boolean;
 }
 
 export interface Meal {
   id: string;
   date: string;
   name: string;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   calories: number;
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -93,6 +117,27 @@ export interface BodyMetric {
   weight?: number;
   bodyFat?: number;
   measurements: Record<string, number>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HydrationEntry {
+  id: string;
+  date: string;
+  amount: number;
+  timestamp: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SleepEntry {
+  id: string;
+  date: string;
+  duration: number;
+  quality: 1 | 2 | 3 | 4 | 5;
+  bedTime?: string;
+  wakeTime?: string;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -157,11 +202,20 @@ class Storage {
         if (!db.objectStoreNames.contains('workouts')) {
           db.createObjectStore('workouts', { keyPath: 'id' });
         }
+        if (!db.objectStoreNames.contains('workoutTemplates')) {
+          db.createObjectStore('workoutTemplates', { keyPath: 'id' });
+        }
         if (!db.objectStoreNames.contains('meals')) {
           db.createObjectStore('meals', { keyPath: 'id' });
         }
         if (!db.objectStoreNames.contains('bodyMetrics')) {
           db.createObjectStore('bodyMetrics', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('hydration')) {
+          db.createObjectStore('hydration', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('sleep')) {
+          db.createObjectStore('sleep', { keyPath: 'id' });
         }
         if (!db.objectStoreNames.contains('goals')) {
           db.createObjectStore('goals', { keyPath: 'id' });
@@ -290,8 +344,11 @@ class Storage {
       'transactions',
       'budgets',
       'workouts',
+      'workoutTemplates',
       'meals',
       'bodyMetrics',
+      'hydration',
+      'sleep',
       'goals',
       'settings',
     ];
@@ -313,8 +370,11 @@ class Storage {
       'transactions',
       'budgets',
       'workouts',
+      'workoutTemplates',
       'meals',
       'bodyMetrics',
+      'hydration',
+      'sleep',
       'goals',
       'settings',
     ];
