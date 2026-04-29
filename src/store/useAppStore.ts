@@ -19,6 +19,7 @@ const defaultSettings: AppSettings = {
   country: 'US',
   name: '',
   fitnessGoals: [],
+  primaryGate: 'financial',
   theme: 'dark',
   onboardingComplete: false,
 };

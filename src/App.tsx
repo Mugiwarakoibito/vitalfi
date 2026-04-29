@@ -46,7 +46,26 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/finance" element={<Finance />} />
+        <Route path="/finance/accounts" element={<Finance defaultTab="accounts" />} />
+        <Route path="/finance/transactions" element={<Finance defaultTab="transactions" />} />
+        <Route path="/finance/budgets" element={<Finance defaultTab="budgets" />} />
+        <Route path="/finance/investments" element={<Finance defaultTab="investments" />} />
+        <Route path="/finance/bills" element={<Finance defaultTab="bills" />} />
+        <Route path="/finance/subscriptions" element={<Finance defaultTab="subscriptions" />} />
+        <Route path="/finance/debts" element={<Finance defaultTab="debts" />} />
         <Route path="/fitness" element={<Fitness />} />
+        <Route path="/fitness/workouts" element={<Fitness defaultTab="workouts" />} />
+        <Route path="/fitness/exercises" element={<Fitness defaultTab="exercises" />} />
+        <Route path="/fitness/templates" element={<Fitness defaultTab="templates" />} />
+        <Route path="/fitness/body" element={<Fitness defaultTab="body" />} />
+        <Route path="/fitness/nutrition" element={<Fitness defaultTab="nutrition" />} />
+        <Route path="/fitness/hydration" element={<Fitness defaultTab="hydration" />} />
+        <Route path="/fitness/sleep" element={<Fitness defaultTab="sleep" />} />
+        <Route path="/fitness/records" element={<Fitness defaultTab="records" />} />
+        <Route path="/fitness/streak" element={<Fitness defaultTab="streak" />} />
+        <Route path="/fitness/planner" element={<Fitness defaultTab="planner" />} />
+        <Route path="/fitness/supplements" element={<Fitness defaultTab="supplements" />} />
+        <Route path="/fitness/analytics" element={<Fitness defaultTab="analytics" />} />
         <Route path="/insights" element={<Insights />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>

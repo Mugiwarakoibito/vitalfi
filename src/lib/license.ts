@@ -9,7 +9,7 @@ export interface LicenseInfo {
   status: 'active' | 'expired' | 'invalid';
 }
 
-const ALLOWED_DOMAINS = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'proton.me'];
+const ALLOWED_DOMAINS: string[] = [];
 
 export async function getStoredLicense(): Promise<LicenseInfo | null> {
   const data = localStorage.getItem(LICENSE_KEY);
@@ -22,13 +22,13 @@ export async function getStoredLicense(): Promise<LicenseInfo | null> {
   }
 }
 
-export async function activateLicense(email: string): Promise<{ success: boolean; licenseKey?: string; error?: string }> {
+export function activateLicense(email: string): { success: boolean; licenseKey?: string; error?: string } {
   if (!isValidEmail(email)) {
     return { success: false, error: 'Invalid email format' };
   }
 
   const normalizedEmail = normalizeEmail(email);
-  const licenseKey = await emailToLicenseKey(normalizedEmail);
+  const licenseKey = emailToLicenseKey(normalizedEmail);
 
   const licenseInfo: LicenseInfo = {
     email: normalizedEmail,
@@ -68,6 +68,7 @@ export function generatePurchaseUrl(returnUrl?: string): string {
 }
 
 export function isLicenseEmail(email: string): boolean {
+  if (ALLOWED_DOMAINS.length === 0) return true;
   const domain = email.split('@')[1]?.toLowerCase();
   return ALLOWED_DOMAINS.includes(domain);
 }

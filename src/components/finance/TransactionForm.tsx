@@ -3,13 +3,14 @@ import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import type { Transaction as DBTransaction } from '@/lib/storage'
-import { ALL_CATEGORIES } from '@/lib/categories'
+import { storage } from '@/lib/storage'
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/lib/categories'
 import { generateId } from '@/lib/utils'
 
 interface TransactionFormProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (transaction: DBTransaction) => void
+  onSave: (transaction: DBTransaction | DBTransaction[]) => void
   accounts: { id: string; name: string }[]
   transaction?: DBTransaction | null
 }
@@ -22,7 +23,13 @@ export function TransactionForm({ isOpen, onClose, onSave, accounts, transaction
   const [subcategory, setSubcategory] = useState('')
   const [accountId, setAccountId] = useState('')
   const [date, setDate] = useState('')
+  const [toAccountId, setToAccountId] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    setCategory('')
+    setSubcategory('')
+  }, [type])
 
   useEffect(() => {
     if (transaction) {
@@ -38,7 +45,13 @@ export function TransactionForm({ isOpen, onClose, onSave, accounts, transaction
     }
   }, [transaction, isOpen])
 
-  const selectedCategory = ALL_CATEGORIES.find((c) => c.name === category || c.id === category)
+  const categories = type === 'income' 
+    ? INCOME_CATEGORIES 
+    : type === 'transfer' 
+      ? [] 
+      : EXPENSE_CATEGORIES
+
+  const selectedCategory = categories.find((c) => c.name === category || c.id === category)
 
   const resetForm = () => {
     setDescription('')
@@ -56,29 +69,65 @@ export function TransactionForm({ isOpen, onClose, onSave, accounts, transaction
     if (!description.trim()) newErrors.description = 'Description is required'
     if (!amount || isNaN(parseFloat(amount))) newErrors.amount = 'Valid amount required'
     if (!accountId) newErrors.accountId = 'Select an account'
-    if (!category) newErrors.category = 'Category is required'
+    if (type === 'transfer' && !toAccountId) newErrors.toAccountId = 'Select destination account'
+    if (type !== 'transfer' && !category) newErrors.category = 'Category is required'
     if (!date) newErrors.date = 'Date is required'
+    if (type === 'transfer' && accountId === toAccountId) newErrors.toAccountId = 'Cannot transfer to same account'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validate()) return
 
-    const txn: DBTransaction = {
-      id: transaction?.id || generateId(),
-      description: description.trim(),
-      amount: parseFloat(amount),
-      type: type as 'income' | 'expense',
-      category,
-      accountId,
-      date,
-      createdAt: transaction?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
+    if (type === 'transfer') {
+      const now = new Date().toISOString()
+      const id = transaction?.id || generateId()
+      
+      const txn1: DBTransaction = {
+        id,
+        description: description.trim(),
+        amount: parseFloat(amount),
+        type: 'expense',
+        category: 'Transfer Out',
+        accountId,
+        date,
+        createdAt: transaction?.createdAt || now,
+        updatedAt: now,
+      }
+      
+      const txn2: DBTransaction = {
+        id: `${id}-to`,
+        description: description.trim(),
+        amount: parseFloat(amount),
+        type: 'income',
+        category: 'Transfer In',
+        accountId: toAccountId,
+        date,
+        createdAt: transaction?.createdAt || now,
+        updatedAt: now,
+      }
 
-    onSave(txn)
+      await storage.put('transactions', txn1)
+      await storage.put('transactions', txn2)
+      onSave([txn1, txn2])
+    } else {
+      const txn: DBTransaction = {
+        id: transaction?.id || generateId(),
+        description: description.trim(),
+        amount: parseFloat(amount),
+        type: type as 'income' | 'expense',
+        category,
+        accountId,
+        date,
+        createdAt: transaction?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      await storage.put('transactions', txn)
+      onSave(txn)
+    }
     resetForm()
     onClose()
   }
@@ -143,7 +192,9 @@ export function TransactionForm({ isOpen, onClose, onSave, accounts, transaction
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-muted">Account</label>
+          <label className="mb-1.5 block text-sm font-medium text-muted">
+            {type === 'transfer' ? 'From Account' : 'Account'}
+          </label>
           <select
             value={accountId}
             onChange={(e) => setAccountId(e.target.value)}
@@ -159,25 +210,46 @@ export function TransactionForm({ isOpen, onClose, onSave, accounts, transaction
           {errors.accountId && <p className="mt-1 text-xs text-error-light">{errors.accountId}</p>}
         </div>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-muted">Category</label>
-          <select
-            value={category}
-            onChange={(e) => {
-              setCategory(e.target.value)
-              setSubcategory('')
-            }}
-            className="glass-input w-full"
-          >
-            <option value="">Select category</option>
-            {ALL_CATEGORIES.map((cat) => (
-              <option key={cat.id} value={cat.name}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-          {errors.category && <p className="mt-1 text-xs text-error-light">{errors.category}</p>}
-        </div>
+        {type === 'transfer' && (
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-muted">To Account</label>
+            <select
+              value={toAccountId}
+              onChange={(e) => setToAccountId(e.target.value)}
+              className="glass-input w-full"
+            >
+              <option value="">Select account</option>
+              {accounts.filter((acc) => acc.id !== accountId).map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.name}
+                </option>
+              ))}
+            </select>
+            {errors.toAccountId && <p className="mt-1 text-xs text-error-light">{errors.toAccountId}</p>}
+          </div>
+        )}
+
+        {type !== 'transfer' && (
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-muted">Category</label>
+            <select
+              value={category}
+              onChange={(e) => {
+                setCategory(e.target.value)
+                setSubcategory('')
+              }}
+              className="glass-input w-full"
+            >
+              <option value="">Select category</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.name}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+            {errors.category && <p className="mt-1 text-xs text-error-light">{errors.category}</p>}
+          </div>
+        )}
 
         {selectedCategory && selectedCategory.subcategories.length > 0 && (
           <div>

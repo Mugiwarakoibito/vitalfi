@@ -15,6 +15,10 @@ interface DBSchema {
   sleep: SleepEntry;
   goals: Goal;
   settings: AppSettings;
+  investments: Investment;
+  bills: Bill;
+  debts: Debt;
+  subscriptions: Subscription;
 }
 
 export interface Account {
@@ -49,8 +53,73 @@ export interface Transaction {
   category: string;
   accountId: string;
   type: 'income' | 'expense';
+  tags?: string[];
+  notes?: string;
+  isRecurring?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Investment {
+  id: string;
+  name: string;
+  symbol?: string;
+  type: 'stock' | 'etf' | 'crypto' | 'bond' | 'realestate' | 'other';
+  quantity: number;
+  purchasePrice: number;
+  currentPrice: number;
+  purchaseDate: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Bill {
+  id: string;
+  name: string;
+  amount: number;
+  dueDay: number;
+  category: 'utilities' | 'rent' | 'insurance' | 'subscription' | 'loan' | 'other';
+  isPaid: boolean;
+  lastPaidDate?: string;
+  reminders: number[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Debt {
+  id: string;
+  name: string;
+  type: 'credit_card' | 'loan' | 'mortgage' | 'student' | 'other';
+  totalAmount: number;
+  currentBalance: number;
+  interestRate: number;
+  minimumPayment: number;
+  dueDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Subscription {
+  id: string;
+  name: string;
+  amount: number;
+  billingCycle: 'weekly' | 'monthly' | 'yearly';
+  category: 'entertainment' | 'productivity' | 'fitness' | 'news' | 'cloud' | 'other';
+  startDate: string;
+  nextBillingDate: string;
+  isActive: boolean;
+  logoUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NetWorthEntry {
+  id: string;
+  date: string;
+  totalAssets: number;
+  totalLiabilities: number;
+  createdAt: string;
 }
 
 export interface Workout {
@@ -159,6 +228,7 @@ export interface AppSettings {
   country: string;
   name: string;
   fitnessGoals: string[];
+  primaryGate: 'financial' | 'health';
   theme: 'dark' | 'light';
   onboardingComplete: boolean;
 }

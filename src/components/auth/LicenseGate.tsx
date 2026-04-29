@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, ExternalLink, AlertCircle, CheckCircle } from 'lucide-react';
+import { Mail, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Card, CardContent } from '../ui/Card';
-import { activateLicense, getStoredLicense, generatePurchaseUrl, isLicenseEmail } from '../../lib/license';
+import { activateLicense, getStoredLicense, isLicenseEmail } from '../../lib/license';
 import { useAppStore } from '../../store/useAppStore';
 
 export function LicenseGate({ children }: { children: React.ReactNode }) {
@@ -28,7 +28,7 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
     checkLicense();
   }, [setLicensed, setOnboarded]);
 
-  const handleActivate = async () => {
+  const handleActivate = () => {
     setError('');
     setSuccess('');
 
@@ -44,8 +44,8 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
 
     setIsLoading(true);
 
-    try {
-      const result = await activateLicense(email);
+    setTimeout(() => {
+      const result = activateLicense(email);
       if (result.success) {
         setLicenseKey(result.licenseKey || '');
         setSuccess('License activated! Your license key is shown below.');
@@ -53,15 +53,8 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
       } else {
         setError(result.error || 'Activation failed');
       }
-    } catch {
-      setError('Something went wrong. Please try again.');
-    } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handlePurchase = () => {
-    window.open(generatePurchaseUrl(window.location.href), '_blank');
+    }, 500);
   };
 
   if (isChecking) {
@@ -87,17 +80,17 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
       >
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold gradient-text mb-2">VitalFi</h1>
-          <p className="text-gray-400">Financial & Fitness Intelligence</p>
+          <p className="text-gray-400">Financial, Fitness & Health Intelligence</p>
         </div>
 
         <Card className="backdrop-blur-xl bg-gray-900/50 border border-gray-700/50">
           <CardContent className="p-6">
-            <h2 className="text-xl font-semibold text-white mb-4">Activate License</h2>
+            <h2 className="text-xl font-semibold text-white mb-4 text-center">Welcome to VitalFi</h2>
 
             {!licenseKey ? (
               <>
-                <p className="text-sm text-gray-400 mb-4">
-                  Enter your email to generate your license key. Purchase a license to unlock all features.
+                <p className="text-sm text-gray-400 mb-4 text-center">
+                  Enter your email to unlock premium access and start optimizing your financial and fitness journey.
                 </p>
 
                 <div className="space-y-4">
@@ -108,7 +101,7 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     icon={<Mail className="w-4 h-4" />}
-                    error={error && !licenseKey ? error : undefined}
+                    error={error}
                   />
 
                   <Button
@@ -117,25 +110,7 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
                     onClick={handleActivate}
                     isLoading={isLoading}
                   >
-                    Generate License Key
-                  </Button>
-
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-700" />
-                    </div>
-                    <div className="relative flex justify-center text-xs">
-                      <span className="px-2 bg-gray-900 text-gray-500">or</span>
-                    </div>
-                  </div>
-
-                  <Button
-                    variant="default"
-                    className="w-full"
-                    onClick={handlePurchase}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Purchase License on Etsy
+                    Unlock Premium Access
                   </Button>
                 </div>
               </>
@@ -163,13 +138,6 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
                   Continue to App
                 </Button>
               </>
-            )}
-
-            {error && !licenseKey && (
-              <div className="flex items-center gap-2 text-red-400 mt-4 text-sm">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                {error}
-              </div>
             )}
           </CardContent>
         </Card>

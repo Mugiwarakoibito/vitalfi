@@ -28,10 +28,8 @@ import {
 import {
   Wallet,
   Dumbbell,
-  TrendingUp,
   Target,
-  Search,
-  Command,
+  ArrowLeftRight,
 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -109,149 +107,203 @@ export default function Dashboard() {
     )
   }
 
+  const primaryGate = settings.primaryGate || 'financial'
+  const isFinancial = primaryGate === 'financial'
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white">Dashboard</h2>
+          <h2 className="text-2xl font-bold text-white">
+            {isFinancial ? 'Financial Dashboard' : 'Health & Fitness'}
+          </h2>
           <p className="text-sm text-muted mt-1">
-            Your financial and fitness overview.
+            {isFinancial ? 'Your financial overview at a glance' : 'Your health & fitness overview'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <kbd className="hidden md:inline-flex items-center gap-1 text-[11px] bg-white/[0.06] text-muted border border-white/[0.08] rounded-lg px-2.5 py-1.5">
-            <Command size={10} />
-            K
-          </kbd>
-        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="flex items-center gap-2"
+          onClick={() => window.location.href = '/settings'}
+        >
+          <ArrowLeftRight size={14} />
+          Switch to {isFinancial ? 'Health' : 'Financial'}
+        </Button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card hover={false}>
-          <CardContent className="flex items-center gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15">
-              <Wallet className="h-5 w-5 text-primary-light" />
-            </div>
-            <div>
-              <p className="text-xs text-muted">Net Worth</p>
-              <p className="text-lg font-semibold text-white">
-                {accounts.length
-                  ? '$' + accounts.reduce((s, a) => s + a.balance, 0).toLocaleString()
-                  : '$0'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card hover={false}>
-          <CardContent className="flex items-center gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15">
-              <TrendingUp className="h-5 w-5 text-accent-light" />
-            </div>
-            <div>
-              <p className="text-xs text-muted">This Month</p>
-              <p className="text-lg font-semibold text-white">
-                {transactions.length
-                  ? '$' + transactions
-                      .filter((t) => t.type === 'expense')
-                      .slice(-30)
-                      .reduce((s, t) => s + t.amount, 0)
-                      .toLocaleString()
-                  : '$0'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card hover={false}>
-          <CardContent className="flex items-center gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-success/15">
-              <Dumbbell className="h-5 w-5 text-success-light" />
-            </div>
-            <div>
-              <p className="text-xs text-muted">Workouts</p>
-              <p className="text-lg font-semibold text-white">
-                {workouts.length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card hover={false}>
-          <CardContent className="flex items-center gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/15">
-              <Target className="h-5 w-5 text-warning-light" />
-            </div>
-            <div>
-              <p className="text-xs text-muted">Goals</p>
-              <p className="text-lg font-semibold text-white">
-                {goals.filter((g) => Math.round((g.current / g.target) * 100) >= 100).length}/{goals.length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {isFinancial ? (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card hover={false} className="bg-gradient-to-br from-primary/10 to-primary/5">
+              <CardContent className="py-4">
+                <p className="text-xs text-muted mb-1">Net Worth</p>
+                <p className="text-2xl font-bold text-white">
+                  {accounts.length
+                    ? '$' + accounts.reduce((s, a) => s + a.balance, 0).toLocaleString()
+                    : '$0'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card hover={false} className="bg-gradient-to-br from-accent/10 to-accent/5">
+              <CardContent className="py-4">
+                <p className="text-xs text-muted mb-1">This Month Spending</p>
+                <p className="text-2xl font-bold text-white">
+                  {transactions.length
+                    ? '$' + transactions
+                        .filter((t) => t.type === 'expense')
+                        .slice(-30)
+                        .reduce((s, t) => s + t.amount, 0)
+                        .toLocaleString()
+                    : '$0'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card hover={false} className="bg-gradient-to-br from-success/10 to-success/5">
+              <CardContent className="py-4">
+                <p className="text-xs text-muted mb-1">Financial Goals</p>
+                <p className="text-2xl font-bold text-white">
+                  {goals.filter((g) => g.type === 'financial' && Math.round((g.current / g.target) * 100) >= 100).length}/{goals.filter(g => g.type === 'financial').length}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Overview columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div>
-          <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-            <Wallet size={14} className="text-primary-light" />
-            Financial
-          </h3>
-          <FinancialOverview
-            accounts={accounts}
-            transactions={transactions}
-            currency={currency}
-            spendingByCategory={spendingByCategory}
-          />
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-            <Dumbbell size={14} className="text-success-light" />
-            Fitness
-          </h3>
-          <FitnessOverview
-            workoutStats={getMonthlyWorkoutStats(workouts)}
-            todayNutrition={getTodayNutrition(meals)}
-            todayHydration={getTodayHydration(hydration)}
-          />
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-            <Target size={14} className="text-warning-light" />
-            Goals
-          </h3>
-          <GoalList goals={goals} currency={currency} onGoalsChange={loadAll} />
-        </div>
-      </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Financial Overview</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FinancialOverview
+                    accounts={accounts}
+                    transactions={transactions}
+                    currency={currency}
+                    spendingByCategory={spendingByCategory}
+                  />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Recent Activity</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RecentActivity 
+                    items={activity.filter((a: any) => a.type === 'transaction' || a.type === 'account')} 
+                    currency={currency} 
+                  />
+                </CardContent>
+              </Card>
+            </div>
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Goals</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <GoalList goals={goals.filter(g => g.type === 'financial')} currency={currency} onGoalsChange={loadAll} />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button variant="primary" className="w-full justify-start gap-2">
+                    <Wallet size={16} /> Add Transaction
+                  </Button>
+                  <Button className="w-full justify-start gap-2">
+                    <Target size={16} /> Set Goal
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card hover={false} className="bg-gradient-to-br from-success/10 to-success/5">
+              <CardContent className="py-4">
+                <p className="text-xs text-muted mb-1">Total Workouts</p>
+                <p className="text-2xl font-bold text-white">{workouts.length}</p>
+              </CardContent>
+            </Card>
+            <Card hover={false} className="bg-gradient-to-br from-orange-500/10 to-orange-500/5">
+              <CardContent className="py-4">
+                <p className="text-xs text-muted mb-1">This Month</p>
+                <p className="text-2xl font-bold text-white">
+                  {workouts.filter(w => {
+                    const d = new Date(w.date)
+                    const now = new Date()
+                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+                  }).length}
+                </p>
+              </CardContent>
+            </Card>
+            <Card hover={false} className="bg-gradient-to-br from-warning/10 to-warning/5">
+              <CardContent className="py-4">
+                <p className="text-xs text-muted mb-1">Fitness Goals</p>
+                <p className="text-2xl font-bold text-white">
+                  {goals.filter((g) => g.type === 'fitness' && Math.round((g.current / g.target) * 100) >= 100).length}/{goals.filter(g => g.type === 'fitness').length}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Activity and Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
-          <RecentActivity items={activity} currency={currency} />
-        </div>
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="primary" className="w-full justify-start gap-2">
-                <Wallet size={16} /> Add Transaction
-              </Button>
-              <Button variant="accent" className="w-full justify-start gap-2">
-                <Dumbbell size={16} /> Log Workout
-              </Button>
-              <Button className="w-full justify-start gap-2">
-                <Target size={16} /> Set Goal
-              </Button>
-              <kbd className="w-full flex items-center justify-center gap-1 text-[11px] bg-white/[0.03] text-muted border border-white/[0.06] rounded-lg px-2.5 py-1.5 mt-1">
-                <Search size={10} />
-                Press / to search
-              </kbd>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Fitness Overview</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FitnessOverview
+                    workoutStats={getMonthlyWorkoutStats(workouts)}
+                    todayNutrition={getTodayNutrition(meals)}
+                    todayHydration={getTodayHydration(hydration)}
+                  />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Recent Activity</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RecentActivity 
+                    items={activity.filter((a: any) => a.type === 'workout' || a.type === 'meal' || a.type === 'hydration' || a.type === 'sleep')} 
+                    currency={currency} 
+                  />
+                </CardContent>
+              </Card>
+            </div>
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Goals</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <GoalList goals={goals.filter(g => g.type === 'fitness')} currency={currency} onGoalsChange={loadAll} />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button variant="primary" className="w-full justify-start gap-2">
+                    <Dumbbell size={16} /> Log Workout
+                  </Button>
+                  <Button className="w-full justify-start gap-2">
+                    <Target size={16} /> Set Goal
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

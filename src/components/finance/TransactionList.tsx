@@ -100,8 +100,14 @@ export function TransactionList({ accounts, onTransactionChange }: TransactionLi
     setDeletingTransaction(null)
   }
 
-  const handleSave = async (txn: DBTransaction) => {
-    await storage.put('transactions', txn)
+  const handleSave = async (txn: DBTransaction | DBTransaction[]) => {
+    if (Array.isArray(txn)) {
+      for (const t of txn) {
+        await storage.put('transactions', t)
+      }
+    } else {
+      await storage.put('transactions', txn)
+    }
     await loadTransactions()
     onTransactionChange?.()
     setEditingTransaction(null)
