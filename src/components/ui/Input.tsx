@@ -9,7 +9,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, icon, ...props }, ref) => {
+  ({ className, label, error, icon, type, ...props }, ref) => {
     return (
       <div className="w-full">
         {label && (
@@ -25,6 +25,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
           <input
             ref={ref}
+            autoComplete={type === 'number' ? 'off' : undefined}
             className={cn(
               'glass-input w-full',
               icon && 'pl-10',
