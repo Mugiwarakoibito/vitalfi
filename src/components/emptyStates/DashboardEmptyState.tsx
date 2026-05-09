@@ -16,7 +16,7 @@ export function DashboardEmptyState() {
           <Sparkles className="w-10 h-10 text-primary-light" />
         </div>
       </div>
-      <h3 className="text-xl font-bold text-white mb-2">Welcome to VitalFi</h3>
+      <h3 className="text-xl font-bold text-white mb-2">Welcome to LifeSync Pro</h3>
       <p className="text-muted max-w-sm mb-6">
         Your unified dashboard is waiting for data. Start by adding an account and your first transaction to see your financial overview.
       </p>

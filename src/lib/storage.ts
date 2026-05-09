@@ -1,6 +1,6 @@
 import { generateId } from './utils';
 
-const DB_NAME = 'VitalFiDB';
+const DB_NAME = 'LifeSyncProDB';
 const DB_VERSION = 3;
 
 interface DBSchema {

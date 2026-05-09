@@ -18,7 +18,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
           >
             <Menu size={20} />
           </button>
-          <h1 className="text-base font-semibold text-white md:text-lg">VitalFi</h1>
+          <h1 className="text-base font-semibold text-white md:text-lg">LifeSync Pro</h1>
         </div>
 
         <div className="flex items-center gap-2">

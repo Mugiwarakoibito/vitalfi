@@ -69,7 +69,7 @@ export function Sidebar() {
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/20">
           <ShieldCheck className="h-5 w-5 text-primary-light" />
         </div>
-        <span className="text-lg font-bold gradient-text">VitalFi</span>
+        <span className="text-lg font-bold gradient-text">LifeSync Pro</span>
       </div>
 
       <div className="px-3 py-2">

@@ -79,13 +79,13 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold gradient-text mb-2">VitalFi</h1>
+          <h1 className="text-4xl font-bold gradient-text mb-2">LifeSync Pro</h1>
           <p className="text-gray-400">Financial, Fitness & Health Intelligence</p>
         </div>
 
         <Card className="backdrop-blur-xl bg-gray-900/50 border border-gray-700/50">
           <CardContent className="p-6">
-            <h2 className="text-xl font-semibold text-white mb-4 text-center">Welcome to VitalFi</h2>
+            <h2 className="text-xl font-semibold text-white mb-4 text-center">Welcome to LifeSync Pro</h2>
 
             {!licenseKey ? (
               <>
