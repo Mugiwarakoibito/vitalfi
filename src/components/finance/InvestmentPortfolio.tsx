@@ -23,9 +23,9 @@ export function InvestmentPortfolio() {
     name: '',
     symbol: '',
     type: 'stock' as Investment['type'],
-    quantity: '0.00',
-    purchasePrice: '0.00',
-    currentPrice: '0.00',
+    quantity: '',
+    purchasePrice: '',
+    currentPrice: '',
     purchaseDate: new Date().toISOString().split('T')[0],
   })
 
@@ -97,7 +97,7 @@ export function InvestmentPortfolio() {
     }
     setShowModal(false)
     setEditingInvestment(null)
-    setFormData({ name: '', symbol: '', type: 'stock', quantity: '0.00', purchasePrice: '0.00', currentPrice: '0.00', purchaseDate: new Date().toISOString().split('T')[0] })
+    setFormData({ name: '', symbol: '', type: 'stock', quantity: '', purchasePrice: '', currentPrice: '', purchaseDate: new Date().toISOString().split('T')[0] })
   }
 
   const handleDelete = async () => {
@@ -152,7 +152,7 @@ export function InvestmentPortfolio() {
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-white">Investment Portfolio</h3>
-        <button onClick={() => { setEditingInvestment(null); setShowModal(true) }} className="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm flex items-center gap-2 hover:bg-emerald-500/30 transition-all">
+        <button onClick={() => { setEditingInvestment(null); setFormData({ name: '', symbol: '', type: 'stock', quantity: '', purchasePrice: '', currentPrice: '', purchaseDate: new Date().toISOString().split('T')[0] }); setShowModal(true) }} className="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm flex items-center gap-2 hover:bg-emerald-500/30 transition-all">
           <Plus className="w-4 h-4" />
           Add Investment
         </button>

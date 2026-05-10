@@ -40,10 +40,10 @@ export function DebtTracker() {
   const [formData, setFormData] = useState({
     name: '',
     type: 'credit_card' as Debt['type'],
-    totalAmount: '0.00',
-    currentBalance: '0.00',
-    interestRate: '0.00',
-    minimumPayment: '0.00',
+    totalAmount: '',
+    currentBalance: '',
+    interestRate: '',
+    minimumPayment: '',
     dueDate: '',
   })
 
@@ -51,10 +51,10 @@ export function DebtTracker() {
     setFormData({
       name: '',
       type: 'credit_card',
-      totalAmount: '0.00',
-      currentBalance: '0.00',
-      interestRate: '0.00',
-      minimumPayment: '0.00',
+      totalAmount: '',
+      currentBalance: '',
+      interestRate: '',
+      minimumPayment: '',
       dueDate: '',
     })
   }
