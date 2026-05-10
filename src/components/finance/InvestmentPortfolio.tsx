@@ -19,6 +19,24 @@ export function InvestmentPortfolio() {
   const [showModal, setShowModal] = useState(false)
   const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null)
   const [deletingInvestment, setDeletingInvestment] = useState<Investment | null>(null)
+  const investmentExamples = ['Apple Inc.', 'Microsoft', 'Bitcoin']
+
+  const getSymbolPlaceholder = () => {
+    const n = formData.name.toLowerCase()
+    if (n.includes('apple')) return 'AAPL'
+    if (n.includes('microsoft')) return 'MSFT'
+    if (n.includes('google') || n.includes('alphabet')) return 'GOOGL'
+    if (n.includes('amazon')) return 'AMZN'
+    if (n.includes('bitcoin')) return 'BTC'
+    if (n.includes('ethereum')) return 'ETH'
+    if (n.includes('nvidia')) return 'NVDA'
+    if (n.includes('tesla')) return 'TSLA'
+    if (n.includes('facebook') || n.includes('meta')) return 'META'
+    if (n.includes('netflix')) return 'NFLX'
+    if (n.includes('spotify')) return 'SPOT'
+    return 'AAPL'
+  }
+
   const [formData, setFormData] = useState({
     name: '',
     symbol: '',
@@ -222,11 +240,11 @@ export function InvestmentPortfolio() {
             <div className="space-y-5">
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Investment Name</label>
-                <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder="Apple Inc., Microsoft, Bitcoin, Vanguard ETF, Real Estate Property" />
+                <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder={investmentExamples[Math.floor(Math.random() * investmentExamples.length)]} />
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Symbol (optional)</label>
-                <input type="text" value={formData.symbol} onChange={e => setFormData({...formData, symbol: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder={formData.name.toLowerCase().includes('apple') ? 'AAPL' : formData.name.toLowerCase().includes('microsoft') ? 'MSFT' : formData.name.toLowerCase().includes('google') ? 'GOOGL' : formData.name.toLowerCase().includes('amazon') ? 'AMZN' : formData.name.toLowerCase().includes('bitcoin') ? 'BTC' : formData.name.toLowerCase().includes('ethereum') ? 'ETH' : 'AAPL, MSFT, GOOGL'} />
+                <input type="text" value={formData.symbol} onChange={e => setFormData({...formData, symbol: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder={getSymbolPlaceholder()} />
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Type</label>

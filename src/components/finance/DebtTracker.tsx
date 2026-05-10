@@ -123,7 +123,7 @@ export function DebtTracker() {
     setDeletingDebt(null)
   }
 
-  const debtExamples = ['Chase Credit Card', 'Car Loan', 'Student Loan', 'Mortgage', 'Personal Loan', 'Medical Debt']
+  const debtExamples = ['Chase Card', 'Car Loan', 'Mortgage']
 
   return (
     <div className="space-y-6">

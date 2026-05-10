@@ -69,7 +69,7 @@ export function AccountForm({ isOpen, onClose, onSave, account }: AccountFormPro
      setErrors({})
    }
 
-  const accountExamples = ['Chase Checking', 'Bank of America Savings', 'Chase Sapphire Card', 'Fidelity Investment', 'Cash Wallet']
+  const accountExamples = ['Chase Checking', 'Savings', 'Credit Card']
 
   return (
     <Modal

@@ -228,7 +228,7 @@ function BudgetForm({
     onClose()
   }
 
-  const budgetExamples = ['Food & Dining', 'Transportation', 'Entertainment', 'Shopping', 'Utilities', 'Healthcare', 'Travel', 'Subscriptions']
+  const budgetExamples = ['Food & Dining', 'Transport', 'Entertainment']
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={budget ? 'Edit Budget' : 'New Budget'} className="max-w-md">
