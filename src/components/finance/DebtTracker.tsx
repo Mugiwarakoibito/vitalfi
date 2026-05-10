@@ -181,7 +181,7 @@ export function DebtTracker() {
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-white">Debt Overview</h3>
-        <button onClick={() => { setEditingDebt(null); setFormData({ name: '', type: 'credit_card', totalAmount: '0', currentBalance: '0', interestRate: '0', minimumPayment: '0', dueDate: '' }); setShowModal(true) }} className="px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 text-sm flex items-center gap-2 hover:bg-red-500/30 transition-all">
+        <button onClick={() => { setEditingDebt(null); setFormData({ name: '', type: 'credit_card', totalAmount: '0.00', currentBalance: '0.00', interestRate: '0.00', minimumPayment: '0.00', dueDate: '' }); setShowModal(true) }} className="px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 text-sm flex items-center gap-2 hover:bg-red-500/30 transition-all">
           <Plus className="w-4 h-4" />
           Add Debt
         </button>
@@ -300,21 +300,21 @@ export function DebtTracker() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Original Amount</label>
-                  <input type="number" value={formData.totalAmount} onChange={e => setFormData({...formData, totalAmount: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-red-500/50 focus:outline-none transition-all" placeholder="0" />
+                  <input type="number" value={formData.totalAmount} onChange={e => setFormData({...formData, totalAmount: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-red-500/50 focus:outline-none transition-all" placeholder="0.00" />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Current Balance</label>
-                  <input type="number" value={formData.currentBalance} onChange={e => setFormData({...formData, currentBalance: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-red-500/50 focus:outline-none transition-all" placeholder="0" />
+                  <input type="number" value={formData.currentBalance} onChange={e => setFormData({...formData, currentBalance: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-red-500/50 focus:outline-none transition-all" placeholder="0.00" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Interest Rate (%)</label>
-                  <input type="number" step="0.1" value={formData.interestRate} onChange={e => setFormData({...formData, interestRate: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-red-500/50 focus:outline-none transition-all" placeholder="0" />
+                  <input type="number" step="0.1" value={formData.interestRate} onChange={e => setFormData({...formData, interestRate: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-red-500/50 focus:outline-none transition-all" placeholder="0.00" />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Min. Payment</label>
-                  <input type="number" value={formData.minimumPayment} onChange={e => setFormData({...formData, minimumPayment: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-red-500/50 focus:outline-none transition-all" placeholder="0" />
+                  <input type="number" value={formData.minimumPayment} onChange={e => setFormData({...formData, minimumPayment: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-red-500/50 focus:outline-none transition-all" placeholder="0.00" />
                 </div>
               </div>
               <div>

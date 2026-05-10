@@ -23,9 +23,9 @@ export function InvestmentPortfolio() {
     name: '',
     symbol: '',
     type: 'stock' as Investment['type'],
-    quantity: '0',
-    purchasePrice: '0',
-    currentPrice: '0',
+    quantity: '0.00',
+    purchasePrice: '0.00',
+    currentPrice: '0.00',
     purchaseDate: new Date().toISOString().split('T')[0],
   })
 
@@ -79,7 +79,7 @@ export function InvestmentPortfolio() {
     }
     setShowModal(false)
     setEditingInvestment(null)
-    setFormData({ name: '', symbol: '', type: 'stock', quantity: '0', purchasePrice: '0', currentPrice: '0', purchaseDate: new Date().toISOString().split('T')[0] })
+    setFormData({ name: '', symbol: '', type: 'stock', quantity: '0.00', purchasePrice: '0.00', currentPrice: '0.00', purchaseDate: new Date().toISOString().split('T')[0] })
   }
 
   const handleDelete = async () => {
@@ -242,17 +242,17 @@ export function InvestmentPortfolio() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Quantity</label>
-                  <input type="number" value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder="0" />
+                  <input type="number" value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder="0.00" />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Current Price</label>
-                  <input type="number" value={formData.currentPrice} onChange={e => setFormData({...formData, currentPrice: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder="0" />
+                  <input type="number" value={formData.currentPrice} onChange={e => setFormData({...formData, currentPrice: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder="0.00" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Purchase Price</label>
-                  <input type="number" value={formData.purchasePrice} onChange={e => setFormData({...formData, purchasePrice: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder="0" />
+                  <input type="number" value={formData.purchasePrice} onChange={e => setFormData({...formData, purchasePrice: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder="0.00" />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Purchase Date</label>
