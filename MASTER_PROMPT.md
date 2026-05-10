@@ -1,20 +1,20 @@
-# VITALFI — MASTER PROMPT
-## All-In-One Finance & Health Tracker
+# LIFESYNC PRO — MASTER PROMPT
+## All-In-One MoneyFlow & BodyForge Hub
 
 ---
 
 ## VISION & POSITIONING
 
-VitalFi is the "Tesla of personal apps" — sleek, intelligent, and redefining expectations. It combines finance management and fitness/health tracking into one unified platform, eliminating the need for multiple apps. Every dollar is tracked, every workout is optimized, every meal is logged, and every decision is empowered by intelligent automation.
+LifeSync Pro is the ultimate lifestyle command center — sleek, intelligent, and redefining expectations. It combines high-velocity finance management and elite fitness/health tracking into one unified platform, eliminating the need for multiple apps. Every dollar is tracked, every workout is optimized, every meal is logged, and every decision is empowered by intelligent automation.
 
-Most apps fail because they are passive data graveyards. Users log data, see a chart, feel guilt, and quit. VitalFi must be active, predictive, and behavioral — it should change how users manage money and care for their bodies, not just record what they did.
+Most apps fail because they are passive data graveyards. Users log data, see a chart, feel guilt, and quit. LifeSync Pro must be active, predictive, and behavioral — it should change how users manage money and care for their bodies, not just record what they did.
 
 Target market: individuals who want both financial discipline and fitness excellence in one beautiful app. Millennials, professionals, freelancers, families — anyone tired of using separate apps for money and health.
 
 Competitive differentiation:
-- Unified platform — finance + fitness in one app
-- AI-first architecture with intelligent suggestions
-- Glassmorphic dark mode — premium design, easy on eyes
+- Unified platform — MoneyFlow + BodyForge in one app
+- AI-first architecture with predictive intelligence
+- Elite Dark Mode — premium design, easy on eyes
 - Behavioral economics that drive real change
 - Simple email-based licensing
 

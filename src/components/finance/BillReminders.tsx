@@ -22,7 +22,7 @@ export function BillReminders() {
   const currency = settings.currency || 'USD'
   const [formData, setFormData] = useState({
     name: '',
-    amount: '',
+    amount: '0.00',
     dueDay: '',
     category: '' as Bill['category'],
     reminders: '',
@@ -150,7 +150,7 @@ export function BillReminders() {
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-white">Bills & Reminders</h3>
-        <button onClick={() => { setEditingBill(null); setFormData({ name: '', amount: '', dueDay: '', category: 'other', reminders: '' }); setShowModal(true) }} className="px-4 py-2 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-sm flex items-center gap-2 hover:bg-yellow-500/30 transition-all">
+        <button onClick={() => { setEditingBill(null); setFormData({ name: '', amount: '0.00', dueDay: '', category: 'other', reminders: '' }); setShowModal(true) }} className="px-4 py-2 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-sm flex items-center gap-2 hover:bg-yellow-500/30 transition-all">
           <Plus className="w-4 h-4" />
           Add Bill
         </button>
@@ -236,14 +236,14 @@ export function BillReminders() {
                 label="Bill Name"
                 value={formData.name}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, name: e.target.value})}
-                placeholder="Electric Bill"
+                placeholder="Netflix, Rent, Electric, Internet, Phone"
               />
               <Input
                 label="Amount"
                 type="number"
                 value={formData.amount}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, amount: e.target.value})}
-                placeholder="150.00"
+                placeholder="0.00"
               />
               <Input
                 label="Due Day of Month"

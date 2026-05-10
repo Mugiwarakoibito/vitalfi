@@ -1,21 +1,22 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Search, Filter, X, ArrowUpDown, Receipt, AlertTriangle, Pencil, Trash2 } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Search, Filter, X, ArrowUpDown, Receipt, Pencil, Trash2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { storage, type Transaction as DBTransaction } from '@/lib/storage'
+import { type Transaction as DBTransaction, type Transaction } from '@/lib/storage'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 import { ALL_CATEGORIES, getCategoryByName } from '@/lib/categories'
 import { TransactionForm } from './TransactionForm'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface TransactionListProps {
   accounts: { id: string; name: string; color: string }[]
+  initialTransactions?: Transaction[]
   onTransactionChange?: () => void
 }
 
-export function TransactionList({ accounts, onTransactionChange }: TransactionListProps) {
-  const [transactions, setTransactions] = useState<DBTransaction[]>([])
+export function TransactionList({ accounts, initialTransactions = [], onTransactionChange }: TransactionListProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterAccount, setFilterAccount] = useState('')
   const [filterCategory, setFilterCategory] = useState('')
@@ -23,43 +24,16 @@ export function TransactionList({ accounts, onTransactionChange }: TransactionLi
   const [showFilters, setShowFilters] = useState(false)
   const [sortField, setSortField] = useState<'date' | 'amount' | 'description'>('date')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [chartRange, setChartRange] = useState<'7d' | '30d' | '90d'>('30d')
   const [editingTransaction, setEditingTransaction] = useState<DBTransaction | null>(null)
   const [deletingTransaction, setDeletingTransaction] = useState<DBTransaction | null>(null)
-  const [duplicates, setDuplicates] = useState<Set<string>>(new Set())
-  const { settings } = useAppStore()
+  const { settings, deleteTransaction, addTransaction, updateTransaction } = useAppStore()
 
-  const loadTransactions = useCallback(async () => {
-    const data = await storage.getAll('transactions')
-    setTransactions(data)
-  }, [])
-
-  useEffect(() => {
-    loadTransactions()
-  }, [loadTransactions])
-
-  // Duplicate detection: same amount + similar description within 7 days
-  useEffect(() => {
-    const dupSet = new Set<string>()
-    for (let i = 0; i < transactions.length; i++) {
-      for (let j = i + 1; j < transactions.length; j++) {
-        const a = transactions[i]
-        const b = transactions[j]
-        if (
-          a.amount === b.amount &&
-          a.type === b.type &&
-          a.description.toLowerCase().includes(b.description.toLowerCase().split(' ')[0]) ||
-          b.description.toLowerCase().includes(a.description.toLowerCase().split(' ')[0])
-        ) {
-          const dateDiff = Math.abs(new Date(a.date).getTime() - new Date(b.date).getTime())
-          if (dateDiff <= 7 * 24 * 60 * 60 * 1000) {
-            dupSet.add(a.id)
-            dupSet.add(b.id)
-          }
-        }
-      }
-    }
-    setDuplicates(dupSet)
-  }, [transactions])
+  // Use initial transactions passed in, or fall back to store if empty
+  const transactions = useMemo(() => {
+    if (initialTransactions.length > 0) return initialTransactions
+    return []
+  }, [initialTransactions])
 
   const filtered = useMemo(() => {
     let result = [...transactions]
@@ -92,10 +66,30 @@ export function TransactionList({ accounts, onTransactionChange }: TransactionLi
     return result
   }, [transactions, searchQuery, filterAccount, filterCategory, filterType, sortField, sortDir])
 
+  // Daily spending trend
+  const spendingTrend = useMemo(() => {
+    const days = chartRange === '7d' ? 7 : chartRange === '30d' ? 30 : 90
+    const now = new Date()
+    const data: { date: string; expenses: number }[] = []
+    
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now)
+      d.setDate(d.getDate() - i)
+      const dateStr = d.toISOString().split('T')[0]
+      const dayExpenses = transactions
+        .filter(t => t.date.startsWith(dateStr) && t.type === 'expense')
+        .reduce((s, t) => s + t.amount, 0)
+      data.push({
+        date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        expenses: dayExpenses
+      })
+    }
+    return data.filter(d => d.expenses > 0)
+  }, [transactions, chartRange])
+
   const handleDelete = async () => {
     if (!deletingTransaction) return
-    await storage.delete('transactions', deletingTransaction.id)
-    await loadTransactions()
+    await deleteTransaction(deletingTransaction.id)
     onTransactionChange?.()
     setDeletingTransaction(null)
   }
@@ -103,18 +97,28 @@ export function TransactionList({ accounts, onTransactionChange }: TransactionLi
   const handleSave = async (txn: DBTransaction | DBTransaction[]) => {
     if (Array.isArray(txn)) {
       for (const t of txn) {
-        await storage.put('transactions', t)
+        const existing = transactions.find(ex => ex.id === t.id)
+        if (existing) {
+          await updateTransaction(t)
+        } else {
+          await addTransaction(t)
+        }
       }
     } else {
-      await storage.put('transactions', txn)
+      const existing = transactions.find(ex => ex.id === txn.id)
+      if (existing) {
+        await updateTransaction(txn)
+      } else {
+        await addTransaction(txn)
+      }
     }
-    await loadTransactions()
     onTransactionChange?.()
     setEditingTransaction(null)
   }
 
   const totalIncome = filtered.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
   const totalExpense = filtered.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const totalTransfer = filtered.filter((t) => t.type === 'transfer').reduce((s, t) => s + t.amount, 0)
 
   return (
     <div className="space-y-4">
@@ -195,6 +199,7 @@ export function TransactionList({ accounts, onTransactionChange }: TransactionLi
                   <option value="">All types</option>
                   <option value="expense">Expense</option>
                   <option value="income">Income</option>
+                  <option value="transfer">Transfer</option>
                 </select>
               </div>
             </div>
@@ -209,16 +214,78 @@ export function TransactionList({ accounts, onTransactionChange }: TransactionLi
         )}
 
         {/* Summary */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="glass-card rounded-xl p-3">
-            <p className="text-xs text-muted">Income</p>
-            <p className="text-lg font-bold text-emerald-400">+{formatCurrency(totalIncome, settings.currency || 'USD')}</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent p-5">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10" />
+            <div className="relative">
+              <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-2">
+                <span>Income</span>
+              </div>
+              <p className="text-3xl font-bold text-emerald-400">+{formatCurrency(totalIncome, settings.currency || 'USD')}</p>
+            </div>
           </div>
-          <div className="glass-card rounded-xl p-3">
-            <p className="text-xs text-muted">Expenses</p>
-            <p className="text-lg font-bold text-red-400">-{formatCurrency(totalExpense, settings.currency || 'USD')}</p>
+          <div className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-gradient-to-br from-red-500/10 to-transparent p-5">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/10 rounded-full -mr-10 -mt-10" />
+            <div className="relative">
+              <div className="flex items-center gap-2 text-red-400/80 text-sm mb-2">
+                <span>Expenses</span>
+              </div>
+              <p className="text-3xl font-bold text-red-400">-{formatCurrency(totalExpense, settings.currency || 'USD')}</p>
+            </div>
+          </div>
+          <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent p-5">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10" />
+            <div className="relative">
+              <div className="flex items-center gap-2 text-purple-400/80 text-sm mb-2">
+                <span>Transfers</span>
+              </div>
+              <p className="text-3xl font-bold text-purple-400">{formatCurrency(totalTransfer, settings.currency || 'USD')}</p>
+            </div>
           </div>
         </div>
+
+        {/* Spending Trend Chart */}
+        {spendingTrend.length > 0 && (
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Spending Trend</h3>
+              <div className="flex gap-1">
+                {(['7d', '30d', '90d'] as const).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setChartRange(r)}
+                    className={`text-[10px] px-2 py-1 rounded-md font-medium transition-all ${
+                      chartRange === r 
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                        : 'text-muted hover:text-white border border-transparent'
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={180}>
+              <AreaChart data={spendingTrend}>
+                <defs>
+                  <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                <XAxis dataKey="date" stroke="#ffffff60" fontSize={10} />
+                <YAxis stroke="#ffffff60" fontSize={10} tickFormatter={(v: number) => `$${v}`} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #ffffff20', borderRadius: '8px' }}
+                  labelStyle={{ color: '#fff' }}
+                  formatter={(value: number) => [formatCurrency(value, settings.currency || 'USD'), 'Spent']}
+                />
+                <Area type="monotone" dataKey="expenses" stroke="#EF4444" fill="url(#spendingGradient)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </Card>
+        )}
 
         {/* Sort */}
         <div className="flex items-center gap-2">
@@ -249,31 +316,28 @@ export function TransactionList({ accounts, onTransactionChange }: TransactionLi
 
       {/* Transaction list */}
       {filtered.length === 0 ? (
-        <Card className="py-12 text-center">
-          <Receipt className="mx-auto h-10 w-10 text-muted/50 mb-3" />
-          <h4 className="text-white font-medium mb-1">No transactions</h4>
-          <p className="text-sm text-muted">Add your first transaction to get started</p>
-        </Card>
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+            <Receipt className="w-8 h-8 text-emerald-400/50" />
+          </div>
+          <p className="text-gray-400 mb-1">No transactions</p>
+          <p className="text-gray-500 text-sm">Add your first transaction to get started</p>
+        </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {filtered.map((txn) => {
             const cat = getCategoryByName(txn.category)
             const account = accounts.find((a) => a.id === txn.accountId)
-            const isDup = duplicates.has(txn.id)
 
             return (
-              <Card
+              <div
                 key={txn.id}
-                hover
-                className={cn(
-                  'group relative',
-                  isDup && 'border-amber-500/25 bg-amber-500/[0.03]'
-                )}
+                className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/[0.07] transition-all group relative"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-sm"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl text-sm"
                       style={{
                         backgroundColor: cat?.color ? `${cat.color}18` : 'rgba(107,114,128,0.12)',
                         color: cat?.color || '#9CA3AF',
@@ -282,21 +346,13 @@ export function TransactionList({ accounts, onTransactionChange }: TransactionLi
                       {txn.description.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-sm font-medium text-white">{txn.description}</p>
-                        {isDup && (
-                          <span className="flex items-center gap-0.5 text-amber-400 text-[10px] font-medium bg-amber-500/15 px-1.5 py-0.5 rounded-full">
-                            <AlertTriangle size={10} />
-                            Duplicate
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted">
+                      <p className="text-sm font-semibold text-white">{txn.description}</p>
+                      <p className="text-xs text-gray-400">
                         {new Date(txn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         {' • '}
                         {account?.name ?? 'Unknown'}
                         {' • '}
-                        {txn.category}
+                        {txn.type === 'transfer' ? 'Transfer' : txn.category}
                       </p>
                     </div>
                   </div>
@@ -304,28 +360,29 @@ export function TransactionList({ accounts, onTransactionChange }: TransactionLi
                     <p
                       className={cn(
                         'text-sm font-semibold',
-                        txn.type === 'income' ? 'text-emerald-400' : 'text-white'
+                        txn.type === 'income' ? 'text-emerald-400' : 
+                        txn.type === 'transfer' ? 'text-purple-400' : 'text-red-400'
                       )}
                     >
-                      {txn.type === 'income' ? '+' : '-'}{formatCurrency(txn.amount, settings.currency || 'USD')}
+                      {txn.type === 'income' ? '+' : txn.type === 'transfer' ? '' : '-'}{formatCurrency(txn.amount, settings.currency || 'USD')}
                     </p>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => setEditingTransaction(txn)}
-                        className="rounded-lg p-1.5 text-muted hover:text-white hover:bg-white/[0.06]"
+                        className="rounded-lg p-1.5 text-gray-400 hover:text-white hover:bg-white/10"
                       >
                         <Pencil size={13} />
                       </button>
                       <button
                         onClick={() => setDeletingTransaction(txn)}
-                        className="rounded-lg p-1.5 text-muted hover:text-red-400 hover:bg-red-500/10"
+                        className="rounded-lg p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
                       >
                         <Trash2 size={13} />
                       </button>
                     </div>
                   </div>
                 </div>
-              </Card>
+              </div>
             )
           })}
         </div>

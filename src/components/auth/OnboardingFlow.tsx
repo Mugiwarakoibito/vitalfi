@@ -1,19 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Target, CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Card, CardContent } from '../ui/Card';
+import { User, CheckCircle, ChevronLeft, Sparkles, Zap, Target, ShieldCheck, Activity, Search, ArrowRight, Loader2 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
+import { cn } from '@/lib/utils';
 
 interface OnboardingFlowProps {
   onComplete: () => void;
 }
-
-const TRACKER_GATES = [
-  { id: 'financial', label: 'Financial', icon: '💰', description: 'Accounts • Transactions • Budgets • Investments • Bills • Subscriptions • Debts' },
-  { id: 'health', label: 'Health & Fitness', icon: '💪', description: 'Workouts • Exercises • Nutrition • Hydration • Sleep • Body Metrics • Analytics' },
-];
 
 const COUNTRIES = [
   { code: 'AF', name: 'Afghanistan', currency: 'AFN' },
@@ -54,8 +47,8 @@ const COUNTRIES = [
   { code: 'CN', name: 'China', currency: 'CNY' },
   { code: 'CO', name: 'Colombia', currency: 'COP' },
   { code: 'KM', name: 'Comoros', currency: 'KMF' },
+  { code: 'CG', name: 'Congo', currency: 'XAF' },
   { code: 'CD', name: 'Congo (Democratic Republic)', currency: 'CDF' },
-  { code: 'CG', name: 'Congo (Republic)', currency: 'XAF' },
   { code: 'CR', name: 'Costa Rica', currency: 'CRC' },
   { code: 'CI', name: "Cote d'Ivoire", currency: 'XOF' },
   { code: 'HR', name: 'Croatia', currency: 'EUR' },
@@ -87,8 +80,7 @@ const COUNTRIES = [
   { code: 'GN', name: 'Guinea', currency: 'GNF' },
   { code: 'GW', name: 'Guinea-Bissau', currency: 'XOF' },
   { code: 'GY', name: 'Guyana', currency: 'GYD' },
-  { code: 'HT', name: 'Haiti', currency: 'HTG' },
-  { code: 'HN', name: 'Honduras', currency: 'HNL' },
+{ code: 'HT', name: 'Haiti', currency: 'HTG' },
   { code: 'HU', name: 'Hungary', currency: 'HUF' },
   { code: 'IS', name: 'Iceland', currency: 'ISK' },
   { code: 'IN', name: 'India', currency: 'INR' },
@@ -162,7 +154,7 @@ const COUNTRIES = [
   { code: 'RW', name: 'Rwanda', currency: 'RWF' },
   { code: 'KN', name: 'Saint Kitts and Nevis', currency: 'XCD' },
   { code: 'LC', name: 'Saint Lucia', currency: 'XCD' },
-  { code: 'VC', name: 'Saint Vincent and the Grenadines', currency: 'XCD' },
+  { code: 'VC', name: 'Saint Vincent and Grenadines', currency: 'XCD' },
   { code: 'WS', name: 'Samoa', currency: 'WST' },
   { code: 'SM', name: 'San Marino', currency: 'EUR' },
   { code: 'ST', name: 'Sao Tome and Principe', currency: 'STN' },
@@ -205,7 +197,6 @@ const COUNTRIES = [
   { code: 'UY', name: 'Uruguay', currency: 'UYU' },
   { code: 'UZ', name: 'Uzbekistan', currency: 'UZS' },
   { code: 'VU', name: 'Vanuatu', currency: 'VUV' },
-  { code: 'VA', name: 'Vatican City', currency: 'EUR' },
   { code: 'VE', name: 'Venezuela', currency: 'VES' },
   { code: 'VN', name: 'Vietnam', currency: 'VND' },
   { code: 'YE', name: 'Yemen', currency: 'YER' },
@@ -213,29 +204,20 @@ const COUNTRIES = [
   { code: 'ZW', name: 'Zimbabwe', currency: 'ZWL' },
 ];
 
-const STEPS = ['details', 'gate', 'complete'];
+const STEPS = ['identity', 'philosophy', 'complete'];
 
 export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [name, setName] = useState('');
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
-  const [selectedGate, setSelectedGate] = useState<'financial' | 'health' | undefined>(undefined);
-  const [countrySearch, setCountrySearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { updateSettings, setOnboarded, settings } = useAppStore();
+  const [countrySearch, setCountrySearch] = useState('');
+  const { updateSettings, setOnboarded, setUser } = useAppStore();
 
-  useEffect(() => {
-    if (settings.name) setName(settings.name);
-    if (settings.country) {
-      const country = COUNTRIES.find((c) => c.code === settings.country);
-      if (country) setSelectedCountry(country);
-    }
-    if (settings.primaryGate) {
-      setSelectedGate(settings.primaryGate);
-    }
-  }, [settings]);
-
-  const currentStep = STEPS[stepIndex];
+  const filteredCountries = COUNTRIES.filter(c => 
+    c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
+    c.code.toLowerCase().includes(countrySearch.toLowerCase())
+  );
 
   const handleNext = async () => {
     if (stepIndex === STEPS.length - 1) {
@@ -244,8 +226,11 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         name,
         country: selectedCountry.code,
         currency: selectedCountry.currency,
-        primaryGate: selectedGate,
         onboardingComplete: true,
+      });
+      setUser({
+        email: localStorage.getItem('lifesync_license_email') || 'user@lifesync.pro',
+        name: name,
       });
       setOnboarded(true);
       setIsLoading(false);
@@ -255,191 +240,193 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     }
   };
 
-  const handleBack = () => {
-    if (stepIndex > 0) {
-      setStepIndex((prev) => prev - 1);
-    }
-  };
-
-  const canProceed = () => {
-    switch (currentStep) {
-      case 'details':
-        return name.trim().length >= 2 && !!selectedCountry;
-      case 'gate':
-        return !!selectedGate;
-      default:
-        return true;
-    }
-  };
+  const currentStep = STEPS[stepIndex];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-purple-950 to-gray-950 flex items-center justify-center p-4">
+    <div className="min-h-[100dvh] bg-[#030507] flex items-center justify-center p-4 py-10 md:p-6 relative overflow-y-auto overflow-x-hidden">
+      {/* Aurora Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-purple-600/10 blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-cyan-600/10 blur-[120px]" />
+      </div>
+
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-lg"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-2xl relative z-10 my-auto"
       >
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold gradient-text mb-2">Welcome to VitalFi</h1>
-          <p className="text-gray-400">Let's set up your account</p>
-        </div>
-
-        <div className="flex justify-center gap-2 mb-8">
-          {STEPS.map((step, index) => (
-            <div
-              key={step}
-              className={`h-2 w-16 rounded-full transition-colors ${
-                index <= stepIndex ? 'bg-purple-500' : 'bg-gray-700'
-              }`}
-            />
-          ))}
-        </div>
-
-        <Card className="backdrop-blur-xl bg-gray-900/50 border border-gray-700/50">
-          <CardContent className="p-6">
-            <AnimatePresence mode="wait">
-              {currentStep === 'details' && (
-                <motion.div
-                  key="details"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-4"
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    <User className="w-6 h-6 text-purple-400" />
-                    <h2 className="text-xl font-semibold text-white">Tell us about yourself</h2>
-                  </div>
-
-                  <Input
-                    label="Full Name"
-                    placeholder="Enter your name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    autoFocus
-                  />
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Where are you from?</label>
-                    <input
-                      type="text"
-                      placeholder="Search country..."
-                      value={countrySearch}
-                      onChange={(e) => setCountrySearch(e.target.value)}
-                      className="w-full px-3 py-2 mb-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500"
-                    />
-                    <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                      {COUNTRIES.filter((c) =>
-                        c.name.toLowerCase().includes(countrySearch.toLowerCase())
-                      ).map((country) => (
-                        <button
-                          key={country.code}
-                          type="button"
-                          onClick={() => setSelectedCountry(country)}
-                          className={`p-2 rounded-lg text-left text-xs transition-all ${
-                            selectedCountry.code === country.code
-                              ? 'bg-purple-500/20 border border-purple-500/50 text-white'
-                              : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:border-gray-600'
-                          }`}
-                        >
-                          <div className="font-medium truncate">{country.name}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {currentStep === 'gate' && (
-                <motion.div
-                  key="gate"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-4"
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    <Target className="w-6 h-6 text-purple-400" />
-                    <h2 className="text-xl font-semibold text-white">Choose your tracker</h2>
-                  </div>
-
-                  <p className="text-sm text-gray-400">Select which tracker you want to start with</p>
-
-                  <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                    <p className="text-xs text-blue-300">
-                      💡 You can switch between trackers anytime in Settings after completing onboarding.
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    {TRACKER_GATES.map((gate) => (
-                      <button
-                        key={gate.id}
-                        onClick={() => setSelectedGate(gate.id as 'financial' | 'health')}
-                        className={`w-full p-4 rounded-lg text-left transition-all ${
-                          selectedGate === gate.id
-                            ? 'bg-purple-500/20 border border-purple-500/50 text-white'
-                            : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:border-gray-600'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="text-3xl">{gate.icon}</div>
-                          <div>
-                            <div className="font-semibold">{gate.label}</div>
-                            <div className="text-xs text-gray-400">{gate.description}</div>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-
-              {currentStep === 'complete' && (
-                <motion.div
-                  key="complete"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="text-center py-8"
-                >
-                  <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle className="w-8 h-8 text-green-400" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-white mb-2">You're all set!</h2>
-                  <p className="text-gray-400">
-                    {name}, your {selectedGate === 'financial' ? 'financial tracker' : 'health & fitness tracker'} is ready. You can switch between trackers anytime in settings.
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div className="flex gap-3 mt-6">
-              {stepIndex > 0 && currentStep !== 'complete' && (
-                <Button variant="ghost" onClick={handleBack}>
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  Back
-                </Button>
-              )}
-              <div className="flex-1" />
-              <Button
-                variant="primary"
-                onClick={handleNext}
-                disabled={!canProceed()}
-                isLoading={isLoading}
-              >
-                {currentStep === 'complete' ? (
-                  'Get Started'
-                ) : (
-                  <>
-                    Next
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </>
-                )}
-              </Button>
+        <div className="text-center mb-8 md:mb-12 space-y-4">
+<motion.div 
+            initial={{ rotate: -10, scale: 0 }}
+            animate={{ rotate: 0, scale: 1 }}
+            className="h-12 w-12 md:h-16 md:w-16 rounded-2xl bg-gradient-to-br from-purple-500 to-cyan-500 p-[2px] mx-auto"
+          >
+            <div className="w-full h-full rounded-2xl bg-slate-950 flex items-center justify-center">
+              <ShieldCheck size={20} className="md:text-24 text-white" />
             </div>
-          </CardContent>
-        </Card>
+          </motion.div>
+          <div className="space-y-2 text-center">
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">LifeSync <span className="gradient-text">Pro</span></h1>
+              <p className="text-slate-400 text-xs md:text-sm font-bold uppercase tracking-[0.3em] text-[10px]">Setup Guide</p>
+           </div>
+        </div>
+
+        <div className="glass-card p-5 md:p-10 lg:p-14 border-white/5 relative overflow-hidden flex flex-col">
+          <div className="absolute top-0 right-0 p-8 opacity-[0.02] pointer-events-none">
+             <Sparkles size={150} />
+          </div>
+
+          <AnimatePresence mode="wait">
+            {currentStep === 'identity' && (
+              <motion.div
+                key="identity"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-10"
+              >
+                <div className="space-y-2 mb-6">
+                  <h2 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-3">
+                    <User size={24} className="text-cyan-400" />
+                    Personal Details
+                  </h2>
+                  <p className="text-slate-500 font-medium text-sm md:text-base">Let's get to know you better.</p>
+                </div>
+
+<div className="space-y-6 md:space-y-8 flex-1">
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Your Name</label>
+                      <input 
+                         autoFocus
+                         value={name}
+                         onChange={(e) => setName(e.target.value)}
+                         className="w-full bg-slate-950/50 border border-white/5 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 text-white outline-none focus:border-cyan-500/30 transition-all font-medium"
+                      />
+                   </div>
+                    
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Your Country</label>
+                      <div className="relative">
+                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <input
+                          type="text"
+                          value={countrySearch}
+                          onChange={(e) => setCountrySearch(e.target.value)}
+                          placeholder="Search countries..."
+                          className="w-full bg-slate-950/50 border border-white/5 rounded-xl md:rounded-2xl pl-12 pr-4 py-3 text-white outline-none focus:border-cyan-500/30 transition-all font-medium text-sm"
+                        />
+                      </div>
+                      <div className="mt-3 max-h-48 md:max-h-64 overflow-y-auto space-y-2 pr-2 scrollbar-none">
+                        {filteredCountries.map(c => (
+                          <button
+                            key={c.code}
+                            onClick={() => {
+                              setSelectedCountry(c);
+                              setCountrySearch(c.name);
+                            }}
+                            className={cn(
+                              "w-full p-3 rounded-2xl border text-left transition-all group flex items-center justify-between",
+                              selectedCountry.code === c.code 
+                                ? "bg-cyan-500/10 border-cyan-500/30 text-white" 
+                                : "bg-white/[0.02] border-white/5 text-slate-400 hover:border-white/10"
+                            )}
+                          >
+                            <span className="font-medium">{c.name}</span>
+                            <span className="text-sm opacity-50">{c.currency}</span>
+                          </button>
+                        ))}
+                      </div>
+                   </div>
+                </div>
+              </motion.div>
+            )}
+
+            {currentStep === 'philosophy' && (
+              <motion.div
+                key="philosophy"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-10"
+              >
+<div className="space-y-2 mb-6">
+                  <h2 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-3">
+                    <Zap size={24} className="text-purple-400" />
+                    Why LifeSync?
+                  </h2>
+                  <p className="text-slate-500 font-medium text-sm md:text-base">LifeSync integrates biological and financial performance.</p>
+               </div>
+
+               <div className="grid grid-cols-1 gap-3 md:gap-6 flex-1">
+                  {[
+                    { label: 'Cross-Domain Analytics', desc: 'Track your health and money in one place.', icon: Activity, color: 'text-cyan-400' },
+                    { label: 'Smart Predictions', desc: 'AI-powered insights for better decisions.', icon: Target, color: 'text-purple-400' },
+                    { label: 'Beautiful Design', desc: 'Beautiful dark mode design for focus.', icon: Sparkles, color: 'text-amber-400' },
+                  ].map((p, i) => (
+                     <div key={i} className="p-4 md:p-6 rounded-2xl md:rounded-3xl bg-white/[0.02] border border-white/5 flex gap-4 md:gap-6 group hover:bg-white/[0.04] transition-all">
+                        <div className={cn("p-3 md:p-4 rounded-xl md:rounded-2xl bg-white/5 h-fit border border-white/5 group-hover:scale-110 transition-transform", p.color)}>
+                           <p.icon size={20} className="md:w-6 md:h-6" />
+                        </div>
+                        <div>
+                           <p className="text-sm md:text-base font-black text-white mb-1 uppercase tracking-tight">{p.label}</p>
+                           <p className="text-[10px] md:text-xs text-slate-500 font-medium leading-relaxed">{p.desc}</p>
+                        </div>
+                     </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {currentStep === 'complete' && (
+              <motion.div
+                key="complete"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="text-center py-10 space-y-8"
+              >
+                <div className="relative inline-block">
+                  <div className="absolute inset-0 bg-emerald-500/20 blur-[60px] rounded-full animate-pulse" />
+                  <div className="w-24 h-24 bg-emerald-500/10 border border-emerald-500/20 rounded-[2.5rem] flex items-center justify-center mx-auto relative z-10 shadow-2xl">
+                    <CheckCircle className="w-12 h-12 text-emerald-400" />
+                  </div>
+                </div>
+                <div className="space-y-3">
+<h2 className="text-4xl font-black text-white tracking-tighter">You're All Set!</h2>
+                    <p className="text-slate-400 max-w-sm mx-auto font-medium">
+                      {name}, welcome to LifeSync. Let's start tracking your health and wealth!
+                    </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="flex gap-4 md:gap-6 mt-8 md:mt-16 pt-6 md:pt-10 border-t border-white/5 flex-shrink-0">
+            {stepIndex > 0 && currentStep !== 'complete' && (
+              <button 
+                onClick={() => setStepIndex(prev => prev - 1)}
+                className="px-6 md:px-8 h-12 md:h-14 rounded-xl md:rounded-2xl bg-white/5 text-slate-500 font-black uppercase tracking-widest text-[10px] hover:bg-white/10 hover:text-white transition-all flex items-center justify-center gap-2 md:gap-3"
+              >
+                <ChevronLeft size={16} /> <span className="hidden sm:inline">Back</span>
+              </button>
+            )}
+            <div className="flex-1" />
+            <button
+              onClick={handleNext}
+              disabled={currentStep === 'identity' && name.trim().length < 2}
+              className="w-full sm:w-auto flex-1 md:flex-none px-8 h-12 md:h-14 gradient-brand rounded-xl md:rounded-2xl font-black uppercase tracking-wider text-xs text-white shadow-lg hover:shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              {isLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  {currentStep === 'complete' ? 'Get Started' : 'Continue'}
+                  {currentStep !== 'complete' && <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />}
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </motion.div>
     </div>
   );

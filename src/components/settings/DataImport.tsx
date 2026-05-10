@@ -27,7 +27,7 @@ export function DataImport() {
       const hasValidStructure = requiredKeys.some((key) => key in data) || Array.isArray(data);
 
       if (!hasValidStructure && !Array.isArray(data)) {
-        throw new Error('Invalid file format. Please select a VitalFi export file.');
+        throw new Error('Invalid file format. Please select a LifeSync export file.');
       }
 
       await storage.importAll(data);
@@ -62,7 +62,7 @@ export function DataImport() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-gray-400">
-          Restore your data from a VitalFi JSON export file. This will merge with your existing data.
+          Restore your data from a LifeSync JSON export file. This will merge with your existing data.
         </p>
 
         <div

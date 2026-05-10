@@ -1,46 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useMemo } from 'react'
 import { TrendingUp, Flame, Dumbbell, Timer } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/Card'
-import { storage, type Workout } from '@/lib/storage'
-
-interface WorkoutStats {
-  totalWorkouts: number
-  totalDuration: number
-  avgDuration: number
-  totalExercises: number
-  mostCommonType: string
-  thisWeek: number
-  lastWeek: number
-}
+import { useAppStore } from '@/store/useAppStore'
 
 export function WorkoutAnalytics() {
-  const [workouts, setWorkouts] = useState<Workout[]>([])
-  const [stats, setStats] = useState<WorkoutStats>({
-    totalWorkouts: 0,
-    totalDuration: 0,
-    avgDuration: 0,
-    totalExercises: 0,
-    mostCommonType: '-',
-    thisWeek: 0,
-    lastWeek: 0,
-  })
-
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    const wo = await storage.getAll('workouts')
-    setWorkouts(wo)
-    calculateStats(wo)
-  }
-
-  const calculateStats = (wo: Workout[]) => {
-    const totalDuration = wo.reduce((sum, w) => sum + (w.duration || 0), 0)
-    const totalExercises = wo.reduce((sum, w) => sum + (w.exercises?.length || 0), 0)
+  const { workouts } = useAppStore()
+  
+  const stats = useMemo(() => {
+    const totalDuration = workouts.reduce((sum, w) => sum + (w.duration || 0), 0)
+    const totalExercises = workouts.reduce((sum, w) => sum + (w.exercises?.length || 0), 0)
 
     const typeCount: Record<string, number> = {}
-    wo.forEach(w => {
+    workouts.forEach(w => {
       typeCount[w.type] = (typeCount[w.type] || 0) + 1
     })
     const mostCommon = Object.entries(typeCount).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'
@@ -51,22 +21,22 @@ export function WorkoutAnalytics() {
     const lastWeekStart = new Date(thisWeekStart)
     lastWeekStart.setDate(lastWeekStart.getDate() - 7)
 
-    const thisWeek = wo.filter(w => new Date(w.date) >= thisWeekStart).length
-    const lastWeek = wo.filter(w => {
+    const thisWeek = workouts.filter(w => new Date(w.date) >= thisWeekStart).length
+    const lastWeek = workouts.filter(w => {
       const d = new Date(w.date)
       return d >= lastWeekStart && d < thisWeekStart
     }).length
 
-    setStats({
-      totalWorkouts: wo.length,
+    return {
+      totalWorkouts: workouts.length,
       totalDuration,
-      avgDuration: wo.length > 0 ? Math.round(totalDuration / wo.length) : 0,
+      avgDuration: workouts.length > 0 ? Math.round(totalDuration / workouts.length) : 0,
       totalExercises,
       mostCommonType: mostCommon,
       thisWeek,
       lastWeek,
-    })
-  }
+    }
+  }, [workouts])
 
   const getWeeklyData = () => {
     const days = []
@@ -104,107 +74,105 @@ export function WorkoutAnalytics() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="backdrop-blur-xl bg-gray-900/50 border border-gray-700/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
+        <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-rose-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-rose-400/80 text-sm mb-2">
               <Dumbbell className="w-4 h-4" />
-              Total Workouts
+              <span>Total Workouts</span>
             </div>
-            <div className="text-2xl font-bold text-white">{stats.totalWorkouts}</div>
-          </CardContent>
-        </Card>
-        <Card className="backdrop-blur-xl bg-gray-900/50 border border-gray-700/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
+            <p className="text-3xl font-bold text-white">{stats.totalWorkouts}</p>
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-violet-400/80 text-sm mb-2">
               <Timer className="w-4 h-4" />
-              Avg Duration
+              <span>Avg Duration</span>
             </div>
-            <div className="text-2xl font-bold text-white">{stats.avgDuration} min</div>
-          </CardContent>
-        </Card>
-        <Card className="backdrop-blur-xl bg-gray-900/50 border border-gray-700/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
+            <p className="text-3xl font-bold text-white">{stats.avgDuration} min</p>
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-orange-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-orange-400/80 text-sm mb-2">
               <Flame className="w-4 h-4" />
-              This Week
+              <span>This Week</span>
             </div>
-            <div className="text-2xl font-bold text-white">{stats.thisWeek}</div>
-          </CardContent>
-        </Card>
-        <Card className={`backdrop-blur-xl border ${weekChange >= 0 ? 'bg-green-900/20 border-green-700/50' : 'bg-red-900/20 border-red-700/50'}`}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
-              <TrendingUp className={`w-4 h-4 ${weekChange >= 0 ? 'text-green-400' : 'text-red-400'}`} />
-              vs Last Week
+            <p className="text-3xl font-bold text-white">{stats.thisWeek}</p>
+          </div>
+        </div>
+        <div className={`relative overflow-hidden rounded-2xl border ${weekChange >= 0 ? 'border-green-500/20 bg-gradient-to-br from-green-500/10 to-transparent' : 'border-red-500/20 bg-gradient-to-br from-red-500/10 to-transparent'} p-5`}>
+          <div className={`absolute top-0 right-0 w-20 h-20 ${weekChange >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'} rounded-full -mr-10 -mt-10`} />
+          <div className="relative">
+            <div className={`flex items-center gap-2 text-sm mb-2 ${weekChange >= 0 ? 'text-green-400/80' : 'text-red-400/80'}`}>
+              <TrendingUp className={`w-4 h-4 ${weekChange < 0 ? 'rotate-180' : ''}`} />
+              <span>vs Last Week</span>
             </div>
-            <div className={`text-2xl font-bold ${weekChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <p className={`text-3xl font-bold ${weekChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
               {weekChange >= 0 ? '+' : ''}{weekChange.toFixed(0)}%
-            </div>
-          </CardContent>
-        </Card>
+            </p>
+          </div>
+        </div>
       </div>
 
-      <Card className="backdrop-blur-xl bg-gray-900/50 border border-gray-700/50">
-        <CardContent className="p-4">
-          <h4 className="font-semibold text-white mb-4">Weekly Activity</h4>
-          <div className="flex items-end gap-2 h-32">
-            {weekData.map((d, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center">
-                <div 
-                  className="w-full bg-gradient-to-t from-purple-600 to-pink-500 rounded-t"
-                  style={{ height: `${(d.duration / maxDuration) * 100}%`, minHeight: d.count > 0 ? '8px' : '2px' }}
-                />
-                <span className="text-xs text-gray-500 mt-2">{d.day}</span>
-                <span className="text-xs text-gray-600">{d.duration}m</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="relative overflow-hidden rounded-2xl border border-gray-500/20 bg-gray-900/50 p-5">
+        <h4 className="font-semibold text-white mb-4">Weekly Activity</h4>
+        <div className="flex items-end gap-2 h-32">
+          {weekData.map((d, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center">
+              <div 
+                className="w-full bg-gradient-to-t from-purple-600 to-pink-500 rounded-t"
+                style={{ height: `${(d.duration / maxDuration) * 100}%`, minHeight: d.count > 0 ? '8px' : '2px' }}
+              />
+              <span className="text-xs text-gray-500 mt-2">{d.day}</span>
+              <span className="text-xs text-gray-600">{d.duration}m</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="backdrop-blur-xl bg-gray-900/50 border border-gray-700/50">
-          <CardContent className="p-4">
-            <h4 className="font-semibold text-white mb-3">Workout Types</h4>
-            <div className="space-y-3">
-              {getTypeDistribution().map(({ type, count }) => (
-                <div key={type} className="flex items-center justify-between">
-                  <span className="text-gray-300">{typeLabels[type] || type}</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-purple-500 rounded-full"
-                        style={{ width: `${(count / stats.totalWorkouts) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-white text-sm w-6">{count}</span>
+        <div className="relative overflow-hidden rounded-2xl border border-gray-500/20 bg-gray-900/50 p-5">
+          <h4 className="font-semibold text-white mb-3">Workout Types</h4>
+          <div className="space-y-3">
+            {getTypeDistribution().map(({ type, count }) => (
+              <div key={type} className="flex items-center justify-between">
+                <span className="text-gray-300">{typeLabels[type] || type}</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-purple-500 rounded-full"
+                      style={{ width: `${(count / stats.totalWorkouts) * 100}%` }}
+                    />
                   </div>
+                  <span className="text-white text-sm w-6">{count}</span>
                 </div>
-              ))}
-              {stats.totalWorkouts === 0 && <p className="text-gray-500 text-sm">No workouts yet</p>}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            ))}
+            {stats.totalWorkouts === 0 && <p className="text-gray-500 text-sm">No workouts yet</p>}
+          </div>
+        </div>
 
-        <Card className="backdrop-blur-xl bg-gray-900/50 border border-gray-700/50">
-          <CardContent className="p-4">
-            <h4 className="font-semibold text-white mb-3">Summary</h4>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Total Duration</span>
-                <span className="text-white">{Math.round(stats.totalDuration / 60)}h {stats.totalDuration % 60}m</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Total Exercises</span>
-                <span className="text-white">{stats.totalExercises}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Favorite Type</span>
-                <span className="text-purple-400">{typeLabels[stats.mostCommonType] || stats.mostCommonType}</span>
-              </div>
+        <div className="relative overflow-hidden rounded-2xl border border-gray-500/20 bg-gray-900/50 p-5">
+          <h4 className="font-semibold text-white mb-3">Summary</h4>
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-gray-400">Total Duration</span>
+              <span className="text-white">{Math.round(stats.totalDuration / 60)}h {stats.totalDuration % 60}m</span>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Total Exercises</span>
+              <span className="text-white">{stats.totalExercises}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Favorite Type</span>
+              <span className="text-purple-400">{typeLabels[stats.mostCommonType] || stats.mostCommonType}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

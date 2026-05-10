@@ -1,12 +1,10 @@
-import { useState, useEffect, useMemo } from 'react'
-import { Plus, Wallet, PiggyBank, CreditCard, TrendingUp, Banknote, Archive, Pencil, Trash2 } from 'lucide-react'
-import { Card } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
-import { storage, type Account } from '@/lib/storage'
+import { useState, useMemo } from 'react'
+import { Plus, Wallet, PiggyBank, CreditCard, TrendingUp, Banknote, Archive, Pencil, Trash2, AlertTriangle, DollarSign, ArrowUpDown } from 'lucide-react'
+import type { Account } from '@/lib/storage'
 import { formatCurrency } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 import { AccountForm } from './AccountForm'
-import { Modal } from '@/components/ui/Modal'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
 const accountIcons: Record<Account['type'], typeof Wallet> = {
   checking: Wallet,
@@ -16,185 +14,185 @@ const accountIcons: Record<Account['type'], typeof Wallet> = {
   cash: Banknote,
 }
 
-export function AccountList() {
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const [showForm, setShowForm] = useState(false)
-  const [editingAccount, setEditingAccount] = useState<Account | null>(null)
-  const [deletingAccount, setDeletingAccount] = useState<Account | null>(null)
-  const [loading, setLoading] = useState(true)
-  const { settings } = useAppStore()
-
-  const loadAccounts = async () => {
-    try {
-      const data = await storage.getAll('accounts')
-      setAccounts(data.filter((a) => !a.isArchived))
-    } finally {
-      setLoading(false)
+export function AccountList({ initialAccounts = [], onAccountChange, showForm: externalShowForm, onCloseForm, onOpenForm }: { initialAccounts?: Account[], onAccountChange?: () => void, showForm?: boolean, onCloseForm?: () => void, onOpenForm?: () => void }) {
+  const [showFormState, setShowFormState] = useState(false)
+  const showForm = externalShowForm !== undefined ? externalShowForm : showFormState
+  const setShowForm = (value: boolean) => {
+    if (externalShowForm !== undefined) {
+      if (value) onOpenForm?.()
+      else onCloseForm?.()
+    } else {
+      setShowFormState(value)
     }
   }
-
-  useEffect(() => {
-    loadAccounts()
-  }, [])
-
-  const totalBalance = useMemo(() => {
-    return accounts.reduce((sum, acc) => sum + acc.balance, 0)
-  }, [accounts])
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null)
+  const [deletingAccount, setDeletingAccount] = useState<Account | null>(null)
+  const accounts = initialAccounts
+  const { settings, addAccount, updateAccount, deleteAccount } = useAppStore()
+  const activeAccounts = accounts.filter((a) => !a.isArchived)
+  const totalBalance = useMemo(() => activeAccounts.reduce((sum, acc) => sum + acc.balance, 0), [activeAccounts])
+  const positiveBalance = activeAccounts.filter(a => a.balance > 0).reduce((sum, a) => sum + a.balance, 0)
+  const negativeBalance = activeAccounts.filter(a => a.balance < 0).reduce((sum, a) => sum + Math.abs(a.balance), 0)
 
   const handleSave = async (account: Account) => {
-    await storage.put('accounts', account)
-    await loadAccounts()
+    const existing = accounts.find(a => a.id === account.id)
+    if (existing) await updateAccount(account)
+    else await addAccount(account)
     setShowForm(false)
     setEditingAccount(null)
+    onAccountChange?.()
   }
 
   const handleDelete = async () => {
     if (!deletingAccount) return
-    await storage.delete('accounts', deletingAccount.id)
-    await loadAccounts()
+    await deleteAccount(deletingAccount.id)
     setDeletingAccount(null)
+    onAccountChange?.()
   }
 
   const handleArchive = async (account: Account) => {
-    await storage.put('accounts', { ...account, isArchived: true })
-    await loadAccounts()
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="glass-card h-20 animate-pulse" />
-        ))}
-      </div>
-    )
+    await updateAccount({ ...account, isArchived: true })
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-end justify-between">
-        <div>
-          <p className="text-sm text-muted">Total Net Worth</p>
-          <p className="text-3xl font-bold text-white mt-1">
-            {formatCurrency(totalBalance, settings.currency || 'USD')}
-          </p>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-2">
+              <DollarSign className="w-4 h-4" />
+              <span>Total Net Worth</span>
+            </div>
+            <p className="text-3xl font-bold text-white">{formatCurrency(totalBalance, settings.currency || 'USD')}</p>
+            <p className="text-xs text-gray-500 mt-1">{activeAccounts.length} account{activeAccounts.length !== 1 ? 's' : ''}</p>
+          </div>
         </div>
-        <Button variant="primary" size="sm" onClick={() => setShowForm(true)}>
-          <Plus size={16} className="mr-1.5" />
-          Add Account
-        </Button>
+
+        <div className="relative overflow-hidden rounded-2xl border border-green-500/20 bg-gradient-to-br from-green-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-green-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-green-400/80 text-sm mb-2">
+              <ArrowUpDown className="w-4 h-4" />
+              <span>Assets</span>
+            </div>
+            <p className="text-3xl font-bold text-green-400">{formatCurrency(positiveBalance, settings.currency || 'USD')}</p>
+            <p className="text-xs text-gray-500 mt-1">Positive balances</p>
+          </div>
+        </div>
+
+        <div className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-gradient-to-br from-red-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-red-400/80 text-sm mb-2">
+              <CreditCard className="w-4 h-4" />
+              <span>Liabilities</span>
+            </div>
+            <p className="text-3xl font-bold text-red-400">{formatCurrency(negativeBalance, settings.currency || 'USD')}</p>
+            <p className="text-xs text-gray-500 mt-1">Negative balances</p>
+          </div>
+        </div>
       </div>
 
-      {accounts.length === 0 ? (
-        <Card className="py-12 text-center">
-          <Wallet className="mx-auto h-10 w-10 text-muted/50 mb-3" />
-          <h4 className="text-white font-medium mb-1">No accounts yet</h4>
-          <p className="text-sm text-muted mb-4">Add your first account to start tracking</p>
-          <Button variant="primary" onClick={() => setShowForm(true)}>
-            Add Account
-          </Button>
-        </Card>
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold text-white">Your Accounts</h3>
+        <button onClick={() => setShowForm(true)} className="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm flex items-center gap-2 hover:bg-emerald-500/30 transition-all">
+          <Plus className="w-4 h-4" />
+          Add Account
+        </button>
+      </div>
+
+      {activeAccounts.length > 1 && (
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+          <h4 className="text-sm font-medium text-gray-400 mb-4">Account Distribution</h4>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={activeAccounts.map(a => ({ name: a.name, balance: a.balance, type: a.type }))} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
+              <XAxis type="number" stroke="#ffffff60" fontSize={10} tickFormatter={(v: number) => `$${v >= 1000 ? `${v/1000}k` : v}`} />
+              <YAxis dataKey="name" type="category" stroke="#ffffff60" fontSize={10} width={80} />
+              <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: '12px' }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#fff' }} formatter={(value: number) => formatCurrency(value, settings.currency || 'USD')} />
+              <Bar dataKey="balance" radius={[0, 4, 4, 0]} stroke="none">
+                {activeAccounts.map((_, index) => (
+                  <Cell key={index} fill={['#10B981', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444'][index % 5]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {activeAccounts.length === 0 ? (
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+            <Wallet className="w-8 h-8 text-emerald-400/50" />
+          </div>
+          <p className="text-gray-400 mb-1">No accounts yet</p>
+          <p className="text-gray-500 text-sm">Add your first account to start tracking</p>
+        </div>
       ) : (
-        <div className="space-y-3">
-          {accounts.map((account) => {
+        <div className="space-y-4">
+          {activeAccounts.map((account) => {
             const Icon = accountIcons[account.type]
             return (
-              <Card
-                key={account.id}
-                hover
-                className="group relative overflow-hidden cursor-pointer"
-                onClick={() => setEditingAccount(account)}
-              >
+              <div key={account.id} className="rounded-2xl border border-white/10 bg-white/5 p-5 hover:bg-white/[0.07] transition-all cursor-pointer" onClick={() => setEditingAccount(account)}>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="flex h-10 w-10 items-center justify-center rounded-xl"
-                      style={{ backgroundColor: `${account.color}18` }}
-                    >
-                      <Icon className="h-5 w-5" style={{ color: account.color }} />
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: account.color + '20' }}>
+                      <Icon className="w-5 h-5" style={{ color: account.color }} />
                     </div>
                     <div>
-                      <h4 className="font-medium text-white">{account.name}</h4>
-                      <p className="text-xs text-muted capitalize">{account.type}</p>
+                      <h4 className="font-semibold text-white">{account.name}</h4>
+                      <p className="text-sm text-gray-400 capitalize">{account.type}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-lg font-semibold text-white">
+                  <div className="flex items-center gap-4">
+                    <p className={`text-xl font-bold ${account.balance >= 0 ? 'text-white' : 'text-red-400'}`}>
                       {formatCurrency(account.balance, settings.currency || 'USD')}
                     </p>
-                    <div className="flex items-center justify-end gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setEditingAccount(account)
-                        }}
-                        className="rounded-lg p-1.5 text-muted hover:text-white hover:bg-white/[0.06] transition-colors"
-                      >
-                        <Pencil size={14} />
+                    <div className="flex gap-1">
+                      <button onClick={(e) => { e.stopPropagation(); setEditingAccount(account) }} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                        <Pencil className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleArchive(account)
-                        }}
-                        className="rounded-lg p-1.5 text-muted hover:text-white hover:bg-white/[0.06] transition-colors"
-                      >
-                        <Archive size={14} />
+                      <button onClick={(e) => { e.stopPropagation(); handleArchive(account) }} className="p-2 rounded-lg text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/10 transition-all">
+                        <Archive className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setDeletingAccount(account)
-                        }}
-                        className="rounded-lg p-1.5 text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                      >
-                        <Trash2 size={14} />
+                      <button onClick={(e) => { e.stopPropagation(); setDeletingAccount(account) }} className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
                 </div>
-                <div
-                  className="absolute left-0 top-0 h-full w-1"
-                  style={{ backgroundColor: account.color }}
-                />
-              </Card>
+                <div className="absolute left-0 top-0 h-full w-1 rounded-l-2xl" style={{ backgroundColor: account.color }} />
+              </div>
             )
           })}
         </div>
       )}
 
-      <AccountForm
-        isOpen={showForm}
-        onClose={() => setShowForm(false)}
-        onSave={handleSave}
-      />
+      <AccountForm isOpen={showForm} onClose={() => setShowForm(false)} onSave={handleSave} />
+      <AccountForm isOpen={!!editingAccount} onClose={() => setEditingAccount(null)} onSave={handleSave} account={editingAccount} />
 
-      <AccountForm
-        isOpen={!!editingAccount}
-        onClose={() => setEditingAccount(null)}
-        onSave={handleSave}
-        account={editingAccount}
-      />
-
-      <Modal
-        isOpen={!!deletingAccount}
-        onClose={() => setDeletingAccount(null)}
-        title="Delete Account?"
-        className="max-w-sm"
-      >
-        <p className="text-muted text-sm mb-5">
-          This will permanently delete <strong className="text-white">{deletingAccount?.name}</strong> and all
-          associated data. This cannot be undone.
-        </p>
-        <div className="flex gap-3">
-          <Button variant="ghost" onClick={() => setDeletingAccount(null)} className="flex-1">
-            Cancel
-          </Button>
-          <Button variant="danger" onClick={handleDelete} className="flex-1">
-            Delete
-          </Button>
+      {deletingAccount && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setDeletingAccount(null)}>
+          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-6 h-6 text-red-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-white text-center mb-2">Delete Account?</h3>
+            <p className="text-gray-400 text-sm text-center mb-6">
+              This will permanently delete <span className="text-white font-medium">{deletingAccount.name}</span> and all associated data. This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeletingAccount(null)} className="flex-1 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all">
+                Cancel
+              </button>
+              <button onClick={handleDelete} className="flex-1 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-all">
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
-      </Modal>
+      )}
     </div>
   )
 }

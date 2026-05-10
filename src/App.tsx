@@ -10,14 +10,19 @@ import Finance from '@/pages/Finance'
 import Fitness from '@/pages/Fitness'
 import Insights from '@/pages/Insights'
 import Settings from '@/pages/Settings'
+import Movement from '@/pages/trackers/Movement'
+import Nutrition from '@/pages/trackers/Nutrition'
+import Recovery from '@/pages/trackers/Recovery'
+import Mindset from '@/pages/trackers/Mindset'
+import Social from '@/pages/trackers/Social'
 
 function AppContent() {
   const [showOnboarding, setShowOnboarding] = useState(false)
-  const { isOnboarded, loadSettings, isLoading } = useAppStore()
+  const { isOnboarded, initialize, isLoading } = useAppStore()
 
   useEffect(() => {
-    loadSettings()
-  }, [loadSettings])
+    initialize()
+  }, [initialize])
 
   useEffect(() => {
     if (!isLoading && isOnboarded) {
@@ -29,9 +34,14 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-purple-950 to-gray-950 flex items-center justify-center">
-        <div className="glass-card p-8 text-center">
-          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
+      <div className="min-h-screen bg-[#0F1419] flex flex-col items-center justify-center space-y-6">
+        <div className="relative">
+          <div className="absolute inset-0 bg-cyan-500/20 blur-[40px] rounded-full animate-pulse" />
+          <div className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin relative z-10" />
+        </div>
+        <div className="text-center space-y-2">
+           <p className="text-xl font-black text-white tracking-tighter">LifeSync <span className="gradient-text">Pro</span></p>
+           <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] animate-pulse">Initializing Directives...</p>
         </div>
       </div>
     )
@@ -46,28 +56,16 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/finance" element={<Finance />} />
-        <Route path="/finance/accounts" element={<Finance defaultTab="accounts" />} />
-        <Route path="/finance/transactions" element={<Finance defaultTab="transactions" />} />
-        <Route path="/finance/budgets" element={<Finance defaultTab="budgets" />} />
-        <Route path="/finance/investments" element={<Finance defaultTab="investments" />} />
-        <Route path="/finance/bills" element={<Finance defaultTab="bills" />} />
-        <Route path="/finance/subscriptions" element={<Finance defaultTab="subscriptions" />} />
-        <Route path="/finance/debts" element={<Finance defaultTab="debts" />} />
+        <Route path="/finance/:tab" element={<Finance />} />
         <Route path="/fitness" element={<Fitness />} />
-        <Route path="/fitness/workouts" element={<Fitness defaultTab="workouts" />} />
-        <Route path="/fitness/exercises" element={<Fitness defaultTab="exercises" />} />
-        <Route path="/fitness/templates" element={<Fitness defaultTab="templates" />} />
-        <Route path="/fitness/body" element={<Fitness defaultTab="body" />} />
-        <Route path="/fitness/nutrition" element={<Fitness defaultTab="nutrition" />} />
-        <Route path="/fitness/hydration" element={<Fitness defaultTab="hydration" />} />
-        <Route path="/fitness/sleep" element={<Fitness defaultTab="sleep" />} />
-        <Route path="/fitness/records" element={<Fitness defaultTab="records" />} />
-        <Route path="/fitness/streak" element={<Fitness defaultTab="streak" />} />
-        <Route path="/fitness/planner" element={<Fitness defaultTab="planner" />} />
-        <Route path="/fitness/supplements" element={<Fitness defaultTab="supplements" />} />
-        <Route path="/fitness/analytics" element={<Fitness defaultTab="analytics" />} />
+        <Route path="/fitness/:tab" element={<Fitness />} />
         <Route path="/insights" element={<Insights />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/pillars/movement" element={<Movement />} />
+        <Route path="/pillars/nutrition" element={<Nutrition />} />
+        <Route path="/pillars/recovery" element={<Recovery />} />
+        <Route path="/pillars/mindset" element={<Mindset />} />
+        <Route path="/pillars/social" element={<Social />} />
       </Routes>
     </AppShell>
   )

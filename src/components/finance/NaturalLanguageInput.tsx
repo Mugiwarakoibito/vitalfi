@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { parseNaturalLanguage } from '@/lib/nlpParser'
 import type { ParsedTransaction } from '@/types/finance'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
+import { useAppStore } from '@/store/useAppStore'
 
 interface NaturalLanguageInputProps {
   onParsed: (parsed: ParsedTransaction & { raw: string }) => void
@@ -12,6 +13,9 @@ interface NaturalLanguageInputProps {
 }
 
 export function NaturalLanguageInput({ onParsed, className }: NaturalLanguageInputProps) {
+  const { settings } = useAppStore()
+  const currency = settings?.currency || 'USD'
+  
   const [input, setInput] = useState('')
   const [isParsing, setIsParsing] = useState(false)
   const [preview, setPreview] = useState<(ParsedTransaction & { raw: string }) | null>(null)
@@ -25,20 +29,23 @@ export function NaturalLanguageInput({ onParsed, className }: NaturalLanguageInp
     // Simulate a brief parsing "intelligence" effect
     setTimeout(() => {
       const result = parseNaturalLanguage(input)
+      console.log('Parse result:', result)
       setPreview(result)
       setIsParsing(false)
     }, 400)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (preview && preview.amount > 0) {
-      onParsed(preview)
-      setInput('')
-      setPreview(null)
-      inputRef.current?.focus()
-    }
-  }
+   const handleSubmit = (e: React.FormEvent) => {
+     e.preventDefault()
+     if (preview && preview.amount > 0) {
+       // Ensure amount is positive for storage, type indicates direction
+       const transactionToAdd = { ...preview, amount: Math.abs(preview.amount) }
+       onParsed(transactionToAdd)
+       setInput('')
+       setPreview(null)
+       inputRef.current?.focus()
+     }
+   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -63,7 +70,7 @@ export function NaturalLanguageInput({ onParsed, className }: NaturalLanguageInp
       <form onSubmit={handleSubmit} className="relative">
         <Input
           ref={inputRef}
-          placeholder="Try: 'Coffee at Starbucks yesterday $12.50'"
+          placeholder={`Try: 'Coffee at Starbucks yesterday ${currency === 'MAD' ? 'MAD 12.50' : '$12.50'}'`}
           value={input}
           onChange={(e) => {
             setInput(e.target.value)
@@ -101,7 +108,8 @@ export function NaturalLanguageInput({ onParsed, className }: NaturalLanguageInp
               {Math.round(preview.confidence * 100)}% confidence
             </span>
           </div>
-          <div className="flex items-center justify-between">
+          
+          <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-white font-medium">{preview.description}</p>
               <p className="text-sm text-muted">
@@ -113,29 +121,69 @@ export function NaturalLanguageInput({ onParsed, className }: NaturalLanguageInp
                   : new Date(preview.date || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </p>
             </div>
-            <p className={`text-lg font-bold ${preview.type === 'income' ? 'text-emerald-400' : 'text-white'}`}>
-              {preview.type === 'income' ? '+' : ''}${preview.amount.toFixed(2)}
+            <p className={`text-lg font-bold ${
+              preview.type === 'income' ? 'text-emerald-400' : 
+              preview.type === 'transfer' ? 'text-blue-400' : 'text-red-400'
+            }`}>
+              {preview.type === 'income' ? '+' : preview.type === 'transfer' ? '→' : '-'}{formatCurrency(preview.amount, currency)}
             </p>
           </div>
-          <Button
-            size="sm"
-            variant="primary"
-            onClick={() => onParsed(preview)}
-            className="mt-3 w-full"
+
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={() => setPreview({ ...preview, type: 'expense' })}
+              className={`flex-1 py-1.5 px-3 rounded-lg text-sm font-medium transition-colors ${
+                preview.type === 'expense' 
+                  ? 'bg-red-500/20 text-red-400 border border-red-500/50' 
+                  : 'bg-white/5 text-muted border border-white/10 hover:bg-white/10'
+              }`}
+            >
+              Expense
+            </button>
+            <button
+              onClick={() => setPreview({ ...preview, type: 'income' })}
+              className={`flex-1 py-1.5 px-3 rounded-lg text-sm font-medium transition-colors ${
+                preview.type === 'income' 
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50' 
+                  : 'bg-white/5 text-muted border border-white/10 hover:bg-white/10'
+              }`}
+            >
+              Income
+            </button>
+            <button
+              onClick={() => setPreview({ ...preview, type: 'transfer' })}
+              className={`flex-1 py-1.5 px-3 rounded-lg text-sm font-medium transition-colors ${
+                preview.type === 'transfer' 
+                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50' 
+                  : 'bg-white/5 text-muted border border-white/10 hover:bg-white/10'
+              }`}
+            >
+              Transfer
+            </button>
+          </div>
+
+          <button
+            onClick={async () => {
+              await onParsed(preview)
+              setInput('')
+              setPreview(null)
+              window.location.reload()
+            }}
+            className="w-full py-2 rounded-lg bg-emerald-600 text-white text-sm font-bold"
           >
             Add Transaction
-          </Button>
+          </button>
         </div>
       )}
 
       {showTips && (
         <div className="text-xs text-muted space-y-1 glass-card p-3 rounded-lg">
           <p className="font-medium text-white/80">Try these patterns:</p>
-          <p>• &quot;Coffee at Starbucks yesterday $5.50&quot;</p>
-          <p>• &quot;Grocery run at Whole Foods $120&quot;</p>
-          <p>• &quot;Monthly salary deposit $4500&quot;</p>
-          <p>• &quot;Uber ride to airport $45.60&quot;</p>
-          <p>• &quot;Gym membership $29.99&quot;</p>
+          <p>• "Coffee at Starbucks yesterday {currency === 'MAD' ? 'MAD 50' : '$5.50'}"</p>
+          <p>• "Grocery run at Whole Foods {currency === 'MAD' ? 'MAD 1200' : '$120'}"</p>
+          <p>• "Monthly salary deposit {currency === 'MAD' ? 'MAD 45000' : '$4500'}"</p>
+          <p>• "Uber ride to airport {currency === 'MAD' ? 'MAD 450' : '$45.60'}"</p>
+          <p>• "Gym membership {currency === 'MAD' ? 'MAD 300' : '$29.99'}"</p>
         </div>
       )}
     </div>

@@ -60,8 +60,10 @@ export function RecentActivity({ items, currency }: RecentActivityProps) {
       </CardHeader>
       <CardContent className="space-y-1 max-h-[320px] overflow-auto scrollbar-thin">
         {items.map((item) => {
-          const Icon = iconMap[item.icon] || Activity
-          const colorClass = colorMap[item.color] || colorMap.primary
+          const iconKey = item.icon || 'Activity'
+          const colorKey = item.color || 'primary'
+          const Icon = iconMap[iconKey] || Activity
+          const colorClass = colorMap[colorKey] || colorMap.primary
           return (
             <div
               key={item.id}

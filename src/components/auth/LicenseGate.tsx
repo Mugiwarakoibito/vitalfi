@@ -1,151 +1,129 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Mail, CheckCircle } from 'lucide-react';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Card, CardContent } from '../ui/Card';
-import { activateLicense, getStoredLicense, isLicenseEmail } from '../../lib/license';
-import { useAppStore } from '../../store/useAppStore';
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useAppStore } from '@/store/useAppStore'
+import { ShieldCheck, Mail, ArrowRight, Loader2 } from 'lucide-react'
 
 export function LicenseGate({ children }: { children: React.ReactNode }) {
-  const [email, setEmail] = useState('');
-  const [licenseKey, setLicenseKey] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
-  const { isLicensed, setLicensed, setOnboarded } = useAppStore();
+  const { isLicensed, setLicensed, setUser } = useAppStore()
+  const [email, setEmail] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [checking, setChecking] = useState(true)
 
   useEffect(() => {
-    const checkLicense = async () => {
-      const stored = await getStoredLicense();
-      if (stored && stored.status === 'active') {
-        setLicensed(true);
-        setOnboarded(stored.email ? true : false);
-      }
-      setIsChecking(false);
-    };
-    checkLicense();
-  }, [setLicensed, setOnboarded]);
+    const savedEmail = localStorage.getItem('lifesync_license_email')
+    if (savedEmail) {
+      // Mock validation
+      setLicensed(true)
+      setUser({
+        email: savedEmail,
+        name: savedEmail.split('@')[0],
+      })
+    }
+    setChecking(false)
+  }, [setLicensed, setUser])
 
-  const handleActivate = () => {
-    setError('');
-    setSuccess('');
-
-    if (!email.trim()) {
-      setError('Please enter your email');
-      return;
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email.includes('@')) {
+      setError('Please enter a valid email associated with your purchase.')
+      return
     }
 
-    if (!isLicenseEmail(email)) {
-      setError('Please use a valid personal email address');
-      return;
-    }
+    setLoading(true)
+    setError('')
 
-    setIsLoading(true);
+    // Mock API delay
+    await new Promise(resolve => setTimeout(resolve, 1500))
 
-    setTimeout(() => {
-      const result = activateLicense(email);
-      if (result.success) {
-        setLicenseKey(result.licenseKey || '');
-        setSuccess('License activated! Your license key is shown below.');
-        setLicensed(true);
-      } else {
-        setError(result.error || 'Activation failed');
-      }
-      setIsLoading(false);
-    }, 500);
-  };
-
-  if (isChecking) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-purple-950 to-gray-950 flex items-center justify-center">
-        <div className="glass-card p-8 text-center">
-          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
-        </div>
-      </div>
-    );
+    // For this demo, any email works, but in production this would hit a validation endpoint
+    localStorage.setItem('lifesync_license_email', email)
+    setLicensed(true)
+    setUser({
+      email: email,
+      name: email.split('@')[0],
+    })
+    setLoading(false)
   }
 
-  if (isLicensed) {
-    return <>{children}</>;
-  }
+  if (checking) return null
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-purple-950 to-gray-950 flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
-      >
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold gradient-text mb-2">VitalFi</h1>
-          <p className="text-gray-400">Financial, Fitness & Health Intelligence</p>
-        </div>
+    <AnimatePresence mode="wait">
+      {!isLicensed ? (
+        <motion.div
+          key="gate"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[100] bg-[#030507] flex items-center justify-center p-6"
+        >
+          {/* Aurora Background */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-purple-600/20 blur-[120px]" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-cyan-600/20 blur-[120px]" />
+          </div>
 
-        <Card className="backdrop-blur-xl bg-gray-900/50 border border-gray-700/50">
-          <CardContent className="p-6">
-            <h2 className="text-xl font-semibold text-white mb-4 text-center">Welcome to VitalFi</h2>
-
-            {!licenseKey ? (
-              <>
-                <p className="text-sm text-gray-400 mb-4 text-center">
-                  Enter your email to unlock premium access and start optimizing your financial and fitness journey.
-                </p>
-
-                <div className="space-y-4">
-                  <Input
-                    label="Email Address"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    icon={<Mail className="w-4 h-4" />}
-                    error={error}
-                  />
-
-                  <Button
-                    variant="primary"
-                    className="w-full"
-                    onClick={handleActivate}
-                    isLoading={isLoading}
-                  >
-                    Unlock Premium Access
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-4">
-                  <div className="flex items-center gap-2 text-green-400 mb-2">
-                    <CheckCircle className="w-5 h-5" />
-                    <span className="font-medium">{success}</span>
-                  </div>
-                  <div className="bg-gray-950 rounded p-3 font-mono text-sm text-green-300 break-all">
-                    {licenseKey}
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            className="w-full max-w-md relative z-10"
+          >
+            <div className="glass-card p-10 space-y-8 border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-purple-500 to-cyan-500 p-[2px]">
+                  <div className="h-full w-full rounded-2xl bg-slate-950 flex items-center justify-center shadow-inner">
+                    <ShieldCheck className="h-8 w-8 text-white" />
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-black tracking-tight text-white">LifeSync <span className="gradient-text">Pro</span></h1>
+                  <p className="text-slate-400 text-sm font-medium">Master Your Health & Wealth</p>
+                </div>
+              </div>
 
-                <p className="text-sm text-gray-400 mb-4">
-                  Save this license key - you'll need it to restore your license on other devices.
-                </p>
+              <form onSubmit={handleLogin} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Email Address</label>
+                  <div className="relative group">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="alex@example.com"
+                      className="w-full bg-slate-900/50 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-white placeholder:text-slate-700 focus:outline-none focus:border-cyan-500/50 focus:ring-4 focus:ring-cyan-500/10 transition-all font-medium"
+                      required
+                    />
+                  </div>
+                  {error && <p className="text-rose-500 text-[10px] font-bold uppercase ml-1">{error}</p>}
+                </div>
 
-                <Button
-                  variant="primary"
-                  className="w-full"
-                  onClick={() => setOnboarded(true)}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-14 gradient-brand rounded-2xl font-black uppercase tracking-[0.2em] text-[12px] text-white shadow-[0_10px_30px_rgba(108,92,231,0.3)] hover:shadow-[0_15px_40px_rgba(108,92,231,0.5)] active:scale-[0.98] transition-all flex items-center justify-center gap-3 group"
                 >
-                  Continue to App
-                </Button>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                  {loading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <>
+                      Unlock Portal
+                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+              </form>
 
-        <p className="text-center text-gray-500 text-xs mt-4">
-          Your data is stored locally. We never collect your information.
-        </p>
-      </motion.div>
-    </div>
-  );
+              <div className="pt-6 border-t border-white/5 flex flex-col items-center space-y-4">
+                <p className="text-[10px] text-slate-600 font-bold uppercase tracking-tighter">The Ultimate Health & Wealth System</p>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      ) : (
+        children
+      )}
+    </AnimatePresence>
+  )
 }

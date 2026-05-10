@@ -27,7 +27,7 @@ interface AccountFormProps {
 
 export function AccountForm({ isOpen, onClose, onSave, account }: AccountFormProps) {
   const [name, setName] = useState(account?.name || '')
-  const [balance, setBalance] = useState(account?.balance.toString() || '0')
+  const [balance, setBalance] = useState(account?.balance.toString() || '')
   const [type, setType] = useState<Account['type']>(account?.type || 'checking')
   const [color, setColor] = useState(account?.color || ACCOUNT_COLORS[0])
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -61,13 +61,15 @@ export function AccountForm({ isOpen, onClose, onSave, account }: AccountFormPro
     onClose()
   }
 
-  const resetForm = () => {
-    setName('')
-    setBalance('0')
-    setType('checking')
-    setColor(ACCOUNT_COLORS[0])
-    setErrors({})
-  }
+   const resetForm = () => {
+     setName('')
+     setBalance('')
+     setType('checking')
+     setColor(ACCOUNT_COLORS[0])
+     setErrors({})
+   }
+
+  const accountExamples = ['Chase Checking', 'Bank of America Savings', 'Chase Sapphire Card', 'Fidelity Investment', 'Cash Wallet']
 
   return (
     <Modal
@@ -79,7 +81,7 @@ export function AccountForm({ isOpen, onClose, onSave, account }: AccountFormPro
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           label="Account Name"
-          placeholder="e.g. Chase Checking"
+          placeholder={accountExamples[Math.floor(Math.random() * accountExamples.length)]}
           value={name}
           onChange={(e) => setName(e.target.value)}
           error={errors.name}

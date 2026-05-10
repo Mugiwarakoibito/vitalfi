@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Target } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/Card'
+import { Target, Plus } from 'lucide-react'
+import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
@@ -66,35 +66,34 @@ export function BudgetDashboard() {
   return (
     <div className="space-y-5">
       {/* Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card className="sm:col-span-2">
-          <CardContent className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted">Total Budgeted</p>
-              <p className="text-2xl font-bold text-white mt-1">
-                {formatCurrency(totalBudgeted, settings.currency || 'USD')}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-muted">Total Spent</p>
-              <p className="text-2xl font-bold text-white mt-1">
-                {formatCurrency(totalSpent, settings.currency || 'USD')}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-muted">Remaining</p>
-              <p className="text-2xl font-bold text-emerald-400 mt-1">
-                {formatCurrency(Math.max(0, totalBudgeted - totalSpent), settings.currency || 'USD')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="flex items-center justify-center py-6">
-          <Button variant="primary" size="sm" onClick={() => setShowForm(true)}>
-            <Plus size={16} className="mr-1.5" />
-            New Budget
-          </Button>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <p className="text-xs text-purple-400/80 text-center">Total Budgeted</p>
+            <p className="text-3xl font-bold text-white text-center mt-1">
+              {formatCurrency(totalBudgeted, settings.currency || 'USD')}
+            </p>
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-gradient-to-br from-red-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <p className="text-xs text-red-400/80 text-center">Total Spent</p>
+            <p className="text-3xl font-bold text-red-400 text-center mt-1">
+              {formatCurrency(totalSpent, settings.currency || 'USD')}
+            </p>
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <p className="text-xs text-emerald-400/80 text-center">Remaining</p>
+            <p className="text-3xl font-bold text-emerald-400 text-center mt-1">
+              {formatCurrency(Math.max(0, totalBudgeted - totalSpent), settings.currency || 'USD')}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Budgets Grid */}
@@ -109,6 +108,15 @@ export function BudgetDashboard() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div 
+            className="rounded-2xl border border-dashed border-white/20 bg-white/[0.02] p-5 flex flex-col items-center justify-center cursor-pointer hover:bg-white/[0.05] transition-all min-h-[140px]"
+            onClick={() => setShowForm(true)}
+          >
+            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
+              <Plus className="w-6 h-6 text-gray-400" />
+            </div>
+            <p className="text-sm text-gray-400">Add Budget</p>
+          </div>
           {computedBudgets.map((budget) => (
             <BudgetEnvelope
               key={budget.id}
@@ -220,12 +228,14 @@ function BudgetForm({
     onClose()
   }
 
+  const budgetExamples = ['Food & Dining', 'Transportation', 'Entertainment', 'Shopping', 'Utilities', 'Healthcare', 'Travel', 'Subscriptions']
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={budget ? 'Edit Budget' : 'New Budget'} className="max-w-md">
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           label="Budget Name"
-          placeholder="e.g. Food Budget"
+          placeholder={budgetExamples[Math.floor(Math.random() * budgetExamples.length)]}
           value={name}
           onChange={(e) => setName(e.target.value)}
           error={errors.name}

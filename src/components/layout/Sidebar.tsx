@@ -1,160 +1,290 @@
-import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
-  Wallet,
-  CreditCard,
-  PiggyBank,
-  TrendingUp,
-  Calendar,
-  RefreshCw,
   Dumbbell,
-  BookOpen,
-  Layers,
-  Activity,
   Utensils,
-  Droplets,
   Moon,
+  Droplets,
   Settings,
   ShieldCheck,
-  Trophy,
-  Flame,
-  Pill,
   BarChart3,
+  Wallet,
+  Zap,
+  TrendingUp,
+  Target,
+  Calendar,
+  Flame,
+  Activity,
+  Trophy,
+  BookOpen,
+  Coffee,
+  Scissors,
+  Skull,
+  Gem,
+  Download,
+  Upload
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useAppStore } from '@/store/useAppStore'
-
-const financialItems = [
-  { label: 'Accounts', path: '/finance/accounts', icon: Wallet },
-  { label: 'Transactions', path: '/finance/transactions', icon: CreditCard },
-  { label: 'Budgets', path: '/finance/budgets', icon: PiggyBank },
-  { label: 'Investments', path: '/finance/investments', icon: TrendingUp },
-  { label: 'Bills', path: '/finance/bills', icon: Calendar },
-  { label: 'Subscriptions', path: '/finance/subscriptions', icon: RefreshCw },
-  { label: 'Debts', path: '/finance/debts', icon: CreditCard },
-]
-
-const healthItems = [
-  { label: 'Workouts', path: '/fitness/workouts', icon: Dumbbell },
-  { label: 'Exercises', path: '/fitness/exercises', icon: BookOpen },
-  { label: 'Templates', path: '/fitness/templates', icon: Layers },
-  { label: 'Body Metrics', path: '/fitness/body', icon: Activity },
-  { label: 'Nutrition', path: '/fitness/nutrition', icon: Utensils },
-  { label: 'Hydration', path: '/fitness/hydration', icon: Droplets },
-  { label: 'Sleep', path: '/fitness/sleep', icon: Moon },
-  { label: 'PRs', path: '/fitness/records', icon: Trophy },
-  { label: 'Streak', path: '/fitness/streak', icon: Flame },
-  { label: 'Meal Planner', path: '/fitness/planner', icon: Calendar },
-  { label: 'Supplements', path: '/fitness/supplements', icon: Pill },
-  { label: 'Analytics', path: '/fitness/analytics', icon: BarChart3 },
-]
+import { cn } from '@/lib/utils'
 
 export function Sidebar() {
   const location = useLocation()
-  const { settings, updateSettings } = useAppStore()
-  const primaryGate = settings.primaryGate || 'financial'
-  const isFinancial = primaryGate === 'financial'
+  const { appMode, exportData, importData } = useAppStore()
 
-  const navItems = isFinancial ? financialItems : healthItems
+  const handleExport = async () => {
+    try {
+      const data = await exportData()
+      const blob = new Blob([data], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `lifesync-backup-${new Date().toISOString().split('T')[0]}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Export failed', e)
+    }
+  }
 
-  const handleSwitchGate = async () => {
-    const newGate = isFinancial ? 'health' : 'financial'
-    await updateSettings({ primaryGate: newGate })
-    window.location.reload()
+  const handleImport = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        const reader = new FileReader()
+        reader.onload = async (ev) => {
+          const content = ev.target?.result as string
+          try {
+            await importData(content)
+          } catch (err) {
+            console.error('Import failed', err)
+          }
+        }
+        reader.readAsText(file)
+      }
+    }
+    input.click()
+  }
+
+  const financeGroups = [
+    {
+      title: 'MoneyFlow Core',
+      items: [
+        { label: 'Transaction Hub', path: '/finance?tab=transactions', icon: Wallet, color: 'text-emerald-400', shortcut: 'T' },
+        { label: 'Budget Command', path: '/finance?tab=budgets', icon: Target, color: 'text-cyan-400' },
+        { label: 'Wealth Vault', path: '/finance?tab=wealth', icon: Gem, color: 'text-amber-400' },
+        { label: 'Bill Center', path: '/finance?tab=bills', icon: Calendar, color: 'text-rose-400' },
+      ]
+    },
+    {
+      title: 'Power Tools',
+      items: [
+        { label: 'Sub Assassin', path: '/finance?tab=subscriptions', icon: Scissors, color: 'text-purple-400' },
+        { label: 'Debt Destroyer', path: '/finance?tab=debts', icon: Skull, color: 'text-rose-500' },
+        { label: 'Investment Hub', path: '/finance?tab=investments', icon: TrendingUp, color: 'text-cyan-400' },
+        { label: 'Financial Calendar', path: '/finance?tab=calendar', icon: Calendar, color: 'text-amber-400' },
+      ]
+    }
+  ]
+
+  const fitnessGroups = [
+    {
+      title: 'BodyForge Core',
+      items: [
+        { label: 'Workout Logger', path: '/fitness?tab=workouts', icon: Dumbbell, color: 'text-orange-400', shortcut: 'W' },
+        { label: 'Body Metrics', path: '/fitness?tab=body', icon: Activity, color: 'text-lime-400' },
+        { label: 'Nutrition Hub', path: '/fitness?tab=nutrition', icon: Utensils, color: 'text-purple-400' },
+        { label: 'Hydration Station', path: '/fitness?tab=hydration', icon: Droplets, color: 'text-blue-400' },
+        { label: 'Sleep Sanctuary', path: '/fitness?tab=sleep', icon: Moon, color: 'text-indigo-400' },
+      ]
+    },
+    {
+      title: 'Performance',
+      items: [
+        { label: 'Exercise Library', path: '/fitness?tab=exercises', icon: BookOpen, color: 'text-amber-400' },
+        { label: 'PR Hall of Fame', path: '/fitness?tab=records', icon: Trophy, color: 'text-yellow-400' },
+        { label: 'Streak Engine', path: '/fitness?tab=streak', icon: Flame, color: 'text-orange-500' },
+        { label: 'Supplement Center', path: '/fitness?tab=supplements', icon: Coffee, color: 'text-cyan-400' },
+      ]
+    }
+  ]
+
+  const mainItems = [
+    { label: 'Dashboard', path: '/', icon: LayoutDashboard, shortcut: 'D', color: appMode === 'finance' ? 'text-cyan-400' : 'text-purple-400' },
+    { label: 'Intelligence', path: '/insights', icon: BarChart3, shortcut: 'I', color: appMode === 'finance' ? 'text-emerald-400' : 'text-indigo-400' },
+  ]
+
+  const modeGroups = appMode === 'finance' ? financeGroups : fitnessGroups
+
+  // Check if a nav path matches the current location (handles ?tab= query params)
+  const isActive = (path: string) => {
+    const qIdx = path.indexOf('?')
+    if (qIdx === -1) {
+      // Exact path match, no query
+      return location.pathname === path && !location.search
+    }
+    const pathname = path.slice(0, qIdx)
+    const search = path.slice(qIdx + 1)
+    if (pathname !== location.pathname) return false
+    const expected = new URLSearchParams(search)
+    const current = new URLSearchParams(location.search)
+    for (const [key, val] of expected.entries()) {
+      if (current.get(key) !== val) return false
+    }
+    return true
+  }
+
+  // Get active group title based on current location
+  const getActiveGroupTitle = () => {
+    for (const group of modeGroups) {
+      for (const item of group.items) {
+        if (isActive(item.path)) {
+          return group.title
+        }
+      }
+    }
+    return modeGroups[0]?.title || ''
+  }
+
+  const activeGroupTitle = getActiveGroupTitle()
+
+  const NavItem = ({ label, path, icon: Icon, color, shortcut }: any) => {
+    const active = isActive(path)
+    return (
+      <Link
+        to={path}
+        className={cn(
+          'group flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-bold transition-all duration-300',
+          active
+            ? 'bg-white/5 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] border border-white/5'
+            : 'text-slate-500 hover:bg-white/[0.02] hover:text-slate-300'
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <Icon size={18} className={cn('transition-all duration-500', active ? color : 'opacity-50 group-hover:opacity-100 group-hover:text-slate-400')} />
+          <span className={cn('transition-colors', active ? 'text-white' : 'text-slate-500 group-hover:text-slate-300')}>{label}</span>
+        </div>
+        {shortcut && (
+          <span className="text-[10px] font-mono text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity">
+            {shortcut}
+          </span>
+        )}
+      </Link>
+    )
   }
 
   return (
-    <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 flex-col border-r border-white/[0.06] bg-background-secondary/80 backdrop-blur-xl md:flex">
-      <div className="flex items-center gap-3 px-6 py-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/20">
-          <ShieldCheck className="h-5 w-5 text-primary-light" />
+    <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 flex-col border-r border-white/5 bg-black/80 backdrop-blur-3xl md:flex">
+      {/* Logo */}
+      <div className="flex items-center gap-3 px-6 py-8 flex-shrink-0">
+        <div className={cn(
+          'flex h-10 w-10 items-center justify-center rounded-xl border shadow-lg transition-colors duration-500',
+          appMode === 'finance'
+            ? 'bg-cyan-500/10 border-cyan-500/20 shadow-cyan-500/10'
+            : 'bg-purple-500/10 border-purple-500/20 shadow-purple-500/10'
+        )}>
+          <ShieldCheck className={cn('h-6 w-6 transition-colors duration-500', appMode === 'finance' ? 'text-cyan-400' : 'text-purple-400')} />
         </div>
-        <span className="text-lg font-bold gradient-text">VitalFi</span>
+        <div className="flex flex-col">
+          <span className="text-xl font-black tracking-tight text-white">LifeSync <span className="gradient-text">Pro</span></span>
+          <span className="text-[10px] font-bold text-slate-600 uppercase tracking-[0.2em]">{appMode === 'finance' ? 'Financial Hub' : 'LifeHub'}</span>
+        </div>
       </div>
 
-      <div className="px-3 py-2">
-        <button
-          onClick={handleSwitchGate}
-          className="group relative flex items-center justify-center gap-2 w-full py-2 px-3 rounded-lg backdrop-blur-md bg-gray-800/40 border border-gray-700/30 hover:border-purple-400/50 hover:scale-[1.01] transition-all duration-200"
-        >
-          {isFinancial ? (
-            <>
-              <span className="relative z-10 text-lg">💪</span>
-              <span className="relative z-10 text-white text-sm font-medium">Health & Fitness</span>
-              <span className="relative z-10 text-[10px] text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full font-semibold">
-                Switch
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="relative z-10 text-lg">💰</span>
-              <span className="relative z-10 text-white text-sm font-medium">Financial</span>
-              <span className="relative z-10 text-[10px] text-green-300 bg-green-500/20 px-2 py-0.5 rounded-full font-semibold">
-                Switch
-              </span>
-            </>
-          )}
-        </button>
-        <p className="text-[10px] text-gray-500 text-center mt-1.5">
-          Tap to switch between trackers
-        </p>
-      </div>
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto px-4 pb-4 space-y-6 scrollbar-none">
+        {/* Main */}
+        <div className="space-y-1">
+          <h3 className="px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Main</h3>
+          {mainItems.map(item => <NavItem key={item.label} {...item} />)}
+        </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-2">
-        <Link
-          to="/"
-          className={cn(
-            'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200',
-            location.pathname === '/'
-              ? 'bg-primary/15 text-primary-light'
-              : 'text-muted hover:bg-white/[0.04] hover:text-white'
-          )}
-        >
-          <LayoutDashboard size={18} />
-          Dashboard
-        </Link>
+        {/* Mode-specific groups - show both titles */}
+        {modeGroups.map(group => (
+          <div key={group.title} className="space-y-1">
+            <h3 className="px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
+              {group.title === activeGroupTitle ? activeGroupTitle : group.title}
+            </h3>
+            {group.items.map(item => <NavItem key={item.label} {...item} />)}
+          </div>
+        ))}
+      </nav>
 
-        {navItems.map((item) => {
-          const Icon = item.icon
-          const isActive = location.pathname === item.path || location.pathname.includes(item.path)
-          return (
-            <Link
-              key={item.label}
-              to={item.path}
-              className={cn(
-                'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200',
-                isActive
-                  ? 'bg-primary/15 text-primary-light'
-                  : 'text-muted hover:bg-white/[0.04] hover:text-white'
-              )}
-            >
-              <Icon size={18} />
-              {item.label}
-            </Link>
-          )
-        })}
+      {/* Footer */}
+      <div className="p-4 space-y-3 flex-shrink-0">
+        {/* Sync status */}
+        <div className={cn(
+          'neon-card p-4 space-y-3 relative overflow-hidden group border-white/5',
+          appMode === 'finance' ? 'neon-border-cyan' : 'neon-border-purple'
+        )}>
+          <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Zap size={40} className={appMode === 'finance' ? 'text-cyan-400' : 'text-purple-400'} />
+          </div>
+          <p className={cn('text-[10px] font-black uppercase tracking-widest', appMode === 'finance' ? 'text-cyan-400' : 'text-purple-400')}>
+            Sync Active
+          </p>
+          <div className="space-y-1">
+            <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: '92%' }}
+                transition={{ duration: 1.5 }}
+                className={cn(
+                  'h-full rounded-full',
+                  appMode === 'finance' ? 'bg-cyan-500 shadow-[0_0_10px_rgba(34,211,238,0.3)]' : 'bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.3)]'
+                )}
+              />
+            </div>
+            <p className="text-[10px] text-slate-600 font-bold flex justify-between">
+              <span>Local Storage</span>
+              <span>Secured</span>
+            </p>
+          </div>
+        </div>
 
-        <div className="pt-4 mt-4 border-t border-white/[0.06]">
+        {/* Data actions */}
+        <div className="flex gap-2">
+          <button
+            onClick={handleExport}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border',
+              appMode === 'finance'
+                ? 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border-cyan-500/20'
+                : 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border-purple-500/20'
+            )}
+          >
+            <Download size={12} /> Export
+          </button>
+          <button
+            onClick={handleImport}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20"
+          >
+            <Upload size={12} /> Import
+          </button>
+        </div>
+
+        {/* Settings */}
+        <div className="border-t border-white/5 pt-2">
           <Link
             to="/settings"
             className={cn(
-              'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
+              'flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-all duration-300',
               location.pathname === '/settings'
-                ? 'bg-primary/15 text-primary-light'
-                : 'text-muted hover:bg-white/[0.04] hover:text-white'
+                ? 'bg-white/5 text-white'
+                : 'text-slate-500 hover:bg-white/[0.02] hover:text-slate-300'
             )}
           >
-            <Settings size={18} />
+            <Settings
+              size={18}
+              className={location.pathname === '/settings'
+                ? (appMode === 'finance' ? 'text-cyan-400' : 'text-purple-400')
+                : 'opacity-50'}
+            />
             Settings
           </Link>
-        </div>
-      </nav>
-
-      <div className="border-t border-white/[0.06] px-5 py-4">
-        <div className="glass-card p-3">
-          <p className="text-xs text-muted">
-            {isFinancial ? '💰 Financial Tracker' : '💪 Health & Fitness Tracker'}
-          </p>
         </div>
       </div>
     </aside>

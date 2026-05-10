@@ -4,10 +4,9 @@ import { Button } from '@/components/ui/Button'
 
 interface FinanceEmptyStateProps {
   onAddAccount?: () => void
-  onAddTransaction?: () => void
 }
 
-export function FinanceEmptyState({ onAddAccount, onAddTransaction }: FinanceEmptyStateProps) {
+export function FinanceEmptyState({ onAddAccount }: FinanceEmptyStateProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -29,11 +28,6 @@ export function FinanceEmptyState({ onAddAccount, onAddTransaction }: FinanceEmp
         <Button variant="primary" size="sm" onClick={onAddAccount}>
           <Plus size={16} /> Add Account
         </Button>
-        {onAddTransaction && (
-          <Button variant="ghost" size="sm" onClick={onAddTransaction}>
-            Add Transaction
-          </Button>
-        )}
       </div>
     </motion.div>
   )

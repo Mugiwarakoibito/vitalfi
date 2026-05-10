@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -10,8 +10,6 @@ import type { WorkoutTemplate, TemplateExercise } from '@/types/fitness'
 import { Plus, Trash2, Save, Copy, Dumbbell, Flame, Wind, StretchHorizontal } from 'lucide-react'
 
 interface WorkoutTemplateManagerProps {
-  templates: WorkoutTemplate[]
-  onTemplatesChange: () => void
   onUseTemplate?: (template: WorkoutTemplate) => void
 }
 
@@ -22,8 +20,17 @@ const typeConfig = {
   flexibility: { icon: <StretchHorizontal size={12} />, color: 'text-emerald-400', bg: 'bg-emerald-500/15' },
 }
 
-export function WorkoutTemplateManager({ templates, onTemplatesChange, onUseTemplate }: WorkoutTemplateManagerProps) {
+export function WorkoutTemplateManager({ onUseTemplate }: WorkoutTemplateManagerProps) {
+  const [templates, setTemplates] = useState<WorkoutTemplate[]>([])
   const [showForm, setShowForm] = useState(false)
+
+  useEffect(() => {
+    const loadTemplates = async () => {
+      const stored = await storage.getAll('workoutTemplates') as WorkoutTemplate[]
+      setTemplates(stored)
+    }
+    loadTemplates()
+  }, [])
   const [name, setName] = useState('')
   const [type, setType] = useState<WorkoutTemplate['type']>('strength')
   const [exercises, setExercises] = useState<TemplateExercise[]>([])
@@ -64,14 +71,14 @@ export function WorkoutTemplateManager({ templates, onTemplatesChange, onUseTemp
       updatedAt: new Date().toISOString(),
     }
     await storage.put('workoutTemplates', template)
+    setTemplates((prev) => [...prev, template])
     reset()
     setShowForm(false)
-    onTemplatesChange()
   }
 
   const handleDelete = async (id: string) => {
     await storage.delete('workoutTemplates', id)
-    onTemplatesChange()
+    setTemplates((prev) => prev.filter((t) => t.id !== id))
   }
 
   const filtered = searchQuery.trim()

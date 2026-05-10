@@ -3,9 +3,9 @@ import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import type { Transaction as DBTransaction } from '@/lib/storage'
-import { storage } from '@/lib/storage'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/lib/categories'
 import { generateId } from '@/lib/utils'
+import { useAppStore } from '@/store/useAppStore'
 
 interface TransactionFormProps {
   isOpen: boolean
@@ -25,6 +25,7 @@ export function TransactionForm({ isOpen, onClose, onSave, accounts, transaction
   const [date, setDate] = useState('')
   const [toAccountId, setToAccountId] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const { addTransaction } = useAppStore()
 
   useEffect(() => {
     setCategory('')
@@ -66,7 +67,6 @@ export function TransactionForm({ isOpen, onClose, onSave, accounts, transaction
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
-    if (!description.trim()) newErrors.description = 'Description is required'
     if (!amount || isNaN(parseFloat(amount))) newErrors.amount = 'Valid amount required'
     if (!accountId) newErrors.accountId = 'Select an account'
     if (type === 'transfer' && !toAccountId) newErrors.toAccountId = 'Select destination account'
@@ -85,52 +85,56 @@ export function TransactionForm({ isOpen, onClose, onSave, accounts, transaction
       const now = new Date().toISOString()
       const id = transaction?.id || generateId()
       
-      const txn1: DBTransaction = {
-        id,
-        description: description.trim(),
-        amount: parseFloat(amount),
-        type: 'expense',
-        category: 'Transfer Out',
-        accountId,
-        date,
-        createdAt: transaction?.createdAt || now,
-        updatedAt: now,
-      }
+       const txn: DBTransaction = {
+         id,
+         description: description.trim() || 'Transfer',
+         amount: Math.abs(parseFloat(amount)),
+         type: 'transfer',
+         category: 'Transfer',
+         accountId,
+         toAccountId,
+         date,
+         createdAt: transaction?.createdAt || now,
+         updatedAt: now,
+       }
       
-      const txn2: DBTransaction = {
-        id: `${id}-to`,
-        description: description.trim(),
-        amount: parseFloat(amount),
-        type: 'income',
-        category: 'Transfer In',
-        accountId: toAccountId,
-        date,
-        createdAt: transaction?.createdAt || now,
-        updatedAt: now,
-      }
-
-      await storage.put('transactions', txn1)
-      await storage.put('transactions', txn2)
-      onSave([txn1, txn2])
+      await addTransaction(txn)
+      onSave(txn)
     } else {
-      const txn: DBTransaction = {
-        id: transaction?.id || generateId(),
-        description: description.trim(),
-        amount: parseFloat(amount),
-        type: type as 'income' | 'expense',
-        category,
-        accountId,
-        date,
-        createdAt: transaction?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
+       const txn: DBTransaction = {
+         id: transaction?.id || generateId(),
+         description: description.trim() || category || 'Transaction',
+         amount: Math.abs(parseFloat(amount)),
+         type: type as 'income' | 'expense',
+         category,
+         accountId,
+         date,
+         createdAt: transaction?.createdAt || new Date().toISOString(),
+         updatedAt: new Date().toISOString(),
+       }
 
-      await storage.put('transactions', txn)
+      await addTransaction(txn)
       onSave(txn)
     }
     resetForm()
     onClose()
   }
+
+  const expenseExamples = ['Grocery shopping', 'Coffee at cafe', 'Gas station', 'Netflix subscription', 'Electric bill', 'Restaurant dinner']
+  const incomeExamples = ['Monthly salary', 'Freelance payment', 'Bonus', 'Dividend income', 'Refund', 'Gift money']
+  const transferExamples = ['Transfer to savings', 'Move to checking', 'Pay credit card', 'Send to family', 'Split bills']
+
+  const getPlaceholder = () => {
+    if (type === 'expense') return expenseExamples[Math.floor(Math.random() * expenseExamples.length)]
+    if (type === 'income') return incomeExamples[Math.floor(Math.random() * incomeExamples.length)]
+    return transferExamples[Math.floor(Math.random() * transferExamples.length)]
+  }
+
+  const [placeholder, setPlaceholder] = useState(getPlaceholder())
+
+  useEffect(() => {
+    setPlaceholder(getPlaceholder())
+  }, [type])
 
   return (
     <Modal
@@ -163,7 +167,7 @@ export function TransactionForm({ isOpen, onClose, onSave, accounts, transaction
 
         <Input
           label="Description"
-          placeholder="e.g. Grocery shopping"
+          placeholder={placeholder}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           error={errors.description}

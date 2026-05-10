@@ -1,8 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import type { CommandAction } from '@/hooks/useCommandPalette'
-import { Command as CompCommand } from 'lucide-react'
+import { Command as CompCommand, Sparkles, Plus } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
+import { parseActivityNLP } from '@/lib/nlp-activity'
+import { useAppStore } from '@/store/useAppStore'
 
 interface CommandPaletteProps {
   actions: CommandAction[]
@@ -26,20 +28,24 @@ export function CommandPalette({
   setIsOpen,
 }: CommandPaletteProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const executeActivity = useAppStore(state => state.executeActivity)
+
+  const nlpResult = useMemo(() => {
+    if (!query || query.length < 3) return null
+    const result = parseActivityNLP(query)
+    return result.confidence > 0.6 ? result : null
+  }, [query])
+
+  const handleExecuteNLP = async () => {
+    if (nlpResult) {
+      await executeActivity(nlpResult)
+      setIsOpen(false)
+      setQuery('')
+    }
+  }
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setIsOpen(true)
-      }
-      if (e.key === 'Escape') {
-        setIsOpen(false)
-        setQuery('')
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    // ... rest of useEffect
   }, [setIsOpen, setQuery])
 
   useEffect(() => {
@@ -51,13 +57,20 @@ export function CommandPalette({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setSelectedIndex((selectedIndex + 1) % filtered.length)
+      const total = filtered.length + (nlpResult ? 1 : 0)
+      setSelectedIndex((selectedIndex + 1) % total)
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      setSelectedIndex((selectedIndex - 1 + filtered.length) % filtered.length)
+      const total = filtered.length + (nlpResult ? 1 : 0)
+      setSelectedIndex((selectedIndex - 1 + total) % total)
     } else if (e.key === 'Enter') {
       e.preventDefault()
-      const action = filtered[selectedIndex]
+      if (nlpResult && selectedIndex === 0) {
+        handleExecuteNLP()
+        return
+      }
+      
+      const action = filtered[nlpResult ? selectedIndex - 1 : selectedIndex]
       if (action) {
         setIsOpen(false)
         setQuery('')
@@ -76,33 +89,67 @@ export function CommandPalette({
 
   return (
     <Modal isOpen={isOpen} onClose={() => { setIsOpen(false); setQuery('') }} className="!p-0 !max-w-lg">
-      <div className="p-3 border-b border-white/[0.06]">
-        <div className="flex items-center gap-2 text-muted">
-          <CompCommand size={16} />
+      <div className="p-4 border-b border-white/5">
+        <div className="flex items-center gap-3">
+          <CompCommand size={20} className="text-indigo-400" />
           <input
             ref={inputRef}
-            className="flex-1 bg-transparent text-white text-sm outline-none placeholder-muted-dark"
-            placeholder="Search commands..."
+            className="flex-1 bg-transparent text-white text-base outline-none placeholder-slate-500 font-outfit"
+            placeholder="Search commands or type to log (e.g. 'Morning run 5k')"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+                setQuery(e.target.value)
+                setSelectedIndex(0)
+            }}
             onKeyDown={handleKeyDown}
           />
-          <span className="text-[10px] bg-white/[0.06] px-1.5 py-0.5 rounded text-muted hidden sm:inline">
+          <kbd className="text-[10px] bg-white/5 px-2 py-1 rounded-md text-slate-500 font-mono">
             ESC
-          </span>
+          </kbd>
         </div>
       </div>
-      <div className="max-h-[320px] overflow-auto scrollbar-thin p-2">
-        {filtered.length === 0 && (
-          <p className="text-center text-sm text-muted py-6">No results found.</p>
+      
+      <div className="max-h-[400px] overflow-auto scrollbar-none p-2 space-y-4">
+        {nlpResult && (
+          <div className="px-2">
+            <button
+              onClick={handleExecuteNLP}
+              onMouseEnter={() => setSelectedIndex(0)}
+              className={cn(
+                'w-full flex items-center justify-between rounded-xl px-4 py-3 text-left transition-all duration-300',
+                selectedIndex === 0
+                  ? 'bg-indigo-500/10 text-indigo-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] border border-indigo-500/20'
+                  : 'text-slate-400 border border-transparent'
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-lg bg-indigo-500/20">
+                  <Sparkles size={16} className="text-indigo-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-indigo-400/80">Smart Log</p>
+                  <p className="text-sm font-medium text-white">Log {nlpResult.type}: {nlpResult.name}</p>
+                </div>
+              </div>
+              <Plus size={18} className="opacity-50" />
+            </button>
+          </div>
         )}
+
+        {filtered.length === 0 && !nlpResult && (
+          <div className="text-center py-12">
+            <p className="text-sm text-slate-500">No matching commands.</p>
+          </div>
+        )}
+
         {categories.map((cat) => (
-          <div key={cat} className="mb-2">
-            <p className="text-[10px] text-muted uppercase tracking-wider px-2 mb-1">
+          <div key={cat} className="space-y-1">
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] px-4 py-2">
               {cat}
             </p>
             {byCategory[cat].map((action, index) => {
-              const flatIndex = categories
+              const baseIndex = nlpResult ? 1 : 0
+              const flatIndex = baseIndex + categories
                 .slice(0, categories.indexOf(cat))
                 .reduce((sum, c) => sum + byCategory[c].length, 0) + index
               const isSelected = flatIndex === selectedIndex
@@ -116,15 +163,18 @@ export function CommandPalette({
                   }}
                   onMouseEnter={() => setSelectedIndex(flatIndex)}
                   className={cn(
-                    'w-full flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors',
+                    'w-full flex items-center justify-between rounded-xl px-4 py-2.5 text-left text-sm transition-all duration-300',
                     isSelected
-                      ? 'bg-primary/15 text-primary-light'
-                      : 'text-white hover:bg-white/[0.04]'
+                      ? 'bg-white/5 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]'
+                      : 'text-slate-400 hover:text-slate-200'
                   )}
                 >
-                  <span>{action.title}</span>
+                  <div className="flex items-center gap-3">
+                    <span className={cn("w-1.5 h-1.5 rounded-full transition-all duration-500", isSelected ? "bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.5)]" : "bg-transparent")} />
+                    {action.title}
+                  </div>
                   {action.shortcut && (
-                    <kbd className="text-[10px] bg-white/[0.06] px-1.5 py-0.5 rounded text-muted">
+                    <kbd className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-slate-500 font-mono">
                       {action.shortcut}
                     </kbd>
                   )}
@@ -137,3 +187,4 @@ export function CommandPalette({
     </Modal>
   )
 }
+

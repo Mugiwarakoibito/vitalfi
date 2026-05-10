@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Trophy, Plus, Star } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface PersonalRecord {
   id: string
@@ -74,21 +74,43 @@ export function PersonalRecords() {
         </Button>
       </div>
 
+      {/* PR Progress Chart - show top exercises over time */}
+      {records.length > 2 && (
+        <div className="relative overflow-hidden rounded-2xl border border-gray-500/20 bg-gray-900/50 p-5">
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Strength Progress</h3>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={records.slice(0, 20).reverse().map(r => ({
+              date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              weight: r.weight,
+              exercise: r.exerciseName.split(' ')[0]
+            }))}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+              <XAxis dataKey="date" stroke="#ffffff60" fontSize={10} />
+              <YAxis stroke="#ffffff60" fontSize={10} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #ffffff20', borderRadius: '8px' }}
+                labelStyle={{ color: '#fff' }}
+              />
+              <Line type="monotone" dataKey="weight" stroke="#F59E0B" strokeWidth={2} dot={{ fill: '#F59E0B' }} name="Weight (lbs)" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
       {records.length === 0 ? (
-        <Card className="backdrop-blur-xl bg-gray-900/50 border border-gray-700/50">
-          <CardContent className="p-8 text-center">
-            <Trophy className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
-            <p className="text-gray-400">No personal records yet</p>
-            <p className="text-gray-500 text-sm">Track your heaviest lifts and best performances</p>
-          </CardContent>
-        </Card>
+        <div className="relative overflow-hidden rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-yellow-500/10 to-transparent p-8 text-center">
+          <Trophy className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
+          <p className="text-gray-400">No personal records yet</p>
+          <p className="text-gray-500 text-sm">Track your heaviest lifts and best performances</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Object.entries(groupByExercise).map(([exercise, recs]) => {
             const best = recs.reduce((b, r) => r.type === 'weight' ? (r.weight > b.weight ? r : b) : (r.reps > b.reps ? r : b), recs[0])
             return (
-              <Card key={exercise} className="backdrop-blur-xl bg-gradient-to-br from-yellow-900/20 to-purple-900/20 border border-yellow-700/30">
-                <CardContent className="p-4">
+              <div key={exercise} className="relative overflow-hidden rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-yellow-500/10 to-purple-900/10 p-4">
+                <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/10 rounded-full -mr-8 -mt-8" />
+                <div className="relative">
                   <div className="flex items-center gap-2 mb-3">
                     <Star className="w-5 h-5 text-yellow-400" />
                     <h4 className="font-semibold text-white">{exercise}</h4>
@@ -109,8 +131,8 @@ export function PersonalRecords() {
                       <span className="text-purple-400 text-sm">{best.date}</span>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )
           })}
         </div>

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Flame, Zap, Target, Calendar } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/Card'
-import { storage, type Workout } from '@/lib/storage'
+import { useAppStore } from '@/store/useAppStore'
+import type { Workout } from '@/lib/storage'
 
 export function WorkoutStreak() {
+  const { workouts } = useAppStore()
   const [currentStreak, setCurrentStreak] = useState(0)
   const [longestStreak, setLongestStreak] = useState(0)
   const [totalWorkouts, setTotalWorkouts] = useState(0)
@@ -11,14 +12,9 @@ export function WorkoutStreak() {
   const [calendarDays, setCalendarDays] = useState<{ date: string; hasWorkout: boolean }[]>([])
 
   useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    const wo = await storage.getAll('workouts')
-    calculateStats(wo)
-    generateCalendar(wo)
-  }
+    calculateStats(workouts)
+    generateCalendar(workouts)
+  }, [workouts])
 
   const calculateStats = (wo: Workout[]) => {
     setTotalWorkouts(wo.length)
@@ -93,48 +89,51 @@ export function WorkoutStreak() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-4 gap-4">
-        <Card className="backdrop-blur-xl bg-orange-900/20 border border-orange-700/50">
-          <CardContent className="p-4 text-center">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="relative overflow-hidden rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-transparent p-5 text-center">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-orange-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
             <Flame className="w-6 h-6 text-orange-400 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-white">{currentStreak}</div>
+            <div className="text-3xl font-bold text-white">{currentStreak}</div>
             <div className="text-xs text-gray-400">Current Streak</div>
-          </CardContent>
-        </Card>
-        <Card className="backdrop-blur-xl bg-yellow-900/20 border border-yellow-700/50">
-          <CardContent className="p-4 text-center">
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-yellow-500/10 to-transparent p-5 text-center">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-yellow-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
             <Zap className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-white">{longestStreak}</div>
+            <div className="text-3xl font-bold text-white">{longestStreak}</div>
             <div className="text-xs text-gray-400">Best Streak</div>
-          </CardContent>
-        </Card>
-        <Card className="backdrop-blur-xl bg-purple-900/20 border border-purple-700/50">
-          <CardContent className="p-4 text-center">
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent p-5 text-center">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
             <Target className="w-6 h-6 text-purple-400 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-white">{totalWorkouts}</div>
+            <div className="text-3xl font-bold text-white">{totalWorkouts}</div>
             <div className="text-xs text-gray-400">Total Workouts</div>
-          </CardContent>
-        </Card>
-        <Card className="backdrop-blur-xl bg-blue-900/20 border border-blue-700/50">
-          <CardContent className="p-4 text-center">
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-transparent p-5 text-center">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
             <Calendar className="w-6 h-6 text-blue-400 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-white">{thisMonthWorkouts}</div>
+            <div className="text-3xl font-bold text-white">{thisMonthWorkouts}</div>
             <div className="text-xs text-gray-400">This Month</div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      <Card className="backdrop-blur-xl bg-gray-900/50 border border-gray-700/50">
-        <CardContent className="p-4">
-          <h4 className="font-semibold text-white mb-4">Last 28 Days</h4>
-          <div className="grid grid-cols-7 gap-2">
-            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-              <div key={i} className="text-center text-xs text-gray-500">{d}</div>
-            ))}
-            {calendarDays.slice(0, 28).map((day, i) => (
-              <div
-                key={i}
-                className={`aspect-square rounded-lg flex items-center justify-center text-xs ${
+      <div className="relative overflow-hidden rounded-2xl border border-gray-500/20 bg-gray-900/50 p-5">
+        <h4 className="font-semibold text-white mb-4">Last 28 Days</h4>
+        <div className="grid grid-cols-7 gap-2">
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+            <div key={i} className="text-center text-xs text-gray-500">{d}</div>
+          ))}
+          {calendarDays.slice(0, 28).map((day, i) => (
+            <div
+              key={i}
+              className={`aspect-square rounded-lg flex items-center justify-center text-xs ${
                   day.hasWorkout
                     ? 'bg-gradient-to-br from-orange-500 to-pink-500 text-white'
                     : 'bg-gray-800/50 text-gray-600'
@@ -144,8 +143,7 @@ export function WorkoutStreak() {
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
     </div>
   )
 }

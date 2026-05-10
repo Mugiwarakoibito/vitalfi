@@ -1,7 +1,7 @@
 import { generateId } from './utils';
 
-const DB_NAME = 'VitalFiDB';
-const DB_VERSION = 3;
+const DB_NAME = 'LifeSyncDB';
+const DB_VERSION = 4;
 
 interface DBSchema {
   accounts: Account;
@@ -52,7 +52,8 @@ export interface Transaction {
   amount: number;
   category: string;
   accountId: string;
-  type: 'income' | 'expense';
+  toAccountId?: string;
+  type: 'income' | 'expense' | 'transfer';
   tags?: string[];
   notes?: string;
   isRecurring?: boolean;
@@ -228,9 +229,14 @@ export interface AppSettings {
   country: string;
   name: string;
   fitnessGoals: string[];
-  primaryGate: 'financial' | 'health';
-  theme: 'dark' | 'light';
+  theme: 'light' | 'dark';
   onboardingComplete: boolean;
+  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+  weightKg?: number;
+  heightCm?: number;
+  age?: number;
+  sex?: 'male' | 'female' | 'other';
+  lastSync?: string;
 }
 
 class Storage {
@@ -246,6 +252,11 @@ class Storage {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
+      request.onblocked = () => {
+        console.warn('Database upgrade blocked by another tab. Please close other tabs of this app.');
+        // Optionally notify UI, but for now we just log
+      };
+
       request.onerror = () => {
         console.warn('IndexedDB unavailable, falling back to localStorage');
         this.localStorageFallback = true;
@@ -254,45 +265,32 @@ class Storage {
 
       request.onsuccess = () => {
         this.db = request.result;
+        
+        // Handle version changes from other tabs
+        this.db.onversionchange = () => {
+          this.db?.close();
+          console.warn('Database version changed in another tab. Reloading...');
+          window.location.reload();
+        };
+
         resolve(this.db);
       };
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
 
-        if (!db.objectStoreNames.contains('accounts')) {
-          db.createObjectStore('accounts', { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains('transactions')) {
-          db.createObjectStore('transactions', { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains('budgets')) {
-          db.createObjectStore('budgets', { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains('workouts')) {
-          db.createObjectStore('workouts', { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains('workoutTemplates')) {
-          db.createObjectStore('workoutTemplates', { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains('meals')) {
-          db.createObjectStore('meals', { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains('bodyMetrics')) {
-          db.createObjectStore('bodyMetrics', { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains('hydration')) {
-          db.createObjectStore('hydration', { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains('sleep')) {
-          db.createObjectStore('sleep', { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains('goals')) {
-          db.createObjectStore('goals', { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains('settings')) {
-          db.createObjectStore('settings', { keyPath: 'id' });
-        }
+        const stores = [
+          'accounts', 'transactions', 'budgets', 'workouts', 
+          'workoutTemplates', 'meals', 'bodyMetrics', 'hydration', 
+          'sleep', 'goals', 'settings', 'investments', 'bills', 
+          'debts', 'subscriptions'
+        ];
+
+        stores.forEach(store => {
+          if (!db.objectStoreNames.contains(store)) {
+            db.createObjectStore(store, { keyPath: 'id' });
+          }
+        });
       };
     });
   }
@@ -408,19 +406,11 @@ class Storage {
 
   async exportAll(): Promise<Record<string, unknown>> {
     const data: Record<string, unknown> = {};
-
     const storeNames: (keyof DBSchema)[] = [
-      'accounts',
-      'transactions',
-      'budgets',
-      'workouts',
-      'workoutTemplates',
-      'meals',
-      'bodyMetrics',
-      'hydration',
-      'sleep',
-      'goals',
-      'settings',
+      'accounts', 'transactions', 'budgets', 'workouts', 
+      'workoutTemplates', 'meals', 'bodyMetrics', 'hydration', 
+      'sleep', 'goals', 'settings', 'investments', 'bills', 
+      'debts', 'subscriptions'
     ];
 
     for (const storeName of storeNames) {
@@ -430,23 +420,15 @@ class Storage {
         data[storeName] = [];
       }
     }
-
     return data;
   }
 
   async importAll(data: Record<string, unknown>): Promise<void> {
     const storeNames: (keyof DBSchema)[] = [
-      'accounts',
-      'transactions',
-      'budgets',
-      'workouts',
-      'workoutTemplates',
-      'meals',
-      'bodyMetrics',
-      'hydration',
-      'sleep',
-      'goals',
-      'settings',
+      'accounts', 'transactions', 'budgets', 'workouts', 
+      'workoutTemplates', 'meals', 'bodyMetrics', 'hydration', 
+      'sleep', 'goals', 'settings', 'investments', 'bills', 
+      'debts', 'subscriptions'
     ];
 
     for (const storeName of storeNames) {

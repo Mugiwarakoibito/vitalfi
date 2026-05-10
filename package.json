@@ -1,5 +1,5 @@
 {
-  "name": "vitaffi",
+  "name": "lifesync-pro",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -16,6 +16,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.0",
+    "recharts": "^2.15.4",
     "tailwind-merge": "^2.2.0",
     "zustand": "^5.0.12"
   },

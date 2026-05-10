@@ -42,7 +42,7 @@ export interface ParsedTransaction {
   amount: number;
   category: string;
   subcategory?: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   date?: string;
   confidence: number;
 }

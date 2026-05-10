@@ -21,7 +21,7 @@ export function FitnessEmptyState({ onLogWorkout, onLogMeal }: FitnessEmptyState
           <Dumbbell className="w-10 h-10 text-primary-light" />
         </div>
       </div>
-      <h3 className="text-xl font-bold text-white mb-2">Start Your Fitness Journey</h3>
+      <h3 className="text-xl font-bold text-white mb-2">Ignite Your Potential</h3>
       <p className="text-muted max-w-sm mb-6">
         Log your first workout, track your nutrition, and monitor your progress towards your fitness goals.
       </p>
