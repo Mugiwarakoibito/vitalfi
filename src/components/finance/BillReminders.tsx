@@ -64,7 +64,8 @@ export function BillReminders() {
   }
 
   const handleSubmit = () => {
-    if (!formData.name || !formData.amount || !formData.dueDay) return
+    alert('submit running: ' + formData.name + ' | ' + formData.amount + ' | ' + formData.dueDay)
+    if (!formData.name || !formData.amount || !formData.dueDay) { alert('blocked by guard'); return }
 
     if (editingBill) {
       updateBill({
@@ -150,7 +151,7 @@ export function BillReminders() {
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-white">Bills & Reminders</h3>
-        <button type="button" onClick={() => { console.log('Before:', showModal); setEditingBill(null); setFormData({ name: '', amount: '', dueDay: '', category: 'other', reminders: '' }); setShowModal(true); console.log('After:', true); alert('modal should open') }} className="px-4 py-2 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-sm flex items-center gap-2 hover:bg-yellow-500/30 transition-all">
+        <button type="button" onClick={() => { setEditingBill(null); setFormData({ name: '', amount: '', dueDay: '', category: 'other', reminders: '' }); setShowModal(true) }} className="px-4 py-2 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-sm flex items-center gap-2 hover:bg-yellow-500/30 transition-all">
           <Plus className="w-4 h-4" />
           Add Bill
         </button>
