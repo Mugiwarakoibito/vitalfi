@@ -91,7 +91,7 @@ export function BillReminders() {
     }
     setShowModal(false)
     setEditingBill(null)
-    setFormData({ name: '', amount: '', dueDay: '', category: '' as Bill['category'], reminders: '' })
+    setFormData({ name: '', amount: '0.00', dueDay: '', category: '' as Bill['category'], reminders: '' })
   }
 
   const handleDelete = async () => {

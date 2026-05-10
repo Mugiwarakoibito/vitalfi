@@ -19,6 +19,16 @@ export function InvestmentPortfolio() {
   const [showModal, setShowModal] = useState(false)
   const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null)
   const [deletingInvestment, setDeletingInvestment] = useState<Investment | null>(null)
+  const [formData, setFormData] = useState({
+    name: '',
+    symbol: '',
+    type: 'stock' as Investment['type'],
+    quantity: '0.00',
+    purchasePrice: '0.00',
+    currentPrice: '0.00',
+    purchaseDate: new Date().toISOString().split('T')[0],
+  })
+
   const investmentExamples = ['Apple Inc.', 'Microsoft', 'Bitcoin']
 
   const getSymbolPlaceholder = () => {
@@ -34,18 +44,8 @@ export function InvestmentPortfolio() {
     if (n.includes('facebook') || n.includes('meta')) return 'META'
     if (n.includes('netflix')) return 'NFLX'
     if (n.includes('spotify')) return 'SPOT'
-    return 'AAPL'
+    return 'AAPL, MSFT, BTC'
   }
-
-  const [formData, setFormData] = useState({
-    name: '',
-    symbol: '',
-    type: 'stock' as Investment['type'],
-    quantity: '0.00',
-    purchasePrice: '0.00',
-    currentPrice: '0.00',
-    purchaseDate: new Date().toISOString().split('T')[0],
-  })
 
   const totalValue = investments.reduce((sum, inv) => sum + inv.quantity * inv.currentPrice, 0)
   const totalCost = investments.reduce((sum, inv) => sum + inv.quantity * inv.purchasePrice, 0)
