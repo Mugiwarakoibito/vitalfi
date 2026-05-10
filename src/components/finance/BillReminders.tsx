@@ -64,6 +64,7 @@ export function BillReminders() {
   }
 
   const handleSubmit = () => {
+    console.log('formData:', formData);
     if (!formData.name || !formData.amount || !formData.dueDay) return
 
     if (editingBill) {
