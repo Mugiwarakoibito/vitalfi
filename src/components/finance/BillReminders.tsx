@@ -236,7 +236,7 @@ export function BillReminders() {
                 label="Bill Name"
                 value={formData.name}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, name: e.target.value})}
-                placeholder="Netflix, Rent, Electric"
+                placeholder="Rent, Electric, Internet"
               />
               <Input
                 label="Amount"
