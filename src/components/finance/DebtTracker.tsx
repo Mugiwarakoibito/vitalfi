@@ -40,10 +40,10 @@ export function DebtTracker() {
   const [formData, setFormData] = useState({
     name: '',
     type: 'credit_card' as Debt['type'],
-    totalAmount: '0.00',
-    currentBalance: '0.00',
-    interestRate: '0.00',
-    minimumPayment: '0.00',
+    totalAmount: '',
+    currentBalance: '',
+    interestRate: '',
+    minimumPayment: '',
     dueDate: '',
   })
 
@@ -51,10 +51,10 @@ export function DebtTracker() {
     setFormData({
       name: '',
       type: 'credit_card',
-      totalAmount: '0.00',
-      currentBalance: '0.00',
-      interestRate: '0.00',
-      minimumPayment: '0.00',
+      totalAmount: '',
+      currentBalance: '',
+      interestRate: '',
+      minimumPayment: '',
       dueDate: '',
     })
   }
@@ -181,7 +181,7 @@ export function DebtTracker() {
 
 <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-white">Debt Overview</h3>
-        <button onClick={() => { setEditingDebt(null); setFormData({ name: '', type: 'credit_card', totalAmount: '0.00', currentBalance: '0.00', interestRate: '0.00', minimumPayment: '0.00', dueDate: '' }); setShowModal(true) }} className="px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 text-sm flex items-center gap-2 hover:bg-red-500/30 transition-all">
+        <button onClick={() => { setEditingDebt(null); setFormData({ name: '', type: 'credit_card', totalAmount: '', currentBalance: '', interestRate: '', minimumPayment: '', dueDate: '' }); setShowModal(true) }} className="px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 text-sm flex items-center gap-2 hover:bg-red-500/30 transition-all">
           <Plus className="w-4 h-4" />
           Add Debt
         </button>
