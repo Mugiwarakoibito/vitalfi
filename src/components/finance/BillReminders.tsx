@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react'
-import { Calendar, Bell, CheckCircle, AlertCircle } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
-import { Modal } from '@/components/ui/Modal'
+import { useState } from 'react'
+import { Calendar, CheckCircle, AlertCircle, Pencil, Trash2, Plus, AlertTriangle } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
-import { storage, type Bill } from '@/lib/storage'
+import { useAppStore } from '@/store/useAppStore'
+import type { Bill } from '@/lib/storage'
+import { formatCurrency } from '@/lib/utils'
 
 const billCategories = [
   { id: 'utilities', label: 'Utilities', icon: '⚡' },
@@ -16,54 +15,18 @@ const billCategories = [
 ]
 
 export function BillReminders() {
-  const [bills, setBills] = useState<Bill[]>([])
+  const { bills, addBill, updateBill, deleteBill, settings } = useAppStore()
   const [showModal, setShowModal] = useState(false)
+  const [editingBill, setEditingBill] = useState<Bill | null>(null)
+  const [deletingBill, setDeletingBill] = useState<Bill | null>(null)
+  const currency = settings.currency || 'USD'
   const [formData, setFormData] = useState({
     name: '',
     amount: '',
-    dueDay: '1',
-    category: 'other' as Bill['category'],
-    reminders: '3',
+    dueDay: '',
+    category: '' as Bill['category'],
+    reminders: '',
   })
-
-  useEffect(() => {
-    loadBills()
-  }, [])
-
-  const loadBills = async () => {
-    const data = await storage.getAll('bills')
-    setBills(data)
-  }
-
-  const handleSubmit = async () => {
-    const bill: Bill = {
-      id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15),
-      name: formData.name,
-      amount: Number(formData.amount),
-      dueDay: Number(formData.dueDay),
-      category: formData.category,
-      isPaid: false,
-      reminders: [Number(formData.reminders)],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    await storage.put('bills', bill)
-    loadBills()
-    setShowModal(false)
-    setFormData({
-      name: '',
-      amount: '',
-      dueDay: '1',
-      category: 'other',
-      reminders: '3',
-    })
-  }
-
-  const markAsPaid = async (bill: Bill) => {
-    const updated = { ...bill, isPaid: true, lastPaidDate: new Date().toISOString().split('T')[0] }
-    await storage.put('bills', updated)
-    loadBills()
-  }
 
   const getUpcomingBills = () => {
     const today = new Date()
@@ -88,62 +51,121 @@ export function BillReminders() {
   const totalOverdue = getOverdueBills().reduce((sum, b) => sum + b.amount, 0)
   const monthlyTotal = bills.reduce((sum, b) => sum + b.amount, 0)
 
+  const openEditModal = (bill: Bill) => {
+    setEditingBill(bill)
+    setFormData({
+      name: bill.name,
+      amount: bill.amount.toString(),
+      dueDay: bill.dueDay.toString(),
+      category: bill.category,
+      reminders: bill.reminders[0]?.toString() || '',
+    })
+    setShowModal(true)
+  }
+
+  const handleSubmit = () => {
+    if (!formData.name || !formData.amount || !formData.dueDay) return
+
+    if (editingBill) {
+      updateBill({
+        ...editingBill,
+        name: formData.name,
+        amount: Number(formData.amount),
+        dueDay: Number(formData.dueDay),
+        category: formData.category,
+        reminders: formData.reminders ? [Number(formData.reminders)] : [],
+        updatedAt: new Date().toISOString(),
+      })
+    } else {
+      addBill({
+        id: crypto.randomUUID(),
+        name: formData.name,
+        amount: Number(formData.amount),
+        dueDay: Number(formData.dueDay),
+        category: formData.category,
+        isPaid: false,
+        reminders: formData.reminders ? [Number(formData.reminders)] : [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+    }
+    setShowModal(false)
+    setEditingBill(null)
+    setFormData({ name: '', amount: '', dueDay: '', category: '' as Bill['category'], reminders: '' })
+  }
+
+  const handleDelete = async () => {
+    if (!deletingBill) return
+    await deleteBill(deletingBill.id)
+    setDeletingBill(null)
+  }
+
+  const markAsPaid = (bill: Bill) => {
+    updateBill({ ...bill, isPaid: true, lastPaidDate: new Date().toISOString().split('T')[0], updatedAt: new Date().toISOString() })
+  }
+
+  const markAsUnpaid = (bill: Bill) => {
+    updateBill({ ...bill, isPaid: false, lastPaidDate: undefined, updatedAt: new Date().toISOString() })
+  }
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="backdrop-blur-xl bg-gray-900/50 border border-gray-700/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="relative overflow-hidden rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-yellow-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-yellow-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-yellow-400/80 text-sm mb-2">
               <Calendar className="w-4 h-4" />
-              Monthly Total
+              <span>Monthly Total</span>
             </div>
-            <div className="text-2xl font-bold text-white">
-              ${monthlyTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="backdrop-blur-xl bg-gray-900/50 border border-yellow-700/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-yellow-400 text-sm mb-1">
+            <p className="text-3xl font-bold text-white">{formatCurrency(monthlyTotal, currency)}</p>
+            <p className="text-xs text-gray-500 mt-1">{bills.length} bill{bills.length !== 1 ? 's' : ''}</p>
+          </div>
+        </div>
+
+        <div className="relative overflow-hidden rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-orange-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-orange-400/80 text-sm mb-2">
               <AlertCircle className="w-4 h-4" />
-              Due This Week
+              <span>Due This Week</span>
             </div>
-            <div className="text-2xl font-bold text-yellow-400">
-              ${totalUpcoming.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="backdrop-blur-xl bg-gray-900/50 border border-red-700/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-red-400 text-sm mb-1">
+            <p className="text-3xl font-bold text-orange-400">{formatCurrency(totalUpcoming, currency)}</p>
+            <p className="text-xs text-gray-500 mt-1">{getUpcomingBills().length} upcoming</p>
+          </div>
+        </div>
+
+        <div className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-gradient-to-br from-red-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-red-400/80 text-sm mb-2">
               <AlertCircle className="w-4 h-4" />
-              Overdue
+              <span>Overdue</span>
             </div>
-            <div className="text-2xl font-bold text-red-400">
-              ${totalOverdue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-            </div>
-          </CardContent>
-        </Card>
+            <p className="text-3xl font-bold text-red-400">{formatCurrency(totalOverdue, currency)}</p>
+            <p className="text-xs text-gray-500 mt-1">{getOverdueBills().length} overdue</p>
+          </div>
+        </div>
       </div>
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-white">Bills & Reminders</h3>
-        <Button variant="primary" onClick={() => setShowModal(true)}>
-          <Bell className="w-4 h-4 mr-1" />
+        <button onClick={() => { setEditingBill(null); setFormData({ name: '', amount: '', dueDay: '', category: 'other', reminders: '' }); setShowModal(true) }} className="px-4 py-2 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-sm flex items-center gap-2 hover:bg-yellow-500/30 transition-all">
+          <Plus className="w-4 h-4" />
           Add Bill
-        </Button>
+        </button>
       </div>
 
       {bills.length === 0 ? (
-        <Card className="backdrop-blur-xl bg-gray-900/50 border border-gray-700/50">
-          <CardContent className="p-8 text-center">
-            <Calendar className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-400">No bills yet</p>
-            <p className="text-gray-500 text-sm">Add recurring bills to track and get reminders</p>
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-yellow-500/10 flex items-center justify-center mx-auto mb-4">
+            <Calendar className="w-8 h-8 text-yellow-400/50" />
+          </div>
+          <p className="text-gray-400 mb-1">No bills yet</p>
+          <p className="text-gray-500 text-sm">Add recurring bills to track and get reminders</p>
+        </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {bills.map((bill) => {
             const cat = billCategories.find(c => c.id === bill.category)
             const today = new Date()
@@ -152,111 +174,135 @@ export function BillReminders() {
             const isOverdue = daysUntilDue < 0 && !bill.isPaid
 
             return (
-              <Card 
-                key={bill.id} 
-                className={`backdrop-blur-xl border ${
-                  bill.isPaid 
-                    ? 'bg-green-900/20 border-green-700/30' 
-                    : isOverdue 
-                      ? 'bg-red-900/20 border-red-700/50'
-                      : 'bg-gray-900/50 border-gray-700/50'
-                }`}
-              >
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <div className="text-2xl">{cat?.icon || '📄'}</div>
-                      <div>
-                        <h4 className="font-semibold text-white">{bill.name}</h4>
-                        <p className="text-sm text-gray-400">
-                          Due on day {bill.dueDay} • {cat?.label}
-                        </p>
-                      </div>
+              <div key={bill.id} className={`rounded-2xl border p-5 transition-all ${bill.isPaid ? 'border-green-500/20 bg-green-500/5' : isOverdue ? 'border-red-500/20 bg-red-500/5' : 'border-white/10 bg-white/5 hover:bg-white/[0.07]'}`}>
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl ${bill.isPaid ? 'bg-green-500/20' : isOverdue ? 'bg-red-500/20' : 'bg-yellow-500/20'}`}>
+                      {cat?.icon || '📄'}
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <div className="font-semibold text-white">
-                          ${bill.amount.toFixed(2)}
-                        </div>
-                        {bill.isPaid ? (
-                          <div className="text-sm text-green-400 flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" /> Paid
-                          </div>
-                        ) : isOverdue ? (
-                          <div className="text-sm text-red-400">Overdue</div>
-                        ) : daysUntilDue <= 3 ? (
-                          <div className="text-sm text-yellow-400">Due soon</div>
-                        ) : null}
-                      </div>
-                      {!bill.isPaid && (
-                        <Button variant="ghost" size="sm" onClick={() => markAsPaid(bill)}>
-                          <CheckCircle className="w-4 h-4" />
-                        </Button>
-                      )}
+                    <div>
+                      <h4 className="font-semibold text-white">{bill.name}</h4>
+                      <p className="text-sm text-gray-400">Due day {bill.dueDay} • {cat?.label}</p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="flex gap-1">
+                    <button onClick={() => openEditModal(bill)} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setDeletingBill(bill)} className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-end">
+                  <div>
+                    <p className="text-2xl font-bold text-white">{formatCurrency(bill.amount, currency)}</p>
+                    <p className="text-xs text-gray-500">Per month</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {bill.isPaid ? (
+                      <button onClick={() => markAsUnpaid(bill)} className="px-3 py-1.5 rounded-full bg-green-500/20 text-green-400 text-sm font-medium flex items-center gap-1.5 hover:bg-green-500/30 transition-all">
+                        <CheckCircle className="w-4 h-4" />
+                        Paid
+                      </button>
+                    ) : isOverdue ? (
+                      <button onClick={() => markAsPaid(bill)} className="px-3 py-1.5 rounded-full bg-red-500/20 text-red-400 text-sm font-medium">
+                        Mark as Paid
+                      </button>
+                    ) : daysUntilDue <= 3 ? (
+                      <button onClick={() => markAsPaid(bill)} className="px-3 py-1.5 rounded-full bg-yellow-500/20 text-yellow-400 text-sm font-medium">
+                        Due in {daysUntilDue} days
+                      </button>
+                    ) : (
+                      <button onClick={() => markAsPaid(bill)} className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-gray-400 text-sm hover:bg-white/10 transition-all">
+                        Mark as Paid
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
             )
           })}
         </div>
       )}
 
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add Bill">
-        <div className="space-y-4">
-          <Input
-            label="Bill Name"
-            placeholder="e.g., Electric Bill"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          />
-          <Input
-            label="Amount"
-            type="number"
-            placeholder="0.00"
-            value={formData.amount}
-            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-          />
-          <Input
-            label="Due Day of Month"
-            type="number"
-            min="1"
-            max="31"
-            value={formData.dueDay}
-            onChange={(e) => setFormData({ ...formData, dueDay: e.target.value })}
-          />
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Category</label>
-            <div className="grid grid-cols-3 gap-2">
-              {billCategories.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, category: cat.id as Bill['category'] })}
-                  className={`p-2 rounded-lg text-xs transition-all ${
-                    formData.category === cat.id
-                      ? 'bg-purple-500/20 border border-purple-500/50 text-white'
-                      : 'bg-gray-800/50 border border-gray-700/50 text-gray-300'
-                  }`}
-                >
-                  {cat.icon} {cat.label}
-                </button>
-              ))}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowModal(false)}>
+          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-white mb-6">{editingBill ? 'Edit Bill' : 'Add New Bill'}</h3>
+            <div className="space-y-5">
+              <Input
+                label="Bill Name"
+                value={formData.name}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, name: e.target.value})}
+                placeholder="Electric Bill"
+              />
+              <Input
+                label="Amount"
+                type="number"
+                value={formData.amount}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, amount: e.target.value})}
+                placeholder="150.00"
+              />
+              <Input
+                label="Due Day of Month"
+                type="number"
+                min="1"
+                max="31"
+                value={formData.dueDay}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, dueDay: e.target.value})}
+                placeholder="1"
+              />
+              <Input
+                label="Remind me (days before)"
+                type="number"
+                min="1"
+                max="30"
+                value={formData.reminders}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, reminders: e.target.value})}
+                placeholder="3"
+              />
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Category</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {billCategories.map((cat) => (
+                    <button key={cat.id} onClick={() => setFormData({...formData, category: cat.id as Bill['category']})} className={`relative overflow-hidden p-3 rounded-xl text-sm font-medium flex items-center gap-2 transition-all ${formData.category === cat.id ? 'bg-gradient-to-br from-yellow-500/20 to-amber-500/10 border border-yellow-500/50 text-white' : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/30 hover:bg-white/10'}`}>
+                      <span>{cat.icon}</span>
+                      <span className="truncate">{cat.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <button onClick={handleSubmit} className="w-full px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 font-medium hover:bg-yellow-500/30 transition-all mt-6">
+              {editingBill ? 'Update Bill' : 'Add Bill'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {deletingBill && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setDeletingBill(null)}>
+          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-6 h-6 text-yellow-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-white text-center mb-2">Delete Bill?</h3>
+            <p className="text-gray-400 text-sm text-center mb-6">
+              This will permanently delete <span className="text-white font-medium">{deletingBill.name}</span>. This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeletingBill(null)} className="flex-1 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all">
+                Cancel
+              </button>
+              <button onClick={handleDelete} className="flex-1 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-all">
+                Delete
+              </button>
             </div>
           </div>
-          <Input
-            label="Remind me (days before)"
-            type="number"
-            min="1"
-            max="30"
-            value={formData.reminders}
-            onChange={(e) => setFormData({ ...formData, reminders: e.target.value })}
-          />
-          <Button variant="primary" onClick={handleSubmit} className="w-full">
-            Add Bill
-          </Button>
         </div>
-      </Modal>
+      )}
     </div>
   )
 }

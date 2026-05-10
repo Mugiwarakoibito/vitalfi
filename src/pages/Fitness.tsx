@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/Card'
 import { WorkoutLogger } from '@/components/fitness/WorkoutLogger'
 import { ExerciseLibrary } from '@/components/fitness/ExerciseLibrary'
@@ -19,14 +18,9 @@ import {
   Utensils,
   Droplets,
   Moon,
-  Trophy,
-  Flame,
-  Calendar,
-  Pill,
-  BarChart3,
 } from 'lucide-react'
 
-type TabId = 'workouts' | 'exercises' | 'templates' | 'body' | 'nutrition' | 'hydration' | 'sleep' | 'records' | 'streak' | 'planner' | 'measurements' | 'supplements' | 'analytics'
+type TabId = 'workouts' | 'exercises' | 'templates' | 'body' | 'nutrition' | 'hydration' | 'sleep'
 
 const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: 'workouts', label: 'Workouts', icon: <Dumbbell size={14} /> },
@@ -36,37 +30,11 @@ const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: 'nutrition', label: 'Nutrition', icon: <Utensils size={14} /> },
   { id: 'hydration', label: 'Hydration', icon: <Droplets size={14} /> },
   { id: 'sleep', label: 'Sleep', icon: <Moon size={14} /> },
-  { id: 'records', label: 'PRs', icon: <Trophy size={14} /> },
-  { id: 'streak', label: 'Streak', icon: <Flame size={14} /> },
-  { id: 'planner', label: 'Planner', icon: <Calendar size={14} /> },
-  { id: 'supplements', label: 'Supps', icon: <Pill size={14} /> },
-  { id: 'analytics', label: 'Stats', icon: <BarChart3 size={14} /> },
 ]
 
-type FitnessProps = {
-  defaultTab?: TabId
-}
-
-export default function Fitness({ defaultTab = 'workouts' }: FitnessProps) {
+export default function Fitness() {
+  const [activeTab, setActiveTab] = useState<TabId>('workouts')
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null)
-  const location = useLocation()
-  const isStandalone = location.pathname !== '/fitness'
-  const [activeTab, setActiveTab] = useState<TabId>(() => {
-    if (isStandalone) {
-      const path = location.pathname.split('/fitness/')[1]
-      if (path && path !== '') return path as TabId
-    }
-    return defaultTab
-  })
-
-  useEffect(() => {
-    if (isStandalone) {
-      const path = location.pathname.split('/fitness/')[1]
-      if (path && path !== '') {
-        setActiveTab(path as TabId)
-      }
-    }
-  }, [location.pathname, isStandalone])
 
   const [workouts, setWorkouts] = useState<Workout[]>([])
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([])
@@ -106,28 +74,6 @@ export default function Fitness({ defaultTab = 'workouts' }: FitnessProps) {
     nutrition: meals.length,
     hydration: hydration.length,
     sleep: sleep.length,
-    records: 0,
-    streak: 0,
-    planner: 0,
-    measurements: 0,
-    supplements: 0,
-    analytics: 0,
-  }
-
-  const tabLabels: Record<TabId, string> = {
-    workouts: 'Workouts',
-    exercises: 'Exercises',
-    templates: 'Templates',
-    body: 'Body Metrics',
-    nutrition: 'Nutrition',
-    hydration: 'Hydration',
-    sleep: 'Sleep',
-    records: 'Personal Records',
-    streak: 'Workout Streak',
-    planner: 'Meal Planner',
-    measurements: 'Body Measurements',
-    supplements: 'Supplements',
-    analytics: 'Analytics',
   }
 
   if (isLoading) {
@@ -158,17 +104,12 @@ export default function Fitness({ defaultTab = 'workouts' }: FitnessProps) {
           <Dumbbell className="h-5 w-5 text-success-light" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-white">
-            {isStandalone ? tabLabels[activeTab] : 'Health & Fitness'}
-          </h2>
-          {!isStandalone && (
-            <p className="text-sm text-muted mt-1">Log workouts, nutrition, and body metrics.</p>
-          )}
+          <h2 className="text-2xl font-bold text-white">Fitness</h2>
+          <p className="text-sm text-muted mt-1">Log workouts, nutrition, and body metrics.</p>
         </div>
       </div>
 
       {/* Tabs */}
-      {!isStandalone && (
       <div className="flex flex-wrap gap-1.5">
         {tabs.map((tab) => (
           <button
@@ -195,7 +136,6 @@ export default function Fitness({ defaultTab = 'workouts' }: FitnessProps) {
           </button>
         ))}
       </div>
-      )}
 
       {/* Content */}
       <div>
