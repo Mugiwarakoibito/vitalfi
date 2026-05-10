@@ -64,8 +64,7 @@ export function BillReminders() {
   }
 
   const handleSubmit = () => {
-    alert('submit running: ' + formData.name + ' | ' + formData.amount + ' | ' + formData.dueDay)
-    if (!formData.name || !formData.amount || !formData.dueDay) { alert('blocked by guard'); return }
+    if (!formData.name || !formData.amount || !formData.dueDay) return
 
     if (editingBill) {
       updateBill({
