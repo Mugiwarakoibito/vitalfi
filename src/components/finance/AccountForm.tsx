@@ -81,7 +81,7 @@ export function AccountForm({ isOpen, onClose, onSave, account }: AccountFormPro
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           label="Account Name"
-          placeholder={accountExamples[Math.floor(Math.random() * accountExamples.length)]}
+          placeholder={accountExamples.join(', ')}
           value={name}
           onChange={(e) => setName(e.target.value)}
           error={errors.name}

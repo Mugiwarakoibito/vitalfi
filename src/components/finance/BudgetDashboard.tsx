@@ -235,7 +235,7 @@ function BudgetForm({
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           label="Budget Name"
-          placeholder={budgetExamples[Math.floor(Math.random() * budgetExamples.length)]}
+          placeholder={budgetExamples.join(', ')}
           value={name}
           onChange={(e) => setName(e.target.value)}
           error={errors.name}

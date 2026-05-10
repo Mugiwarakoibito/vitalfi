@@ -17,7 +17,7 @@ interface TransactionFormProps {
 
 export function TransactionForm({ isOpen, onClose, onSave, accounts, transaction }: TransactionFormProps) {
   const [description, setDescription] = useState('')
-  const [amount, setAmount] = useState('')
+  const [amount, setAmount] = useState('0.00')
   const [type, setType] = useState<'income' | 'expense' | 'transfer'>('expense')
   const [category, setCategory] = useState('')
   const [subcategory, setSubcategory] = useState('')
@@ -120,14 +120,14 @@ export function TransactionForm({ isOpen, onClose, onSave, accounts, transaction
     onClose()
   }
 
-  const expenseExamples = ['Grocery shopping', 'Coffee at cafe', 'Gas station', 'Netflix subscription', 'Electric bill', 'Restaurant dinner']
-  const incomeExamples = ['Monthly salary', 'Freelance payment', 'Bonus', 'Dividend income', 'Refund', 'Gift money']
-  const transferExamples = ['Transfer to savings', 'Move to checking', 'Pay credit card', 'Send to family', 'Split bills']
+  const expenseExamples = ['Grocery shopping', 'Coffee at cafe', 'Gas station']
+  const incomeExamples = ['Monthly salary', 'Freelance payment', 'Bonus']
+  const transferExamples = ['Transfer to savings', 'Move to checking', 'Pay credit card']
 
   const getPlaceholder = () => {
-    if (type === 'expense') return expenseExamples[Math.floor(Math.random() * expenseExamples.length)]
-    if (type === 'income') return incomeExamples[Math.floor(Math.random() * incomeExamples.length)]
-    return transferExamples[Math.floor(Math.random() * transferExamples.length)]
+    if (type === 'expense') return expenseExamples.join(', ')
+    if (type === 'income') return incomeExamples.join(', ')
+    return transferExamples.join(', ')
   }
 
   const [placeholder, setPlaceholder] = useState(getPlaceholder())

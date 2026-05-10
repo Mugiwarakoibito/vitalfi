@@ -240,7 +240,7 @@ export function InvestmentPortfolio() {
             <div className="space-y-5">
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Investment Name</label>
-                <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder={investmentExamples[Math.floor(Math.random() * investmentExamples.length)]} />
+                <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder={investmentExamples.join(', ')} />
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Symbol (optional)</label>
