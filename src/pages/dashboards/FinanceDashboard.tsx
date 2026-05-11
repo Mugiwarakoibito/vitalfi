@@ -258,8 +258,20 @@ export function FinanceDashboard() {
         <MetricCard 
           onClick={() => navigate(goals.filter(g => g.type === 'financial').length > 0 ? '/finance?tab=goals' : '/finance?tab=goals&action=add')}
           label="Financial Goals" 
-          value={goals.filter(g => g.type === 'financial').length > 0 ? `${goals.filter(g => g.type === 'financial').length} Goals` : "No Goals"} 
-          trend={goals.filter(g => g.type === 'financial').length > 0 ? `Total: ${formatCurrency(goals.filter(g => g.type === 'financial').reduce((sum, g) => sum + g.current, 0), currency)}` : "Add your first goal"}
+          value={(() => {
+            const count = goals.filter(g => g.type === 'financial').length
+            if (count === 0) return "No Goals"
+            if (count === 1) return "1 Goal"
+            return `${count} Goals`
+          })()}
+          trend={(() => {
+            const fGoals = goals.filter(g => g.type === 'financial')
+            if (fGoals.length === 0) return "Add your first goal"
+            const totalSaved = fGoals.reduce((sum, g) => sum + g.current, 0)
+            const totalTarget = fGoals.reduce((sum, g) => sum + g.target, 0)
+            const progress = totalTarget > 0 ? Math.round((totalSaved / totalTarget) * 100) : 0
+            return `Saved: ${formatCurrency(totalSaved, currency)} (${progress}%)`
+          })()}
           positive={goals.filter(g => g.type === 'financial').length > 0}
           icon={Flag} 
           color="amber"
