@@ -57,7 +57,7 @@ export function FinancialGoals() {
     
     setShowModal(false)
     setEditingGoal(null)
-    setFormData({ name: '', target: '', current: '', category: 'other', deadline: '' })
+setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: '' })
   }
 
   const handleDelete = async () => {
@@ -70,8 +70,8 @@ export function FinancialGoals() {
     setEditingGoal(goal)
     setFormData({
       name: goal.name,
-      target: goal.target.toString(),
-      current: goal.current.toString(),
+      target: goal.target.toString() || '0',
+      current: goal.current.toString() || '0',
       category: 'other',
       deadline: goal.deadline,
     })
@@ -227,14 +227,14 @@ export function FinancialGoals() {
               type="number"
               value={formData.target}
               onChange={(e) => setFormData({...formData, target: e.target.value})}
-              placeholder="5000"
+              placeholder="0"
             />
             <Input
               label="Current Saved"
               type="number"
               value={formData.current}
               onChange={(e) => setFormData({...formData, current: e.target.value})}
-              placeholder="1000"
+              placeholder="0"
             />
           </div>
           <div>
