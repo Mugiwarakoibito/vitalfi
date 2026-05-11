@@ -19,10 +19,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         )}
         <div className="relative">
           {icon && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center">
-              <div className="w-6 h-6 rounded-lg bg-primary/30 flex items-center justify-center text-primary-light">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center" style={{ minWidth: '20px' }}>
+              <span style={{ color: '#8B5CF6', fontSize: '18px', display: 'flex' }}>
                 {icon}
-              </div>
+              </span>
             </div>
           )}
           <input
