@@ -126,7 +126,7 @@ export function TransactionList({ accounts, initialTransactions = [], onTransact
       <div className="space-y-3">
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#A78BFA' }} />
             <input
               type="text"
               placeholder="Search transactions..."
