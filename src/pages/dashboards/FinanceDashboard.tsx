@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { 
   TrendingUp, Target, ShieldCheck, ArrowUpRight, 
   ArrowDownRight, Landmark, PieChart,
-  Zap, Calendar, Plus, Wallet
+  Zap, Calendar, Plus, Wallet, Flag
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { formatCurrency, cn } from '@/lib/utils'
@@ -14,7 +14,7 @@ import { useNavigate } from 'react-router-dom'
 
 export function FinanceDashboard() {
   const navigate = useNavigate()
-  const { settings, accounts, transactions, investments } = useAppStore()
+  const { settings, accounts, transactions, investments, goals } = useAppStore()
   const currency = settings.currency || 'USD'
   
   const now = new Date()
@@ -256,12 +256,12 @@ export function FinanceDashboard() {
           color="purple" 
         />
         <MetricCard 
-          onClick={() => navigate('/finance/calendar')}
-          label="Financial Calendar" 
-          value={transactions.length > 0 ? `${now.getDate()} / ${now.getMonth() + 1}` : "No Data"} 
-          trend={transactions.length > 0 ? `${transactions.filter(t => new Date(t.date).getMonth() === currentMonth).length} This Month` : "No Data"}
-          positive={transactions.length > 0}
-          icon={Calendar} 
+          onClick={() => navigate('/finance?tab=goals')}
+          label="Financial Goals" 
+          value={goals.filter(g => g.type === 'financial').length > 0 ? `${goals.filter(g => g.type === 'financial').length} Goals` : "No Goals"} 
+          trend={goals.filter(g => g.type === 'financial').length > 0 ? `Total: ${formatCurrency(goals.filter(g => g.type === 'financial').reduce((sum, g) => sum + g.current, 0), currency)}` : "Add your first goal"}
+          positive={goals.filter(g => g.type === 'financial').length > 0}
+          icon={Flag} 
           color="amber" 
         />
       </section>
