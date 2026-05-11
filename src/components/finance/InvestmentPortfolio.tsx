@@ -184,7 +184,7 @@ export function InvestmentPortfolio() {
                 <div className="relative z-10">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/25 to-teal-500/25 border border-emerald-500/30 flex items-center justify-center text-xl shadow-lg" style={{boxShadow: '0 0 20px rgba(16,185,129,0.15)'}}>
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500/25 to-teal-500/25 border border-emerald-500/30 flex items-center justify-center text-xl shadow-lg" style={{boxShadow: '0 0 20px rgba(16,185,129,0.15)'}}>
                         {typeInfo?.icon || '💎'}
                       </div>
                       <div>

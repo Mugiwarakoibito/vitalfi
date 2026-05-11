@@ -330,7 +330,7 @@ export function TransactionList({ accounts, initialTransactions = [], onTransact
             const account = accounts.find((a) => a.id === txn.accountId)
 
             return (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 hover:bg-white/[0.04] transition-all group relative overflow-hidden">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all group relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-white/[0.02] to-transparent pointer-events-none" />
                 <div className="flex items-center justify-between relative z-10">
                   <div className="flex items-center gap-3">

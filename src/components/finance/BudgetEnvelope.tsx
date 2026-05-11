@@ -22,7 +22,7 @@ export function BudgetEnvelope({ budget, currency, onEdit, onDelete }: BudgetEnv
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
             <div
-              className="h-3 w-3 rounded-full shadow-lg"
+              className="h-2.5 w-2.5 rounded-full shadow-lg"
               style={{ backgroundColor: budget.color, boxShadow: `0 0 10px ${budget.color}50` }}
             />
             <div>

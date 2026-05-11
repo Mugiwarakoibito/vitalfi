@@ -138,13 +138,13 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
                 <div className="absolute inset-0 bg-gradient-to-r from-white/[0.02] to-transparent pointer-events-none" />
                 <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl" style={{ backgroundColor: account.color }} />
                 <div className="flex items-center justify-between relative z-10">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg" style={{ backgroundColor: account.color + '25', boxShadow: `0 0 20px ${account.color}20` }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg" style={{ backgroundColor: account.color + '25', boxShadow: `0 0 20px ${account.color}20` }}>
                       <Icon className="w-5 h-5" style={{ color: account.color }} />
                     </div>
                     <div>
                       <h4 className="font-semibold text-white tracking-tight">{account.name}</h4>
-                      <p className="text-sm text-gray-500 capitalize flex items-center gap-2">
+                      <p className="text-sm text-gray-500 flex items-center gap-2">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 text-gray-400 text-[10px] capitalize">
                           {account.type}
                         </span>
@@ -152,7 +152,7 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <p className={`text-xl font-bold tracking-wide ${account.balance >= 0 ? 'text-white' : 'text-red-400'}`}>
+                    <p className={`text-lg font-bold tracking-wide ${account.balance >= 0 ? 'text-white' : 'text-red-400'}`}>
                       {formatCurrency(account.balance, settings.currency || 'USD')}
                     </p>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">

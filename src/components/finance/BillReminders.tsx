@@ -151,7 +151,7 @@ export function BillReminders() {
                 <div className="absolute inset-0 bg-gradient-to-r from-white/[0.02] to-transparent pointer-events-none" />
                 <div className="flex justify-between items-start mb-4 relative z-10">
                   <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-lg ${bill.isPaid ? 'bg-green-500/20' : isOverdue ? 'bg-red-500/20' : 'bg-yellow-500/20'}`} style={!bill.isPaid && !isOverdue ? {boxShadow: '0 0 20px rgba(234,179,8,0.2)'} : {}}>
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shadow-lg ${bill.isPaid ? 'bg-green-500/20' : isOverdue ? 'bg-red-500/20' : 'bg-yellow-500/20'}`} style={!bill.isPaid && !isOverdue ? {boxShadow: '0 0 20px rgba(234,179,8,0.2)'} : {}}>
                       {cat?.icon || '📄'}
                     </div>
                     <div>
