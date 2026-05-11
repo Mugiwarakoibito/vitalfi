@@ -64,6 +64,7 @@ export function BillReminders() {
   }
 
   const handleSubmit = () => {
+    alert('formData: name=' + formData.name + ' amount=' + formData.amount + ' dueDay=' + formData.dueDay);
     console.log('handleSubmit called', { formData, editingBill });
     if (!formData.name || !formData.amount || !formData.dueDay) {
       console.log('Guard blocked - missing fields');
