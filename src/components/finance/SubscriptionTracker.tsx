@@ -1,5 +1,8 @@
 import { useState } from 'react'
-import { Trash2, Pause, Play, Plus, Pencil } from 'lucide-react'
+import { Trash2, Pause, Play, Plus, Pencil, AlertTriangle } from 'lucide-react'
+import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
+import { Button } from '@/components/ui/Button'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency } from '@/lib/utils'
 import type { Subscription } from '@/lib/storage'
@@ -196,69 +199,66 @@ export function SubscriptionTracker() {
         </div>
       )}
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowModal(false)}>
-          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-white mb-6">{editingSub ? 'Edit Subscription' : 'Add Subscription'}</h3>
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Subscription Name</label>
-                <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-purple-500/50 focus:outline-none transition-all" placeholder="Netflix, Spotify, Gym" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Amount</label>
-                <input type="number" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-purple-500/50 focus:outline-none transition-all" placeholder="0.00" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Billing Cycle</label>
-                <div className="flex gap-2">
-                  {billingCycles.map(cycle => (
-                    <button key={cycle} onClick={() => setFormData({...formData, billingCycle: cycle})} className={`flex-1 relative overflow-hidden p-3 rounded-xl text-sm font-medium transition-all ${formData.billingCycle === cycle ? 'bg-gradient-to-br from-purple-500/20 to-pink-500/10 border border-purple-500/50 text-white' : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/30 hover:bg-white/10'}`}>
-                      {cycle.charAt(0).toUpperCase() + cycle.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Category</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {categories.map(cat => (
-                    <button key={cat} onClick={() => setFormData({...formData, category: cat})} className={`relative overflow-hidden p-2 rounded-xl text-xs font-medium capitalize transition-all ${formData.category === cat ? 'bg-gradient-to-br from-purple-500/20 to-pink-500/10 border border-purple-500/50 text-white' : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/30 hover:bg-white/10'}`}>
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Start Date</label>
-                <input type="date" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-purple-500/50 focus:outline-none transition-all" />
-              </div>
-              <button onClick={handleSubmit} className="w-full px-4 py-3 rounded-xl bg-purple-500/20 border border-purple-500/50 text-white font-medium hover:bg-purple-500/30 transition-all">
-                {editingSub ? 'Update Subscription' : 'Add Subscription'}
-              </button>
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingSub ? 'Edit Subscription' : 'Add Subscription'} className="max-w-md">
+        <div className="space-y-4">
+          <Input
+            label="Subscription Name"
+            value={formData.name}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, name: e.target.value})}
+            placeholder="Netflix, Spotify, Gym"
+          />
+          <Input
+            label="Amount"
+            type="number"
+            value={formData.amount}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, amount: e.target.value})}
+            placeholder="0.00"
+          />
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-muted">Billing Cycle</label>
+            <div className="flex gap-2">
+              {billingCycles.map(cycle => (
+                <button key={cycle} type="button" onClick={() => setFormData({...formData, billingCycle: cycle})} className={`flex-1 p-3 rounded-xl text-sm font-medium transition-all border ${formData.billingCycle === cycle ? 'border-purple-500/50 bg-purple-500/20 text-white' : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white'}`}>
+                  {cycle.charAt(0).toUpperCase() + cycle.slice(1)}
+                </button>
+              ))}
             </div>
           </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-muted">Category</label>
+            <div className="grid grid-cols-3 gap-2">
+              {categories.map(cat => (
+                <button key={cat} type="button" onClick={() => setFormData({...formData, category: cat})} className={`p-2 rounded-xl text-xs font-medium capitalize transition-all border ${formData.category === cat ? 'border-purple-500/50 bg-purple-500/20 text-white' : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white'}`}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-muted">Start Date</label>
+            <input type="date" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} className="glass-input w-full" />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="ghost" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
+            <Button type="button" variant="primary" className="flex-1" onClick={handleSubmit}>{editingSub ? 'Update' : 'Add'} Subscription</Button>
+          </div>
         </div>
-      )}
+      </Modal>
 
-      {deletingSub && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setDeletingSub(null)}>
-          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-white mb-2">Delete Subscription?</h3>
-            <p className="text-gray-400 text-sm mb-6">
-              This will permanently delete <span className="text-white font-medium">{deletingSub.name}</span>. This cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setDeletingSub(null)} className="flex-1 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all">
-                Cancel
-              </button>
-              <button onClick={handleDelete} className="flex-1 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-all">
-                Delete
-              </button>
-            </div>
+      <Modal isOpen={!!deletingSub} onClose={() => setDeletingSub(null)} title="Delete Subscription?" className="max-w-sm">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-6 h-6 text-red-400" />
+          </div>
+          <p className="text-muted text-sm mb-6">
+            This will permanently delete <span className="text-white font-medium">{deletingSub?.name}</span>. This cannot be undone.
+          </p>
+          <div className="flex gap-3">
+            <Button type="button" variant="ghost" onClick={() => setDeletingSub(null)} className="flex-1">Cancel</Button>
+            <Button type="button" variant="danger" onClick={handleDelete} className="flex-1">Delete</Button>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

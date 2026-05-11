@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Calendar, CheckCircle, AlertCircle, Pencil, Trash2, Plus, AlertTriangle } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
+import { Button } from '@/components/ui/Button'
 import { useAppStore } from '@/store/useAppStore'
 import type { Bill } from '@/lib/storage'
 import { formatCurrency } from '@/lib/utils'
@@ -198,115 +200,102 @@ export function BillReminders() {
         </div>
       )}
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowModal(false)}>
-          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-white mb-6">{editingBill ? 'Edit Bill' : 'Add New Bill'}</h3>
-            <div className="space-y-5">
-              <Input
-                label="Bill Name"
-                value={formData.name}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, name: e.target.value})}
-                placeholder="Rent, Electric, Internet"
-              />
-              <Input
-                label="Amount"
-                type="number"
-                value={formData.amount}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, amount: e.target.value})}
-                placeholder="0.00"
-              />
-              <Input
-                label="Due Day of Month"
-                type="number"
-                min="1"
-                max="31"
-                value={formData.dueDay}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, dueDay: e.target.value})}
-                placeholder="1"
-              />
-              <Input
-                label="Remind me (days before)"
-                type="number"
-                min="1"
-                max="30"
-                value={formData.reminders}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, reminders: e.target.value})}
-                placeholder="3"
-              />
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Category</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {billCategories.map((cat) => (
-                    <button key={cat.id} onClick={() => setFormData({...formData, category: cat.id as Bill['category']})} className={`relative overflow-hidden p-3 rounded-xl text-sm font-medium flex items-center gap-2 transition-all ${formData.category === cat.id ? 'bg-gradient-to-br from-yellow-500/20 to-amber-500/10 border border-yellow-500/50 text-white' : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/30 hover:bg-white/10'}`}>
-                      <span>{cat.icon}</span>
-                      <span className="truncate">{cat.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingBill ? 'Edit Bill' : 'Add New Bill'} className="max-w-md">
+        <div className="space-y-4">
+          <Input
+            label="Bill Name"
+            value={formData.name}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, name: e.target.value})}
+            placeholder="Rent, Electric, Internet"
+          />
+          <Input
+            label="Amount"
+            type="number"
+            value={formData.amount}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, amount: e.target.value})}
+            placeholder="0.00"
+          />
+          <Input
+            label="Due Day of Month"
+            type="number"
+            min="1"
+            max="31"
+            value={formData.dueDay}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, dueDay: e.target.value})}
+            placeholder="1"
+          />
+          <Input
+            label="Remind me (days before)"
+            type="number"
+            min="1"
+            max="30"
+            value={formData.reminders}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, reminders: e.target.value})}
+            placeholder="3"
+          />
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-muted">Category</label>
+            <div className="grid grid-cols-3 gap-2">
+              {billCategories.map((cat) => (
+                <button key={cat.id} type="button" onClick={() => setFormData({...formData, category: cat.id as Bill['category']})} className={`p-3 rounded-xl text-sm font-medium flex items-center gap-2 transition-all border ${formData.category === cat.id ? 'border-yellow-500/50 bg-yellow-500/20 text-white' : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white'}`}>
+                  <span>{cat.icon}</span>
+                  <span className="truncate">{cat.label}</span>
+                </button>
+              ))}
             </div>
-            <button type="button" className="w-full px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 font-medium hover:bg-yellow-500/30 transition-all mt-6" style={{display: 'block'}}>
-              <span onClick={(e) => { 
-                e.stopPropagation(); 
-                if (!formData.name || !formData.amount || !formData.dueDay) {
-                  alert('Please fill in name, amount and due day');
-                  return;
-                }
-                if (editingBill) {
-                  updateBill({
-                    ...editingBill,
-                    name: formData.name,
-                    amount: Number(formData.amount),
-                    dueDay: Number(formData.dueDay),
-                    category: formData.category,
-                    reminders: formData.reminders ? [Number(formData.reminders)] : [],
-                    updatedAt: new Date().toISOString(),
-                  });
-                } else {
-                  addBill({
-                    id: crypto.randomUUID(),
-                    name: formData.name,
-                    amount: Number(formData.amount),
-                    dueDay: Number(formData.dueDay),
-                    category: formData.category || 'other',
-                    isPaid: false,
-                    reminders: formData.reminders ? [Number(formData.reminders)] : [],
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                  });
-                }
-                setShowModal(false);
-                setEditingBill(null);
-                setFormData({ name: '', amount: '', dueDay: '1', category: 'other', reminders: '3' });
-                alert('Bill saved!');
-              }}>{editingBill ? 'UPDATE BILL' : 'ADD BILL'}</span>
-            </button>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="ghost" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
+            <Button type="button" variant="primary" className="flex-1" onClick={() => { 
+              if (!formData.name || !formData.amount || !formData.dueDay) {
+                alert('Please fill in name, amount and due day');
+                return;
+              }
+              if (editingBill) {
+                updateBill({
+                  ...editingBill,
+                  name: formData.name,
+                  amount: Number(formData.amount),
+                  dueDay: Number(formData.dueDay),
+                  category: formData.category,
+                  reminders: formData.reminders ? [Number(formData.reminders)] : [],
+                  updatedAt: new Date().toISOString(),
+                });
+              } else {
+                addBill({
+                  id: crypto.randomUUID(),
+                  name: formData.name,
+                  amount: Number(formData.amount),
+                  dueDay: Number(formData.dueDay),
+                  category: formData.category || 'other',
+                  isPaid: false,
+                  reminders: formData.reminders ? [Number(formData.reminders)] : [],
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+              }
+              setShowModal(false);
+              setEditingBill(null);
+              setFormData({ name: '', amount: '', dueDay: '1', category: 'other', reminders: '3' });
+            }}>{editingBill ? 'Update' : 'Add'} Bill</Button>
           </div>
         </div>
-      )}
+      </Modal>
 
-      {deletingBill && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setDeletingBill(null)}>
-          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-6 h-6 text-yellow-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-white text-center mb-2">Delete Bill?</h3>
-            <p className="text-gray-400 text-sm text-center mb-6">
-              This will permanently delete <span className="text-white font-medium">{deletingBill.name}</span>. This cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setDeletingBill(null)} className="flex-1 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all">
-                Cancel
-              </button>
-              <button onClick={handleDelete} className="flex-1 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-all">
-                Delete
-              </button>
-            </div>
+      <Modal isOpen={!!deletingBill} onClose={() => setDeletingBill(null)} title="Delete Bill?" className="max-w-sm">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-6 h-6 text-yellow-400" />
+          </div>
+          <p className="text-muted text-sm mb-6">
+            This will permanently delete <span className="text-white font-medium">{deletingBill?.name}</span>. This cannot be undone.
+          </p>
+          <div className="flex gap-3">
+            <Button type="button" variant="ghost" onClick={() => setDeletingBill(null)} className="flex-1">Cancel</Button>
+            <Button type="button" variant="danger" onClick={handleDelete} className="flex-1">Delete</Button>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

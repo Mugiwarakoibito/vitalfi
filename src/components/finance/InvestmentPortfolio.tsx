@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { TrendingUp, TrendingDown, Plus, Wallet, PieChart, Pencil, Trash2, AlertTriangle } from 'lucide-react'
+import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
+import { Button } from '@/components/ui/Button'
 import { useAppStore } from '@/store/useAppStore'
 import type { Investment } from '@/lib/storage'
 import { formatCurrency } from '@/lib/utils'
@@ -233,79 +236,81 @@ export function InvestmentPortfolio() {
         </div>
       )}
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowModal(false)}>
-          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-white mb-6">{editingInvestment ? 'Edit Investment' : 'Add New Investment'}</h3>
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Investment Name</label>
-                <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder={investmentExamples.join(', ')} />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Symbol (optional)</label>
-                <input type="text" value={formData.symbol} onChange={e => setFormData({...formData, symbol: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder={getSymbolPlaceholder()} />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Type</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {investmentTypes.map((t) => (
-                    <button key={t.id} onClick={() => setFormData({...formData, type: t.id as Investment['type']})} className={`relative overflow-hidden p-3 rounded-xl text-sm font-medium flex items-center gap-2 transition-all ${formData.type === t.id ? 'bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/50 text-white' : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/30 hover:bg-white/10'}`}>
-                      <span>{t.icon}</span>
-                      <span className="truncate">{t.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Quantity</label>
-                  <input type="number" value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder="0.00" />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Current Price</label>
-                  <input type="number" value={formData.currentPrice} onChange={e => setFormData({...formData, currentPrice: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder="0.00" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Purchase Price</label>
-                  <input type="number" value={formData.purchasePrice} onChange={e => setFormData({...formData, purchasePrice: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/50 focus:outline-none transition-all" placeholder="0.00" />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Purchase Date</label>
-                  <input type="date" value={formData.purchaseDate} onChange={e => setFormData({...formData, purchaseDate: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-emerald-500/50 focus:outline-none transition-all" />
-                </div>
-              </div>
-              <button onClick={handleSubmit} className="w-full px-4 py-3 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-medium hover:bg-emerald-500/30 transition-all">
-                {editingInvestment ? 'Update Investment' : 'Add Investment'}
-              </button>
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingInvestment ? 'Edit Investment' : 'Add New Investment'} className="max-w-md">
+        <div className="space-y-4">
+          <Input
+            label="Investment Name"
+            value={formData.name}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, name: e.target.value})}
+            placeholder={investmentExamples.join(', ')}
+          />
+          <Input
+            label="Symbol (optional)"
+            value={formData.symbol}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, symbol: e.target.value})}
+            placeholder={getSymbolPlaceholder()}
+          />
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-muted">Type</label>
+            <div className="grid grid-cols-3 gap-2">
+              {investmentTypes.map((t) => (
+                <button key={t.id} type="button" onClick={() => setFormData({...formData, type: t.id as Investment['type']})} className={`p-3 rounded-xl text-sm font-medium flex items-center gap-2 transition-all border ${formData.type === t.id ? 'border-emerald-500/50 bg-emerald-500/20 text-white' : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white'}`}>
+                  <span>{t.icon}</span>
+                  <span className="truncate">{t.label}</span>
+                </button>
+              ))}
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Quantity"
+              type="number"
+              value={formData.quantity}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, quantity: e.target.value})}
+              placeholder="0.00"
+            />
+            <Input
+              label="Current Price"
+              type="number"
+              value={formData.currentPrice}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, currentPrice: e.target.value})}
+              placeholder="0.00"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Purchase Price"
+              type="number"
+              value={formData.purchasePrice}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, purchasePrice: e.target.value})}
+              placeholder="0.00"
+            />
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-muted">Purchase Date</label>
+              <input type="date" value={formData.purchaseDate} onChange={e => setFormData({...formData, purchaseDate: e.target.value})} className="glass-input w-full" />
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="ghost" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
+            <Button type="button" variant="primary" className="flex-1" onClick={handleSubmit}>{editingInvestment ? 'Update' : 'Add'} Investment</Button>
+          </div>
         </div>
-      )}
+      </Modal>
 
-      {deletingInvestment && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setDeletingInvestment(null)}>
-          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-6 h-6 text-red-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-white text-center mb-2">Delete Investment?</h3>
-            <p className="text-gray-400 text-sm text-center mb-6">
-              This will permanently delete <span className="text-white font-medium">{deletingInvestment.name}</span>. This cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setDeletingInvestment(null)} className="flex-1 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all">
-                Cancel
-              </button>
-              <button onClick={handleDelete} className="flex-1 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-all">
-                Delete
-              </button>
-            </div>
+      <Modal isOpen={!!deletingInvestment} onClose={() => setDeletingInvestment(null)} title="Delete Investment?" className="max-w-sm">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-6 h-6 text-red-400" />
+          </div>
+          <p className="text-muted text-sm mb-6">
+            This will permanently delete <span className="text-white font-medium">{deletingInvestment?.name}</span>. This cannot be undone.
+          </p>
+          <div className="flex gap-3">
+            <Button type="button" variant="ghost" onClick={() => setDeletingInvestment(null)} className="flex-1">Cancel</Button>
+            <Button type="button" variant="danger" onClick={handleDelete} className="flex-1">Delete</Button>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

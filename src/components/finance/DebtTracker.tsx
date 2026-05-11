@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { CreditCard, TrendingDown, DollarSign, Plus, Pencil, Trash2, AlertTriangle, Calendar, Percent, Flag } from 'lucide-react'
+import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
+import { Button } from '@/components/ui/Button'
 import { useAppStore } from '@/store/useAppStore'
 import type { Debt } from '@/lib/storage'
 import { formatCurrency } from '@/lib/utils'
@@ -277,79 +280,83 @@ export function DebtTracker() {
         </div>
       )}
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowModal(false)}>
-          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-white mb-6">{editingDebt ? 'Edit Debt' : 'Add New Debt'}</h3>
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Debt Name</label>
-                <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-red-500/50 focus:outline-none transition-all" placeholder={debtExamples.join(', ')} />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Type</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {debtTypes.map((t) => (
-                    <button key={t.id} onClick={() => setFormData({...formData, type: t.id as Debt['type']})} className={`relative overflow-hidden p-3 rounded-xl text-sm font-medium flex items-center gap-2 transition-all ${formData.type === t.id ? 'bg-gradient-to-br from-red-500/20 to-orange-500/10 border border-red-500/50 text-white' : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/30 hover:bg-white/10'}`}>
-                      <span>{t.icon}</span>
-                      <span className="truncate">{t.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Original Amount</label>
-                  <input type="number" value={formData.totalAmount} onChange={e => setFormData({...formData, totalAmount: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-red-500/50 focus:outline-none transition-all" placeholder="0.00" />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Current Balance</label>
-                  <input type="number" value={formData.currentBalance} onChange={e => setFormData({...formData, currentBalance: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-red-500/50 focus:outline-none transition-all" placeholder="0.00" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Interest Rate (%)</label>
-                  <input type="number" step="0.1" value={formData.interestRate} onChange={e => setFormData({...formData, interestRate: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-red-500/50 focus:outline-none transition-all" placeholder="0.00" />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Min. Payment</label>
-                  <input type="number" value={formData.minimumPayment} onChange={e => setFormData({...formData, minimumPayment: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-red-500/50 focus:outline-none transition-all" placeholder="0.00" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Due Date (optional)</label>
-                <input type="date" value={formData.dueDate} onChange={e => setFormData({...formData, dueDate: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-red-500/50 focus:outline-none transition-all" />
-              </div>
-              <button onClick={handleSubmit} className="w-full px-4 py-3 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 font-medium hover:bg-red-500/30 transition-all">
-                {editingDebt ? 'Update Debt' : 'Add Debt'}
-              </button>
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingDebt ? 'Edit Debt' : 'Add New Debt'} className="max-w-md">
+        <div className="space-y-4">
+          <Input
+            label="Debt Name"
+            value={formData.name}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, name: e.target.value})}
+            placeholder={debtExamples.join(', ')}
+          />
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-muted">Type</label>
+            <div className="grid grid-cols-2 gap-2">
+              {debtTypes.map((t) => (
+                <button key={t.id} type="button" onClick={() => setFormData({...formData, type: t.id as Debt['type']})} className={`p-3 rounded-xl text-sm font-medium flex items-center gap-2 transition-all border ${formData.type === t.id ? 'border-red-500/50 bg-red-500/20 text-white' : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white'}`}>
+                  <span>{t.icon}</span>
+                  <span className="truncate">{t.label}</span>
+                </button>
+              ))}
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Original Amount"
+              type="number"
+              value={formData.totalAmount}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, totalAmount: e.target.value})}
+              placeholder="0.00"
+            />
+            <Input
+              label="Current Balance"
+              type="number"
+              value={formData.currentBalance}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, currentBalance: e.target.value})}
+              placeholder="0.00"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Interest Rate (%)"
+              type="number"
+              step="0.1"
+              value={formData.interestRate}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, interestRate: e.target.value})}
+              placeholder="0.00"
+            />
+            <Input
+              label="Min. Payment"
+              type="number"
+              value={formData.minimumPayment}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, minimumPayment: e.target.value})}
+              placeholder="0.00"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-muted">Due Date (optional)</label>
+            <input type="date" value={formData.dueDate} onChange={e => setFormData({...formData, dueDate: e.target.value})} className="glass-input w-full" />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="ghost" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
+            <Button type="button" variant="primary" className="flex-1" onClick={handleSubmit}>{editingDebt ? 'Update' : 'Add'} Debt</Button>
+          </div>
         </div>
-      )}
+      </Modal>
 
-      {deletingDebt && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setDeletingDebt(null)}>
-          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-6 h-6 text-red-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-white text-center mb-2">Delete Debt?</h3>
-            <p className="text-gray-400 text-sm text-center mb-6">
-              This will permanently delete <span className="text-white font-medium">{deletingDebt.name}</span>. This cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setDeletingDebt(null)} className="flex-1 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all">
-                Cancel
-              </button>
-              <button onClick={handleDelete} className="flex-1 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-all">
-                Delete
-              </button>
-            </div>
+      <Modal isOpen={!!deletingDebt} onClose={() => setDeletingDebt(null)} title="Delete Debt?" className="max-w-sm">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-6 h-6 text-red-400" />
+          </div>
+          <p className="text-muted text-sm mb-6">
+            This will permanently delete <span className="text-white font-medium">{deletingDebt?.name}</span>. This cannot be undone.
+          </p>
+          <div className="flex gap-3">
+            <Button type="button" variant="ghost" onClick={() => setDeletingDebt(null)} className="flex-1">Cancel</Button>
+            <Button type="button" variant="danger" onClick={handleDelete} className="flex-1">Delete</Button>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }
