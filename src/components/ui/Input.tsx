@@ -19,7 +19,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         )}
         <div className="relative">
           {icon && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#A78BFA' }}>
+            <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none z-20" style={{ color: '#A78BFA' }}>
               {icon}
             </div>
           )}
