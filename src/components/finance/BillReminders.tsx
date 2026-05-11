@@ -280,9 +280,9 @@ export function BillReminders() {
                 </div>
               </div>
             </div>
-            <button onClick={() => { alert('submit clicked'); handleSubmit(); }} className="w-full px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 font-medium hover:bg-yellow-500/30 transition-all mt-6">
+            <div onClick={() => { alert('submit clicked'); handleSubmit(); }} onMouseDown={() => console.log('mouse down')} className="w-full px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 font-medium hover:bg-yellow-500/30 transition-all mt-6 text-center cursor-pointer">
               {editingBill ? 'Update Bill' : 'Add Bill'}
-            </button>
+            </div>
           </div>
         </div>
       )}
