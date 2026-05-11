@@ -101,7 +101,7 @@ setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: 
               <span>Total Goals</span>
             </div>
             <p className="text-3xl font-bold text-white">{financialGoals.length}</p>
-            <p className="text-xs text-gray-500 mt-1">Active goals</p>
+            <p className="text-xs text-gray-500 mt-1">Active</p>
           </div>
         </div>
 
