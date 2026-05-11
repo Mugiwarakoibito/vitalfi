@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CreditCard, TrendingDown, DollarSign, Plus, Pencil, Trash2, AlertTriangle, Calendar, Percent, Flag } from 'lucide-react'
+import { CreditCard, TrendingDown, DollarSign, Pencil, Trash2, AlertTriangle, Calendar, Percent, Flag } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
