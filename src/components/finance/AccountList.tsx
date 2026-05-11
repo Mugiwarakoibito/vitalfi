@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, Wallet, PiggyBank, CreditCard, TrendingUp, Banknote, Archive, Pencil, Trash2, AlertTriangle, DollarSign, ArrowUpDown } from 'lucide-react'
+import { Plus, Wallet, PiggyBank, CreditCard, TrendingUp, Banknote, Pencil, Trash2, AlertTriangle, DollarSign, ArrowUpDown } from 'lucide-react'
 import type { Account } from '@/lib/storage'
 import { formatCurrency } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
@@ -29,7 +29,7 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
   const [deletingAccount, setDeletingAccount] = useState<Account | null>(null)
   const accounts = initialAccounts
   const { settings, addAccount, updateAccount, deleteAccount } = useAppStore()
-  const activeAccounts = accounts.filter((a) => !a.isArchived)
+  const activeAccounts = accounts
   const totalBalance = useMemo(() => activeAccounts.reduce((sum, acc) => sum + acc.balance, 0), [activeAccounts])
   const positiveBalance = activeAccounts.filter(a => a.balance > 0).reduce((sum, a) => sum + a.balance, 0)
   const negativeBalance = activeAccounts.filter(a => a.balance < 0).reduce((sum, a) => sum + Math.abs(a.balance), 0)
@@ -48,10 +48,6 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
     await deleteAccount(deletingAccount.id)
     setDeletingAccount(null)
     onAccountChange?.()
-  }
-
-  const handleArchive = async (account: Account) => {
-    await updateAccount({ ...account, isArchived: true })
   }
 
   return (
@@ -158,9 +154,6 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
                       <button onClick={(e) => { e.stopPropagation(); setEditingAccount(account) }} className="rounded-lg p-2 text-gray-500 hover:text-white hover:bg-white/10 transition-all">
                         <Pencil className="w-4 h-4" />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); handleArchive(account) }} className="rounded-lg p-2 text-gray-500 hover:text-yellow-400 hover:bg-yellow-500/10 transition-all">
-                        <Archive className="w-4 h-4" />
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); setDeletingAccount(account) }} className="rounded-lg p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
                         <Trash2 className="w-4 h-4" />
