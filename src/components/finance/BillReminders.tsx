@@ -64,6 +64,7 @@ export function BillReminders() {
   }
 
   const handleSubmit = () => {
+    alert('3: inside handleSubmit');
     alert('formData: name=' + formData.name + ' amount=' + formData.amount + ' dueDay=' + formData.dueDay);
     console.log('handleSubmit called', { formData, editingBill });
     if (!formData.name || !formData.amount || !formData.dueDay) {
@@ -281,7 +282,7 @@ export function BillReminders() {
                 </div>
               </div>
             </div>
-            <div onClick={() => { alert('submit clicked'); handleSubmit(); }} onMouseDown={() => console.log('mouse down')} className="w-full px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 font-medium hover:bg-yellow-500/30 transition-all mt-6 text-center cursor-pointer">
+            <div onClick={() => { alert('1: before handleSubmit'); handleSubmit(); alert('2: after handleSubmit'); }} onMouseDown={() => console.log('mouse down')} className="w-full px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 font-medium hover:bg-yellow-500/30 transition-all mt-6 text-center cursor-pointer">
               {editingBill ? 'Update Bill' : 'Add Bill'}
             </div>
           </div>
