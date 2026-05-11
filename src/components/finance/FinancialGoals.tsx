@@ -219,7 +219,7 @@ setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: 
             label="Goal Name"
             value={formData.name}
             onChange={(e) => setFormData({...formData, name: e.target.value})}
-            placeholder="e.g., Emergency Fund"
+            placeholder="Emergency Fund, Vacation, New Car"
           />
           <div className="grid grid-cols-2 gap-4">
             <Input
