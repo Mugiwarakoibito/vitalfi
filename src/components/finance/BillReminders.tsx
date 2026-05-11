@@ -64,7 +64,11 @@ export function BillReminders() {
   }
 
   const handleSubmit = () => {
-    if (!formData.name || !formData.amount || !formData.dueDay) return
+    console.log('handleSubmit called', { formData, editingBill });
+    if (!formData.name || !formData.amount || !formData.dueDay) {
+      console.log('Guard blocked - missing fields');
+      return;
+    }
 
     if (editingBill) {
       updateBill({
@@ -77,12 +81,13 @@ export function BillReminders() {
         updatedAt: new Date().toISOString(),
       })
     } else {
+      console.log('Calling addBill with:', { name: formData.name, amount: Number(formData.amount), dueDay: Number(formData.dueDay), category: formData.category });
       addBill({
         id: crypto.randomUUID(),
         name: formData.name,
         amount: Number(formData.amount),
         dueDay: Number(formData.dueDay),
-        category: formData.category,
+        category: formData.category || 'other',
         isPaid: false,
         reminders: formData.reminders ? [Number(formData.reminders)] : [],
         createdAt: new Date().toISOString(),
