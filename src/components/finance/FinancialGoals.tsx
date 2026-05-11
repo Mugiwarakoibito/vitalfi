@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Target, Plus, Pencil, Trash2, AlertTriangle, TrendingUp, Calendar, DollarSign } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -18,11 +18,15 @@ const goalCategories = [
   { id: 'other', label: 'Other', icon: '🎯' },
 ]
 
-export function FinancialGoals() {
+export function FinancialGoals({ initialShow = false }: { initialShow?: boolean }) {
   const { goals, settings, addGoal, updateGoal, deleteGoal } = useAppStore()
   const financialGoals = goals.filter(g => g.type === 'financial')
   
-  const [showModal, setShowModal] = useState(false)
+  const [showModal, setShowModal] = useState(initialShow)
+  
+  useEffect(() => {
+    if (initialShow) setShowModal(true)
+  }, [initialShow])
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
   const [deletingGoal, setDeletingGoal] = useState<Goal | null>(null)
   const [formData, setFormData] = useState({

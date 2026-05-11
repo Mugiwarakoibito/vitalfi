@@ -27,6 +27,7 @@ export default function Finance() {
   const [activeTab, setActiveTab] = useState<Tab>(tabFromUrl || 'transactions')
   const [showTransactionForm, setShowTransactionForm] = useState(false)
   const [showAccountForm, setShowAccountForm] = useState(false)
+  const [showGoalForm, setShowGoalForm] = useState(false)
   const { settings, accounts, transactions, loadAllData, addTransaction } = useAppStore()
 
   useEffect(() => {
@@ -36,6 +37,8 @@ export default function Finance() {
     if (actionFromUrl === 'add') {
       if (tabFromUrl === 'wealth') {
         setShowAccountForm(true)
+      } else if (tabFromUrl === 'goals') {
+        setShowGoalForm(true)
       } else {
         setShowTransactionForm(true)
       }
@@ -177,7 +180,7 @@ export default function Finance() {
       {activeTab === 'subscriptions' && <SubscriptionTracker />}
       {activeTab === 'debts' && <DebtTracker />}
       {activeTab === 'investments' && <InvestmentPortfolio />}
-      {activeTab === 'goals' && <FinancialGoals />}
+      {activeTab === 'goals' && <FinancialGoals initialShow={showGoalForm} />}
       {activeTab === 'calendar' && <FinancialCalendar initialTransactions={transactions} />}
 
       <TransactionForm

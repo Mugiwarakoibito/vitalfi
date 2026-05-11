@@ -256,13 +256,14 @@ export function FinanceDashboard() {
           color="purple" 
         />
         <MetricCard 
-          onClick={() => navigate('/finance?tab=goals')}
+          onClick={() => navigate(goals.filter(g => g.type === 'financial').length > 0 ? '/finance?tab=goals' : '/finance?tab=goals&action=add')}
           label="Financial Goals" 
           value={goals.filter(g => g.type === 'financial').length > 0 ? `${goals.filter(g => g.type === 'financial').length} Goals` : "No Goals"} 
           trend={goals.filter(g => g.type === 'financial').length > 0 ? `Total: ${formatCurrency(goals.filter(g => g.type === 'financial').reduce((sum, g) => sum + g.current, 0), currency)}` : "Add your first goal"}
           positive={goals.filter(g => g.type === 'financial').length > 0}
           icon={Flag} 
-          color="amber" 
+          color="amber"
+          showVsLastMonth={false}
         />
       </section>
 
@@ -507,8 +508,8 @@ export function FinanceDashboard() {
   )
 }
 
-function MetricCard({ label, value, trend, positive, icon: Icon, color, onClick }: any) {
-  const hasData = trend && trend !== 'No Data' && trend !== 'First Month' && trend !== 'Start' && trend !== 'History' && trend !== 'No Last Month'
+function MetricCard({ label, value, trend, positive, icon: Icon, color, onClick, showVsLastMonth = true }: any) {
+  const hasData = trend && trend !== 'No Data' && trend !== 'First Month' && trend !== 'Start' && trend !== 'History' && trend !== 'No Last Month' && trend !== 'Add your first goal'
   const colorMap = {
     cyan: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20 shadow-cyan-500/10",
     emerald: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20 shadow-emerald-500/10",
@@ -529,7 +530,7 @@ function MetricCard({ label, value, trend, positive, icon: Icon, color, onClick 
             <span className={cn("text-[10px] font-bold uppercase", positive ? "text-emerald-400" : "text-rose-500")}>
               {trend}
             </span>
-            <span className="text-[10px] font-bold text-slate-700 uppercase tracking-tighter">vs Last Month</span>
+            {showVsLastMonth && <span className="text-[10px] font-bold text-slate-700 uppercase tracking-tighter">vs Last Month</span>}
           </div>
         )}
       </div>
