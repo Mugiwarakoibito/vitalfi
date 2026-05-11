@@ -229,7 +229,7 @@ export function FinanceDashboard() {
       {/* Primary Metrics */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard 
-          onClick={() => navigate('/finance/wealth')}
+          onClick={() => navigate('/finance?tab=wealth')}
           label="Net Worth" 
           value={formatCurrency(netWorth, currency)} 
           trend={accounts.length > 0 ? (lastMonthIncome > 0 || lastMonthSpending > 0 ? "History" : "Start") : "No Data"}
@@ -238,7 +238,7 @@ export function FinanceDashboard() {
           color="cyan" 
         />
         <MetricCard 
-          onClick={() => navigate('/finance?tab=flow')}
+          onClick={() => navigate('/finance?tab=transactions')}
           label="In vs Out" 
           value={formatCurrency(cashFlow, currency)} 
           trend={transactions.length > 0 && cashFlowChangeStr ? cashFlowChangeStr : (transactions.length > 0 ? "No Last Month" : "No Data")}
@@ -247,7 +247,6 @@ export function FinanceDashboard() {
           color="emerald" 
         />
         <MetricCard 
-          onClick={() => navigate('/finance?tab=spending')}
           label="Spending Health" 
           value={thisMonthIncome > 0 || thisMonthSpending > 0 ? `${spendingHealth}%` : thisMonthSpending > 0 ? "-100%" : "N/A"} 
           trend={transactions.length > 0 && spendingHealthChangeStr ? spendingHealthChangeStr : (transactions.length > 0 ? "No Last Month" : "No Data")}
