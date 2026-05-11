@@ -192,9 +192,9 @@ export function FinancialCalendar({ initialTransactions = [] }: FinancialCalenda
                     {day.transactions.length > 3 && (
                       <div 
                         onClick={() => setSelectedDay(day)}
-                        className="text-[10px] px-1 py-0.5 rounded bg-white/10 text-white font-medium cursor-pointer hover:bg-white/20"
+                        className="text-[10px] px-2 py-1 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-300 font-medium cursor-pointer hover:bg-purple-500/30 transition-all text-center"
                       >
-                        +{day.transactions.length - 3} more
+                        +{day.transactions.length - 3}
                       </div>
                     )}
                   </div>
