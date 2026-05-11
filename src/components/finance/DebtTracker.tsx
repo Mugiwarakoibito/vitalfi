@@ -177,16 +177,8 @@ export function DebtTracker() {
             <p className="text-xl font-bold text-amber-400">
               {earliestPayoffDate || '--'}
             </p>
-            <p className="text-xs text-gray-500 mt-1">Estimated payoff</p>
+             <p className="text-xs text-gray-500 mt-1">Estimated payoff</p>
            </div>
-
-     <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-white">Debt Overview</h3>
-        <button onClick={() => { setEditingDebt(null); setFormData({ name: '', type: 'credit_card', totalAmount: '', currentBalance: '', interestRate: '', minimumPayment: '', dueDate: '' }); setShowModal(true) }} className="px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 text-sm flex items-center gap-2 hover:bg-red-500/30 transition-all">
-          <Plus className="w-4 h-4" />
-          Add Debt
-        </button>
-      </div>
 
       {debts.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
