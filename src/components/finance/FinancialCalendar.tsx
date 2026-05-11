@@ -21,6 +21,7 @@ export function FinancialCalendar({ initialTransactions = [] }: FinancialCalenda
   const transactions = initialTransactions.length > 0 ? initialTransactions : storeTransactions
   const { settings } = useAppStore()
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null)
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -175,7 +176,7 @@ export function FinancialCalendar({ initialTransactions = [] }: FinancialCalenda
                 
                 {hasTransactions && (
                   <div className="space-y-1">
-                    {day.transactions.map(txn => (
+                    {day.transactions.slice(0, 3).map(txn => (
                       <div
                         key={txn.id}
                         className={cn(
@@ -188,6 +189,14 @@ export function FinancialCalendar({ initialTransactions = [] }: FinancialCalenda
                         {txn.type === 'income' ? '+' : '-'}{formatCurrency(txn.amount, settings.currency || 'USD')}
                       </div>
                     ))}
+                    {day.transactions.length > 3 && (
+                      <div 
+                        onClick={() => setSelectedDay(day)}
+                        className="text-[10px] px-1 py-0.5 rounded bg-white/10 text-white font-medium cursor-pointer hover:bg-white/20"
+                      >
+                        +{day.transactions.length - 3} more
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -219,6 +228,30 @@ export function FinancialCalendar({ initialTransactions = [] }: FinancialCalenda
           <span>Expense</span>
         </div>
       </div>
+
+      {/* Day Details Modal */}
+      {selectedDay && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setSelectedDay(null)}>
+          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-white mb-4">
+              {new Date(selectedDay.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </h3>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {selectedDay.transactions.map(txn => (
+                <div key={txn.id} className="flex justify-between items-center p-2 rounded-lg bg-white/5">
+                  <span className="text-white text-sm">{txn.description || txn.category || 'Transaction'}</span>
+                  <span className={cn("font-medium", txn.type === 'income' ? "text-emerald-400" : "text-red-400")}>
+                    {txn.type === 'income' ? '+' : '-'}{formatCurrency(txn.amount, settings.currency || 'USD')}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setSelectedDay(null)} className="mt-4 w-full py-2 rounded-xl bg-white/10 text-white hover:bg-white/20">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
