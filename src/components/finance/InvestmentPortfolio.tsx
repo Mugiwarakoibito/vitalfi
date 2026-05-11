@@ -215,14 +215,10 @@ export function InvestmentPortfolio() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="grid grid-cols-2 gap-3 mb-4">
                     <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-                      <p className="text-xs text-gray-500 mb-1">Current</p>
-                      <p className="text-sm font-bold text-white tracking-tight">{formatCurrency(inv.currentPrice, currency)}</p>
-                    </div>
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-                      <p className="text-xs text-gray-500 mb-1">Total Value</p>
-                      <p className="text-sm font-bold text-white tracking-tight">{formatCurrency(value, currency)}</p>
+                      <p className="text-xs text-gray-500 mb-1">Cost Basis</p>
+                      <p className="text-sm font-bold text-white tracking-tight">{formatCurrency(cost, currency)}</p>
                     </div>
                     <div className={`p-3 rounded-xl ${gain >= 0 ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
                       <p className="text-xs mb-1">{gain >= 0 ? 'Gain' : 'Loss'}</p>
@@ -232,8 +228,8 @@ export function InvestmentPortfolio() {
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500">Cost basis: {formatCurrency(cost, currency)}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-500">Current: {formatCurrency(inv.currentPrice, currency)}/share</span>
                     <span className={`font-medium tracking-wide px-2 py-1 rounded-lg ${gainPercent >= 0 ? 'text-green-400 bg-green-500/10' : 'text-red-400 bg-red-500/10'}`}>
                       {gainPercent >= 0 ? '+' : ''}{gainPercent.toFixed(2)}%
                     </span>
