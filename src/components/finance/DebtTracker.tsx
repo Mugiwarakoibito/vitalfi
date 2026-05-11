@@ -177,17 +177,18 @@ export function DebtTracker() {
             <p className="text-xl font-bold text-amber-400">
               {earliestPayoffDate || '--'}
             </p>
-             <p className="text-xs text-gray-500 mt-1">Estimated payoff</p>
-           </div>
+<p className="text-xs text-gray-500 mt-1">Estimated payoff</p>
+            </div>
+        </div>
+      </div>
 
       {debts.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
           <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
             <CreditCard className="w-8 h-8 text-red-400/50" />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Estimated payoff</p>
           </div>
-          <p className="text-gray-400 mb-1">No debts tracked</p>
-          <p className="text-gray-500 text-sm">Add your debts to track your payoff journey</p>
-        </div>
       ) : (
         <div className="space-y-4">
           {debts.map((debt) => {
