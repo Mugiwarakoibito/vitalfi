@@ -192,9 +192,9 @@ export function FinancialCalendar({ initialTransactions = [] }: FinancialCalenda
                     {day.transactions.length > 3 && (
                       <div 
                         onClick={() => setSelectedDay(day)}
-                        className="text-[10px] px-2 py-1 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-300 font-medium cursor-pointer hover:bg-purple-500/30 transition-all text-center"
+                        className="text-[10px] px-1 py-0.5 rounded bg-white/10 text-white font-medium cursor-pointer hover:bg-white/20"
                       >
-                        +{day.transactions.length - 3}
+                        +{day.transactions.length - 3} more
                       </div>
                     )}
                   </div>
@@ -232,13 +232,14 @@ export function FinancialCalendar({ initialTransactions = [] }: FinancialCalenda
       {/* Day Details Modal */}
       {selectedDay && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setSelectedDay(null)}>
-          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/80 backdrop-blur-xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-cyan-500" />
             <h3 className="text-lg font-semibold text-white mb-4">
               {new Date(selectedDay.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </h3>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {selectedDay.transactions.map(txn => (
-                <div key={txn.id} className="flex justify-between items-center p-2 rounded-lg bg-white/5">
+                <div key={txn.id} className="flex justify-between items-center p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all">
                   <span className="text-white text-sm">{txn.description || txn.category || 'Transaction'}</span>
                   <span className={cn("font-medium", txn.type === 'income' ? "text-emerald-400" : "text-red-400")}>
                     {txn.type === 'income' ? '+' : '-'}{formatCurrency(txn.amount, settings.currency || 'USD')}
@@ -246,7 +247,7 @@ export function FinancialCalendar({ initialTransactions = [] }: FinancialCalenda
                 </div>
               ))}
             </div>
-            <button onClick={() => setSelectedDay(null)} className="mt-4 w-full py-2 rounded-xl bg-white/10 text-white hover:bg-white/20">
+            <button onClick={() => setSelectedDay(null)} className="mt-4 w-full py-2 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all">
               Close
             </button>
           </div>
