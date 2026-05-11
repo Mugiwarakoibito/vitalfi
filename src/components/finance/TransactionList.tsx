@@ -126,13 +126,13 @@ export function TransactionList({ accounts, initialTransactions = [], onTransact
       <div className="space-y-3">
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white" style={{ zIndex: 50 }} />
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-white" style={{ zIndex: 50 }} />
             <input
               type="text"
               placeholder="Search transactions..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="glass-input w-full pl-9"
+              className="glass-input w-full pl-10"
             />
             {searchQuery && (
               <button
