@@ -19,17 +19,15 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         )}
         <div className="relative">
           {icon && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center" style={{ minWidth: '20px' }}>
-              <span style={{ color: '#8B5CF6', fontSize: '18px', display: 'flex' }}>
-                {icon}
-              </span>
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#A78BFA' }}>
+              {icon}
             </div>
           )}
           <input
             ref={ref}
             className={cn(
               'glass-input w-full',
-              icon && 'pl-11',
+              icon && 'pl-10',
               error && 'border-error/50 focus:border-error/70',
               className
             )}
