@@ -63,43 +63,7 @@ export function BillReminders() {
     setShowModal(true)
   }
 
-  const handleSubmit = () => {
-    alert('3: inside handleSubmit');
-    alert('formData: name=' + formData.name + ' amount=' + formData.amount + ' dueDay=' + formData.dueDay);
-    console.log('handleSubmit called', { formData, editingBill });
-    if (!formData.name || !formData.amount || !formData.dueDay) {
-      console.log('Guard blocked - missing fields');
-      return;
-    }
-
-    if (editingBill) {
-      updateBill({
-        ...editingBill,
-        name: formData.name,
-        amount: Number(formData.amount),
-        dueDay: Number(formData.dueDay),
-        category: formData.category,
-        reminders: formData.reminders ? [Number(formData.reminders)] : [],
-        updatedAt: new Date().toISOString(),
-      })
-    } else {
-      console.log('Calling addBill with:', { name: formData.name, amount: Number(formData.amount), dueDay: Number(formData.dueDay), category: formData.category });
-      addBill({
-        id: crypto.randomUUID(),
-        name: formData.name,
-        amount: Number(formData.amount),
-        dueDay: Number(formData.dueDay),
-        category: formData.category || 'other',
-        isPaid: false,
-        reminders: formData.reminders ? [Number(formData.reminders)] : [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      })
-    }
-    setShowModal(false)
-    setEditingBill(null)
-    setFormData({ name: '', amount: '', dueDay: '', category: '' as Bill['category'], reminders: '' })
-  }
+  // handleSubmit removed - inline logic used instead
 
   const handleDelete = async () => {
     if (!deletingBill) return
@@ -289,21 +253,34 @@ export function BillReminders() {
                   alert('Please fill in name, amount and due day');
                   return;
                 }
-                addBill({
-                  id: crypto.randomUUID(),
-                  name: formData.name,
-                  amount: Number(formData.amount),
-                  dueDay: Number(formData.dueDay),
-                  category: formData.category || 'other',
-                  isPaid: false,
-                  reminders: formData.reminders ? [Number(formData.reminders)] : [],
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                });
+                if (editingBill) {
+                  updateBill({
+                    ...editingBill,
+                    name: formData.name,
+                    amount: Number(formData.amount),
+                    dueDay: Number(formData.dueDay),
+                    category: formData.category,
+                    reminders: formData.reminders ? [Number(formData.reminders)] : [],
+                    updatedAt: new Date().toISOString(),
+                  });
+                } else {
+                  addBill({
+                    id: crypto.randomUUID(),
+                    name: formData.name,
+                    amount: Number(formData.amount),
+                    dueDay: Number(formData.dueDay),
+                    category: formData.category || 'other',
+                    isPaid: false,
+                    reminders: formData.reminders ? [Number(formData.reminders)] : [],
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  });
+                }
                 setShowModal(false);
-                setFormData({ name: '', amount: '', dueDay: '', category: '' as Bill['category'], reminders: '' });
-                alert('Bill added!');
-              }}>Add Bill</span>
+                setEditingBill(null);
+                setFormData({ name: '', amount: '', dueDay: '1', category: 'other', reminders: '3' });
+                alert('Bill saved!');
+              }}>{editingBill ? 'UPDATE BILL' : 'ADD BILL'}</span>
             </button>
           </div>
         </div>
