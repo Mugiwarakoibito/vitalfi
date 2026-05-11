@@ -219,6 +219,7 @@ export interface Goal {
   target: number;
   current: number;
   deadline: string;
+  category?: string;
   createdAt: string;
   updatedAt: string;
 }

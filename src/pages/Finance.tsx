@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Wallet, CreditCard, Gem, Calendar, TrendingUp, Plus, Target, Scissors, Skull } from 'lucide-react'
+import { Wallet, CreditCard, Gem, Calendar, TrendingUp, Plus, Target, Scissors, Skull, Flag } from 'lucide-react'
 import { type Transaction } from '@/lib/storage'
 import { AccountList } from '@/components/finance/AccountList'
 import { TransactionList } from '@/components/finance/TransactionList'
@@ -12,12 +12,13 @@ import { SubscriptionTracker } from '@/components/finance/SubscriptionTracker'
 import { DebtTracker } from '@/components/finance/DebtTracker'
 import { InvestmentPortfolio } from '@/components/finance/InvestmentPortfolio'
 import { FinancialCalendar } from '@/components/finance/FinancialCalendar'
+import { FinancialGoals } from '@/components/finance/FinancialGoals'
 import { StreakStatus } from '@/components/dashboard/StreakStatus'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency, cn } from '@/lib/utils'
 import type { ParsedTransaction } from '@/types/finance'
 
-type Tab = 'accounts' | 'transactions' | 'budgets' | 'wealth' | 'bills' | 'subscriptions' | 'debts' | 'investments' | 'calendar'
+type Tab = 'accounts' | 'transactions' | 'budgets' | 'wealth' | 'bills' | 'subscriptions' | 'debts' | 'investments' | 'calendar' | 'goals'
 
 export default function Finance() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -135,6 +136,7 @@ export default function Finance() {
           { id: 'transactions', label: 'Transactions', icon: Wallet },
           { id: 'accounts', label: 'Wealth', icon: CreditCard },
           { id: 'budgets', label: 'Budgets', icon: Target },
+          { id: 'goals', label: 'Goals', icon: Flag },
           { id: 'bills', label: 'Bills', icon: Scissors },
           { id: 'subscriptions', label: 'Subs', icon: Gem },
           { id: 'debts', label: 'Debts', icon: Skull },
@@ -175,6 +177,7 @@ export default function Finance() {
       {activeTab === 'subscriptions' && <SubscriptionTracker />}
       {activeTab === 'debts' && <DebtTracker />}
       {activeTab === 'investments' && <InvestmentPortfolio />}
+      {activeTab === 'goals' && <FinancialGoals />}
       {activeTab === 'calendar' && <FinancialCalendar initialTransactions={transactions} />}
 
       <TransactionForm
