@@ -233,7 +233,6 @@ export function FinancialCalendar({ initialTransactions = [] }: FinancialCalenda
       {selectedDay && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setSelectedDay(null)}>
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/80 backdrop-blur-xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-cyan-500" />
             <h3 className="text-lg font-semibold text-white mb-4">
               {new Date(selectedDay.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </h3>
