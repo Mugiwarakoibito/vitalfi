@@ -330,54 +330,58 @@ export function TransactionList({ accounts, initialTransactions = [], onTransact
             const account = accounts.find((a) => a.id === txn.accountId)
 
             return (
-              <div
-                key={txn.id}
-                className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/[0.07] transition-all group relative"
-              >
-                <div className="flex items-center justify-between">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 hover:bg-white/[0.04] transition-all group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-white/[0.02] to-transparent pointer-events-none" />
+                <div className="flex items-center justify-between relative z-10">
                   <div className="flex items-center gap-3">
                     <div
-                      className="flex h-10 w-10 items-center justify-center rounded-xl text-sm"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl text-sm font-bold shadow-lg"
                       style={{
-                        backgroundColor: cat?.color ? `${cat.color}18` : 'rgba(107,114,128,0.12)',
+                        backgroundColor: cat?.color ? `${cat.color}25` : 'rgba(107,114,128,0.15)',
                         color: cat?.color || '#9CA3AF',
+                        boxShadow: cat?.color ? `0 0 20px ${cat.color}20` : 'none',
                       }}
                     >
                       {txn.description.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-white">{txn.description}</p>
-                      <p className="text-xs text-gray-400">
-                        {new Date(txn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        {' • '}
-                        {account?.name ?? 'Unknown'}
-                        {' • '}
-                        {txn.type === 'transfer' ? 'Transfer' : txn.category}
+                      <p className="text-sm font-semibold text-white tracking-tight">{txn.description}</p>
+                      <p className="text-xs text-gray-500 flex items-center gap-2">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 text-gray-400 text-[10px]">
+                          {new Date(txn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                        <span className="text-gray-600">•</span>
+                        <span className="text-gray-400">{account?.name ?? 'Unknown'}</span>
+                        <span className="text-gray-600">•</span>
+                        <span className={cn(
+                          txn.type === 'expense' ? 'text-red-400/80' : 
+                          txn.type === 'income' ? 'text-emerald-400/80' : 'text-purple-400/80'
+                        )}>
+                          {txn.type === 'transfer' ? 'Transfer' : txn.category}
+                        </span>
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <p
-                      className={cn(
-                        'text-sm font-semibold',
-                        txn.type === 'income' ? 'text-emerald-400' : 
-                        txn.type === 'transfer' ? 'text-purple-400' : 'text-red-400'
-                      )}
-                    >
+                  <div className="flex items-center gap-4">
+                    <p className={cn(
+                      'text-sm font-bold tracking-wide px-3 py-1.5 rounded-lg',
+                      txn.type === 'income' ? 'text-emerald-400 bg-emerald-500/10' : 
+                      txn.type === 'transfer' ? 'text-purple-400 bg-purple-500/10' : 'text-red-400 bg-red-500/10'
+                    )}>
                       {txn.type === 'income' ? '+' : txn.type === 'transfer' ? '' : '-'}{formatCurrency(txn.amount, settings.currency || 'USD')}
                     </p>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
                       <button
                         onClick={() => setEditingTransaction(txn)}
-                        className="rounded-lg p-1.5 text-gray-400 hover:text-white hover:bg-white/10"
+                        className="rounded-lg p-2 text-gray-500 hover:text-white hover:bg-white/10 transition-all"
                       >
-                        <Pencil size={13} />
+                        <Pencil size={14} />
                       </button>
                       <button
                         onClick={() => setDeletingTransaction(txn)}
-                        className="rounded-lg p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                        className="rounded-lg p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </div>

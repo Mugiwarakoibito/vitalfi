@@ -134,35 +134,40 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
           {activeAccounts.map((account) => {
             const Icon = accountIcons[account.type]
             return (
-              <div key={account.id} className="rounded-2xl border border-white/10 bg-white/5 p-5 hover:bg-white/[0.07] transition-all cursor-pointer" onClick={() => setEditingAccount(account)}>
-                <div className="flex items-center justify-between">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all cursor-pointer group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-white/[0.02] to-transparent pointer-events-none" />
+                <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl" style={{ backgroundColor: account.color }} />
+                <div className="flex items-center justify-between relative z-10">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: account.color + '20' }}>
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg" style={{ backgroundColor: account.color + '25', boxShadow: `0 0 20px ${account.color}20` }}>
                       <Icon className="w-5 h-5" style={{ color: account.color }} />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-white">{account.name}</h4>
-                      <p className="text-sm text-gray-400 capitalize">{account.type}</p>
+                      <h4 className="font-semibold text-white tracking-tight">{account.name}</h4>
+                      <p className="text-sm text-gray-500 capitalize flex items-center gap-2">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 text-gray-400 text-[10px] capitalize">
+                          {account.type}
+                        </span>
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <p className={`text-xl font-bold ${account.balance >= 0 ? 'text-white' : 'text-red-400'}`}>
+                    <p className={`text-xl font-bold tracking-wide ${account.balance >= 0 ? 'text-white' : 'text-red-400'}`}>
                       {formatCurrency(account.balance, settings.currency || 'USD')}
                     </p>
-                    <div className="flex gap-1">
-                      <button onClick={(e) => { e.stopPropagation(); setEditingAccount(account) }} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                      <button onClick={(e) => { e.stopPropagation(); setEditingAccount(account) }} className="rounded-lg p-2 text-gray-500 hover:text-white hover:bg-white/10 transition-all">
                         <Pencil className="w-4 h-4" />
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); handleArchive(account) }} className="p-2 rounded-lg text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/10 transition-all">
+                      <button onClick={(e) => { e.stopPropagation(); handleArchive(account) }} className="rounded-lg p-2 text-gray-500 hover:text-yellow-400 hover:bg-yellow-500/10 transition-all">
                         <Archive className="w-4 h-4" />
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); setDeletingAccount(account) }} className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                      <button onClick={(e) => { e.stopPropagation(); setDeletingAccount(account) }} className="rounded-lg p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
                 </div>
-                <div className="absolute left-0 top-0 h-full w-1 rounded-l-2xl" style={{ backgroundColor: account.color }} />
               </div>
             )
           })}

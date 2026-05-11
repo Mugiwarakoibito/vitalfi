@@ -179,56 +179,65 @@ export function InvestmentPortfolio() {
             const typeInfo = investmentTypes.find(t => t.id === inv.type)
 
             return (
-              <div key={inv.id} className="rounded-2xl border border-white/10 bg-white/5 p-5 hover:bg-white/[0.07] transition-all">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 flex items-center justify-center text-xl">
-                      {typeInfo?.icon || '💎'}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-semibold text-white">{inv.name}</h4>
-                        {inv.symbol && (
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
-                            {inv.symbol}
-                          </span>
-                        )}
+              <div key={inv.id} className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/[0.02] to-transparent pointer-events-none" />
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/25 to-teal-500/25 border border-emerald-500/30 flex items-center justify-center text-xl shadow-lg" style={{boxShadow: '0 0 20px rgba(16,185,129,0.15)'}}>
+                        {typeInfo?.icon || '💎'}
                       </div>
-                      <p className="text-sm text-gray-400">{typeInfo?.label} • {inv.quantity} shares</p>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-white tracking-tight">{inv.name}</h4>
+                          {inv.symbol && (
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
+                              {inv.symbol}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500 flex items-center gap-2">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 text-gray-400 text-[10px]">
+                            {typeInfo?.label}
+                          </span>
+                          <span className="text-gray-600">•</span>
+                          <span className="text-gray-400">{inv.quantity} shares</span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                      <button onClick={() => openEditModal(inv)} className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => setDeletingInvestment(inv)} className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex gap-1">
-                    <button onClick={() => openEditModal(inv)} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setDeletingInvestment(inv)} className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-                    <p className="text-xs text-gray-400 mb-1">Current</p>
-                    <p className="text-sm font-bold text-white">{formatCurrency(inv.currentPrice, currency)}</p>
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+                      <p className="text-xs text-gray-500 mb-1">Current</p>
+                      <p className="text-sm font-bold text-white tracking-tight">{formatCurrency(inv.currentPrice, currency)}</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+                      <p className="text-xs text-gray-500 mb-1">Total Value</p>
+                      <p className="text-sm font-bold text-white tracking-tight">{formatCurrency(value, currency)}</p>
+                    </div>
+                    <div className={`p-3 rounded-xl ${gain >= 0 ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+                      <p className="text-xs mb-1">{gain >= 0 ? 'Gain' : 'Loss'}</p>
+                      <p className={`text-sm font-bold tracking-tight ${gain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {gain >= 0 ? '+' : ''}{formatCurrency(gain, currency)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-                    <p className="text-xs text-gray-400 mb-1">Total Value</p>
-                    <p className="text-sm font-bold text-white">{formatCurrency(value, currency)}</p>
-                  </div>
-                  <div className={`p-3 rounded-xl ${gain >= 0 ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
-                    <p className="text-xs mb-1">{gain >= 0 ? 'Gain' : 'Loss'}</p>
-                    <p className={`text-sm font-bold ${gain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {gain >= 0 ? '+' : ''}{formatCurrency(gain, currency)}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-500">Cost basis: {formatCurrency(cost, currency)}</span>
-                  <span className={`font-medium ${gainPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {gainPercent >= 0 ? '+' : ''}{gainPercent.toFixed(2)}%
-                  </span>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500">Cost basis: {formatCurrency(cost, currency)}</span>
+                    <span className={`font-medium tracking-wide px-2 py-1 rounded-lg ${gainPercent >= 0 ? 'text-green-400 bg-green-500/10' : 'text-red-400 bg-red-500/10'}`}>
+                      {gainPercent >= 0 ? '+' : ''}{gainPercent.toFixed(2)}%
+                    </span>
+                  </div>
                 </div>
               </div>
             )

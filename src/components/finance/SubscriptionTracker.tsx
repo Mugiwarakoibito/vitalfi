@@ -159,39 +159,46 @@ export function SubscriptionTracker() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {subscriptions.map((sub) => (
-            <div key={sub.id} className={`rounded-2xl border border-white/10 p-5 transition-all ${sub.isActive ? 'bg-white/5' : 'bg-white/5 opacity-60'}`}>
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 flex items-center justify-center text-lg">
-                    📱
+            <div key={sub.id} className={`rounded-2xl border border-white/10 p-5 transition-all group relative overflow-hidden ${sub.isActive ? 'bg-white/[0.02]' : 'bg-white/[0.02] opacity-60'}`}>
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/[0.02] to-transparent pointer-events-none" />
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500/25 to-pink-500/25 border border-purple-500/30 flex items-center justify-center text-lg shadow-lg" style={{boxShadow: '0 0 20px rgba(168,85,247,0.15)'}}>
+                      📱
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white tracking-tight">{sub.name}</h4>
+                      <p className="text-xs text-gray-500 capitalize flex items-center gap-2">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 text-gray-400 text-[10px] capitalize">
+                          {sub.category}
+                        </span>
+                      </p>
+                    </div>
                   </div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                    <button onClick={() => openEditModal(sub)} className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setDeletingSub(sub)} className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => toggleActive(sub)} className={`p-2 rounded-lg transition-all ${sub.isActive ? 'text-green-400 hover:bg-green-500/10' : 'text-gray-500 hover:bg-white/10'}`}>
+                      {sub.isActive ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex justify-between items-end">
                   <div>
-                    <h4 className="font-semibold text-white">{sub.name}</h4>
-                    <p className="text-xs text-gray-400 capitalize">{sub.category}</p>
+                    <p className="text-2xl font-bold text-white tracking-tight">
+                      {formatCurrency(sub.amount, currency)}
+                      <span className="text-sm text-gray-400 font-normal ml-1">/{getCycleLabel(sub.billingCycle)}</span>
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Next: {sub.nextBillingDate}</p>
                   </div>
-                </div>
-                <div className="flex gap-1">
-                  <button onClick={() => openEditModal(sub)} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => setDeletingSub(sub)} className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => toggleActive(sub)} className={`p-2 rounded-lg transition-all ${sub.isActive ? 'text-green-400 hover:bg-green-500/10' : 'text-gray-500 hover:bg-white/10'}`}>
-                    {sub.isActive ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-              <div className="flex justify-between items-end">
-                <div>
-                  <p className="text-2xl font-bold text-white">
-                    {formatCurrency(sub.amount, currency)}
-                    <span className="text-sm text-gray-400 font-normal ml-1">/{getCycleLabel(sub.billingCycle)}</span>
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">Next: {sub.nextBillingDate}</p>
-                </div>
-                <div className={`px-3 py-1 rounded-full text-xs font-medium ${sub.isActive ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                  {sub.isActive ? 'Active' : 'Paused'}
+                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${sub.isActive ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                    {sub.isActive ? 'Active' : 'Paused'}
+                  </div>
                 </div>
               </div>
             </div>

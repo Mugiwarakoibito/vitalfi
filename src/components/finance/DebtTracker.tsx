@@ -206,56 +206,62 @@ export function DebtTracker() {
             const typeInfo = debtTypes.find(t => t.id === debt.type)
 
             return (
-              <div key={debt.id} className="rounded-2xl border border-white/10 bg-white/5 p-5 hover:bg-white/[0.07] transition-all">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500/20 to-orange-500/20 border border-red-500/30 flex items-center justify-center text-xl">
-                      {typeInfo?.icon || '💳'}
+              <div key={debt.id} className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-red-500/[0.02] to-transparent pointer-events-none" />
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500/25 to-orange-500/25 border border-red-500/30 flex items-center justify-center text-xl shadow-lg" style={{boxShadow: '0 0 20px rgba(239,68,68,0.15)'}}>
+                        {typeInfo?.icon || '💳'}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-white tracking-tight">{debt.name}</h4>
+                        <p className="text-sm text-gray-500 flex items-center gap-2">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 text-gray-400 text-[10px]">
+                            {typeInfo?.label}
+                          </span>
+                          <span className="text-gray-600">•</span>
+                          <span className="text-red-400/80">{debt.interestRate}% APR</span>
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-white">{debt.name}</h4>
-                      <p className="text-sm text-gray-400">
-                        {typeInfo?.label} • {debt.interestRate}% APR
-                      </p>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                      <button onClick={() => openEditModal(debt)} className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => setDeletingDebt(debt)} className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex gap-1">
-                    <button onClick={() => openEditModal(debt)} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setDeletingDebt(debt)} className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-                    <p className="text-xs text-gray-400 mb-1">Original</p>
-                    <p className="text-lg font-bold text-white">{formatCurrency(debt.totalAmount, currency)}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+                      <p className="text-xs text-gray-500 mb-1">Original</p>
+                      <p className="text-lg font-bold text-white tracking-tight">{formatCurrency(debt.totalAmount, currency)}</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+                      <p className="text-xs text-green-400/80 mb-1">Paid Off</p>
+                      <p className="text-lg font-bold text-green-400 tracking-tight">{formatCurrency(paid, currency)}</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                      <p className="text-xs text-red-400/80 mb-1">Remaining</p>
+                      <p className="text-lg font-bold text-red-400 tracking-tight">{formatCurrency(debt.currentBalance, currency)}</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                      <p className="text-xs text-purple-400/80 mb-1">Progress</p>
+                      <p className="text-lg font-bold text-purple-400 tracking-tight">{debtProgress.toFixed(1)}%</p>
+                    </div>
                   </div>
-                  <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/20">
-                    <p className="text-xs text-green-400/80 mb-1">Paid Off</p>
-                    <p className="text-lg font-bold text-green-400">{formatCurrency(paid, currency)}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
-                    <p className="text-xs text-red-400/80 mb-1">Remaining</p>
-                    <p className="text-lg font-bold text-red-400">{formatCurrency(debt.currentBalance, currency)}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                    <p className="text-xs text-purple-400/80 mb-1">Progress</p>
-                    <p className="text-lg font-bold text-purple-400">{debtProgress.toFixed(1)}%</p>
-                  </div>
-                </div>
 
-                <div className="space-y-3">
-                  <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-500"
-                      style={{ width: `${debtProgress}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
+                  <div className="space-y-3">
+                    <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-500"
+                        style={{ width: `${debtProgress}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1.5 text-gray-400">
                           <Calendar className="w-3.5 h-3.5" />
@@ -273,6 +279,7 @@ export function DebtTracker() {
                         <span>Min. {formatCurrency(debt.minimumPayment, currency)}/mo</span>
                       </div>
                     </div>
+                  </div>
                 </div>
               </div>
             )

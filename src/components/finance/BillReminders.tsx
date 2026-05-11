@@ -123,7 +123,7 @@ export function BillReminders() {
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-white">Bills & Reminders</h3>
-        <button type="button" onClick={() => { setEditingBill(null); setFormData({ name: '', amount: '', dueDay: '1', category: 'other', reminders: '3' }); setShowModal(true) }} className="px-4 py-2 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-sm flex items-center gap-2 hover:bg-yellow-500/30 transition-all">
+        <button type="button" onClick={() => { setEditingBill(null); setFormData({ name: '', amount: '', dueDay: '', category: 'other', reminders: '' }); setShowModal(true) }} className="px-4 py-2 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-sm flex items-center gap-2 hover:bg-yellow-500/30 transition-all">
           <Plus className="w-4 h-4" />
           Add Bill
         </button>
@@ -147,30 +147,37 @@ export function BillReminders() {
             const isOverdue = daysUntilDue < 0 && !bill.isPaid
 
             return (
-              <div key={bill.id} className={`rounded-2xl border p-5 transition-all ${bill.isPaid ? 'border-green-500/20 bg-green-500/5' : isOverdue ? 'border-red-500/20 bg-red-500/5' : 'border-white/10 bg-white/5 hover:bg-white/[0.07]'}`}>
-                <div className="flex justify-between items-start mb-4">
+              <div key={bill.id} className={`rounded-2xl border p-5 transition-all group relative overflow-hidden ${bill.isPaid ? 'border-green-500/20 bg-green-500/5' : isOverdue ? 'border-red-500/20 bg-red-500/5' : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.04]'}`}>
+                <div className="absolute inset-0 bg-gradient-to-r from-white/[0.02] to-transparent pointer-events-none" />
+                <div className="flex justify-between items-start mb-4 relative z-10">
                   <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl ${bill.isPaid ? 'bg-green-500/20' : isOverdue ? 'bg-red-500/20' : 'bg-yellow-500/20'}`}>
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-lg ${bill.isPaid ? 'bg-green-500/20' : isOverdue ? 'bg-red-500/20' : 'bg-yellow-500/20'}`} style={!bill.isPaid && !isOverdue ? {boxShadow: '0 0 20px rgba(234,179,8,0.2)'} : {}}>
                       {cat?.icon || '📄'}
                     </div>
                     <div>
-                      <h4 className="font-semibold text-white">{bill.name}</h4>
-                      <p className="text-sm text-gray-400">Due day {bill.dueDay} • {cat?.label}</p>
+                      <h4 className="font-semibold text-white tracking-tight">{bill.name}</h4>
+                      <p className="text-sm text-gray-500 flex items-center gap-2">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 text-gray-400 text-[10px]">
+                          Due day {bill.dueDay}
+                        </span>
+                        <span className="text-gray-600">•</span>
+                        <span className="text-gray-400">{cat?.label}</span>
+                      </p>
                     </div>
                   </div>
-                  <div className="flex gap-1">
-                    <button onClick={() => openEditModal(bill)} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                    <button onClick={() => openEditModal(bill)} className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all">
                       <Pencil className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setDeletingBill(bill)} className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                    <button onClick={() => setDeletingBill(bill)} className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                <div className="flex justify-between items-end">
+                <div className="flex justify-between items-end relative z-10">
                   <div>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(bill.amount, currency)}</p>
+                    <p className="text-2xl font-bold text-white tracking-tight">{formatCurrency(bill.amount, currency)}</p>
                     <p className="text-xs text-gray-500">Per month</p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -246,38 +253,38 @@ export function BillReminders() {
           </div>
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="ghost" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
-            <Button type="button" variant="primary" className="flex-1" onClick={() => { 
-              if (!formData.name || !formData.amount || !formData.dueDay) {
-                alert('Please fill in name, amount and due day');
-                return;
-              }
-              if (editingBill) {
-                updateBill({
-                  ...editingBill,
-                  name: formData.name,
-                  amount: Number(formData.amount),
-                  dueDay: Number(formData.dueDay),
-                  category: formData.category,
-                  reminders: formData.reminders ? [Number(formData.reminders)] : [],
-                  updatedAt: new Date().toISOString(),
-                });
-              } else {
-                addBill({
-                  id: crypto.randomUUID(),
-                  name: formData.name,
-                  amount: Number(formData.amount),
-                  dueDay: Number(formData.dueDay),
-                  category: formData.category || 'other',
-                  isPaid: false,
-                  reminders: formData.reminders ? [Number(formData.reminders)] : [],
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                });
-              }
-              setShowModal(false);
-              setEditingBill(null);
-              setFormData({ name: '', amount: '', dueDay: '1', category: 'other', reminders: '3' });
-            }}>{editingBill ? 'Update' : 'Add'} Bill</Button>
+              <Button type="button" variant="primary" className="flex-1" onClick={() => { 
+                if (!formData.name || !formData.amount || !formData.dueDay) {
+                  alert('Please fill in name, amount and due day');
+                  return;
+                }
+                if (editingBill) {
+                  updateBill({
+                    ...editingBill,
+                    name: formData.name,
+                    amount: Number(formData.amount),
+                    dueDay: Number(formData.dueDay),
+                    category: formData.category,
+                    reminders: formData.reminders ? [Number(formData.reminders)] : [],
+                    updatedAt: new Date().toISOString(),
+                  });
+                } else {
+                  addBill({
+                    id: crypto.randomUUID(),
+                    name: formData.name,
+                    amount: Number(formData.amount),
+                    dueDay: Number(formData.dueDay),
+                    category: formData.category || 'other',
+                    isPaid: false,
+                    reminders: formData.reminders ? [Number(formData.reminders)] : [],
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  });
+                }
+                setShowModal(false);
+                setEditingBill(null);
+                setFormData({ name: '', amount: '', dueDay: '', category: 'other', reminders: '' });
+              }}>{editingBill ? 'Update' : 'Add'} Bill</Button>
           </div>
         </div>
       </Modal>
