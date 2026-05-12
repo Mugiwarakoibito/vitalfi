@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Target, Plus, Pencil, Trash2, AlertTriangle, TrendingUp, Calendar, DollarSign } from 'lucide-react'
-import { Modal } from '@/components/ui/Modal'
+import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
 import { useAppStore } from '@/store/useAppStore'
 import type { Goal } from '@/lib/storage'
 import { formatCurrency } from '@/lib/utils'
@@ -136,27 +137,26 @@ setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: 
         </div>
       </div>
 
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-white">Your Goals</h3>
-        <button 
-          onClick={() => { setEditingGoal(null); setFormData({ name: '', target: '', current: '', category: 'other', deadline: '' }); setShowModal(true) }} 
-          className="px-4 py-2 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm flex items-center gap-2 hover:bg-purple-500/30 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          Add Goal
-        </button>
-      </div>
-
       {financialGoals.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center mx-auto mb-4">
-            <Target className="w-8 h-8 text-purple-400/50" />
-          </div>
-          <p className="text-gray-400 mb-1">No financial goals yet</p>
-          <p className="text-gray-500 text-sm">Set your first savings goal</p>
-        </div>
+        <Card className="py-12 text-center">
+          <Target className="mx-auto h-10 w-10 text-muted/50 mb-3" />
+          <h4 className="text-white font-medium mb-1">No financial goals yet</h4>
+          <p className="text-sm text-muted mb-4">Set your first savings goal</p>
+          <Button variant="primary" onClick={() => { setEditingGoal(null); setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: '' }); setShowModal(true) }}>
+            Create Goal
+          </Button>
+        </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div 
+            className="rounded-2xl border border-dashed border-white/20 bg-white/[0.02] p-5 flex flex-col items-center justify-center cursor-pointer hover:bg-white/[0.05] transition-all min-h-[140px]"
+            onClick={() => { setEditingGoal(null); setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: '' }); setShowModal(true) }}
+          >
+            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
+              <Plus className="w-6 h-6 text-gray-400" />
+            </div>
+            <p className="text-sm text-gray-400">Add Goal</p>
+          </div>
           {financialGoals.map((goal) => {
             const progress = goal.target > 0 ? (goal.current / goal.target) * 100 : 0
             const daysLeft = getDaysRemaining(goal.deadline)
