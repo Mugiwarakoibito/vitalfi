@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, Wallet, PiggyBank, CreditCard, TrendingUp, Banknote, Pencil, Trash2, AlertTriangle, DollarSign, ArrowUpDown } from 'lucide-react'
+import { Plus, Wallet, PiggyBank, CreditCard, TrendingUp, Banknote, Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import type { Account } from '@/lib/storage'
 import { formatCurrency } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
@@ -57,7 +57,6 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
           <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
             <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-2">
-              <DollarSign className="w-4 h-4" />
               <span>Total Net Worth</span>
             </div>
             <p className="text-3xl font-bold text-white">{formatCurrency(totalBalance, settings.currency || 'USD')}</p>
@@ -69,7 +68,6 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
           <div className="absolute top-0 right-0 w-20 h-20 bg-green-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
             <div className="flex items-center gap-2 text-green-400/80 text-sm mb-2">
-              <ArrowUpDown className="w-4 h-4" />
               <span>Assets</span>
             </div>
             <p className="text-3xl font-bold text-green-400">{formatCurrency(positiveBalance, settings.currency || 'USD')}</p>
@@ -81,7 +79,6 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
           <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
             <div className="flex items-center gap-2 text-red-400/80 text-sm mb-2">
-              <CreditCard className="w-4 h-4" />
               <span>Liabilities</span>
             </div>
             <p className="text-3xl font-bold text-red-400">{formatCurrency(negativeBalance, settings.currency || 'USD')}</p>
