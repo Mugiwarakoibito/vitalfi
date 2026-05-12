@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { TrendingUp, TrendingDown, Plus, Wallet, PieChart, Pencil, Trash2, AlertTriangle } from 'lucide-react'
+import { TrendingUp, Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -117,7 +117,6 @@ export function InvestmentPortfolio() {
           <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
             <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-2">
-              <Wallet className="w-4 h-4" />
               <span>Total Value</span>
             </div>
             <p className="text-3xl font-bold text-white">{formatCurrency(totalValue, currency)}</p>
@@ -129,7 +128,6 @@ export function InvestmentPortfolio() {
           <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -mr-10 -mt-10" />
           <div className="relative">
             <div className="flex items-center gap-2 text-gray-400/80 text-sm mb-2">
-              <PieChart className="w-4 h-4" />
               <span>Total Gain/Loss</span>
             </div>
             <p className={`text-3xl font-bold ${totalGain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -143,7 +141,6 @@ export function InvestmentPortfolio() {
           <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
             <div className="flex items-center gap-2 text-purple-400/80 text-sm mb-2">
-              {totalGainPercent >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
               <span>Return</span>
             </div>
             <p className={`text-3xl font-bold ${totalGainPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CreditCard, TrendingDown, DollarSign, Pencil, Trash2, AlertTriangle, Calendar, Percent, Flag, Plus } from 'lucide-react'
+import { CreditCard, Pencil, Trash2, AlertTriangle, Calendar, Percent, Flag, Plus } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -136,7 +136,6 @@ export function DebtTracker() {
           <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
             <div className="flex items-center gap-2 text-red-400/80 text-sm mb-2">
-              <DollarSign className="w-4 h-4" />
               <span>Total Debt</span>
             </div>
             <p className="text-3xl font-bold text-white">{formatCurrency(totalDebt, currency)}</p>
@@ -148,7 +147,6 @@ export function DebtTracker() {
           <div className="absolute top-0 right-0 w-20 h-20 bg-green-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
             <div className="flex items-center gap-2 text-green-400/80 text-sm mb-2">
-              <TrendingDown className="w-4 h-4" />
               <span>Paid Off</span>
             </div>
             <p className="text-3xl font-bold text-green-400">{formatCurrency(totalPaid, currency)}</p>
@@ -160,7 +158,6 @@ export function DebtTracker() {
           <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
             <div className="flex items-center gap-2 text-purple-400/80 text-sm mb-2">
-              <CreditCard className="w-4 h-4" />
               <span>Progress</span>
             </div>
             <p className="text-3xl font-bold text-purple-400">{progressPercent.toFixed(1)}%</p>
@@ -172,7 +169,6 @@ export function DebtTracker() {
           <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
             <div className="flex items-center gap-2 text-amber-400/80 text-sm mb-2">
-              <Flag className="w-4 h-4" />
               <span>Debt Free By</span>
             </div>
             <p className="text-xl font-bold text-amber-400">

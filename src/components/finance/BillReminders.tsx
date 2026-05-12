@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Calendar, CheckCircle, AlertCircle, Pencil, Trash2, AlertTriangle, Plus } from 'lucide-react'
+import { Calendar, CheckCircle, Pencil, Trash2, AlertTriangle, Plus } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -89,7 +89,6 @@ export function BillReminders() {
           <div className="absolute top-0 right-0 w-20 h-20 bg-yellow-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
             <div className="flex items-center gap-2 text-yellow-400/80 text-sm mb-2">
-              <Calendar className="w-4 h-4" />
               <span>Monthly Total</span>
             </div>
             <p className="text-3xl font-bold text-white">{formatCurrency(monthlyTotal, currency)}</p>
@@ -101,7 +100,6 @@ export function BillReminders() {
           <div className="absolute top-0 right-0 w-20 h-20 bg-orange-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
             <div className="flex items-center gap-2 text-orange-400/80 text-sm mb-2">
-              <AlertCircle className="w-4 h-4" />
               <span>Due This Week</span>
             </div>
             <p className="text-3xl font-bold text-orange-400">{formatCurrency(totalUpcoming, currency)}</p>
@@ -113,7 +111,6 @@ export function BillReminders() {
           <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
             <div className="flex items-center gap-2 text-red-400/80 text-sm mb-2">
-              <AlertCircle className="w-4 h-4" />
               <span>Overdue</span>
             </div>
             <p className="text-3xl font-bold text-red-400">{formatCurrency(totalOverdue, currency)}</p>

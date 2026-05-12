@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Target, Plus, Pencil, Trash2, AlertTriangle, TrendingUp, Calendar, DollarSign } from 'lucide-react'
+import { Target, Plus, Pencil, Trash2, AlertTriangle, Calendar } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -102,7 +102,6 @@ setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: 
           <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
             <div className="flex items-center gap-2 text-purple-400/80 text-sm mb-2">
-              <Target className="w-4 h-4" />
               <span>Total Goals</span>
             </div>
             <p className="text-3xl font-bold text-white">{financialGoals.length}</p>
@@ -114,7 +113,6 @@ setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: 
           <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
             <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-2">
-              <DollarSign className="w-4 h-4" />
               <span>Total Saved</span>
             </div>
             <p className="text-3xl font-bold text-emerald-400">{formatCurrency(totalSaved, currency)}</p>
@@ -126,7 +124,6 @@ setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: 
           <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
             <div className="flex items-center gap-2 text-blue-400/80 text-sm mb-2">
-              <TrendingUp className="w-4 h-4" />
               <span>Overall Progress</span>
             </div>
             <p className="text-3xl font-bold text-blue-400">
