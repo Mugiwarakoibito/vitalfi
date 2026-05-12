@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -31,6 +31,20 @@ export function AccountForm({ isOpen, onClose, onSave, account }: AccountFormPro
   const [type, setType] = useState<Account['type']>(account?.type || 'checking')
   const [color, setColor] = useState(account?.color || ACCOUNT_COLORS[0])
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (account) {
+      setName(account.name)
+      setBalance(account.balance.toString())
+      setType(account.type)
+      setColor(account.color)
+    } else {
+      setName('')
+      setBalance('')
+      setType('checking')
+      setColor(ACCOUNT_COLORS[0])
+    }
+  }, [account])
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
