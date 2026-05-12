@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Target, Plus, Pencil, Trash2, AlertTriangle, Calendar } from 'lucide-react'
+import { Target, Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -83,11 +83,6 @@ setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: 
     setShowModal(true)
   }
 
-  const getDaysRemaining = (deadline: string) => {
-    const days = Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-    return days > 0 ? days : 0
-  }
-
   const getProgressColor = (percent: number) => {
     if (percent >= 100) return '#10B981'
     if (percent >= 75) return '#3B82F6'
@@ -146,14 +141,13 @@ setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: 
             className="rounded-2xl border border-dashed border-white/20 bg-white/[0.02] p-5 flex flex-col items-center justify-center cursor-pointer hover:bg-white/[0.05] transition-all min-h-[140px]"
             onClick={() => { setEditingGoal(null); setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: '' }); setShowModal(true) }}
           >
-            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
-              <Plus className="w-6 h-6 text-gray-400" />
+            <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-3">
+              <Target className="w-6 h-6 text-purple-400" />
             </div>
             <p className="text-sm text-gray-400">Add Goal</p>
           </div>
           {financialGoals.map((goal) => {
             const progress = goal.target > 0 ? (goal.current / goal.target) * 100 : 0
-            const daysLeft = getDaysRemaining(goal.deadline)
             const progressColor = getProgressColor(progress)
             const category = goalCategories.find(c => c.id === goal.category) || goalCategories[7]
             
@@ -182,26 +176,26 @@ setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: 
                   </div>
 
                   <div className="mb-3">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-400">{formatCurrency(goal.current, currency)}</span>
-                      <span className="text-gray-400">{formatCurrency(goal.target, currency)}</span>
-                    </div>
-                    <div className="h-3 rounded-full bg-white/10 overflow-hidden">
+                    <div className="h-2.5 w-full rounded-full bg-white/[0.04] overflow-hidden">
                       <div 
                         className="h-full rounded-full transition-all duration-500"
                         style={{ 
                           width: `${Math.min(progress, 100)}%`,
                           backgroundColor: progressColor,
-                          boxShadow: `0 0 12px ${progressColor}60`
+                          boxShadow: `0 0 10px ${progressColor}40`
                         }}
                       />
                     </div>
-                    <div className="flex justify-between mt-2">
-                      <span className="text-sm font-medium" style={{ color: progressColor }}>{progress.toFixed(1)}%</span>
-                      <div className="flex items-center gap-1 text-xs text-gray-500">
-                        <Calendar className="w-3 h-3" />
-                        {daysLeft > 0 ? `${daysLeft} days left` : 'Deadline passed'}
-                      </div>
+                  </div>
+
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-0.5">Saved</p>
+                      <p className="text-sm font-bold text-white tracking-tight">{formatCurrency(goal.current, currency)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500 mb-0.5">Remaining</p>
+                      <p className="text-sm font-bold tracking-tight text-purple-400">{formatCurrency(goal.target - goal.current, currency)}</p>
                     </div>
                   </div>
                 </div>
