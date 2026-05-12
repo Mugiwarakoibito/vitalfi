@@ -18,7 +18,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency, cn } from '@/lib/utils'
 import type { ParsedTransaction } from '@/types/finance'
 
-type Tab = 'accounts' | 'transactions' | 'budgets' | 'wealth' | 'bills' | 'subscriptions' | 'debts' | 'investments' | 'calendar' | 'goals'
+type Tab = 'transactions' | 'wealth' | 'budgets' | 'goals' | 'bills' | 'subscriptions' | 'debts' | 'investments' | 'calendar'
 
 export default function Finance() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -137,7 +137,7 @@ export default function Finance() {
       <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none">
         {[
           { id: 'transactions', label: 'Transactions', icon: Wallet },
-          { id: 'accounts', label: 'Wealth', icon: CreditCard },
+          { id: 'wealth', label: 'Wealth', icon: CreditCard },
           { id: 'budgets', label: 'Budgets', icon: Target },
           { id: 'goals', label: 'Goals', icon: Flag },
           { id: 'bills', label: 'Bills', icon: Scissors },
@@ -166,7 +166,6 @@ export default function Finance() {
         <NaturalLanguageInput onParsed={handleNaturalLanguageParsed} />
       )}
 
-      {activeTab === 'accounts' && <AccountList initialAccounts={accounts} onAccountChange={() => loadAllData()} />}
       {activeTab === 'transactions' && (
         <TransactionList
           accounts={accounts.map((a) => ({ id: a.id, name: a.name, color: a.color }))}
@@ -175,7 +174,7 @@ export default function Finance() {
         />
       )}
       {activeTab === 'budgets' && <BudgetDashboard />}
-      {activeTab === 'accounts' && <AccountList initialAccounts={accounts} onAccountChange={() => loadAllData()} showForm={showAccountForm} onCloseForm={() => setShowAccountForm(false)} onOpenForm={() => setShowAccountForm(true)} />}
+      {activeTab === 'wealth' && <AccountList initialAccounts={accounts} onAccountChange={() => loadAllData()} showForm={showAccountForm} onCloseForm={() => setShowAccountForm(false)} onOpenForm={() => setShowAccountForm(true)} />}
       {activeTab === 'bills' && <BillReminders />}
       {activeTab === 'subscriptions' && <SubscriptionTracker />}
       {activeTab === 'debts' && <DebtTracker />}
