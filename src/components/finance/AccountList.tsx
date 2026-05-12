@@ -93,21 +93,38 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
       </div>
 
       {activeAccounts.length > 1 && (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-          <h4 className="text-sm font-medium text-gray-400 mb-4">Account Distribution</h4>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={activeAccounts.map(a => ({ name: a.name, balance: a.balance, type: a.type }))} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
-              <XAxis type="number" stroke="#ffffff60" fontSize={10} tickFormatter={(v: number) => `$${v >= 1000 ? `${v/1000}k` : v}`} />
-              <YAxis dataKey="name" type="category" stroke="#ffffff60" fontSize={10} width={80} />
-              <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: '12px' }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#fff' }} formatter={(value: number) => formatCurrency(value, settings.currency || 'USD')} />
-              <Bar dataKey="balance" radius={[0, 4, 4, 0]} fill="transparent">
+        <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-sm font-medium text-gray-400">Account Distribution</h4>
+            <span className="text-xs text-gray-500">{activeAccounts.length} accounts</span>
+          </div>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={activeAccounts.map(a => ({ name: a.name, value: a.balance, color: a.color }))} layout="vertical" barSize={24}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" horizontal={false} vertical={false} />
+              <XAxis type="number" stroke="#ffffff40" fontSize={9} tickFormatter={(v: number) => `$${v >= 1000 ? `${v/1000}k` : v}`} axisLine={false} tickLine={false} />
+              <YAxis dataKey="name" type="category" stroke="#ffffff40" fontSize={10} width={70} axisLine={false} tickLine={false} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} 
+                labelStyle={{ color: '#fff', fontWeight: 600 }}
+                itemStyle={{ color: '#fff' }}
+                formatter={(value: number) => formatCurrency(value, settings.currency || 'USD')}
+                cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+              />
+              <Bar dataKey="value" radius={[0, 6, 6, 0]}>
                 {activeAccounts.map((account, index) => (
-                  <Cell key={index} fill={account.color || ['#10B981', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444'][index % 5]} stroke="none" />
+                  <Cell key={index} fill={account.color} stroke="transparent" />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          <div className="flex flex-wrap gap-3 mt-4">
+            {activeAccounts.map((account) => (
+              <div key={account.id} className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: account.color }} />
+                <span className="text-xs text-gray-400">{account.name}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
