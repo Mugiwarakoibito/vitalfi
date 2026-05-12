@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { TrendingUp, TrendingDown, Wallet, PieChart, Pencil, Trash2, AlertTriangle } from 'lucide-react'
+import { TrendingUp, TrendingDown, Plus, Wallet, PieChart, Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -165,6 +165,15 @@ export function InvestmentPortfolio() {
         </Card>
       ) : (
         <div className="space-y-4">
+          <div 
+            className="rounded-2xl border border-dashed border-white/20 bg-white/[0.02] p-5 flex flex-col items-center justify-center cursor-pointer hover:bg-white/[0.05] transition-all min-h-[100px]"
+            onClick={() => { setEditingInvestment(null); setFormData({ name: '', symbol: '', type: 'stock', quantity: '', purchasePrice: '', currentPrice: '', purchaseDate: new Date().toISOString().split('T')[0] }); setShowModal(true) }}
+          >
+            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
+              <Plus className="w-6 h-6 text-gray-400" />
+            </div>
+            <p className="text-sm text-gray-400">Add Investment</p>
+          </div>
           {investments.map((inv) => {
             const value = inv.quantity * inv.currentPrice
             const cost = inv.quantity * inv.purchasePrice

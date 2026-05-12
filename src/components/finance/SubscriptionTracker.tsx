@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trash2, Pause, Play, Pencil, AlertTriangle, Gem } from 'lucide-react'
+import { Trash2, Pause, Play, Pencil, AlertTriangle, Gem, Plus } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -152,6 +152,15 @@ export function SubscriptionTracker() {
         </Card>
       ) : (
         <div className="space-y-4">
+          <div 
+            className="rounded-2xl border border-dashed border-white/20 bg-white/[0.02] p-5 flex flex-col items-center justify-center cursor-pointer hover:bg-white/[0.05] transition-all min-h-[100px]"
+            onClick={() => { setEditingSub(null); setFormData({ name: '', amount: '', billingCycle: 'monthly', category: 'other', startDate: new Date().toISOString().split('T')[0] }); setShowModal(true) }}
+          >
+            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
+              <Plus className="w-6 h-6 text-gray-400" />
+            </div>
+            <p className="text-sm text-gray-400">Add Subscription</p>
+          </div>
           {subscriptions.map((sub) => (
             <div key={sub.id} className={`rounded-2xl border border-white/10 p-5 transition-all group relative overflow-hidden ${sub.isActive ? 'bg-white/[0.02]' : 'bg-white/[0.02] opacity-60'}`}>
               <div className="absolute inset-0 bg-gradient-to-r from-purple-500/[0.02] to-transparent pointer-events-none" />

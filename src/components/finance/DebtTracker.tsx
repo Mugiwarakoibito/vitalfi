@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CreditCard, TrendingDown, DollarSign, Pencil, Trash2, AlertTriangle, Calendar, Percent, Flag } from 'lucide-react'
+import { CreditCard, TrendingDown, DollarSign, Pencil, Trash2, AlertTriangle, Calendar, Percent, Flag, Plus } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -192,8 +192,17 @@ export function DebtTracker() {
             Add Debt
           </Button>
         </Card>
-      ) : (
+) : (
         <div className="space-y-4">
+          <div 
+            className="rounded-2xl border border-dashed border-white/20 bg-white/[0.02] p-5 flex flex-col items-center justify-center cursor-pointer hover:bg-white/[0.05] transition-all min-h-[100px]"
+            onClick={() => { setEditingDebt(null); resetForm(); setShowModal(true) }}
+          >
+            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
+              <Plus className="w-6 h-6 text-gray-400" />
+            </div>
+            <p className="text-sm text-gray-400">Add Debt</p>
+          </div>
           {debts.map((debt) => {
             const paid = debt.totalAmount - debt.currentBalance
             const debtProgress = debt.totalAmount > 0 ? (paid / debt.totalAmount) * 100 : 0
