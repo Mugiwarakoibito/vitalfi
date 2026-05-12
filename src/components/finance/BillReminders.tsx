@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Calendar, CheckCircle, Pencil, Trash2, AlertTriangle, Plus } from 'lucide-react'
+import { Calendar, CheckCircle, Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -131,8 +131,8 @@ export function BillReminders() {
             className="rounded-2xl border border-dashed border-white/20 bg-white/[0.02] p-5 flex flex-col items-center justify-center cursor-pointer hover:bg-white/[0.05] transition-all min-h-[100px]"
             onClick={() => { setEditingBill(null); setFormData({ name: '', amount: '', dueDay: '', category: 'other', reminders: '' }); setShowModal(true) }}
           >
-            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
-              <Plus className="w-6 h-6 text-gray-400" />
+            <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center mb-3">
+              <Calendar className="w-6 h-6 text-yellow-400" />
             </div>
             <p className="text-sm text-gray-400">Add Bill</p>
           </div>
