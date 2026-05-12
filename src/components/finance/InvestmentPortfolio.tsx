@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { TrendingUp, TrendingDown, Plus, Wallet, PieChart, Pencil, Trash2, AlertTriangle } from 'lucide-react'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
-import { Button } from '@/components/ui/Button'
 import { useAppStore } from '@/store/useAppStore'
 import type { Investment } from '@/lib/storage'
 import { formatCurrency } from '@/lib/utils'
@@ -162,13 +163,14 @@ export function InvestmentPortfolio() {
       </div>
 
       {investments.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
-            <TrendingUp className="w-8 h-8 text-emerald-400/50" />
-          </div>
-          <p className="text-gray-400 mb-1">No investments yet</p>
-          <p className="text-gray-500 text-sm">Add your first investment to track your portfolio</p>
-        </div>
+        <Card className="py-12 text-center">
+          <TrendingUp className="mx-auto h-10 w-10 text-muted/50 mb-3" />
+          <h4 className="text-white font-medium mb-1">No investments yet</h4>
+          <p className="text-sm text-muted mb-4">Add your first investment to track your portfolio</p>
+          <Button variant="primary" onClick={() => { setEditingInvestment(null); setFormData({ name: '', symbol: '', type: 'stock', quantity: '', purchasePrice: '', currentPrice: '', purchaseDate: new Date().toISOString().split('T')[0] }); setShowModal(true) }}>
+            Add Investment
+          </Button>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {investments.map((inv) => {

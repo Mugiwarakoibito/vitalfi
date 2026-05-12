@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Trash2, Pause, Play, Plus, Pencil, AlertTriangle } from 'lucide-react'
+import { Trash2, Pause, Play, Plus, Pencil, AlertTriangle, Gem } from 'lucide-react'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
-import { Button } from '@/components/ui/Button'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency } from '@/lib/utils'
 import type { Subscription } from '@/lib/storage'
@@ -149,13 +150,14 @@ export function SubscriptionTracker() {
       </div>
 
       {subscriptions.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">📱</span>
-          </div>
-          <p className="text-gray-400 mb-1">No subscriptions yet</p>
-          <p className="text-gray-500 text-sm">Track your recurring expenses</p>
-        </div>
+        <Card className="py-12 text-center">
+          <Gem className="mx-auto h-10 w-10 text-muted/50 mb-3" />
+          <h4 className="text-white font-medium mb-1">No subscriptions yet</h4>
+          <p className="text-sm text-muted mb-4">Track your recurring expenses</p>
+          <Button variant="primary" onClick={() => { setEditingSub(null); setFormData({ name: '', amount: '', billingCycle: 'monthly', category: 'other', startDate: new Date().toISOString().split('T')[0] }); setShowModal(true) }}>
+            Add Subscription
+          </Button>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {subscriptions.map((sub) => (
