@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { CreditCard, TrendingDown, DollarSign, Pencil, Trash2, AlertTriangle, Calendar, Percent, Flag } from 'lucide-react'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
-import { Button } from '@/components/ui/Button'
 import { useAppStore } from '@/store/useAppStore'
 import type { Debt } from '@/lib/storage'
 import { formatCurrency } from '@/lib/utils'
@@ -177,18 +178,20 @@ export function DebtTracker() {
             <p className="text-xl font-bold text-amber-400">
               {earliestPayoffDate || '--'}
             </p>
-<p className="text-xs text-gray-500 mt-1">Estimated payoff</p>
+            <p className="text-xs text-gray-500 mt-1">Estimated payoff</p>
             </div>
         </div>
       </div>
 
-      {debts.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-            <CreditCard className="w-8 h-8 text-red-400/50" />
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Estimated payoff</p>
-          </div>
+{debts.length === 0 ? (
+        <Card className="py-12 text-center">
+          <CreditCard className="mx-auto h-10 w-10 text-muted/50 mb-3" />
+          <h4 className="text-white font-medium mb-1">No debts yet</h4>
+          <p className="text-sm text-muted mb-4">Track your debts and monitor your progress</p>
+          <Button variant="primary" onClick={() => { setEditingDebt(null); resetForm(); setShowModal(true) }}>
+            Add Debt
+          </Button>
+        </Card>
       ) : (
         <div className="space-y-4">
           {debts.map((debt) => {
