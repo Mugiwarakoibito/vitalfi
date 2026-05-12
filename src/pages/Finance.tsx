@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Wallet, CreditCard, Gem, Calendar, TrendingUp, Plus, Target, Scissors, Skull, Flag } from 'lucide-react'
+import { Wallet, CreditCard, Gem, Calendar, TrendingUp, Plus, Target } from 'lucide-react'
 import { type Transaction } from '@/lib/storage'
 import { AccountList } from '@/components/finance/AccountList'
 import { TransactionList } from '@/components/finance/TransactionList'
@@ -139,10 +139,10 @@ export default function Finance() {
           { id: 'transactions', label: 'Transactions', icon: Wallet },
           { id: 'wealth', label: 'Wealth', icon: CreditCard },
           { id: 'budgets', label: 'Budgets', icon: Target },
-          { id: 'goals', label: 'Goals', icon: Flag },
-          { id: 'bills', label: 'Bills', icon: Scissors },
+          { id: 'goals', label: 'Goals', icon: Target },
+          { id: 'bills', label: 'Bills', icon: Calendar },
           { id: 'subscriptions', label: 'Subs', icon: Gem },
-          { id: 'debts', label: 'Debts', icon: Skull },
+          { id: 'debts', label: 'Debts', icon: CreditCard },
           { id: 'investments', label: 'Invest', icon: TrendingUp },
           { id: 'calendar', label: 'Calendar', icon: Calendar },
         ].map((tab) => (
