@@ -101,9 +101,9 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
               <XAxis type="number" stroke="#ffffff60" fontSize={10} tickFormatter={(v: number) => `$${v >= 1000 ? `${v/1000}k` : v}`} />
               <YAxis dataKey="name" type="category" stroke="#ffffff60" fontSize={10} width={80} />
               <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: '12px' }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#fff' }} formatter={(value: number) => formatCurrency(value, settings.currency || 'USD')} />
-              <Bar dataKey="balance" radius={[0, 4, 4, 0]} stroke="none">
-                {activeAccounts.map((_, index) => (
-                  <Cell key={index} fill={['#10B981', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444'][index % 5]} />
+              <Bar dataKey="balance" radius={[0, 4, 4, 0]} fill="transparent">
+                {activeAccounts.map((account, index) => (
+                  <Cell key={index} fill={account.color || ['#10B981', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444'][index % 5]} stroke="none" />
                 ))}
               </Bar>
             </BarChart>
