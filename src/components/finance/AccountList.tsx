@@ -123,28 +123,26 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
         <div className="space-y-4">
           {activeAccounts.map((account) => {
             const Icon = accountIcons[account.type]
+            const isPositive = account.balance >= 0
             return (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all cursor-pointer group relative overflow-hidden">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all group relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-white/[0.02] to-transparent pointer-events-none" />
                 <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl" style={{ backgroundColor: account.color }} />
-                <div className="flex items-center justify-between relative z-10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg" style={{ backgroundColor: account.color + '25', boxShadow: `0 0 20px ${account.color}20` }}>
-                      <Icon className="w-5 h-5" style={{ color: account.color }} />
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg" style={{ backgroundColor: account.color + '25', boxShadow: `0 0 20px ${account.color}20` }}>
+                        <Icon className="w-5 h-5" style={{ color: account.color }} />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-white tracking-tight">{account.name}</h4>
+                        <p className="text-sm text-gray-500 flex items-center gap-2">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 text-gray-400 text-[10px] capitalize">
+                            {account.type}
+                          </span>
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-white tracking-tight">{account.name}</h4>
-                      <p className="text-sm text-gray-500 flex items-center gap-2">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 text-gray-400 text-[10px] capitalize">
-                          {account.type}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <p className={`text-lg font-bold tracking-wide ${account.balance >= 0 ? 'text-white' : 'text-red-400'}`}>
-                      {formatCurrency(account.balance, settings.currency || 'USD')}
-                    </p>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
                       <button onClick={(e) => { e.stopPropagation(); setEditingAccount(account) }} className="rounded-lg p-2 text-gray-500 hover:text-white hover:bg-white/10 transition-all">
                         <Pencil className="w-4 h-4" />
@@ -152,6 +150,18 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
                       <button onClick={(e) => { e.stopPropagation(); setDeletingAccount(account) }} className="rounded-lg p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
                         <Trash2 className="w-4 h-4" />
                       </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <p className={`text-2xl font-bold tracking-wide ${isPositive ? 'text-white' : 'text-red-400'}`}>
+                        {formatCurrency(account.balance, settings.currency || 'USD')}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">{isPositive ? 'Balance' : 'Owed'}</p>
+                    </div>
+                    <div className={`px-3 py-1 rounded-lg text-xs font-medium ${isPositive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                      {isPositive ? 'Positive' : 'Negative'}
                     </div>
                   </div>
                 </div>
