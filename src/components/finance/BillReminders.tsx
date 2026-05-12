@@ -91,8 +91,7 @@ export function BillReminders() {
             <div className="flex items-center gap-2 text-yellow-400/80 text-sm mb-2">
               <span>Monthly Total</span>
             </div>
-            <p className="text-3xl font-bold text-white">{formatCurrency(monthlyTotal, currency)}</p>
-            <p className="text-xs text-gray-500 mt-1">{bills.length} bill{bills.length !== 1 ? 's' : ''}</p>
+            <p className="text-3xl font-bold text-yellow-400">{formatCurrency(monthlyTotal, currency)}</p>
           </div>
         </div>
 
@@ -103,7 +102,6 @@ export function BillReminders() {
               <span>Due This Week</span>
             </div>
             <p className="text-3xl font-bold text-orange-400">{formatCurrency(totalUpcoming, currency)}</p>
-            <p className="text-xs text-gray-500 mt-1">{getUpcomingBills().length} upcoming</p>
           </div>
         </div>
 
@@ -114,7 +112,6 @@ export function BillReminders() {
               <span>Overdue</span>
             </div>
             <p className="text-3xl font-bold text-red-400">{formatCurrency(totalOverdue, currency)}</p>
-            <p className="text-xs text-gray-500 mt-1">{getOverdueBills().length} overdue</p>
           </div>
         </div>
       </div>

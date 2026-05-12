@@ -118,7 +118,7 @@ export function SubscriptionTracker() {
             <div className="flex items-center gap-2 text-purple-400/80 text-sm mb-2">
               <span>Active Subs</span>
             </div>
-            <p className="text-3xl font-bold text-white">{activeSubs.length}</p>
+            <p className="text-3xl font-bold text-purple-400">{activeSubs.length}</p>
           </div>
         </div>
         <div className="relative overflow-hidden rounded-2xl border border-pink-500/20 bg-gradient-to-br from-pink-500/10 to-transparent p-5">

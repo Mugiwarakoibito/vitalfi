@@ -138,8 +138,7 @@ export function DebtTracker() {
             <div className="flex items-center gap-2 text-red-400/80 text-sm mb-2">
               <span>Total Debt</span>
             </div>
-            <p className="text-3xl font-bold text-white">{formatCurrency(totalDebt, currency)}</p>
-            <p className="text-xs text-gray-500 mt-1">{debts.length} debt{debts.length !== 1 ? 's' : ''}</p>
+            <p className="text-3xl font-bold text-red-400">{formatCurrency(totalDebt, currency)}</p>
           </div>
         </div>
 
@@ -150,7 +149,6 @@ export function DebtTracker() {
               <span>Paid Off</span>
             </div>
             <p className="text-3xl font-bold text-green-400">{formatCurrency(totalPaid, currency)}</p>
-            <p className="text-xs text-gray-500 mt-1">Your progress</p>
           </div>
         </div>
 
@@ -161,7 +159,6 @@ export function DebtTracker() {
               <span>Progress</span>
             </div>
             <p className="text-3xl font-bold text-purple-400">{progressPercent.toFixed(1)}%</p>
-            <p className="text-xs text-gray-500 mt-1">Of total debt paid</p>
           </div>
         </div>
 
@@ -171,10 +168,9 @@ export function DebtTracker() {
             <div className="flex items-center gap-2 text-amber-400/80 text-sm mb-2">
               <span>Debt Free By</span>
             </div>
-            <p className="text-xl font-bold text-amber-400">
+            <p className="text-3xl font-bold text-amber-400">
               {earliestPayoffDate || '--'}
             </p>
-            <p className="text-xs text-gray-500 mt-1">Estimated payoff</p>
             </div>
         </div>
       </div>

@@ -119,8 +119,7 @@ export function InvestmentPortfolio() {
             <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-2">
               <span>Total Value</span>
             </div>
-            <p className="text-3xl font-bold text-white">{formatCurrency(totalValue, currency)}</p>
-            <p className="text-xs text-gray-500 mt-1">{investments.length} holding{investments.length !== 1 ? 's' : ''}</p>
+            <p className="text-3xl font-bold text-emerald-400">{formatCurrency(totalValue, currency)}</p>
           </div>
         </div>
 
@@ -133,7 +132,6 @@ export function InvestmentPortfolio() {
             <p className={`text-3xl font-bold ${totalGain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
               {totalGain >= 0 ? '+' : ''}{formatCurrency(totalGain, currency)}
             </p>
-            <p className="text-xs text-gray-500 mt-1">Since purchase</p>
           </div>
         </div>
 
@@ -146,7 +144,6 @@ export function InvestmentPortfolio() {
             <p className={`text-3xl font-bold ${totalGainPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
               {totalGainPercent >= 0 ? '+' : ''}{totalGainPercent.toFixed(2)}%
             </p>
-            <p className="text-xs text-gray-500 mt-1">ROI</p>
           </div>
         </div>
       </div>

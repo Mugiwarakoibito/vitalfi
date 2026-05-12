@@ -59,8 +59,7 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
             <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-2">
               <span>Total Net Worth</span>
             </div>
-            <p className="text-3xl font-bold text-white">{formatCurrency(totalBalance, settings.currency || 'USD')}</p>
-            <p className="text-xs text-gray-500 mt-1">{activeAccounts.length} account{activeAccounts.length !== 1 ? 's' : ''}</p>
+            <p className="text-3xl font-bold text-emerald-400">{formatCurrency(totalBalance, settings.currency || 'USD')}</p>
           </div>
         </div>
 
@@ -71,7 +70,6 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
               <span>Assets</span>
             </div>
             <p className="text-3xl font-bold text-green-400">{formatCurrency(positiveBalance, settings.currency || 'USD')}</p>
-            <p className="text-xs text-gray-500 mt-1">Positive balances</p>
           </div>
         </div>
 
@@ -82,7 +80,6 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
               <span>Liabilities</span>
             </div>
             <p className="text-3xl font-bold text-red-400">{formatCurrency(negativeBalance, settings.currency || 'USD')}</p>
-            <p className="text-xs text-gray-500 mt-1">Negative balances</p>
           </div>
         </div>
       </div>

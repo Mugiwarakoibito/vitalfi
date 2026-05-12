@@ -104,8 +104,7 @@ setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: 
             <div className="flex items-center gap-2 text-purple-400/80 text-sm mb-2">
               <span>Total Goals</span>
             </div>
-            <p className="text-3xl font-bold text-white">{financialGoals.length}</p>
-            <p className="text-xs text-gray-500 mt-1">Total</p>
+            <p className="text-3xl font-bold text-purple-400">{financialGoals.length}</p>
           </div>
         </div>
 
@@ -116,7 +115,6 @@ setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: 
               <span>Total Saved</span>
             </div>
             <p className="text-3xl font-bold text-emerald-400">{formatCurrency(totalSaved, currency)}</p>
-            <p className="text-xs text-gray-500 mt-1">Across all goals</p>
           </div>
         </div>
 
@@ -129,7 +127,6 @@ setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: 
             <p className="text-3xl font-bold text-blue-400">
               {totalTarget > 0 ? Math.round((totalSaved / totalTarget) * 100) : 0}%
             </p>
-            <p className="text-xs text-gray-500 mt-1">Of total target</p>
           </div>
         </div>
       </div>
