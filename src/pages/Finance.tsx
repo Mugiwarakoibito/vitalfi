@@ -175,7 +175,7 @@ export default function Finance() {
         />
       )}
       {activeTab === 'budgets' && <BudgetDashboard />}
-      {activeTab === 'wealth' && <AccountList initialAccounts={accounts} onAccountChange={() => loadAllData()} showForm={showAccountForm} onCloseForm={() => setShowAccountForm(false)} onOpenForm={() => setShowAccountForm(true)} />}
+      {activeTab === 'accounts' && <AccountList initialAccounts={accounts} onAccountChange={() => loadAllData()} showForm={showAccountForm} onCloseForm={() => setShowAccountForm(false)} onOpenForm={() => setShowAccountForm(true)} />}
       {activeTab === 'bills' && <BillReminders />}
       {activeTab === 'subscriptions' && <SubscriptionTracker />}
       {activeTab === 'debts' && <DebtTracker />}
