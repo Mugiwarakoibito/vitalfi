@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { TrendingUp, TrendingDown, Plus, Wallet, PieChart, Pencil, Trash2, AlertTriangle } from 'lucide-react'
+import { TrendingUp, TrendingDown, Wallet, PieChart, Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -154,14 +154,6 @@ export function InvestmentPortfolio() {
         </div>
       </div>
 
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-white">Investment Portfolio</h3>
-        <button onClick={() => { setEditingInvestment(null); setFormData({ name: '', symbol: '', type: 'stock', quantity: '', purchasePrice: '', currentPrice: '', purchaseDate: new Date().toISOString().split('T')[0] }); setShowModal(true) }} className="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm flex items-center gap-2 hover:bg-emerald-500/30 transition-all">
-          <Plus className="w-4 h-4" />
-          Add Investment
-        </button>
-      </div>
-
       {investments.length === 0 ? (
         <Card className="py-12 text-center">
           <TrendingUp className="mx-auto h-10 w-10 text-muted/50 mb-3" />
@@ -172,7 +164,7 @@ export function InvestmentPortfolio() {
           </Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4">
           {investments.map((inv) => {
             const value = inv.quantity * inv.currentPrice
             const cost = inv.quantity * inv.purchasePrice

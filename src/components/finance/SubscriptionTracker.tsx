@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trash2, Pause, Play, Plus, Pencil, AlertTriangle, Gem } from 'lucide-react'
+import { Trash2, Pause, Play, Pencil, AlertTriangle, Gem } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -141,14 +141,6 @@ export function SubscriptionTracker() {
         </div>
       </div>
 
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-white">Subscriptions</h3>
-        <button onClick={() => { setEditingSub(null); setFormData({ name: '', amount: '', billingCycle: 'monthly', category: 'other', startDate: new Date().toISOString().split('T')[0] }); setShowModal(true) }} className="px-4 py-2 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm flex items-center gap-2 hover:bg-purple-500/30 transition-all">
-          <Plus className="w-4 h-4" />
-          Add Subscription
-        </button>
-      </div>
-
       {subscriptions.length === 0 ? (
         <Card className="py-12 text-center">
           <Gem className="mx-auto h-10 w-10 text-muted/50 mb-3" />
@@ -159,7 +151,7 @@ export function SubscriptionTracker() {
           </Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4">
           {subscriptions.map((sub) => (
             <div key={sub.id} className={`rounded-2xl border border-white/10 p-5 transition-all group relative overflow-hidden ${sub.isActive ? 'bg-white/[0.02]' : 'bg-white/[0.02] opacity-60'}`}>
               <div className="absolute inset-0 bg-gradient-to-r from-purple-500/[0.02] to-transparent pointer-events-none" />
