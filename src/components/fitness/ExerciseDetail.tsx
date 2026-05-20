@@ -70,7 +70,7 @@ export function ExerciseDetail({ exerciseId, onClose, onStartExercise }: Exercis
               <div className="mt-2 flex flex-wrap gap-1">
                 {exercise.primaryMuscles.map((m) => (
                   <span key={m} className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium ${muscleGroupColors[m]}`}>
-                    {m.replace(/_/g, ' ')}
+                    {m.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </span>
                 ))}
               </div>
@@ -151,7 +151,7 @@ export function ExerciseDetail({ exerciseId, onClose, onStartExercise }: Exercis
                 <div className="flex flex-wrap gap-2">
                   {exercise.equipment.map((eq) => (
                     <span key={eq} className="rounded-lg border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-gray-300">
-                      {eq.replace(/_/g, ' ')}
+                      {eq.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </span>
                   ))}
                 </div>
@@ -177,12 +177,12 @@ export function ExerciseDetail({ exerciseId, onClose, onStartExercise }: Exercis
                 <div className="flex flex-wrap gap-1">
                   {exercise.primaryMuscles.map((m) => (
                     <span key={m} className={`rounded-md px-2 py-0.5 text-xs font-medium ${muscleGroupColors[m]}`}>
-                      {m.replace(/_/g, ' ')}
+                      {m.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </span>
                   ))}
                   {exercise.secondaryMuscles.map((m) => (
                     <span key={m} className={`rounded-md px-2 py-0.5 text-xs font-medium ${muscleGroupColors[m]} opacity-70`}>
-                      {m.replace(/_/g, ' ')}
+                      {m.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </span>
                   ))}
                 </div>

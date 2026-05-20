@@ -223,7 +223,7 @@ export function WorkoutTemplateManager({ onUseTemplate }: WorkoutTemplateManager
               >
                 <div>
                   <p className="text-sm font-medium text-white">{ex.name}</p>
-                  <p className="text-xs text-muted">{ex.primaryMuscles.slice(0, 3).map((m) => m.replace(/_/g, ' ')).join(', ')}</p>
+                  <p className="text-xs text-muted">{ex.primaryMuscles.slice(0, 3).map((m) => m.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())).join(', ')}</p>
                 </div>
                 <Plus size={14} className="text-primary-light" />
               </button>

@@ -166,7 +166,7 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
                         : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white'
                     }`}
                   >
-                    {muscle.replace(/_/g, ' ')}
+                    {muscle.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </button>
                 ))}
               </div>
@@ -263,7 +263,7 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
                         key={m}
                         className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-medium ${muscleGroupColors[m] || 'bg-white/10 text-gray-300'}`}
                       >
-                        {m.replace(/_/g, ' ')}
+                        {m.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                       </span>
                     ))}
                     {ex.secondaryMuscles.length > 0 && (

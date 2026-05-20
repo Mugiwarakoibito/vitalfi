@@ -24,9 +24,19 @@ export function AppShell({ children }: AppShellProps) {
   const location = useLocation()
 
   const navigateTo = useCallback((path: string) => {
-    if (location.pathname === path) return
-    navigate(path)
-  }, [navigate, location.pathname])
+    const [targetPath, targetSearch] = path.split('?')
+    const currentPath = location.pathname
+    const currentSearch = location.search
+
+    if (currentPath !== targetPath) {
+      navigate(path)
+      return
+    }
+
+    if (targetSearch && targetSearch !== currentSearch.slice(1)) {
+      navigate(path)
+    }
+  }, [navigate, location.pathname, location.search])
 
   const actions: CommandAction[] = [
     // Navigation

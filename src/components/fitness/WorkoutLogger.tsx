@@ -284,7 +284,7 @@ export function WorkoutLogger() {
                 <button key={ex.id} onClick={() => addExercise(ex.id)} className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left hover:bg-white/10 transition-all">
                   <div>
                     <p className="font-medium text-white">{ex.name}</p>
-                    <p className="text-xs text-gray-400">{ex.primaryMuscles.slice(0, 2).map(m => m.replace(/_/g, ' ')).join(', ')}</p>
+                    <p className="text-xs text-gray-400">{ex.primaryMuscles.slice(0, 2).map(m => m.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())).join(', ')}</p>
                   </div>
                   <Plus size={14} className="text-rose-400" />
                 </button>

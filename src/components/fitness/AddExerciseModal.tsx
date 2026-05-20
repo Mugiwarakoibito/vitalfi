@@ -270,7 +270,7 @@ export function AddExerciseModal({ isOpen, onClose, onAdd }: AddExerciseModalPro
                                     : 'border-white/[0.08] bg-white/[0.02] text-muted hover:text-white'
                                 }`}
                               >
-                                {muscle.replace(/_/g, ' ')}
+                                {muscle.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                               </button>
                             ))}
                           </div>
@@ -281,7 +281,7 @@ export function AddExerciseModal({ isOpen, onClose, onAdd }: AddExerciseModalPro
                                 key={muscle}
                                 className={`rounded-md border px-2 py-1 text-xs font-medium ${muscleColors[muscle] || 'bg-white/10'}`}
                               >
-                                {muscle.replace(/_/g, ' ')}
+                                {muscle.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                               </span>
                             ))}
                             {selectedPrimaryMuscles.length === 0 && (
