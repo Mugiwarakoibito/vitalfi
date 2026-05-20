@@ -23,7 +23,7 @@ const categoryColors: Record<string, string> = {
   cardio: 'bg-sky-500/15 text-sky-300 border-sky-500/20',
   hiit: 'bg-orange-500/15 text-orange-300 border-orange-500/20',
   flexibility: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/20',
-  plyometrics: 'bg-violet-500/15 text-violet-300 border-violet-500/20',
+  plyo: 'bg-violet-500/15 text-violet-300 border-violet-500/20',
   calisthenics: 'bg-amber-500/15 text-amber-300 border-amber-500/20'
 }
 

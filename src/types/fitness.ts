@@ -3,7 +3,7 @@ export type ExerciseCategory =
   | 'cardio'
   | 'hiit'
   | 'flexibility'
-  | 'plyometrics'
+  | 'plyo'
   | 'calisthenics'
 
 export type MuscleGroup =
@@ -21,8 +21,8 @@ export type MuscleGroup =
   | 'forearms'
   | 'traps'
   | 'lats'
-  | 'full_body'
   | 'core'
+  | 'full_body'
   | 'hip_flexors'
   | 'rear_delts'
 

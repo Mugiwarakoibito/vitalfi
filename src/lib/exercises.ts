@@ -3001,7 +3001,7 @@ export const exerciseLibrary: ExerciseDefinition[] = [
   {
     id: 'depth_jumps',
     name: 'Depth Jumps',
-    category: 'plyometrics',
+    category: 'plyo',
     primaryMuscles: ['quads', 'glutes'],
     secondaryMuscles: ['calves', 'hamstrings'],
     equipment: ['bodyweight'],
@@ -3017,7 +3017,7 @@ export const exerciseLibrary: ExerciseDefinition[] = [
   {
     id: 'lateral_jumps',
     name: 'Lateral Jumps',
-    category: 'plyometrics',
+    category: 'plyo',
     primaryMuscles: ['glutes', 'quads'],
     secondaryMuscles: ['calves', 'hamstrings'],
     equipment: ['bodyweight'],
@@ -3032,7 +3032,7 @@ export const exerciseLibrary: ExerciseDefinition[] = [
   {
     id: 'single_leg_hops',
     name: 'Single-Leg Hops',
-    category: 'plyometrics',
+    category: 'plyo',
     primaryMuscles: ['quads', 'calves'],
     secondaryMuscles: ['glutes', 'core'],
     equipment: ['bodyweight'],
@@ -3048,7 +3048,7 @@ export const exerciseLibrary: ExerciseDefinition[] = [
   {
     id: 'standing_long_jump',
     name: 'Standing Long Jump',
-    category: 'plyometrics',
+    category: 'plyo',
     primaryMuscles: ['quads', 'glutes'],
     secondaryMuscles: ['hamstrings', 'calves'],
     equipment: ['bodyweight'],
@@ -3064,7 +3064,7 @@ export const exerciseLibrary: ExerciseDefinition[] = [
   {
     id: 'power_skip',
     name: 'Power Skips',
-    category: 'plyometrics',
+    category: 'plyo',
     primaryMuscles: ['quads', 'glutes'],
     secondaryMuscles: ['calves', 'core'],
     equipment: ['bodyweight'],
@@ -3079,7 +3079,7 @@ export const exerciseLibrary: ExerciseDefinition[] = [
   {
     id: 'lateral_box_jumps',
     name: 'Lateral Box Jumps',
-    category: 'plyometrics',
+    category: 'plyo',
     primaryMuscles: ['glutes', 'quads'],
     secondaryMuscles: ['calves', 'hamstrings'],
     equipment: ['bodyweight'],
@@ -3095,7 +3095,7 @@ export const exerciseLibrary: ExerciseDefinition[] = [
   {
     id: 'skaters',
     name: 'Skaters',
-    category: 'plyometrics',
+    category: 'plyo',
     primaryMuscles: ['glutes', 'quads'],
     secondaryMuscles: ['calves', 'core'],
     equipment: ['bodyweight'],
@@ -3111,7 +3111,7 @@ export const exerciseLibrary: ExerciseDefinition[] = [
   {
     id: 'jump_squats_plyo',
     name: 'Jump Squats',
-    category: 'plyometrics',
+    category: 'plyo',
     primaryMuscles: ['quads', 'glutes'],
     secondaryMuscles: ['calves'],
     equipment: ['bodyweight'],
@@ -3126,7 +3126,7 @@ export const exerciseLibrary: ExerciseDefinition[] = [
   {
     id: 'clap_push_ups_plyo',
     name: 'Clap Push-ups',
-    category: 'plyometrics',
+    category: 'plyo',
     primaryMuscles: ['chest', 'shoulders'],
     secondaryMuscles: ['triceps', 'core'],
     equipment: ['bodyweight'],
@@ -3142,7 +3142,7 @@ export const exerciseLibrary: ExerciseDefinition[] = [
   {
     id: 'pogo_jumps',
     name: 'Pogo Jumps',
-    category: 'plyometrics',
+    category: 'plyo',
     primaryMuscles: ['calves'],
     secondaryMuscles: ['quads', 'core'],
     equipment: ['bodyweight'],
@@ -3158,7 +3158,7 @@ export const exerciseLibrary: ExerciseDefinition[] = [
   {
     id: 'lateral_shuffles',
     name: 'Lateral Shuffles',
-    category: 'plyometrics',
+    category: 'plyo',
     primaryMuscles: ['glutes', 'quads'],
     secondaryMuscles: ['calves'],
     equipment: ['bodyweight'],
@@ -3173,7 +3173,7 @@ export const exerciseLibrary: ExerciseDefinition[] = [
   {
     id: 'bounding',
     name: 'Bounding',
-    category: 'plyometrics',
+    category: 'plyo',
     primaryMuscles: ['quads', 'glutes'],
     secondaryMuscles: ['calves', 'core'],
     equipment: ['bodyweight'],
@@ -3905,7 +3905,7 @@ export const categoryColors: Record<ExerciseCategory, string> = {
   cardio: 'bg-sky-500/20 text-sky-300',
   hiit: 'bg-orange-500/20 text-orange-300',
   flexibility: 'bg-emerald-500/20 text-emerald-300',
-  plyometrics: 'bg-violet-500/20 text-violet-300',
+  plyo: 'bg-violet-500/20 text-violet-300',
   calisthenics: 'bg-amber-500/20 text-amber-300',
 }
 
@@ -3914,7 +3914,7 @@ export const categoryLabels: Record<ExerciseCategory, string> = {
   cardio: 'Cardio',
   hiit: 'HIIT',
   flexibility: 'Flexibility',
-  plyometrics: 'Plyometrics',
+  plyo: 'Plyo',
   calisthenics: 'Calisthenics',
 }
 

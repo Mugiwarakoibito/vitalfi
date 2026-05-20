@@ -18,7 +18,7 @@ const categories: { value: ExerciseCategory; icon: React.ReactNode; label: strin
   { value: 'cardio', icon: <Wind size={14} />, label: 'Cardio' },
   { value: 'hiit', icon: <Flame size={14} />, label: 'HIIT' },
   { value: 'flexibility', icon: <StretchHorizontal size={14} />, label: 'Flexibility' },
-  { value: 'plyometrics', icon: <Zap size={14} />, label: 'Plyo' },
+  { value: 'plyo', icon: <Zap size={14} />, label: 'Plyo' },
   { value: 'calisthenics', icon: <PersonStanding size={14} />, label: 'Calisthenics' },
 ]
 

@@ -22,7 +22,7 @@ const equipmentTypes: EquipmentType[] = [
   'bodyweight', 'resistance_band', 'smith_machine', 'medicine_ball', 'none'
 ]
 
-const categories: ExerciseCategory[] = ['strength', 'cardio', 'hiit', 'flexibility', 'plyometrics', 'calisthenics']
+const categories: ExerciseCategory[] = ['strength', 'cardio', 'hiit', 'flexibility', 'plyo', 'calisthenics']
 
 export async function checkOllamaStatus(): Promise<boolean> {
   try {
@@ -39,7 +39,7 @@ export async function parseExerciseFromNaturalLanguage(input: string): Promise<P
 Return ONLY valid JSON with this exact structure:
 {
   "name": "Exercise Name",
-  "category": "strength|cardio|hiit|flexibility|plyometrics|calisthenics",
+  "category": "strength|cardio|hiit|flexibility|plyo|calisthenics",
   "primaryMuscles": ["chest"|"back"|"shoulders"|"biceps"|"triceps"|"abs"|"obliques"|"quads"|"hamstrings"|"glutes"|"calves"|"forearms"|"traps"|"lats"|"full_body"|"core"],
   "secondaryMuscles": ["..."],
   "equipment": ["barbell"|"dumbbell"|"kettlebell"|"machine"|"cable"|"bodyweight"|"resistance_band"|"medicine_ball"|"none"],
