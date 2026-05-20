@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react'
 import { Plus, Trash2, Utensils, Flame, Beef, Wheat, Droplet, Pencil, AlertTriangle } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { MealForm } from './MealForm'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 import type { Meal } from '@/types/fitness'
 
 export function NutritionLogger() {
@@ -102,62 +104,68 @@ export function NutritionLogger() {
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-white">Today's Meals</h3>
-        <button onClick={() => { setEditingMeal(null); setShowForm(true) }} className="px-4 py-2 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-400 text-sm flex items-center gap-2 hover:bg-rose-500/30 transition-all">
-          <Plus className="w-4 h-4" />
+        <Button variant="primary" onClick={() => { setEditingMeal(null); setShowForm(true) }}>
+          <Plus className="w-4 h-4 mr-2" />
           Log Meal
-        </button>
+        </Button>
       </div>
 
       {todayMeals.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
+        <Card className="py-12 text-center">
           <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4">
             <Utensils className="w-8 h-8 text-rose-400/50" />
           </div>
           <p className="text-gray-400 mb-1">No meals logged today</p>
-          <p className="text-gray-500 text-sm">Start tracking what you eat</p>
-        </div>
+          <p className="text-gray-500 text-sm mb-4">Start tracking what you eat</p>
+          <Button variant="primary" onClick={() => { setEditingMeal(null); setShowForm(true) }}>
+            Log Your First Meal
+          </Button>
+        </Card>
       ) : (
         <div className="space-y-4">
           {todayMeals.map((meal) => {
             const config = mealTypeConfig[meal.mealType]
             return (
-              <div key={meal.id} className="rounded-2xl border border-white/10 bg-white/5 p-5 hover:bg-white/[0.07] transition-all">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-xl ${config.bg} flex items-center justify-center text-xl`}>
-                      {config.icon}
+              <div key={meal.id} className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-rose-500/[0.02] to-transparent pointer-events-none" />
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-11 h-11 rounded-xl ${config.bg} flex items-center justify-center text-xl shadow-lg`} style={{boxShadow: '0 0 20px rgba(16,185,129,0.15)'}}>
+                        {config.icon}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-white tracking-tight">{meal.name}</h4>
+                        <p className="text-sm text-gray-400">{config.label}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-white">{meal.name}</h4>
-                      <p className="text-sm text-gray-400">{config.label}</p>
+                    <div className="flex gap-1">
+                      <button onClick={() => { setEditingMeal(meal); setShowForm(true) }} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => setDeletingMeal(meal)} className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex gap-1">
-                    <button onClick={() => { setEditingMeal(meal); setShowForm(true) }} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setDeletingMeal(meal)} className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-4 gap-3">
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-center">
-                    <p className="text-2xl font-bold text-white">{meal.calories}</p>
-                    <p className="text-xs text-gray-500">kcal</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
-                    <p className="text-2xl font-bold text-emerald-400">{meal.protein}g</p>
-                    <p className="text-xs text-emerald-400/80">Protein</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center">
-                    <p className="text-2xl font-bold text-amber-400">{meal.carbs}g</p>
-                    <p className="text-xs text-amber-400/80">Carbs</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-center">
-                    <p className="text-2xl font-bold text-sky-400">{meal.fat}g</p>
-                    <p className="text-xs text-sky-400/80">Fat</p>
+                  <div className="grid grid-cols-4 gap-3">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-center">
+                      <p className="text-2xl font-bold text-white">{meal.calories}</p>
+                      <p className="text-xs text-gray-500">kcal</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+                      <p className="text-2xl font-bold text-emerald-400">{meal.protein}g</p>
+                      <p className="text-xs text-emerald-400/80">Protein</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center">
+                      <p className="text-2xl font-bold text-amber-400">{meal.carbs}g</p>
+                      <p className="text-xs text-amber-400/80">Carbs</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-center">
+                      <p className="text-2xl font-bold text-sky-400">{meal.fat}g</p>
+                      <p className="text-xs text-sky-400/80">Fat</p>
+                    </div>
                   </div>
                 </div>
               </div>

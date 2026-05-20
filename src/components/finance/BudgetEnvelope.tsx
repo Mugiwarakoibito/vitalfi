@@ -16,10 +16,10 @@ export function BudgetEnvelope({ budget, currency, onEdit, onDelete }: BudgetEnv
   const isNearLimit = percentage >= 80 && !isOverBudget
 
   return (
-    <div className="glass-card-hover p-5 rounded-2xl relative group cursor-pointer overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-r from-white/[0.02] to-transparent pointer-events-none" />
+    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all group relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/[0.02] to-transparent pointer-events-none" />
       <div className="relative z-10">
-        <div className="flex items-start justify-between mb-3">
+        <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-3">
             <div
               className="h-2.5 w-2.5 rounded-full shadow-lg"
@@ -50,10 +50,10 @@ export function BudgetEnvelope({ budget, currency, onEdit, onDelete }: BudgetEnv
           </div>
         </div>
 
-        <div className="mb-3">
+        <div className="mb-4">
           <div className="h-2.5 w-full rounded-full bg-white/[0.04] overflow-hidden">
             <div
-              className="h-full rounded-full transition-all duration-500 ease-out shadow-lg"
+              className="h-full rounded-full transition-all duration-500"
               style={{
                 width: `${percentage}%`,
                 backgroundColor: isOverBudget ? '#EF4444' : isNearLimit ? '#F59E0B' : budget.color,

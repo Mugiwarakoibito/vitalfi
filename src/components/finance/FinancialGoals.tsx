@@ -62,7 +62,7 @@ export function FinancialGoals({ initialShow = false }: { initialShow?: boolean 
     
     setShowModal(false)
     setEditingGoal(null)
-setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: '' })
+setFormData({ name: '', target: '', current: '', category: 'other', deadline: '' })
   }
 
   const handleDelete = async () => {
@@ -75,8 +75,8 @@ setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: 
     setEditingGoal(goal)
     setFormData({
       name: goal.name,
-      target: goal.target.toString() || '0',
-      current: goal.current.toString() || '0',
+      target: goal.target.toString() || '0.00',
+      current: goal.current.toString() || '0.00',
       category: 'other',
       deadline: goal.deadline,
     })
@@ -131,7 +131,7 @@ setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: 
           <Target className="mx-auto h-10 w-10 text-muted/50 mb-3" />
           <h4 className="text-white font-medium mb-1">No financial goals yet</h4>
           <p className="text-sm text-muted mb-4">Set your first savings goal</p>
-          <Button variant="primary" onClick={() => { setEditingGoal(null); setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: '' }); setShowModal(true) }}>
+          <Button variant="primary" onClick={() => { setEditingGoal(null); setFormData({ name: '', target: '', current: '', category: 'other', deadline: '' }); setShowModal(true) }}>
             Create Goal
           </Button>
         </Card>
@@ -139,7 +139,7 @@ setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div 
             className="rounded-2xl border border-dashed border-white/20 bg-white/[0.02] p-5 flex flex-col items-center justify-center cursor-pointer hover:bg-white/[0.05] transition-all min-h-[140px]"
-            onClick={() => { setEditingGoal(null); setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: '' }); setShowModal(true) }}
+            onClick={() => { setEditingGoal(null); setFormData({ name: '', target: '', current: '', category: 'other', deadline: '' }); setShowModal(true) }}
           >
             <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-3">
               <Target className="w-6 h-6 text-purple-400" />
@@ -219,14 +219,16 @@ setFormData({ name: '', target: '0', current: '0', category: 'other', deadline: 
               type="number"
               value={formData.target}
               onChange={(e) => setFormData({...formData, target: e.target.value})}
-              placeholder="0"
+              onBlur={(e) => !e.target.value && setFormData({...formData, target: '0.00'})}
+              placeholder="0.00"
             />
             <Input
               label="Current Saved"
               type="number"
               value={formData.current}
               onChange={(e) => setFormData({...formData, current: e.target.value})}
-              placeholder="0"
+              onBlur={(e) => !e.target.value && setFormData({...formData, current: '0.00'})}
+              placeholder="0.00"
             />
           </div>
           <div>

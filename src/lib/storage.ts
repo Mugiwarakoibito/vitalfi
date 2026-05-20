@@ -250,49 +250,48 @@ class Storage {
   }
 
   private initDB(): Promise<IDBDatabase> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
+    return new Promise((resolve) => {
+      try {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-      request.onblocked = () => {
-        console.warn('Database upgrade blocked by another tab. Please close other tabs of this app.');
-        // Optionally notify UI, but for now we just log
-      };
-
-      request.onerror = () => {
-        console.warn('IndexedDB unavailable, falling back to localStorage');
-        this.localStorageFallback = true;
-        reject(new Error('IndexedDB unavailable'));
-      };
-
-      request.onsuccess = () => {
-        this.db = request.result;
-        
-        // Handle version changes from other tabs
-        this.db.onversionchange = () => {
-          this.db?.close();
-          console.warn('Database version changed in another tab. Reloading...');
-          window.location.reload();
+        request.onblocked = () => {
+          console.warn('Database upgrade blocked by another tab.');
         };
 
-        resolve(this.db);
-      };
+        request.onerror = () => {
+          console.warn('IndexedDB unavailable, falling back to localStorage');
+          this.localStorageFallback = true;
+          resolve(null as unknown as IDBDatabase);
+        };
 
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
+        request.onsuccess = () => {
+          this.db = request.result;
+          this.db.onversionchange = () => {
+            this.db?.close();
+            window.location.reload();
+          };
+          resolve(this.db);
+        };
 
-        const stores = [
-          'accounts', 'transactions', 'budgets', 'workouts', 
-          'workoutTemplates', 'meals', 'bodyMetrics', 'hydration', 
-          'sleep', 'goals', 'settings', 'investments', 'bills', 
-          'debts', 'subscriptions'
-        ];
-
-        stores.forEach(store => {
-          if (!db.objectStoreNames.contains(store)) {
-            db.createObjectStore(store, { keyPath: 'id' });
-          }
-        });
-      };
+        request.onupgradeneeded = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+          const stores = [
+            'accounts', 'transactions', 'budgets', 'workouts',
+            'workoutTemplates', 'meals', 'bodyMetrics', 'hydration',
+            'sleep', 'goals', 'settings', 'investments', 'bills',
+            'debts', 'subscriptions'
+          ];
+          stores.forEach(store => {
+            if (!db.objectStoreNames.contains(store)) {
+              db.createObjectStore(store, { keyPath: 'id' });
+            }
+          });
+        };
+      } catch (error) {
+        console.warn('IndexedDB init failed:', error);
+        this.localStorageFallback = true;
+        resolve(null as unknown as IDBDatabase);
+      }
     });
   }
 
@@ -301,45 +300,58 @@ class Storage {
     mode: IDBTransactionMode = 'readonly'
   ): Promise<IDBObjectStore> {
     const db = await this.dbReady;
+    if (!db) throw new Error('Database not available');
     const transaction = db.transaction(storeName, mode);
     return transaction.objectStore(storeName);
   }
 
   private localGet<T>(key: string): T | null {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : null;
+    try {
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
   }
 
   private localSet(key: string, value: unknown): void {
-    localStorage.setItem(key, JSON.stringify(value));
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.warn('localStorage set failed:', error);
+    }
   }
 
   async get<K extends keyof DBSchema>(storeName: K, id: string): Promise<DBSchema[K] | null> {
     if (this.localStorageFallback) {
       return this.localGet(`${storeName}_${id}`);
     }
-
-    return new Promise((resolve, reject) => {
-      this.getStore(storeName).then((store) => {
+    try {
+      const store = await this.getStore(storeName);
+      return new Promise((resolve, reject) => {
         const request = store.get(id);
         request.onsuccess = () => resolve(request.result || null);
         request.onerror = () => reject(request.error);
       });
-    });
+    } catch (error) {
+      return null;
+    }
   }
 
   async getAll<K extends keyof DBSchema>(storeName: K): Promise<DBSchema[K][]> {
     if (this.localStorageFallback) {
       return this.localGet(`${storeName}_all`) || [];
     }
-
-    return new Promise((resolve, reject) => {
-      this.getStore(storeName).then((store) => {
+    try {
+      const store = await this.getStore(storeName);
+      return new Promise((resolve, reject) => {
         const request = store.getAll();
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
-    });
+    } catch (error) {
+      return [];
+    }
   }
 
   async put<K extends keyof DBSchema>(storeName: K, data: DBSchema[K]): Promise<string> {
@@ -359,13 +371,16 @@ class Storage {
       return withTimestamps.id;
     }
 
-    return new Promise((resolve, reject) => {
-      this.getStore(storeName, 'readwrite').then((store) => {
+    try {
+      const store = await this.getStore(storeName, 'readwrite');
+      return new Promise((resolve, reject) => {
         const request = store.put(withTimestamps);
         request.onsuccess = () => resolve(withTimestamps.id);
         request.onerror = () => reject(request.error);
       });
-    });
+    } catch (error) {
+      return withTimestamps.id;
+    }
   }
 
   async delete<K extends keyof DBSchema>(storeName: K, id: string): Promise<void> {
@@ -373,44 +388,46 @@ class Storage {
       localStorage.removeItem(`${storeName}_${id}`);
       const allKey = `${storeName}_all`;
       const existing = this.localGet<DBSchema[K][]>(allKey) || [];
-      this.localSet(
-        allKey,
-        existing.filter((item) => (item as { id: string }).id !== id)
-      );
+      this.localSet(allKey, existing.filter((item) => (item as { id: string }).id !== id));
       return;
     }
 
-    return new Promise((resolve, reject) => {
-      this.getStore(storeName, 'readwrite').then((store) => {
+    try {
+      const store = await this.getStore(storeName, 'readwrite');
+      return new Promise((resolve, reject) => {
         const request = store.delete(id);
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       });
-    });
+    } catch (error) {
+      console.warn(`Failed to delete ${storeName}/${id}:`, error);
+    }
   }
 
   async clear<K extends keyof DBSchema>(storeName: K): Promise<void> {
     if (this.localStorageFallback) {
-      const allKey = `${storeName}_all`;
-      this.localSet(allKey, []);
+      this.localSet(`${storeName}_all`, []);
       return;
     }
 
-    return new Promise((resolve, reject) => {
-      this.getStore(storeName, 'readwrite').then((store) => {
+    try {
+      const store = await this.getStore(storeName, 'readwrite');
+      return new Promise((resolve, reject) => {
         const request = store.clear();
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       });
-    });
+    } catch (error) {
+      console.warn(`Failed to clear ${storeName}:`, error);
+    }
   }
 
   async exportAll(): Promise<Record<string, unknown>> {
     const data: Record<string, unknown> = {};
     const storeNames: (keyof DBSchema)[] = [
-      'accounts', 'transactions', 'budgets', 'workouts', 
-      'workoutTemplates', 'meals', 'bodyMetrics', 'hydration', 
-      'sleep', 'goals', 'settings', 'investments', 'bills', 
+      'accounts', 'transactions', 'budgets', 'workouts',
+      'workoutTemplates', 'meals', 'bodyMetrics', 'hydration',
+      'sleep', 'goals', 'settings', 'investments', 'bills',
       'debts', 'subscriptions'
     ];
 
@@ -426,9 +443,9 @@ class Storage {
 
   async importAll(data: Record<string, unknown>): Promise<void> {
     const storeNames: (keyof DBSchema)[] = [
-      'accounts', 'transactions', 'budgets', 'workouts', 
-      'workoutTemplates', 'meals', 'bodyMetrics', 'hydration', 
-      'sleep', 'goals', 'settings', 'investments', 'bills', 
+      'accounts', 'transactions', 'budgets', 'workouts',
+      'workoutTemplates', 'meals', 'bodyMetrics', 'hydration',
+      'sleep', 'goals', 'settings', 'investments', 'bills',
       'debts', 'subscriptions'
     ];
 

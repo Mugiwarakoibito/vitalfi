@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, CheckCircle, ChevronLeft, Sparkles, Zap, Target, ShieldCheck, Activity, Search, ArrowRight, Loader2 } from 'lucide-react';
+import { User, CheckCircle, ChevronLeft, Sparkles, Zap, Target, ShieldCheck, Activity, ArrowRight, Loader2, Mail } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { cn } from '@/lib/utils';
 
@@ -204,10 +204,13 @@ const COUNTRIES = [
   { code: 'ZW', name: 'Zimbabwe', currency: 'ZWL' },
 ];
 
-const STEPS = ['identity', 'philosophy', 'complete'];
+const STEPS = ['email', 'identity', 'philosophy', 'complete'];
 
 export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
-  const [stepIndex, setStepIndex] = useState(0);
+  const savedEmail = localStorage.getItem('lifesync_license_email')
+  const initialStep = savedEmail ? 1 : 0
+  const [stepIndex, setStepIndex] = useState(initialStep);
+  const [email, setEmail] = useState(savedEmail || '');
   const [name, setName] = useState('');
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
   const [isLoading, setIsLoading] = useState(false);
@@ -220,6 +223,10 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   );
 
   const handleNext = async () => {
+    if (stepIndex === 0 && currentStep === 'email') {
+      if (!email.includes('@')) return
+      localStorage.setItem('lifesync_license_email', email)
+    }
     if (stepIndex === STEPS.length - 1) {
       setIsLoading(true);
       await updateSettings({
@@ -228,8 +235,9 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         currency: selectedCountry.currency,
         onboardingComplete: true,
       });
+      localStorage.setItem('lifesync_user_name', name)
       setUser({
-        email: localStorage.getItem('lifesync_license_email') || 'user@lifesync.pro',
+        email: email || localStorage.getItem('lifesync_license_email') || 'user@lifesync.pro',
         name: name,
       });
       setOnboarded(true);
@@ -253,123 +261,157 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-2xl relative z-10 my-auto"
+        className="w-full max-w-sm relative z-10 my-auto"
       >
-        <div className="text-center mb-8 md:mb-12 space-y-4">
-<motion.div 
-            initial={{ rotate: -10, scale: 0 }}
-            animate={{ rotate: 0, scale: 1 }}
-            className="h-12 w-12 md:h-16 md:w-16 rounded-2xl bg-gradient-to-br from-purple-500 to-cyan-500 p-[2px] mx-auto"
-          >
-            <div className="w-full h-full rounded-2xl bg-slate-950 flex items-center justify-center">
-              <ShieldCheck size={20} className="md:text-24 text-white" />
-            </div>
-          </motion.div>
-          <div className="space-y-2 text-center">
-              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">LifeSync <span className="gradient-text">Pro</span></h1>
-              <p className="text-slate-400 text-xs md:text-sm font-bold uppercase tracking-[0.3em] text-[10px]">Setup Guide</p>
-           </div>
+<div className="text-center mb-8 space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto">
+            <ShieldCheck size={24} className="text-cyan-400" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-white">LifeSync Pro</h1>
+            <p className="text-cyan-400/50 text-xs uppercase tracking-[0.25em] mt-2">Setup Guide</p>
+          </div>
         </div>
 
-        <div className="glass-card p-5 md:p-10 lg:p-14 border-white/5 relative overflow-hidden flex flex-col">
-          <div className="absolute top-0 right-0 p-8 opacity-[0.02] pointer-events-none">
-             <Sparkles size={150} />
+        <div className="glass-card p-10 border border-cyan-500/20 relative overflow-hidden flex flex-col">
+          <div className="absolute top-0 right-0 p-4 opacity-[0.02] pointer-events-none">
+             <Sparkles size={80} />
           </div>
 
-          <AnimatePresence mode="wait">
+<AnimatePresence mode="wait">
+            {currentStep === 'email' && (
+              <motion.div
+                key="email"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-8"
+              >
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto">
+                    <div className="w-10 h-10 rounded-xl bg-cyan-500 flex items-center justify-center">
+                      <Mail size={20} className="text-white" />
+                    </div>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-semibold text-white tracking-tight">Enter Your Email</h2>
+                    <p className="text-cyan-400/70 text-sm mt-2">This will be your account login</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Email address</label>
+                  <input
+                    type="email"
+                    autoFocus
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@company.com"
+                    className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm placeholder:text-white/30 outline-none focus:border-cyan-500/50 focus:bg-slate-900/70 transition-all"
+                  />
+                </div>
+              </motion.div>
+            )}
+
             {currentStep === 'identity' && (
               <motion.div
                 key="identity"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="space-y-10"
+                className="space-y-8"
               >
-                <div className="space-y-2 mb-6">
-                  <h2 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-3">
-                    <User size={24} className="text-cyan-400" />
-                    Personal Details
-                  </h2>
-                  <p className="text-slate-500 font-medium text-sm md:text-base">Let's get to know you better.</p>
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto">
+                    <div className="w-10 h-10 rounded-xl bg-cyan-500 flex items-center justify-center">
+                      <User size={20} className="text-white" />
+                    </div>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-semibold text-white tracking-tight">Personal Details</h2>
+                    <p className="text-cyan-400/70 text-sm mt-2">Let's get to know you better</p>
+                  </div>
                 </div>
 
-<div className="space-y-6 md:space-y-8 flex-1">
-                   <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Your Name</label>
-                      <input 
-                         autoFocus
-                         value={name}
-                         onChange={(e) => setName(e.target.value)}
-                         className="w-full bg-slate-950/50 border border-white/5 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 text-white outline-none focus:border-cyan-500/30 transition-all font-medium"
-                      />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Your name</label>
+                    <input 
+                      autoFocus
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="John Doe"
+                      className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm placeholder:text-white/30 outline-none focus:border-cyan-500/50 focus:bg-slate-900/70 transition-all"
+                    />
+                  </div>
+                   
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Your country</label>
+                    <input
+                      type="text"
+                      value={countrySearch}
+                      onChange={(e) => setCountrySearch(e.target.value)}
+                      placeholder="Search countries..."
+                      className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm placeholder:text-white/30 outline-none focus:border-cyan-500/50 focus:bg-slate-900/70 transition-all"
+                    />
+<div className="space-y-1 max-h-32 overflow-y-auto pr-1 pb-2">
+                      {filteredCountries.map(c => (
+                       <button
+                         key={c.code}
+                         onClick={() => {
+                           setSelectedCountry(c);
+                           setCountrySearch(c.name);
+                         }}
+                         className={cn(
+                           "w-full p-3 rounded-xl border text-left text-sm flex items-center justify-between transition-all",
+                           selectedCountry.code === c.code 
+                             ? "bg-cyan-500/20 border-cyan-500/40 text-white" 
+                             : "bg-transparent border-white/10 text-white/60 hover:border-white/20"
+                         )}
+                       >
+                         <span>{c.name}</span>
+                         <span className="text-xs text-cyan-400">{c.currency}</span>
+                       </button>
+                     ))}
                    </div>
-                    
-                   <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Your Country</label>
-                      <div className="relative">
-                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <input
-                          type="text"
-                          value={countrySearch}
-                          onChange={(e) => setCountrySearch(e.target.value)}
-                          placeholder="Search countries..."
-                          className="w-full bg-slate-950/50 border border-white/5 rounded-xl md:rounded-2xl pl-12 pr-4 py-3 text-white outline-none focus:border-cyan-500/30 transition-all font-medium text-sm"
-                        />
-                      </div>
-                      <div className="mt-3 max-h-48 md:max-h-64 overflow-y-auto space-y-2 pr-2 scrollbar-none">
-                        {filteredCountries.map(c => (
-                          <button
-                            key={c.code}
-                            onClick={() => {
-                              setSelectedCountry(c);
-                              setCountrySearch(c.name);
-                            }}
-                            className={cn(
-                              "w-full p-3 rounded-2xl border text-left transition-all group flex items-center justify-between",
-                              selectedCountry.code === c.code 
-                                ? "bg-cyan-500/10 border-cyan-500/30 text-white" 
-                                : "bg-white/[0.02] border-white/5 text-slate-400 hover:border-white/10"
-                            )}
-                          >
-                            <span className="font-medium">{c.name}</span>
-                            <span className="text-sm opacity-50">{c.currency}</span>
-                          </button>
-                        ))}
-                      </div>
-                   </div>
+                  </div>
                 </div>
               </motion.div>
             )}
 
-            {currentStep === 'philosophy' && (
+{currentStep === 'philosophy' && (
               <motion.div
                 key="philosophy"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="space-y-10"
+                className="space-y-8"
               >
-<div className="space-y-2 mb-6">
-                  <h2 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-3">
-                    <Zap size={24} className="text-purple-400" />
-                    Why LifeSync?
-                  </h2>
-                  <p className="text-slate-500 font-medium text-sm md:text-base">LifeSync integrates biological and financial performance.</p>
-               </div>
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto">
+                    <div className="w-10 h-10 rounded-xl bg-cyan-500 flex items-center justify-center">
+                      <Zap size={20} className="text-white" />
+                    </div>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-semibold text-white tracking-tight">Why LifeSync?</h2>
+                    <p className="text-cyan-400/70 text-sm mt-2">Everything you need to thrive</p>
+                  </div>
+                </div>
 
-               <div className="grid grid-cols-1 gap-3 md:gap-6 flex-1">
+                <div className="space-y-2 pb-2">
                   {[
-                    { label: 'Cross-Domain Analytics', desc: 'Track your health and money in one place.', icon: Activity, color: 'text-cyan-400' },
-                    { label: 'Smart Predictions', desc: 'AI-powered insights for better decisions.', icon: Target, color: 'text-purple-400' },
-                    { label: 'Beautiful Design', desc: 'Beautiful dark mode design for focus.', icon: Sparkles, color: 'text-amber-400' },
+                    { label: 'Cross-Domain Analytics', desc: 'Track health & wealth in one unified platform', icon: Activity },
+                    { label: 'Smart Predictions', desc: 'AI-powered insights for better decisions', icon: Target },
+                    { label: 'Beautiful Design', desc: 'Dark mode design built for deep focus', icon: Sparkles },
                   ].map((p, i) => (
-                     <div key={i} className="p-4 md:p-6 rounded-2xl md:rounded-3xl bg-white/[0.02] border border-white/5 flex gap-4 md:gap-6 group hover:bg-white/[0.04] transition-all">
-                        <div className={cn("p-3 md:p-4 rounded-xl md:rounded-2xl bg-white/5 h-fit border border-white/5 group-hover:scale-110 transition-transform", p.color)}>
-                           <p.icon size={20} className="md:w-6 md:h-6" />
+                     <div key={i} className="p-4 rounded-xl bg-cyan-500/[0.03] border border-cyan-500/10 hover:bg-cyan-500/10 hover:border-cyan-500/20 transition-all flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                          <p.icon size={18} className="text-cyan-400" />
                         </div>
                         <div>
-                           <p className="text-sm md:text-base font-black text-white mb-1 uppercase tracking-tight">{p.label}</p>
-                           <p className="text-[10px] md:text-xs text-slate-500 font-medium leading-relaxed">{p.desc}</p>
+                           <p className="text-sm font-medium text-white">{p.label}</p>
+                           <p className="text-xs text-white/50">{p.desc}</p>
                         </div>
                      </div>
                   ))}
@@ -377,51 +419,47 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               </motion.div>
             )}
 
-            {currentStep === 'complete' && (
+{currentStep === 'complete' && (
               <motion.div
                 key="complete"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="text-center py-10 space-y-8"
+                className="text-center space-y-4"
               >
-                <div className="relative inline-block">
-                  <div className="absolute inset-0 bg-emerald-500/20 blur-[60px] rounded-full animate-pulse" />
-                  <div className="w-24 h-24 bg-emerald-500/10 border border-emerald-500/20 rounded-[2.5rem] flex items-center justify-center mx-auto relative z-10 shadow-2xl">
-                    <CheckCircle className="w-12 h-12 text-emerald-400" />
-                  </div>
+                <div className="w-20 h-20 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto">
+                  <CheckCircle size={40} className="text-cyan-400" />
                 </div>
-                <div className="space-y-3">
-<h2 className="text-4xl font-black text-white tracking-tighter">You're All Set!</h2>
-                    <p className="text-slate-400 max-w-sm mx-auto font-medium">
-                      {name}, welcome to LifeSync. Let's start tracking your health and wealth!
-                    </p>
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-semibold text-white tracking-tight">You're all set!</h2>
+                  <p className="text-cyan-400 text-sm">{name}, we're excited to have you</p>
+                  <p className="text-white/40 text-xs mt-3">Start exploring your dashboard</p>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <div className="flex gap-4 md:gap-6 mt-8 md:mt-16 pt-6 md:pt-10 border-t border-white/5 flex-shrink-0">
+<div className="flex gap-4 pt-6 flex-shrink-0">
             {stepIndex > 0 && currentStep !== 'complete' && (
               <button 
                 onClick={() => setStepIndex(prev => prev - 1)}
-                className="px-6 md:px-8 h-12 md:h-14 rounded-xl md:rounded-2xl bg-white/5 text-slate-500 font-black uppercase tracking-widest text-[10px] hover:bg-white/10 hover:text-white transition-all flex items-center justify-center gap-2 md:gap-3"
+                className="px-5 h-12 rounded-xl bg-white/5 text-white/60 text-sm font-medium hover:bg-white/10 hover:text-white flex items-center gap-2 transition-all"
               >
-                <ChevronLeft size={16} /> <span className="hidden sm:inline">Back</span>
+                <ChevronLeft size={16} /> Back
               </button>
             )}
             <div className="flex-1" />
             <button
               onClick={handleNext}
-              disabled={currentStep === 'identity' && name.trim().length < 2}
-              className="w-full sm:w-auto flex-1 md:flex-none px-8 h-12 md:h-14 gradient-brand rounded-xl md:rounded-2xl font-black uppercase tracking-wider text-xs text-white shadow-lg hover:shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              disabled={(currentStep === 'email' && !email.includes('@')) || (currentStep === 'identity' && name.trim().length < 2)}
+              className="px-8 h-12 rounded-xl bg-cyan-500 text-white font-semibold text-sm flex items-center gap-2 hover:bg-cyan-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
                 <>
                   {currentStep === 'complete' ? 'Get Started' : 'Continue'}
-                  {currentStep !== 'complete' && <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />}
+                  {currentStep !== 'complete' && <ArrowRight size={16} />}
                 </>
               )}
             </button>

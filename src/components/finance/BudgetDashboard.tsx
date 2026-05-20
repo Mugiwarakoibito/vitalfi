@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Target, Plus } from 'lucide-react'
+import { PiggyBank } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -70,8 +70,10 @@ export function BudgetDashboard() {
         <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent p-5">
           <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
-            <p className="text-xs text-purple-400/80 text-center">Total Budgeted</p>
-            <p className="text-3xl font-bold text-white text-center mt-1">
+            <div className="flex items-center gap-2 text-purple-400/80 text-sm mb-2">
+              <span>Total Budgeted</span>
+            </div>
+            <p className="text-3xl font-bold text-purple-400">
               {formatCurrency(totalBudgeted, settings.currency || 'USD')}
             </p>
           </div>
@@ -79,8 +81,10 @@ export function BudgetDashboard() {
         <div className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-gradient-to-br from-red-500/10 to-transparent p-5">
           <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
-            <p className="text-xs text-red-400/80 text-center">Total Spent</p>
-            <p className="text-3xl font-bold text-red-400 text-center mt-1">
+            <div className="flex items-center gap-2 text-red-400/80 text-sm mb-2">
+              <span>Total Spent</span>
+            </div>
+            <p className="text-3xl font-bold text-red-400">
               {formatCurrency(totalSpent, settings.currency || 'USD')}
             </p>
           </div>
@@ -88,8 +92,10 @@ export function BudgetDashboard() {
         <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent p-5">
           <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
-            <p className="text-xs text-emerald-400/80 text-center">Remaining</p>
-            <p className="text-3xl font-bold text-emerald-400 text-center mt-1">
+            <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-2">
+              <span>Remaining</span>
+            </div>
+            <p className="text-3xl font-bold text-emerald-400">
               {formatCurrency(Math.max(0, totalBudgeted - totalSpent), settings.currency || 'USD')}
             </p>
           </div>
@@ -98,24 +104,26 @@ export function BudgetDashboard() {
 
       {/* Budgets Grid */}
       {computedBudgets.length === 0 ? (
-        <Card className="py-12 text-center">
-          <Target className="mx-auto h-10 w-10 text-muted/50 mb-3" />
+        <Card className="py-12">
+          <div className="flex flex-col items-center">
+            <PiggyBank className="h-10 w-10 text-muted/50 mb-3" />
           <h4 className="text-white font-medium mb-1">No budgets yet</h4>
           <p className="text-sm text-muted mb-4">Create a budget to track spending limits</p>
           <Button variant="primary" onClick={() => setShowForm(true)}>
             Create Budget
           </Button>
+          </div>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div 
-            className="rounded-2xl border border-dashed border-white/20 bg-white/[0.02] p-5 flex flex-col items-center justify-center cursor-pointer hover:bg-white/[0.05] transition-all min-h-[140px]"
+            className="rounded-2xl border border-dashed border-cyan-500/30 bg-cyan-500/5 p-5 flex flex-col items-center justify-center cursor-pointer hover:bg-cyan-500/10 transition-all min-h-[140px]"
             onClick={() => setShowForm(true)}
           >
-            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
-              <Plus className="w-6 h-6 text-gray-400" />
+            <div className="w-12 h-12 rounded-full bg-cyan-500/20 flex items-center justify-center mb-3">
+              <PiggyBank className="w-6 h-6 text-cyan-400" />
             </div>
-            <p className="text-sm text-gray-400">Add Budget</p>
+            <p className="text-sm text-cyan-300">Add Budget</p>
           </div>
           {computedBudgets.map((budget) => (
             <BudgetEnvelope

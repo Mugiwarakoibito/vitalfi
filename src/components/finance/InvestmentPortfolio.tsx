@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { TrendingUp, Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -17,11 +17,22 @@ const investmentTypes = [
   { id: 'other', label: 'Other', icon: '💎' },
 ]
 
-export function InvestmentPortfolio() {
+interface InvestmentPortfolioProps {
+  initialShow?: boolean
+  onCloseForm?: () => void
+}
+
+export function InvestmentPortfolio({ initialShow = false, onCloseForm }: InvestmentPortfolioProps) {
   const { investments, addInvestment, updateInvestment, deleteInvestment, settings } = useAppStore()
   const currency = settings.currency || 'USD'
   const [showModal, setShowModal] = useState(false)
   const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null)
+
+  useEffect(() => {
+    if (initialShow) {
+      setShowModal(true)
+    }
+  }, [initialShow])
   const [deletingInvestment, setDeletingInvestment] = useState<Investment | null>(null)
   const [formData, setFormData] = useState({
     name: '',
@@ -169,10 +180,6 @@ export function InvestmentPortfolio() {
             <p className="text-sm text-gray-400">Add Investment</p>
           </div>
           {investments.map((inv) => {
-            const value = inv.quantity * inv.currentPrice
-            const cost = inv.quantity * inv.purchasePrice
-            const gain = value - cost
-            const gainPercent = cost > 0 ? (gain / cost) * 100 : 0
             const typeInfo = investmentTypes.find(t => t.id === inv.type)
 
             return (
@@ -197,8 +204,6 @@ export function InvestmentPortfolio() {
                           <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 text-gray-400 text-[10px]">
                             {typeInfo?.label}
                           </span>
-                          <span className="text-gray-600">•</span>
-                          <span className="text-gray-400">{inv.quantity} shares</span>
                         </p>
                       </div>
                     </div>
@@ -212,25 +217,26 @@ export function InvestmentPortfolio() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-                      <p className="text-xs text-gray-500 mb-1">Cost Basis</p>
-                      <p className="text-sm font-bold text-white tracking-tight">{formatCurrency(cost, currency)}</p>
+                  <div className="space-y-3 pt-3 border-t border-white/5">
+                      <div className="grid grid-cols-4 gap-2">
+                        <div className="p-2.5 rounded-lg bg-white/5 border border-white/5">
+                          <p className="text-[10px] text-gray-500 mb-0.5">Quantity</p>
+                          <p className="text-xs font-bold text-white">{inv.quantity}</p>
+                        </div>
+                        <div className="p-2.5 rounded-lg bg-white/5 border border-white/5">
+                          <p className="text-[10px] text-gray-500 mb-0.5">Current Price</p>
+                          <p className="text-xs font-bold text-white">{formatCurrency(inv.currentPrice, currency)}</p>
+                        </div>
+                        <div className="p-2.5 rounded-lg bg-white/5 border border-white/5">
+                          <p className="text-[10px] text-gray-500 mb-0.5">Purchase Price</p>
+                          <p className="text-xs font-bold text-white">{formatCurrency(inv.purchasePrice, currency)}</p>
+                        </div>
+                        <div className="p-2.5 rounded-lg bg-white/5 border border-white/5">
+                          <p className="text-[10px] text-gray-500 mb-0.5">Purchase Date</p>
+                          <p className="text-xs font-bold text-white">{inv.purchaseDate ? new Date(inv.purchaseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) : '-'}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className={`p-3 rounded-xl ${gain >= 0 ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
-                      <p className="text-xs mb-1">{gain >= 0 ? 'Gain' : 'Loss'}</p>
-                      <p className={`text-sm font-bold tracking-tight ${gain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {gain >= 0 ? '+' : ''}{formatCurrency(gain, currency)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-gray-500">Current: {formatCurrency(inv.currentPrice, currency)}/share</span>
-                    <span className={`font-medium tracking-wide px-2 py-1 rounded-lg ${gainPercent >= 0 ? 'text-green-400 bg-green-500/10' : 'text-red-400 bg-red-500/10'}`}>
-                      {gainPercent >= 0 ? '+' : ''}{gainPercent.toFixed(2)}%
-                    </span>
-                  </div>
                 </div>
               </div>
             )
@@ -238,7 +244,7 @@ export function InvestmentPortfolio() {
         </div>
       )}
 
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingInvestment ? 'Edit Investment' : 'Add New Investment'} className="max-w-md">
+      <Modal isOpen={showModal} onClose={() => { setShowModal(false); onCloseForm?.() }} title={editingInvestment ? 'Edit Investment' : 'Add New Investment'} className="max-w-md">
         <div className="space-y-4">
           <Input
             label="Investment Name"

@@ -3,6 +3,8 @@ import { Plus, Trash2, TrendingDown, TrendingUp, Minus, Activity, AlertTriangle 
 import { useAppStore } from '@/store/useAppStore'
 import { generateId } from '@/lib/utils'
 import { calculateBMI, bmiCategory } from '@/lib/calculations'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 import type { BodyMetric } from '@/types/fitness'
 
 interface BodyMetricsTrackerProps { heightCm?: number }
@@ -88,35 +90,41 @@ export function BodyMetricsTracker({ heightCm }: BodyMetricsTrackerProps) {
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-white">Body Metrics</h3>
-        <button onClick={() => setShowForm(true)} className="px-4 py-2 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-400 text-sm flex items-center gap-2 hover:bg-rose-500/30 transition-all">
-          <Plus className="w-4 h-4" />
+        <Button variant="primary" onClick={() => setShowForm(true)}>
+          <Plus className="w-4 h-4 mr-2" />
           Log Entry
-        </button>
+        </Button>
       </div>
 
       {bodyMetrics.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
+        <Card className="py-12 text-center">
           <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4"><Activity className="w-8 h-8 text-rose-400/50" /></div>
           <p className="text-gray-400 mb-1">No body metrics logged yet</p>
-          <p className="text-gray-500 text-sm">Start tracking your progress</p>
-        </div>
+          <p className="text-gray-500 text-sm mb-4">Start tracking your progress</p>
+          <Button variant="primary" onClick={() => setShowForm(true)}>
+            Log Your First Entry
+          </Button>
+        </Card>
       ) : (
         <div className="space-y-4">
           {sorted.map((m) => (
-            <div key={m.id} className="rounded-2xl border border-white/10 bg-white/5 p-5 hover:bg-white/[0.07] transition-all">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-rose-500/20 flex items-center justify-center"><Activity className="w-5 h-5 text-rose-400" /></div>
-                  <div>
-                    <h4 className="font-semibold text-white">{new Date(m.date).toLocaleDateString()}</h4>
-                    <div className="flex gap-3 text-sm">
-                      {m.weight && <span className="text-gray-300">{m.weight.toFixed(1)} kg</span>}
-                      {m.bodyFat && <span className="text-amber-400">{m.bodyFat.toFixed(1)}% fat</span>}
-                      {Object.keys(m.measurements).length > 0 && <span className="text-gray-500">{Object.keys(m.measurements).length} measurements</span>}
+            <div key={m.id} className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all group relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-rose-500/[0.02] to-transparent pointer-events-none" />
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-rose-500/20 flex items-center justify-center shadow-lg" style={{boxShadow: '0 0 20px rgba(244,63,94,0.15)'}}><Activity className="w-5 h-5 text-rose-400" /></div>
+                    <div>
+                      <h4 className="font-semibold text-white tracking-tight">{new Date(m.date).toLocaleDateString()}</h4>
+                      <div className="flex gap-3 text-sm">
+                        {m.weight && <span className="text-gray-300">{m.weight.toFixed(1)} kg</span>}
+                        {m.bodyFat && <span className="text-amber-400">{m.bodyFat.toFixed(1)}% fat</span>}
+                        {Object.keys(m.measurements).length > 0 && <span className="text-gray-500">{Object.keys(m.measurements).length} measurements</span>}
+                      </div>
                     </div>
                   </div>
+                  <button onClick={() => setDeletingEntry(m)} className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all"><Trash2 className="w-4 h-4" /></button>
                 </div>
-                <button onClick={() => setDeletingEntry(m)} className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all"><Trash2 className="w-4 h-4" /></button>
               </div>
             </div>
           ))}

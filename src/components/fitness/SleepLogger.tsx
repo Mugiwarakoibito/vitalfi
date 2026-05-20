@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react'
 import { Moon, Trash2, Star, Clock, Plus, AlertTriangle } from 'lucide-react'
 import { generateId, formatSleepDuration } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 import type { SleepEntry } from '@/types/fitness'
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 
@@ -82,35 +84,41 @@ export function SleepLogger() {
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-white">Sleep History</h3>
-        <button onClick={() => setShowForm(true)} className="px-4 py-2 rounded-xl bg-violet-500/20 border border-violet-500/30 text-violet-400 text-sm flex items-center gap-2 hover:bg-violet-500/30 transition-all">
-          <Plus className="w-4 h-4" />
+        <Button variant="primary" onClick={() => setShowForm(true)}>
+          <Plus className="w-4 h-4 mr-2" />
           Log Sleep
-        </button>
+        </Button>
       </div>
 
       {sleep.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
+        <Card className="py-12 text-center">
           <div className="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center mx-auto mb-4"><Moon className="w-8 h-8 text-violet-400/50" /></div>
           <p className="text-gray-400 mb-1">No sleep entries yet</p>
-          <p className="text-gray-500 text-sm">Start tracking your sleep</p>
-        </div>
+          <p className="text-gray-500 text-sm mb-4">Start tracking your sleep</p>
+          <Button variant="primary" onClick={() => setShowForm(true)}>
+            Log Your First Sleep
+          </Button>
+        </Card>
       ) : (
         <div className="space-y-4">
           {sorted.map((entry) => (
-            <div key={entry.id} className="rounded-2xl border border-white/10 bg-white/5 p-5 hover:bg-white/[0.07] transition-all">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-violet-500/20 flex items-center justify-center"><Moon className="w-5 h-5 text-violet-400" /></div>
-                  <div>
-                    <h4 className="font-semibold text-white">{new Date(entry.date).toLocaleDateString()}</h4>
-                    <p className="text-sm text-gray-400">{formatSleepDuration(entry.duration)}</p>
+            <div key={entry.id} className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all group relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-violet-500/[0.02] to-transparent pointer-events-none" />
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-violet-500/20 flex items-center justify-center shadow-lg" style={{boxShadow: '0 0 20px rgba(139,92,246,0.15)'}}><Moon className="w-5 h-5 text-violet-400" /></div>
+                    <div>
+                      <h4 className="font-semibold text-white tracking-tight">{new Date(entry.date).toLocaleDateString()}</h4>
+                      <p className="text-sm text-gray-400">{formatSleepDuration(entry.duration)}</p>
+                    </div>
                   </div>
+                  <button onClick={() => setDeletingEntry(entry)} className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all"><Trash2 className="w-4 h-4" /></button>
                 </div>
-                <button onClick={() => setDeletingEntry(entry)} className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all"><Trash2 className="w-4 h-4" /></button>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1">{qualityStars(entry.quality)}</div>
-                {entry.bedTime && entry.wakeTime && <span className="text-xs text-gray-500">{entry.bedTime} - {entry.wakeTime}</span>}
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1">{qualityStars(entry.quality)}</div>
+                  {entry.bedTime && entry.wakeTime && <span className="text-xs text-gray-500">{entry.bedTime} - {entry.wakeTime}</span>}
+                </div>
               </div>
             </div>
           ))}

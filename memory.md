@@ -1,6 +1,6 @@
 # VitalFi Memory
 
-## Current Status (May 10, 2026)
+## Current Status (May 20, 2026)
 
 ### Latest Commit
 - **Hash:** 3c3a0fc
@@ -14,6 +14,32 @@
 ### Build Status
 - Build passes successfully (no TypeScript errors)
 - No pending changes in working tree
+
+## Recent Features Added
+
+### AI Exercise Creator
+- **Files:** `src/lib/ai-exercise.ts`, `src/components/fitness/AddExerciseModal.tsx`
+- **Purpose:** Natural language exercise creation using Ollama (local AI)
+- **How it works:** User describes exercise in plain language, AI parses into structured exercise with name, muscles, equipment, difficulty, instructions
+- **Requirement:** Ollama must be running locally at `http://localhost:11434` with `llama3.2` model
+- **Custom exercises:** AI-created exercises are stored in component state (session-only, not persisted)
+
+### Exercise Library Enhanced
+- **File:** `src/components/fitness/ExerciseLibrary.tsx`
+- **New features:**
+  - Image display for exercises (Unsplash URLs)
+  - "Add with AI" button to open AI exercise creator
+  - Expandable exercise details (instructions, tips, equipment)
+  - Custom exercise counter and clear button
+  - "AI" badge on custom exercises
+  - Muscle-group gradient fallbacks when images fail to load
+- **Type update:** `ExerciseDefinition` now has optional `imageUrl` field
+
+### Exercise Data
+- **File:** `src/lib/exercises.ts`
+- **Count:** ~70 exercises across all categories
+- **Images:** Each exercise has an `imageUrl` pointing to relevant Unsplash fitness images
+- **Categories:** Strength, Cardio, HIIT, Flexibility (with Plyometrics & Calisthenics category definitions)
 
 ## Ongoing Work
 
@@ -44,6 +70,7 @@
 - React 18 + TypeScript + Vite
 - Tailwind CSS + glassmorphism dark mode
 - Zustand for state management
+- Ollama (local AI) for exercise parsing
 - Vercel deployment
 
 ## File Locations
@@ -56,3 +83,7 @@
 - Investment portfolio: `src/components/finance/InvestmentPortfolio.tsx`
 - Subscription tracker: `src/components/finance/SubscriptionTracker.tsx`
 - Vercel config: `vercel.json`
+- AI exercise service: `src/lib/ai-exercise.ts`
+- AI exercise modal: `src/components/fitness/AddExerciseModal.tsx`
+- Exercise library: `src/components/fitness/ExerciseLibrary.tsx`
+- Exercise data: `src/lib/exercises.ts`

@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   BarChart3,
   Wallet,
-  Zap,
   TrendingUp,
   Target,
   Calendar,
@@ -20,62 +19,24 @@ import {
   Scissors,
   Skull,
   Gem,
-  Download,
-  Upload
+  PiggyBank
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/lib/utils'
 
 export function Sidebar() {
   const location = useLocation()
-  const { appMode, exportData, importData } = useAppStore()
-
-  const handleExport = async () => {
-    try {
-      const data = await exportData()
-      const blob = new Blob([data], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `lifesync-backup-${new Date().toISOString().split('T')[0]}.json`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (e) {
-      console.error('Export failed', e)
-    }
-  }
-
-  const handleImport = () => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.json'
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (file) {
-        const reader = new FileReader()
-        reader.onload = async (ev) => {
-          const content = ev.target?.result as string
-          try {
-            await importData(content)
-          } catch (err) {
-            console.error('Import failed', err)
-          }
-        }
-        reader.readAsText(file)
-      }
-    }
-    input.click()
-  }
+  const { appMode } = useAppStore()
 
   const financeGroups = [
     {
       title: 'MoneyFlow Core',
       items: [
         { label: 'Transaction Hub', path: '/finance?tab=transactions', icon: Wallet, color: 'text-emerald-400', shortcut: 'T' },
-        { label: 'Budget Command', path: '/finance?tab=budgets', icon: Target, color: 'text-cyan-400' },
         { label: 'Wealth Vault', path: '/finance?tab=wealth', icon: Gem, color: 'text-amber-400' },
+        { label: 'Budget Command', path: '/finance?tab=budgets', icon: PiggyBank, color: 'text-cyan-400' },
+        { label: 'Goal Crusher', path: '/finance?tab=goals', icon: Target, color: 'text-lime-400' },
         { label: 'Bill Center', path: '/finance?tab=bills', icon: Calendar, color: 'text-rose-400' },
       ]
     },
@@ -121,10 +82,13 @@ export function Sidebar() {
 
   // Check if a nav path matches the current location (handles ?tab= query params)
   const isActive = (path: string) => {
+    // Dashboard path "/" should be active in both modes when at root
+    if (path === '/') {
+      return location.pathname === '/'
+    }
     const qIdx = path.indexOf('?')
     if (qIdx === -1) {
-      // Exact path match, no query
-      return location.pathname === path && !location.search
+      return location.pathname === path
     }
     const pathname = path.slice(0, qIdx)
     const search = path.slice(qIdx + 1)
@@ -205,7 +169,7 @@ export function Sidebar() {
         {/* Mode-specific groups - show both titles */}
         {modeGroups.map(group => (
           <div key={group.title} className="space-y-1">
-            <h3 className="px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
+<h3 className="px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
               {group.title === activeGroupTitle ? activeGroupTitle : group.title}
             </h3>
             {group.items.map(item => <NavItem key={item.label} {...item} />)}
@@ -216,56 +180,6 @@ export function Sidebar() {
       {/* Footer */}
       <div className="p-4 space-y-3 flex-shrink-0">
         {/* Sync status */}
-        <div className={cn(
-          'neon-card p-4 space-y-3 relative overflow-hidden group border-white/5',
-          appMode === 'finance' ? 'neon-border-cyan' : 'neon-border-purple'
-        )}>
-          <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Zap size={40} className={appMode === 'finance' ? 'text-cyan-400' : 'text-purple-400'} />
-          </div>
-          <p className={cn('text-[10px] font-black uppercase tracking-widest', appMode === 'finance' ? 'text-cyan-400' : 'text-purple-400')}>
-            Sync Active
-          </p>
-          <div className="space-y-1">
-            <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: '92%' }}
-                transition={{ duration: 1.5 }}
-                className={cn(
-                  'h-full rounded-full',
-                  appMode === 'finance' ? 'bg-cyan-500 shadow-[0_0_10px_rgba(34,211,238,0.3)]' : 'bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.3)]'
-                )}
-              />
-            </div>
-            <p className="text-[10px] text-slate-600 font-bold flex justify-between">
-              <span>Local Storage</span>
-              <span>Secured</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Data actions */}
-        <div className="flex gap-2">
-          <button
-            onClick={handleExport}
-            className={cn(
-              'flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border',
-              appMode === 'finance'
-                ? 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border-cyan-500/20'
-                : 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border-purple-500/20'
-            )}
-          >
-            <Download size={12} /> Export
-          </button>
-          <button
-            onClick={handleImport}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20"
-          >
-            <Upload size={12} /> Import
-          </button>
-        </div>
-
         {/* Settings */}
         <div className="border-t border-white/5 pt-2">
           <Link

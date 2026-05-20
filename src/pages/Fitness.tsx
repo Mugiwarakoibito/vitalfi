@@ -83,124 +83,49 @@ export default function Fitness() {
             )}
           </p>
           <div className="flex flex-wrap gap-4 mt-6">
-            <button onClick={() => { setShowWorkoutForm(true); setActiveTab('workouts'); setSearchParams({ tab: 'workouts' }) }} className="glass-card bg-purple-500/10 border-purple-500/20 px-8 py-4 rounded-2xl flex items-center gap-3 hover:bg-purple-500/20 transition-all group">
-              <Plus size={20} className="text-purple-400 group-hover:rotate-90 transition-transform" />
-              <span className="text-xs font-black uppercase tracking-widest text-white">Add Workout</span>
-            </button>
+            {workouts.length > 0 && (
+              <button onClick={() => { setShowWorkoutForm(true); setActiveTab('workouts'); setSearchParams({ tab: 'workouts' }) }} className="glass-card bg-purple-500/10 border-purple-500/20 px-8 py-4 rounded-2xl flex items-center gap-3 hover:bg-purple-500/20 transition-all group">
+                <Plus size={20} className="text-purple-400 group-hover:rotate-90 transition-transform" />
+                <span className="text-xs font-black uppercase tracking-widest text-white">Add Workout</span>
+              </button>
+            )}
+            {workouts.length === 0 ? (
+              <button onClick={() => { setShowWorkoutForm(true); setActiveTab('workouts'); setSearchParams({ tab: 'workouts' }) }} className="glass-card bg-purple-500/10 border-purple-500/20 px-8 py-4 rounded-2xl flex items-center gap-3 hover:bg-purple-500/20 transition-all">
+                <Plus size={20} className="text-purple-400" />
+                <span className="text-xs font-black uppercase tracking-widest text-white">Add Workout</span>
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none">
-        <button
-          onClick={() => { setActiveTab('workouts'); setSearchParams({ tab: 'workouts' }) }}
-          className={cn(
-            "flex-shrink-0 flex items-center gap-3 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-500",
-            activeTab === 'workouts' 
-              ? "bg-white/10 text-white shadow-[0_0_30px_rgba(255,255,255,0.05)] border border-white/10" 
-              : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
-          )}
-        >
-          <Dumbbell size={16} />
-          Workouts
-        </button>
-        <button
-          onClick={() => { setActiveTab('body'); setSearchParams({ tab: 'body' }) }}
-          className={cn(
-            "flex-shrink-0 flex items-center gap-3 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-500",
-            activeTab === 'body' 
-              ? "bg-white/10 text-white border border-white/20" 
-              : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
-          )}
-        >
-          <Activity size={16} className={activeTab === 'body' ? "text-lime-400" : "text-slate-600"} />
-          Body
-        </button>
-        <button
-          onClick={() => { setActiveTab('nutrition'); setSearchParams({ tab: 'nutrition' }) }}
-          className={cn(
-            "flex-shrink-0 flex items-center gap-3 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-500",
-            activeTab === 'nutrition' 
-              ? "bg-white/10 text-white border border-white/20" 
-              : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
-          )}
-        >
-          <Utensils size={16} className={activeTab === 'nutrition' ? "text-purple-400" : "text-slate-600"} />
-          Nutrition
-        </button>
-        <button
-          onClick={() => { setActiveTab('hydration'); setSearchParams({ tab: 'hydration' }) }}
-          className={cn(
-            "flex-shrink-0 flex items-center gap-3 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-500",
-            activeTab === 'hydration' 
-              ? "bg-white/10 text-white border border-white/20" 
-              : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
-          )}
-        >
-          <Droplets size={16} className={activeTab === 'hydration' ? "text-blue-400" : "text-slate-600"} />
-          Hydration
-        </button>
-        <button
-          onClick={() => { setActiveTab('sleep'); setSearchParams({ tab: 'sleep' }) }}
-          className={cn(
-            "flex-shrink-0 flex items-center gap-3 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-500",
-            activeTab === 'sleep' 
-              ? "bg-white/10 text-white border border-white/20" 
-              : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
-          )}
-        >
-          <Moon size={16} className={activeTab === 'sleep' ? "text-indigo-400" : "text-slate-600"} />
-          Sleep
-        </button>
-        <button
-          onClick={() => { setActiveTab('exercises'); setSearchParams({ tab: 'exercises' }) }}
-          className={cn(
-            "flex-shrink-0 flex items-center gap-3 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-500",
-            activeTab === 'exercises' 
-              ? "bg-white/10 text-white border border-white/20" 
-              : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
-          )}
-        >
-          <BookOpen size={16} className={activeTab === 'exercises' ? "text-amber-400" : "text-slate-600"} />
-          Exercises
-        </button>
-        <button
-          onClick={() => { setActiveTab('records'); setSearchParams({ tab: 'records' }) }}
-          className={cn(
-            "flex-shrink-0 flex items-center gap-3 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-500",
-            activeTab === 'records' 
-              ? "bg-white/10 text-white border border-white/20" 
-              : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
-          )}
-        >
-          <Trophy size={16} className={activeTab === 'records' ? "text-yellow-400" : "text-slate-600"} />
-          PRs
-        </button>
-        <button
-          onClick={() => { setActiveTab('streak'); setSearchParams({ tab: 'streak' }) }}
-          className={cn(
-            "flex-shrink-0 flex items-center gap-3 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-500",
-            activeTab === 'streak' 
-              ? "bg-white/10 text-white border border-white/20" 
-              : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
-          )}
-        >
-          <Flame size={16} className={activeTab === 'streak' ? "text-orange-500" : "text-slate-600"} />
-          Streak
-        </button>
-        <button
-          onClick={() => { setActiveTab('supplements'); setSearchParams({ tab: 'supplements' }) }}
-          className={cn(
-            "flex-shrink-0 flex items-center gap-3 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-500",
-            activeTab === 'supplements' 
-              ? "bg-white/10 text-white border border-white/20" 
-              : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
-          )}
-        >
-          <Coffee size={16} className={activeTab === 'supplements' ? "text-cyan-400" : "text-slate-600"} />
-          Supps
-        </button>
+      <div className="flex items-center gap-1 overflow-x-auto pb-4 scrollbar-none">
+        {[
+          { id: 'workouts', label: 'Workouts', icon: Dumbbell },
+          { id: 'body', label: 'Body', icon: Activity },
+          { id: 'nutrition', label: 'Nutrition', icon: Utensils },
+          { id: 'hydration', label: 'Hydration', icon: Droplets },
+          { id: 'sleep', label: 'Sleep', icon: Moon },
+          { id: 'exercises', label: 'Exercises', icon: BookOpen },
+          { id: 'records', label: 'PRs', icon: Trophy },
+          { id: 'streak', label: 'Streak', icon: Flame },
+          { id: 'supplements', label: 'Supps', icon: Coffee },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => { setActiveTab(tab.id as TabId); setSearchParams({ tab: tab.id }) }}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-[11px] font-bold uppercase tracking-[0.15em] transition-all duration-300",
+              activeTab === tab.id 
+                ? "bg-white/10 text-white shadow-[0_0_30px_rgba(255,255,255,0.05)] border border-white/10" 
+                : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
+            )}
+          >
+            <tab.icon size={16} />
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Content */}
@@ -220,7 +145,7 @@ export default function Fitness() {
             {selectedExerciseId ? (
               <ExerciseDetail
                 exerciseId={selectedExerciseId}
-                onBack={() => setSelectedExerciseId(null)}
+                onClose={() => setSelectedExerciseId(null)}
               />
             ) : (
               <ExerciseLibrary onSelectExercise={(id) => setSelectedExerciseId(id)} />

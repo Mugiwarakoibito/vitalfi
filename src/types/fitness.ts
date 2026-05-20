@@ -23,6 +23,8 @@ export type MuscleGroup =
   | 'lats'
   | 'full_body'
   | 'core'
+  | 'hip_flexors'
+  | 'rear_delts'
 
 export type EquipmentType =
   | 'barbell'
@@ -47,6 +49,7 @@ export interface ExerciseDefinition {
   instructions: string[]
   tips: string[]
   videoUrl?: string
+  imageUrl?: string
 }
 
 export interface WorkoutExercise {

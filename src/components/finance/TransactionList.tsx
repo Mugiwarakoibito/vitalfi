@@ -14,9 +14,10 @@ interface TransactionListProps {
   accounts: { id: string; name: string; color: string }[]
   initialTransactions?: Transaction[]
   onTransactionChange?: () => void
+  onOpenForm?: () => void
 }
 
-export function TransactionList({ accounts, initialTransactions = [], onTransactionChange }: TransactionListProps) {
+export function TransactionList({ accounts, initialTransactions = [], onTransactionChange, onOpenForm }: TransactionListProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterAccount, setFilterAccount] = useState('')
   const [filterCategory, setFilterCategory] = useState('')
@@ -316,12 +317,19 @@ export function TransactionList({ accounts, initialTransactions = [], onTransact
 
       {/* Transaction list */}
       {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
-            <Receipt className="w-8 h-8 text-emerald-400/50" />
-          </div>
-          <p className="text-gray-400 mb-1">No transactions</p>
-          <p className="text-gray-500 text-sm">Add your first transaction to get started</p>
+        <div className="py-12 text-center">
+          <Receipt className="mx-auto h-10 w-10 text-muted/50 mb-3" />
+          <h4 className="text-white font-medium mb-1">No transactions</h4>
+          <p className="text-sm text-muted mb-4">
+            {accounts.length === 0 
+              ? 'Add an account first to start logging transactions' 
+              : 'Add your first transaction to get started'}
+          </p>
+          {accounts.length > 0 && (
+            <Button variant="primary" onClick={() => onOpenForm?.()}>
+              Add Transaction
+            </Button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Wallet, CreditCard, Gem, Calendar, TrendingUp, Plus, Target } from 'lucide-react'
+import { Wallet, CreditCard, Gem, Calendar, TrendingUp, Plus, Target, PiggyBank } from 'lucide-react'
 import { type Transaction } from '@/lib/storage'
 import { AccountList } from '@/components/finance/AccountList'
 import { TransactionList } from '@/components/finance/TransactionList'
@@ -28,6 +28,7 @@ export default function Finance() {
   const [showTransactionForm, setShowTransactionForm] = useState(false)
   const [showAccountForm, setShowAccountForm] = useState(false)
   const [showGoalForm, setShowGoalForm] = useState(false)
+  const [showInvestmentForm, setShowInvestmentForm] = useState(false)
   const { settings, accounts, transactions, loadAllData, addTransaction } = useAppStore()
 
   useEffect(() => {
@@ -39,12 +40,14 @@ export default function Finance() {
         setShowAccountForm(true)
       } else if (tabFromUrl === 'goals') {
         setShowGoalForm(true)
+      } else if (tabFromUrl === 'investments') {
+        setShowInvestmentForm(true)
       } else {
         setShowTransactionForm(true)
       }
       setSearchParams({ tab: tabFromUrl || 'transactions' })
     }
-  }, [tabFromUrl, actionFromUrl])
+  }, [tabFromUrl])
 
   const totalBalance = useMemo(() => {
     return accounts.reduce((sum, acc) => sum + acc.balance, 0)
@@ -134,11 +137,11 @@ export default function Finance() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none">
+      <div className="flex items-center gap-1 overflow-x-auto pb-4 scrollbar-none">
         {[
           { id: 'transactions', label: 'Transactions', icon: Wallet },
           { id: 'wealth', label: 'Wealth', icon: CreditCard },
-          { id: 'budgets', label: 'Budgets', icon: Target },
+          { id: 'budgets', label: 'Budgets', icon: PiggyBank },
           { id: 'goals', label: 'Goals', icon: Target },
           { id: 'bills', label: 'Bills', icon: Calendar },
           { id: 'subscriptions', label: 'Subs', icon: Gem },
@@ -150,7 +153,7 @@ export default function Finance() {
             key={tab.id}
             onClick={() => { setActiveTab(tab.id as Tab); setSearchParams({ tab: tab.id }) }}
             className={cn(
-              "flex-shrink-0 flex items-center gap-3 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-500",
+              "flex-1 flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-[11px] font-bold uppercase tracking-[0.15em] transition-all duration-300",
               activeTab === tab.id 
                 ? "bg-white/10 text-white shadow-[0_0_30px_rgba(255,255,255,0.05)] border border-white/10" 
                 : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
@@ -171,6 +174,7 @@ export default function Finance() {
           accounts={accounts.map((a) => ({ id: a.id, name: a.name, color: a.color }))}
           initialTransactions={transactions}
           onTransactionChange={handleTransactionSaved}
+          onOpenForm={() => setShowTransactionForm(true)}
         />
       )}
       {activeTab === 'budgets' && <BudgetDashboard />}
@@ -178,7 +182,7 @@ export default function Finance() {
       {activeTab === 'bills' && <BillReminders />}
       {activeTab === 'subscriptions' && <SubscriptionTracker />}
       {activeTab === 'debts' && <DebtTracker />}
-      {activeTab === 'investments' && <InvestmentPortfolio />}
+      {activeTab === 'investments' && <InvestmentPortfolio initialShow={showInvestmentForm} onCloseForm={() => setShowInvestmentForm(false)} />}
       {activeTab === 'goals' && <FinancialGoals initialShow={showGoalForm} />}
       {activeTab === 'calendar' && <FinancialCalendar initialTransactions={transactions} />}
 

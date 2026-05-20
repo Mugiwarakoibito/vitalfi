@@ -9,11 +9,8 @@ export function TrackerSwitcher() {
   const navigate = useNavigate()
 
   const handleClick = () => {
-    if (appMode === 'finance') {
-      navigate('/fitness')
-    } else {
-      navigate('/')
-    }
+    const targetPath = appMode === 'finance' ? '/' : '/'
+    navigate(targetPath)
     toggleAppMode()
   }
 

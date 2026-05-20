@@ -166,7 +166,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   initialize: async () => {
     set({ isLoading: true });
 
-    // Safety timeout: stop loading after 5 seconds no matter what
     const timeout = setTimeout(() => {
       if (get().isLoading) {
         console.warn('Initialization timed out, forcing UI unlock');
@@ -175,20 +174,27 @@ export const useAppStore = create<AppState>((set, get) => ({
     }, 5000);
 
     try {
-      // 1. Load Settings
-      const settings = await storage.get('settings', 'app_settings');
+      const settings = await storage.get('settings', 'app_settings').catch(() => null);
       if (settings) {
         set({
           settings,
           isOnboarded: settings.onboardingComplete ?? false,
         });
+        
+        const savedEmail = localStorage.getItem('lifesync_license_email')
+        const savedName = localStorage.getItem('lifesync_user_name') || settings.name
+        if (savedEmail) {
+          set({
+            user: {
+              email: savedEmail,
+              name: savedName || savedEmail.split('@')[0],
+            }
+          })
+        }
       }
 
-      // 2. Load All Data
-      await get().loadAllData();
-      
-      // 3. Migrate legacy transfer transactions (expense + income pairs → single transfer)
-      await get().migrateLegacyTransfers();
+      await get().loadAllData().catch(console.error);
+      await get().migrateLegacyTransfers().catch(console.error);
       
     } catch (error) {
       console.error('Initialization error:', error);

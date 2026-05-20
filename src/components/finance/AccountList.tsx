@@ -4,7 +4,8 @@ import type { Account } from '@/lib/storage'
 import { formatCurrency } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 import { AccountForm } from './AccountForm'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
 const accountIcons: Record<Account['type'], typeof Wallet> = {
   checking: Wallet,
@@ -84,70 +85,35 @@ export function AccountList({ initialAccounts = [], onAccountChange, showForm: e
         </div>
       </div>
 
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-white">Your Accounts</h3>
-        <button onClick={() => setShowForm(true)} className="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm flex items-center gap-2 hover:bg-emerald-500/30 transition-all">
-          <Plus className="w-4 h-4" />
-          Add Account
-        </button>
-      </div>
-
-      {activeAccounts.length > 1 && (
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-medium text-gray-400">Account Distribution</h4>
-            <span className="text-xs text-gray-500">{activeAccounts.length} accounts</span>
-          </div>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={activeAccounts.map(a => ({ name: a.name, value: a.balance, color: a.color }))} layout="vertical" barSize={24}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" horizontal={false} vertical={false} />
-              <XAxis type="number" stroke="#ffffff40" fontSize={9} tickFormatter={(v: number) => `$${v >= 1000 ? `${v/1000}k` : v}`} axisLine={false} tickLine={false} />
-              <YAxis dataKey="name" type="category" stroke="#ffffff40" fontSize={10} width={70} axisLine={false} tickLine={false} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} 
-                labelStyle={{ color: '#fff', fontWeight: 600 }}
-                itemStyle={{ color: '#fff' }}
-                formatter={(value: number) => formatCurrency(value, settings.currency || 'USD')}
-                cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-              />
-              <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-                {activeAccounts.map((account, index) => (
-                  <Cell key={index} fill={account.color} stroke="transparent" />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          <div className="flex flex-wrap gap-3 mt-4">
-            {activeAccounts.map((account) => (
-              <div key={account.id} className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: account.color }} />
-                <span className="text-xs text-gray-400">{account.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {activeAccounts.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
-            <Wallet className="w-8 h-8 text-emerald-400/50" />
-          </div>
-          <p className="text-gray-400 mb-1">No accounts yet</p>
-          <p className="text-gray-500 text-sm">Add your first account to start tracking</p>
-        </div>
+        <Card className="py-12 text-center">
+          <Wallet className="mx-auto h-10 w-10 text-muted/50 mb-3" />
+          <h4 className="text-white font-medium mb-1">No accounts yet</h4>
+          <p className="text-sm text-muted mb-4">Add your first account to start tracking</p>
+          <Button variant="primary" onClick={() => setShowForm(true)}>
+            Add Account
+          </Button>
+        </Card>
       ) : (
         <div className="space-y-4">
+          <div 
+            className="rounded-2xl border border-dashed border-amber-500/30 bg-amber-500/5 p-5 flex flex-col items-center justify-center cursor-pointer hover:bg-amber-500/10 transition-all min-h-[100px]"
+            onClick={() => setShowForm(true)}
+          >
+            <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center mb-3">
+              <Plus className="w-6 h-6 text-amber-400" />
+            </div>
+            <p className="text-sm text-amber-300">Add Account</p>
+          </div>
           {activeAccounts.map((account) => {
             const Icon = accountIcons[account.type]
             const isPositive = account.balance >= 0
             return (
               <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all group relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-white/[0.02] to-transparent pointer-events-none" />
-                <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl" style={{ backgroundColor: account.color }} />
-                <div className="flex items-center justify-between relative z-10">
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-500/[0.02] to-transparent pointer-events-none" />
+                <div className="flex justify-between items-start mb-4 relative z-10">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg" style={{ backgroundColor: account.color + '25', boxShadow: `0 0 20px ${account.color}20` }}>
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shadow-lg" style={{ backgroundColor: account.color + '25', boxShadow: `0 0 20px ${account.color}20` }}>
                       <Icon className="w-5 h-5" style={{ color: account.color }} />
                     </div>
                     <div>

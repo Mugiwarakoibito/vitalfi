@@ -216,7 +216,7 @@ export function FinanceDashboard() {
               </button>
             )}
             <button 
-              onClick={() => navigate('/finance?tab=investments')}
+              onClick={() => navigate(investments.length > 0 ? '/finance?tab=investments' : '/finance?tab=investments&action=add')}
               className="glass-card bg-white/5 border-white/10 px-8 py-4 rounded-2xl flex items-center gap-3 hover:bg-white/10 transition-all"
             >
               <Target size={20} className="text-cyan-400" />
@@ -367,41 +367,29 @@ export function FinanceDashboard() {
                     <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Account Distribution</h3>
                     <button onClick={() => navigate('/finance?tab=wealth')} className="text-[10px] font-black text-cyan-400 uppercase tracking-tighter hover:underline">See All</button>
                  </div>
-                 <div className="space-y-2">
-                    {accounts.length === 0 ? (
-                      <div className="glass-card p-6 text-center border-white/5">
-                        <p className="text-slate-500 text-xs font-bold uppercase">No accounts linked</p>
-                      </div>
-                    ) : (
-                      accounts.slice(0, 3).map(acc => {
-                        const percentage = netWorth > 0 ? (acc.balance / netWorth) * 100 : 0
-                        return (
-                         <div key={acc.id} onClick={() => navigate('/finance/accounts')} className="glass-card p-4 border-white/5 hover:border-white/20 hover:bg-white/[0.02] transition-all cursor-pointer group">
-                            <div className="flex items-center justify-between mb-2">
-                               <div className="flex items-center gap-3">
-                                  <div className="p-2 rounded-lg" style={{ backgroundColor: acc.color + '20', color: acc.color }}>
-                                     <Landmark size={16} />
-                                  </div>
-                                  <div>
-                                     <p className="text-sm font-bold text-white">{acc.name}</p>
-                                     <p className="text-[10px] font-bold text-slate-500 uppercase">{acc.type}</p>
-                                  </div>
-                               </div>
-                               <p className="text-sm font-black text-white">{formatCurrency(acc.balance, currency)}</p>
+<div className="glass-card border-white/5 overflow-hidden">
+                     {accounts.length === 0 ? (
+                       <div className="p-6 text-center">
+                         <p className="text-slate-500 text-[10px] font-bold uppercase">No accounts linked</p>
+                       </div>
+) : (
+                        accounts.slice(0, 3).map(acc => (
+                          <div key={acc.id} onClick={() => navigate('/finance/accounts')} className="p-4 border-b border-white/5 last:border-0 flex items-center justify-between hover:bg-white/[0.02] transition-all cursor-pointer group">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-xl" style={{ backgroundColor: acc.color + '20', color: acc.color }}>
+                                <Landmark size={14} />
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors">{acc.name}</p>
+                                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">{acc.type}</p>
+                              </div>
                             </div>
-                            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                               <div 
-                                  className="h-full rounded-full transition-all duration-500" 
-                                  style={{ width: `${percentage}%`, backgroundColor: acc.color }}
-                               />
-                            </div>
-                            <p className="text-[10px] text-slate-500 mt-1 text-right">{percentage.toFixed(1)}%</p>
-                         </div>
-                      )
-                      })
-                    )}
-                 </div>
-              </div>
+                            <p className="text-sm font-black text-white">{formatCurrency(acc.balance, currency)}</p>
+                          </div>
+                        ))
+                      )}
+                   </div>
+               </div>
 
               {/* Recent Activity */}
               <div className="space-y-4">

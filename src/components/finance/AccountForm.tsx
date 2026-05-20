@@ -121,8 +121,8 @@ export function AccountForm({ isOpen, onClose, onSave, account }: AccountFormPro
                 onClick={() => setType(t.value)}
                 className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                   type === t.value
-                    ? 'border-primary/50 bg-primary/15 text-primary-light'
-                    : 'border-white/[0.08] bg-white/[0.03] text-muted hover:border-white/[0.12] hover:bg-white/[0.06]'
+                    ? 'border-amber-500/50 bg-amber-500/20 text-white'
+                    : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white'
                 }`}
               >
                 {t.label}
@@ -140,7 +140,7 @@ export function AccountForm({ isOpen, onClose, onSave, account }: AccountFormPro
                 type="button"
                 onClick={() => setColor(c)}
                 className={`h-8 w-8 rounded-full border-2 transition-all duration-200 ${
-                  color === c ? 'border-white scale-110' : 'border-transparent hover:scale-105'
+                  color === c ? 'border-amber-500 scale-110' : 'border-transparent hover:scale-105'
                 }`}
                 style={{ backgroundColor: c }}
               />

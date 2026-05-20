@@ -3,6 +3,8 @@ import { Plus, Trash2, Clock, Dumbbell, Flame, ChevronDown, ChevronUp, Check, Al
 import { useAppStore } from '@/store/useAppStore'
 import { generateId, formatDuration } from '@/lib/utils'
 import { exerciseLibrary, getExerciseById } from '@/lib/exercises'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 import type { Workout, WorkoutExercise, ExerciseSet } from '@/types/fitness'
 
 export function WorkoutLogger() {
@@ -113,63 +115,69 @@ export function WorkoutLogger() {
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-white">Workout History</h3>
-        <button onClick={() => setShowForm(true)} className="px-4 py-2 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-400 text-sm flex items-center gap-2 hover:bg-rose-500/30 transition-all">
-          <Plus className="w-4 h-4" />
+        <Button variant="primary" onClick={() => setShowForm(true)}>
+          <Plus className="w-4 h-4 mr-2" />
           Log Workout
-        </button>
+        </Button>
       </div>
 
       {sortedWorkouts.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
+        <Card className="py-12 text-center">
           <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4">
             <Dumbbell className="w-8 h-8 text-rose-400/50" />
           </div>
           <p className="text-gray-400 mb-1">No workouts logged yet</p>
-          <p className="text-gray-500 text-sm">Start tracking your fitness journey</p>
-        </div>
+          <p className="text-gray-500 text-sm mb-4">Start tracking your fitness journey</p>
+          <Button variant="primary" onClick={() => setShowForm(true)}>
+            Log Your First Workout
+          </Button>
+        </Card>
       ) : (
         <div className="space-y-4">
           {sortedWorkouts.map((wo) => {
             const config = typeConfig[wo.type]
             const volume = calcVolume(wo.exercises)
             return (
-              <div key={wo.id} className="rounded-2xl border border-white/10 bg-white/5 p-5 hover:bg-white/[0.07] transition-all">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-xl ${config.bg} flex items-center justify-center text-xl`}>
-                      {config.icon}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-semibold text-white">{wo.name}</h4>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.color}`}>{wo.type}</span>
+              <div key={wo.id} className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-rose-500/[0.02] to-transparent pointer-events-none" />
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-11 h-11 rounded-xl ${config.bg} flex items-center justify-center text-xl shadow-lg`} style={{boxShadow: '0 0 20px rgba(244,63,94,0.15)'}}>
+                        {config.icon}
                       </div>
-                      <p className="text-sm text-gray-400">{new Date(wo.date).toLocaleDateString()} • {wo.duration > 0 ? formatDuration(wo.duration) : 'No duration'}</p>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-white tracking-tight">{wo.name}</h4>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.color}`}>{wo.type}</span>
+                        </div>
+                        <p className="text-sm text-gray-400">{new Date(wo.date).toLocaleDateString()} • {wo.duration > 0 ? formatDuration(wo.duration) : 'No duration'}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setDeletingWorkout(wo)} className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-center">
+                      <p className="text-2xl font-bold text-white">{wo.exercises.length}</p>
+                      <p className="text-xs text-gray-500">Exercises</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-center">
+                      <p className="text-2xl font-bold text-white">{wo.exercises.reduce((acc, ex) => acc + ex.sets.length, 0)}</p>
+                      <p className="text-xs text-gray-500">Sets</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+                      <p className="text-2xl font-bold text-emerald-400">{volume.toLocaleString()}kg</p>
+                      <p className="text-xs text-emerald-400/80">Volume</p>
                     </div>
                   </div>
-                  <button onClick={() => setDeletingWorkout(wo)} className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-center">
-                    <p className="text-2xl font-bold text-white">{wo.exercises.length}</p>
-                    <p className="text-xs text-gray-500">Exercises</p>
+                  <div className="flex flex-wrap gap-2">
+                    {wo.exercises.slice(0, 4).map((ex) => (
+                      <span key={ex.id} className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-gray-300">{ex.name}</span>
+                    ))}
+                    {wo.exercises.length > 4 && <span className="px-3 py-1 rounded-full bg-white/5 text-xs text-gray-400">+{wo.exercises.length - 4} more</span>}
                   </div>
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-center">
-                    <p className="text-2xl font-bold text-white">{wo.exercises.reduce((acc, ex) => acc + ex.sets.length, 0)}</p>
-                    <p className="text-xs text-gray-500">Sets</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
-                    <p className="text-2xl font-bold text-emerald-400">{volume.toLocaleString()}kg</p>
-                    <p className="text-xs text-emerald-400/80">Volume</p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {wo.exercises.slice(0, 4).map((ex) => (
-                    <span key={ex.id} className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-gray-300">{ex.name}</span>
-                  ))}
-                  {wo.exercises.length > 4 && <span className="px-3 py-1 rounded-full bg-white/5 text-xs text-gray-400">+{wo.exercises.length - 4} more</span>}
                 </div>
               </div>
             )

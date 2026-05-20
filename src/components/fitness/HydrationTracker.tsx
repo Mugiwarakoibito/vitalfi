@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react'
 import { Droplets, Plus, Trash2, GlassWater, Target, AlertTriangle } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { generateId } from '@/lib/utils'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 import type { HydrationEntry } from '@/types/fitness'
 
 interface HydrationTrackerProps {
@@ -80,38 +82,41 @@ export function HydrationTracker({ dailyGoal = 2500 }: HydrationTrackerProps) {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">Today's Progress</h3>
-          <span className="text-2xl font-bold text-sky-400">{percentage.toFixed(0)}%</span>
-        </div>
-        <div className="h-4 bg-gray-800 rounded-full overflow-hidden mb-6">
-          <div className="h-full bg-gradient-to-r from-sky-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${percentage}%` }} />
-        </div>
+      <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 relative overflow-hidden group">
+        <div className="absolute inset-0 bg-gradient-to-r from-sky-500/[0.02] to-transparent pointer-events-none" />
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white tracking-tight">Today's Progress</h3>
+            <span className="text-2xl font-bold text-sky-400">{percentage.toFixed(0)}%</span>
+          </div>
+          <div className="h-4 bg-white/5 rounded-full overflow-hidden mb-6">
+            <div className="h-full bg-gradient-to-r from-sky-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${percentage}%` }} />
+          </div>
 
-        <div className="flex gap-3 flex-wrap mb-6">
-          {quickAmounts.map((amount) => (
-            <button key={amount} onClick={() => addEntry(amount)} className="px-5 py-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 font-medium hover:bg-sky-500/20 transition-all flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              {amount}ml
-            </button>
-          ))}
-        </div>
+          <div className="flex gap-3 flex-wrap mb-6">
+            {quickAmounts.map((amount) => (
+              <button key={amount} onClick={() => addEntry(amount)} className="px-5 py-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 font-medium hover:bg-sky-500/20 transition-all flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                {amount}ml
+              </button>
+            ))}
+          </div>
 
-        <div className="flex gap-3">
-          <input type="number" value={customAmount} onChange={(e) => setCustomAmount(e.target.value)} placeholder="Custom amount (ml)" className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-sky-500/50 focus:outline-none transition-all" />
-          <button onClick={() => customAmount && addEntry(Number(customAmount))} className="px-6 py-3 rounded-xl bg-sky-500/20 border border-sky-500/30 text-sky-400 font-medium hover:bg-sky-500/30 transition-all">
-            Add
-          </button>
+          <div className="flex gap-3">
+            <input type="number" value={customAmount} onChange={(e) => setCustomAmount(e.target.value)} placeholder="Custom amount (ml)" className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-sky-500/50 focus:outline-none transition-all" />
+            <Button variant="primary" onClick={() => customAmount && addEntry(Number(customAmount))}>
+              Add
+            </Button>
+          </div>
         </div>
       </div>
 
       {todayEntries.length > 0 && (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+        <Card className="p-5">
           <h4 className="text-sm font-medium text-gray-400 mb-4">Today's Entries</h4>
           <div className="space-y-2">
             {todayEntries.map((entry) => (
-              <div key={entry.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5">
+              <div key={entry.id} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02]">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-sky-500/20 flex items-center justify-center">
                     <GlassWater className="w-4 h-4 text-sky-400" />
@@ -127,7 +132,7 @@ export function HydrationTracker({ dailyGoal = 2500 }: HydrationTrackerProps) {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {deletingEntry && (

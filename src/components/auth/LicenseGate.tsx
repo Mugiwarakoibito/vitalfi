@@ -12,12 +12,14 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const savedEmail = localStorage.getItem('lifesync_license_email')
+    const savedName = localStorage.getItem('lifesync_user_name')
     if (savedEmail) {
       // Mock validation
       setLicensed(true)
+      const userName = savedName || savedEmail.split('@')[0].replace(/[^a-zA-Z]/g, '').charAt(0).toUpperCase() + savedEmail.split('@')[0].replace(/[^a-zA-Z]/g, '').slice(1).toLowerCase() || 'User'
       setUser({
         email: savedEmail,
-        name: savedEmail.split('@')[0],
+        name: userName,
       })
     }
     setChecking(false)
@@ -39,9 +41,10 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
     // For this demo, any email works, but in production this would hit a validation endpoint
     localStorage.setItem('lifesync_license_email', email)
     setLicensed(true)
+    const userName = email.split('@')[0].replace(/[^a-zA-Z]/g, '').charAt(0).toUpperCase() + email.split('@')[0].replace(/[^a-zA-Z]/g, '').slice(1).toLowerCase() || 'User'
     setUser({
       email: email,
-      name: email.split('@')[0],
+      name: userName,
     })
     setLoading(false)
   }
