@@ -33,7 +33,7 @@ const difficultyOrder = { beginner: 1, intermediate: 2, advanced: 3 }
 export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: ExerciseLibraryProps) {
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState<ExerciseCategory | null>(null)
-  const [activeMuscle, setActiveMuscle] = useState<MuscleGroup | null>(null)
+  const [activeMuscles, setActiveMuscles] = useState<MuscleGroup[]>([])
   const [showFilters, setShowFilters] = useState(false)
   const [sortBy, setSortBy] = useState<'name' | 'difficulty'>('name')
   const [showAddModal, setShowAddModal] = useState(false)
@@ -59,7 +59,7 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
         ex.primaryMuscles.some((m) => m.includes(q)) ||
         ex.equipment.some((e) => e.includes(q))
       const matchesCategory = !activeCategory || ex.category === activeCategory
-      const matchesMuscle = !activeMuscle || ex.primaryMuscles.includes(activeMuscle)
+      const matchesMuscle = activeMuscles.length === 0 || activeMuscles.some(m => ex.primaryMuscles.includes(m))
       return matchesQuery && matchesCategory && matchesMuscle
     })
     if (sortBy === 'difficulty') {
@@ -68,7 +68,7 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
       result = [...result].sort((a, b) => a.name.localeCompare(b.name))
     }
     return result
-  }, [query, activeCategory, activeMuscle, sortBy, allExercises])
+  }, [query, activeCategory, activeMuscles, sortBy, allExercises])
 
   const isSelected = (id: string) => selectedIds.includes(id)
   const isCustom = (id: string) => id.startsWith('custom_')
@@ -154,14 +154,18 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-medium text-muted">Primary Muscle</p>
+              <p className="mb-2 text-xs font-medium text-muted">Primary Muscles</p>
               <div className="flex flex-wrap gap-2">
                 {allMuscles.map((muscle) => (
                   <button
                     key={muscle}
-                    onClick={() => setActiveMuscle(activeMuscle === muscle ? null : muscle)}
+                    onClick={() => setActiveMuscles(prev =>
+                      prev.includes(muscle)
+                        ? prev.filter(m => m !== muscle)
+                        : [...prev, muscle]
+                    )}
                     className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-all duration-200 ${
-                      activeMuscle === muscle
+                      activeMuscles.includes(muscle)
                         ? 'border-primary/40 bg-primary/15 text-primary-light'
                         : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white'
                     }`}
@@ -191,8 +195,8 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
               </div>
             </div>
 
-            {(activeCategory || activeMuscle) && (
-              <Button variant="ghost" size="sm" onClick={() => { setActiveCategory(null); setActiveMuscle(null) }}>
+            {(activeCategory || activeMuscles.length > 0) && (
+              <Button variant="ghost" size="sm" onClick={() => { setActiveCategory(null); setActiveMuscles([]) }}>
                 Clear Filters
               </Button>
             )}
