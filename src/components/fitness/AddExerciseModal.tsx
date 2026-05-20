@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { parseExerciseFromNaturalLanguage, checkOllamaStatus, type ParsedExercise } from '@/lib/ai-exercise'
-import type { ExerciseDefinition } from '@/types/fitness'
+import type { ExerciseDefinition, MuscleGroup } from '@/types/fitness'
 import { Wand2, X, Loader2, AlertCircle, CheckCircle2, Wifi, WifiOff } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -27,6 +27,33 @@ const categoryColors: Record<string, string> = {
   calisthenics: 'bg-amber-500/15 text-amber-300 border-amber-500/20'
 }
 
+const allMuscleGroups: MuscleGroup[] = [
+  'chest', 'back', 'shoulders', 'biceps', 'triceps', 'abs', 'obliques',
+  'quads', 'hamstrings', 'glutes', 'calves', 'forearms', 'traps', 'lats',
+  'core', 'full_body', 'hip_flexors', 'rear_delts'
+]
+
+const muscleColors: Record<string, string> = {
+  chest: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+  back: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  shoulders: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+  biceps: 'bg-violet-500/20 text-violet-300 border-violet-500/30',
+  triceps: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
+  abs: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+  obliques: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
+  quads: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+  hamstrings: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+  glutes: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
+  calves: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+  forearms: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+  traps: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+  lats: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  core: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+  full_body: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+  hip_flexors: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+  rear_delts: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+}
+
 
 
 export function AddExerciseModal({ isOpen, onClose, onAdd }: AddExerciseModalProps) {
@@ -35,6 +62,8 @@ export function AddExerciseModal({ isOpen, onClose, onAdd }: AddExerciseModalPro
   const [error, setError] = useState<string | null>(null)
   const [parsed, setParsed] = useState<ParsedExercise | null>(null)
   const [ollamaOnline, setOllamaOnline] = useState<boolean | null>(null)
+  const [selectedPrimaryMuscles, setSelectedPrimaryMuscles] = useState<MuscleGroup[]>([])
+  const [showMuscleEditor, setShowMuscleEditor] = useState(false)
 
   const checkStatus = async () => {
     const online = await checkOllamaStatus()
@@ -58,15 +87,26 @@ export function AddExerciseModal({ isOpen, onClose, onAdd }: AddExerciseModalPro
     setLoading(true)
     setError(null)
     setParsed(null)
+    setSelectedPrimaryMuscles([])
+    setShowMuscleEditor(false)
 
     try {
       const result = await parseExerciseFromNaturalLanguage(input.trim())
       setParsed(result)
+      setSelectedPrimaryMuscles(result.primaryMuscles as MuscleGroup[])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to parse exercise')
     } finally {
       setLoading(false)
     }
+  }
+
+  const toggleMuscle = (muscle: MuscleGroup) => {
+    setSelectedPrimaryMuscles(prev =>
+      prev.includes(muscle)
+        ? prev.filter(m => m !== muscle)
+        : [...prev, muscle]
+    )
   }
 
   const handleConfirm = () => {
@@ -76,7 +116,7 @@ export function AddExerciseModal({ isOpen, onClose, onAdd }: AddExerciseModalPro
       id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       name: parsed.name,
       category: parsed.category,
-      primaryMuscles: parsed.primaryMuscles,
+      primaryMuscles: selectedPrimaryMuscles,
       secondaryMuscles: parsed.secondaryMuscles,
       equipment: parsed.equipment,
       difficulty: parsed.difficulty,
@@ -88,6 +128,8 @@ export function AddExerciseModal({ isOpen, onClose, onAdd }: AddExerciseModalPro
     setInput('')
     setParsed(null)
     setError(null)
+    setSelectedPrimaryMuscles([])
+    setShowMuscleEditor(false)
     onClose()
   }
 
@@ -96,6 +138,8 @@ export function AddExerciseModal({ isOpen, onClose, onAdd }: AddExerciseModalPro
     setParsed(null)
     setError(null)
     setOllamaOnline(null)
+    setSelectedPrimaryMuscles([])
+    setShowMuscleEditor(false)
     onClose()
   }
 
@@ -205,9 +249,48 @@ export function AddExerciseModal({ isOpen, onClose, onAdd }: AddExerciseModalPro
                       </div>
 
                       <div className="space-y-1">
-                        <p className="text-xs text-muted">Primary: {parsed.primaryMuscles.join(', ')}</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted">Primary Muscles:</p>
+                          <button
+                            onClick={() => setShowMuscleEditor(!showMuscleEditor)}
+                            className="text-xs text-primary-light hover:text-primary transition-colors"
+                          >
+                            {showMuscleEditor ? 'Done' : 'Edit'}
+                          </button>
+                        </div>
+                        {showMuscleEditor ? (
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {allMuscleGroups.map(muscle => (
+                              <button
+                                key={muscle}
+                                onClick={() => toggleMuscle(muscle)}
+                                className={`rounded-md border px-2 py-1 text-xs font-medium transition-all ${
+                                  selectedPrimaryMuscles.includes(muscle)
+                                    ? muscleColors[muscle] || 'bg-white/20'
+                                    : 'border-white/[0.08] bg-white/[0.02] text-muted hover:text-white'
+                                }`}
+                              >
+                                {muscle.replace(/_/g, ' ')}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {selectedPrimaryMuscles.map(muscle => (
+                              <span
+                                key={muscle}
+                                className={`rounded-md border px-2 py-1 text-xs font-medium ${muscleColors[muscle] || 'bg-white/10'}`}
+                              >
+                                {muscle.replace(/_/g, ' ')}
+                              </span>
+                            ))}
+                            {selectedPrimaryMuscles.length === 0 && (
+                              <span className="text-xs text-gray-500">None selected</span>
+                            )}
+                          </div>
+                        )}
                         {parsed.secondaryMuscles.length > 0 && (
-                          <p className="text-xs text-muted">Secondary: {parsed.secondaryMuscles.join(', ')}</p>
+                          <p className="text-xs text-muted mt-1">Secondary: {parsed.secondaryMuscles.join(', ')}</p>
                         )}
                         <p className="text-xs text-muted">Equipment: {parsed.equipment.join(', ')}</p>
                       </div>
