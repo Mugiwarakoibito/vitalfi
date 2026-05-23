@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { generateId, formatDuration } from '@/lib/utils'
+import { storage } from '@/lib/storage'
 import { exerciseLibrary, getExerciseById, getAllMuscleGroups, categoryLabels } from '@/lib/exercises'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -379,8 +380,7 @@ export function WorkoutLogger() {
   const [deletingWorkout, setDeletingWorkout] = useState<Workout | null>(null)
   const [supersetGroups, setSupersetGroups] = useState<Record<string, string[]>>({})
   const [restTimerExercise, setRestTimerExercise] = useState<string | null>(null)
-  const [autoTimer, setAutoTimer] = useState(false)
-  const [timerStartedAt, setTimerStartedAt] = useState<Date | null>(null)
+  const [templateSaved, setTemplateSaved] = useState(false)
 
   const [filters, setFilters] = useState<WorkoutFilter>({})
   const [showFilters, setShowFilters] = useState(false)
@@ -414,34 +414,7 @@ export function WorkoutLogger() {
     setExpandedExercises(new Set())
     setSupersetGroups({})
     setRestTimerExercise(null)
-    setAutoTimer(false)
-    setTimerStartedAt(null)
   }, [])
-
-  const startAutoTimer = useCallback(() => {
-    setAutoTimer(true)
-    setTimerStartedAt(new Date())
-  }, [])
-
-  const stopAutoTimer = useCallback(() => {
-    if (autoTimer && timerStartedAt) {
-      const elapsed = Math.round((Date.now() - timerStartedAt.getTime()) / 60000)
-      setDuration(String(elapsed))
-    }
-    setAutoTimer(false)
-    setTimerStartedAt(null)
-  }, [autoTimer, timerStartedAt])
-
-  useEffect(() => {
-    if (!autoTimer) return
-    const interval = setInterval(() => {
-      if (timerStartedAt) {
-        const elapsed = Math.round((Date.now() - timerStartedAt.getTime()) / 60000)
-        setDuration(String(elapsed))
-      }
-    }, 10000)
-    return () => clearInterval(interval)
-  }, [autoTimer, timerStartedAt])
 
   const applyTemplate = useCallback((template: WorkoutTemplate) => {
     setWorkoutName(template.name)
@@ -460,8 +433,7 @@ export function WorkoutLogger() {
     setExercises(mapped)
     setExpandedExercises(new Set(mapped.map((e) => e.id)))
     setShowTemplatePicker(false)
-    startAutoTimer()
-  }, [startAutoTimer])
+  }, [])
 
   const addExercise = useCallback(
     (exerciseId: string) => {
@@ -590,9 +562,7 @@ export function WorkoutLogger() {
 
   const handleSave = useCallback(async () => {
     if (!workoutName.trim() || exercises.length === 0) return
-    const finalDuration = autoTimer && timerStartedAt
-      ? Math.round((Date.now() - timerStartedAt.getTime()) / 60000)
-      : parseInt(duration) || 0
+    const finalDuration = parseInt(duration) || 0
     const workout: Workout = {
       id: generateId(),
       name: workoutName.trim(),
@@ -606,7 +576,7 @@ export function WorkoutLogger() {
     await addWorkout(workout)
     resetForm()
     setShowForm(false)
-  }, [workoutName, exercises, workoutType, date, duration, autoTimer, timerStartedAt, addWorkout, resetForm])
+  }, [workoutName, exercises, workoutType, date, duration, addWorkout, resetForm])
 
   const handleDuplicate = useCallback(async (wo: Workout) => {
     const duplicate: Workout = {
@@ -629,6 +599,26 @@ export function WorkoutLogger() {
     await deleteWorkout(deletingWorkout.id)
     setDeletingWorkout(null)
   }, [deletingWorkout, deleteWorkout])
+
+  const saveAsTemplate = useCallback(async () => {
+    if (!workoutName.trim() || exercises.length === 0) return
+    const template: WorkoutTemplate = {
+      id: generateId(),
+      name: workoutName.trim(),
+      category: workoutType,
+      exercises: exercises.map((e) => ({
+        exerciseId: e.exerciseId,
+        name: e.name,
+        targetSets: e.sets.length,
+        targetReps: e.sets[0]?.reps,
+      })),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    await storage.put('workoutTemplates', template)
+    setTemplateSaved(true)
+    setTimeout(() => setTemplateSaved(false), 2000)
+  }, [workoutName, workoutType, exercises])
 
   return (
     <div className="space-y-6">
@@ -705,7 +695,7 @@ export function WorkoutLogger() {
             <Layers className="w-3.5 h-3.5 mr-1.5" />
             Templates
           </Button>
-          <Button variant="primary" size="sm" onClick={() => { resetForm(); setShowForm(true); startAutoTimer() }}>
+          <Button variant="primary" size="sm" onClick={() => { resetForm(); setShowForm(true) }}>
             <Plus className="w-4 h-4 mr-1.5" />
             Log Workout
           </Button>
@@ -790,7 +780,7 @@ export function WorkoutLogger() {
               <p className="text-gray-500 text-sm mb-4">
                 {workouts.length === 0 ? 'Start tracking your fitness journey' : 'Try adjusting your filter criteria'}
               </p>
-              <Button variant="primary" onClick={() => { resetForm(); setShowForm(true); startAutoTimer() }}>
+              <Button variant="primary" onClick={() => { resetForm(); setShowForm(true) }}>
                 Log Your First Workout
               </Button>
             </Card>
@@ -915,23 +905,18 @@ export function WorkoutLogger() {
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-white">Log Workout</h3>
                   <div className="flex items-center gap-2">
-                    {autoTimer ? (
-                      <button
-                        onClick={stopAutoTimer}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs hover:bg-emerald-500/30 transition-all"
-                      >
-                        <Pause className="w-3.5 h-3.5" />
-                        Stop Timer
-                      </button>
-                    ) : (
-                      <button
-                        onClick={startAutoTimer}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 text-xs hover:border-white/20 transition-all"
-                      >
-                        <Play className="w-3.5 h-3.5" />
-                        Start Timer
-                      </button>
-                    )}
+                    <button
+                      onClick={saveAsTemplate}
+                      disabled={!workoutName.trim() || exercises.length === 0}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                        templateSaved
+                          ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400'
+                          : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/20 hover:text-white'
+                      }`}
+                    >
+                      {templateSaved ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {templateSaved ? 'Saved!' : 'Save as Template'}
+                    </button>
                     <button onClick={() => setShowTemplatePicker(true)} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 transition-all">
                       <Layers className="w-4 h-4" />
                     </button>
@@ -987,17 +972,13 @@ export function WorkoutLogger() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2">
-                      Duration (min)
-                      {autoTimer && <span className="text-emerald-400 text-xs ml-2">auto</span>}
-                    </label>
+                    <label className="block text-sm text-gray-400 mb-2">Duration (min)</label>
                     <input
                       type="number"
                       value={duration}
                       onChange={(e) => setDuration(e.target.value)}
                       className="glass-input w-full"
                       placeholder="60"
-                      disabled={autoTimer}
                     />
                   </div>
                 </div>
