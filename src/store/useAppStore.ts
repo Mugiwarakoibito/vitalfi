@@ -133,7 +133,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   debts: [],
   subscriptions: [],
   dataVersion: 0,
-  appMode: 'finance',
+  appMode: (() => { try { return (localStorage.getItem('vitalfi_appMode') as 'finance' | 'fitness') || 'finance' } catch { return 'finance' } })(),
   isSplitView: false,
   user: null,
 
@@ -827,8 +827,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     await get().resetApp();
   },
 
-  setAppMode: (mode) => set({ appMode: mode }),
-  toggleAppMode: () => set((state) => ({ appMode: state.appMode === 'finance' ? 'fitness' : 'finance' })),
+  setAppMode: (mode) => { localStorage.setItem('vitalfi_appMode', mode); set({ appMode: mode }) },
+  toggleAppMode: () => set((state) => { const next = state.appMode === 'finance' ? 'fitness' : 'finance'; localStorage.setItem('vitalfi_appMode', next); return { appMode: next } }),
   setSplitView: (value) => set({ isSplitView: value }),
   setUser: (user) => set({ user }),
 }));

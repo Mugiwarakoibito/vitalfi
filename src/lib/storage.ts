@@ -196,6 +196,7 @@ export interface HydrationEntry {
   date: string;
   amount: number;
   timestamp: string;
+  note?: string;
   createdAt: string;
   updatedAt: string;
 }
