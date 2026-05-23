@@ -261,12 +261,43 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
             className={`flex flex-col items-center gap-1 rounded-xl border px-2.5 py-2 transition-all duration-200 shrink-0 min-w-[64px] ${
               activeCategory === cat.value
                 ? 'border-primary/40 bg-primary/10 text-primary-light shadow-[0_0_20px_rgba(139,92,246,0.1)]'
-                : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white hover:bg-white/[0.04]'
+                : 'border-primary/[0.08] bg-primary/[0.02] text-muted hover:text-primary-light hover:bg-primary/[0.05]'
             }`}
           >
             <span className="opacity-70">{cat.icon}</span>
             <span className="text-[10px] font-semibold leading-tight text-center">{cat.label}</span>
             <span className="text-[9px] opacity-60">{stats.categories[cat.value] || 0}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Muscle Group Bar */}
+      <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent -mx-1 px-1">
+        <button
+          onClick={() => setActiveMuscles([])}
+          className={`flex flex-col items-center gap-1 rounded-xl border px-2.5 py-2 transition-all duration-200 shrink-0 min-w-[56px] ${
+            activeMuscles.length === 0
+              ? 'border-primary/40 bg-primary/10 text-primary-light shadow-[0_0_20px_rgba(139,92,246,0.1)]'
+              : 'border-primary/[0.08] bg-primary/[0.02] text-muted hover:text-primary-light hover:bg-primary/[0.05]'
+          }`}
+        >
+          <span className="text-[10px] font-semibold leading-tight text-center">All</span>
+        </button>
+        {allMuscles.map((muscle) => (
+          <button
+            key={muscle}
+            onClick={() => setActiveMuscles(prev =>
+              prev.includes(muscle)
+                ? prev.filter(m => m !== muscle)
+                : [...prev, muscle]
+            )}
+            className={`rounded-xl border px-3 py-2 transition-all duration-200 shrink-0 text-xs font-medium whitespace-nowrap ${
+              activeMuscles.includes(muscle)
+                ? 'border-primary/40 bg-primary/10 text-primary-light'
+                : 'border-primary/[0.08] bg-primary/[0.02] text-muted hover:text-primary-light hover:bg-primary/[0.05]'
+            }`}
+          >
+            {formatMuscle(muscle)}
           </button>
         ))}
       </div>
@@ -389,30 +420,6 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
                       </motion.div>
                     )}
                   </AnimatePresence>
-                </div>
-              </div>
-
-              {/* Muscle Groups */}
-              <div>
-                <p className="mb-2 text-xs font-medium text-muted">Primary Muscles</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {allMuscles.map((muscle) => (
-                    <button
-                      key={muscle}
-                      onClick={() => setActiveMuscles(prev =>
-                        prev.includes(muscle)
-                          ? prev.filter(m => m !== muscle)
-                          : [...prev, muscle]
-                      )}
-                      className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-all duration-200 ${
-                        activeMuscles.includes(muscle)
-                          ? 'border-primary/40 bg-primary/15 text-primary-light'
-                          : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white'
-                      }`}
-                    >
-                      {formatMuscle(muscle)}
-                    </button>
-                  ))}
                 </div>
               </div>
 

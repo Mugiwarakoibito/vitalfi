@@ -12,7 +12,7 @@ import {
 import { useAppStore } from '@/store/useAppStore'
 import { generateId, formatDuration } from '@/lib/utils'
 import { storage } from '@/lib/storage'
-import { exerciseLibrary, getExerciseById, getAllMuscleGroups, categoryLabels } from '@/lib/exercises'
+import { exerciseLibrary, getExerciseById, getAllMuscleGroups, categoryLabels, muscleGroupColors } from '@/lib/exercises'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import type { WorkoutExercise, ExerciseSet, WorkoutTemplate, WorkoutFilter, ExerciseCategory, MuscleGroup } from '@/types/fitness'
@@ -144,6 +144,8 @@ function ExercisePicker({ onSelect, onClose }: { onSelect: (id: string) => void;
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState<ExerciseCategory | ''>('')
   const [muscle, setMuscle] = useState('')
+  const [showCategoryGrid, setShowCategoryGrid] = useState(false)
+  const [showMuscleGrid, setShowMuscleGrid] = useState(false)
   const muscleOptions = useMemo(() => getAllMuscleGroups(), [])
 
   const results = useMemo(() => {
@@ -189,32 +191,57 @@ function ExercisePicker({ onSelect, onClose }: { onSelect: (id: string) => void;
               className="glass-input w-full pl-10"
             />
           </div>
-          <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-none">
-            {(['', ...Object.keys(categoryLabels)] as ('' | ExerciseCategory)[]).map((cat) => (
+          <div className="flex gap-2 mt-3">
+            <div className="flex-1">
               <button
-                key={cat}
-                onClick={() => setCategory(cat === '' ? '' : cat)}
-                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  category === cat
-                    ? 'bg-rose-500/20 border border-rose-500/40 text-rose-300'
-                    : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/20'
-                }`}
+                onClick={() => setShowCategoryGrid(true)}
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-xs hover:border-white/20 transition-all"
               >
-                {cat === '' ? 'All' : categoryLabels[cat]}
+                {category ? (
+                  <>
+                    <span className="text-[10px] font-medium">{categoryLabels[category as ExerciseCategory]}</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setCategory('') }}
+                      className="ml-auto p-0.5 rounded hover:bg-white/10 text-gray-500"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Filter className="w-3.5 h-3.5 text-gray-500" />
+                    <span className="text-gray-500">All categories</span>
+                    <ChevronDown className="w-3 h-3 ml-auto text-gray-500" />
+                  </>
+                )}
               </button>
-            ))}
-          </div>
-          <div className="mt-2">
-            <select
-              value={muscle}
-              onChange={(e) => setMuscle(e.target.value)}
-              className="w-full px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-xs focus:border-rose-500/50 focus:outline-none"
-            >
-              <option value="">All muscle groups</option>
-              {muscleOptions.map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
+            </div>
+            <div className="flex-1">
+              <button
+                onClick={() => setShowMuscleGrid(true)}
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-xs hover:border-white/20 transition-all"
+              >
+                {muscle ? (
+                  <>
+                    <span className={`text-[10px] font-medium ${muscleGroupColors[muscle]?.split(' ')[1] || 'text-gray-300'}`}>
+                      {muscle.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                    </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setMuscle('') }}
+                      className="ml-auto p-0.5 rounded hover:bg-white/10 text-gray-500"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Filter className="w-3.5 h-3.5 text-gray-500" />
+                    <span className="text-gray-500">All muscles</span>
+                    <ChevronDown className="w-3 h-3 ml-auto text-gray-500" />
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
         <div className="overflow-y-auto max-h-[50vh] p-2 space-y-1">
@@ -234,7 +261,7 @@ function ExercisePicker({ onSelect, onClose }: { onSelect: (id: string) => void;
                       {categoryLabels[ex.category]}
                     </span>
                     {ex.primaryMuscles.slice(0, 2).map((m) => (
-                      <span key={m} className="px-2 py-0.5 rounded text-[10px] font-medium bg-white/5 text-gray-400">
+                      <span key={m} className={`px-2 py-0.5 rounded text-[10px] font-medium ${muscleGroupColors[m] || 'bg-white/5 text-gray-400'}`}>
                         {m.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                       </span>
                     ))}
@@ -246,6 +273,122 @@ function ExercisePicker({ onSelect, onClose }: { onSelect: (id: string) => void;
           )}
         </div>
       </motion.div>
+
+      {showCategoryGrid && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[60] p-4" onClick={() => setShowCategoryGrid(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="w-full max-w-lg max-h-[70vh] overflow-hidden rounded-2xl border border-white/10 bg-gray-950/90 backdrop-blur-2xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-white/5">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-white">Filter by Category</h4>
+                <button onClick={() => setShowCategoryGrid(false)} className="p-1 rounded-lg hover:bg-white/10 text-gray-400 transition-all">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+            <div className="overflow-y-auto max-h-[55vh] p-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                <button
+                  onClick={() => { setCategory(''); setShowCategoryGrid(false) }}
+                  className={`flex items-center gap-2 rounded-xl border p-2.5 text-left transition-all ${
+                    category === ''
+                      ? 'border-rose-500/40 bg-rose-500/10 text-rose-300'
+                      : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center">
+                    <Filter className="w-3.5 h-3.5 opacity-70" />
+                  </div>
+                  <span className="text-xs font-medium">All</span>
+                </button>
+                {(Object.entries(typeConfig) as [string, typeof typeConfig['strength']][]).map(([key, cfg]) => {
+                  const CfgIcon = cfg.icon
+                  const isActive = category === key
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => { setCategory(key as ExerciseCategory); setShowCategoryGrid(false) }}
+                      className={`flex items-center gap-2 rounded-xl border p-2.5 text-left transition-all ${
+                        isActive
+                          ? `${cfg.bg} ${cfg.color} border-current`
+                          : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white hover:bg-white/[0.04]'
+                      }`}
+                    >
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isActive ? cfg.bg : 'bg-white/5'}`}>
+                        <CfgIcon className={`w-3.5 h-3.5 ${isActive ? cfg.color : 'opacity-70'}`} />
+                      </div>
+                      <span className="text-xs font-medium">{categoryLabels[key as ExerciseCategory]}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {showMuscleGrid && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[60] p-4" onClick={() => setShowMuscleGrid(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="w-full max-w-lg max-h-[70vh] overflow-hidden rounded-2xl border border-white/10 bg-gray-950/90 backdrop-blur-2xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-white/5">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-white">Filter by Muscle</h4>
+                <button onClick={() => setShowMuscleGrid(false)} className="p-1 rounded-lg hover:bg-white/10 text-gray-400 transition-all">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+            <div className="overflow-y-auto max-h-[55vh] p-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                <button
+                  onClick={() => { setMuscle(''); setShowMuscleGrid(false) }}
+                  className={`flex items-center gap-2 rounded-xl border p-2.5 text-left transition-all ${
+                    muscle === ''
+                      ? 'border-rose-500/40 bg-rose-500/10 text-rose-300'
+                      : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center">
+                    <Filter className="w-3.5 h-3.5 opacity-70" />
+                  </div>
+                  <span className="text-xs font-medium">All</span>
+                </button>
+                {muscleOptions.map((m) => {
+                  const isActive = muscle === m.value
+                  const colors = muscleGroupColors[m.value] || 'bg-white/5 text-gray-400'
+                  return (
+                    <button
+                      key={m.value}
+                      onClick={() => { setMuscle(m.value); setShowMuscleGrid(false) }}
+                      className={`flex items-center gap-2 rounded-xl border p-2.5 text-left transition-all ${
+                        isActive
+                          ? `${colors} border-current`
+                          : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white hover:bg-white/[0.04]'
+                      }`}
+                    >
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${colors}`}>
+                        <span className="text-[10px] font-bold">{m.label.charAt(0)}</span>
+                      </div>
+                      <span className="text-xs font-medium">{m.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1127,13 +1270,11 @@ export function WorkoutLogger() {
                                     className="overflow-hidden"
                                   >
                                     <div className="px-4 py-3 space-y-2">
-                                      <div className="grid grid-cols-[1fr_1fr_1fr_auto_auto] gap-2 px-1 mb-1">
-                                        <span className="text-[10px] text-gray-500 uppercase tracking-wider">Weight</span>
-                                        <span className="text-[10px] text-gray-500 uppercase tracking-wider">Reps</span>
-                                        <span className="text-[10px] text-gray-500 uppercase tracking-wider">RPE</span>
-                                        <span className="w-6" />
-                                        <span className="w-6" />
-                                      </div>
+                                      <div className="grid grid-cols-[1fr_1fr_auto] gap-2 px-1 mb-1">
+                                          <span className="text-[10px] text-gray-500 uppercase tracking-wider">Weight</span>
+                                          <span className="text-[10px] text-gray-500 uppercase tracking-wider">Reps</span>
+                                          <span className="text-[10px] text-gray-500 uppercase tracking-wider">Done</span>
+                                        </div>
                                       {ex.sets.map((set, setIdx) => {
                                           return (
                                           <div key={setIdx} className="flex items-center gap-2">
@@ -1155,16 +1296,32 @@ export function WorkoutLogger() {
                                               onChange={(e) => updateSet(ex.id, setIdx, 'reps', parseInt(e.target.value) || 0)}
                                               className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-rose-500/50 focus:outline-none placeholder-gray-600 transition-all"
                                             />
-                                            <select
-                                              value={(set as unknown as { rpe?: number }).rpe ?? ''}
-                                              onChange={(e) => updateSet(ex.id, setIdx, 'rpe', e.target.value ? Number(e.target.value) : undefined)}
-                                              className="w-full px-2 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-rose-500/50 focus:outline-none"
-                                            >
-                                              <option value="">RPE</option>
-                                              {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map((r) => (
-                                                <option key={r} value={r}>{r}</option>
-                                              ))}
-                                            </select>
+                                            <div className="flex gap-1">
+                                              {[
+                                                { v: 6, c: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' },
+                                                { v: 6.5, c: 'bg-teal-500/15 border-teal-500/30 text-teal-300' },
+                                                { v: 7, c: 'bg-green-500/15 border-green-500/30 text-green-300' },
+                                                { v: 7.5, c: 'bg-lime-500/15 border-lime-500/30 text-lime-300' },
+                                                { v: 8, c: 'bg-amber-500/15 border-amber-500/30 text-amber-300' },
+                                                { v: 8.5, c: 'bg-orange-500/15 border-orange-500/30 text-orange-300' },
+                                                { v: 9, c: 'bg-red-500/15 border-red-500/30 text-red-300' },
+                                                { v: 9.5, c: 'bg-rose-500/15 border-rose-500/30 text-rose-300' },
+                                                { v: 10, c: 'bg-purple-500/15 border-purple-500/30 text-purple-300' },
+                                              ].map(({ v, c }) => {
+                                                const isSelected = (set as unknown as { rpe?: number }).rpe === v
+                                                return (
+                                                  <button
+                                                    key={v}
+                                                    onClick={() => updateSet(ex.id, setIdx, 'rpe', isSelected ? undefined : v)}
+                                                    className={`w-7 h-7 rounded-md border text-[10px] font-bold transition-all ${
+                                                      isSelected ? c : 'border-primary/[0.08] text-muted hover:border-primary/30 hover:text-primary-light'
+                                                    }`}
+                                                  >
+                                                    {v}
+                                                  </button>
+                                                )
+                                              })}
+                                            </div>
                                             <button
                                               onClick={() => updateSet(ex.id, setIdx, 'completed', !set.completed)}
                                               className={`w-7 h-7 rounded-md border flex items-center justify-center transition-all shrink-0 ${
