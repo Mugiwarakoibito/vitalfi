@@ -1270,13 +1270,13 @@ export function WorkoutLogger() {
                                      className="overflow-hidden"
                                    >
                                      <div className="px-4 py-3 space-y-2">
-                                       <div className="grid grid-cols-[20px_1fr_1fr_auto_auto] gap-2 px-1 mb-1 items-center">
-                                           <span className="text-[10px] text-gray-500 uppercase tracking-wider">#</span>
-                                           <span className="text-[10px] text-gray-500 uppercase tracking-wider">Weight</span>
-                                           <span className="text-[10px] text-gray-500 uppercase tracking-wider">Reps</span>
-                                           <span className="text-[10px] text-gray-500 uppercase tracking-wider">RPE</span>
-                                           <span className="text-[10px] text-gray-500 uppercase tracking-wider">Done</span>
-                                         </div>
+                                        <div className="grid grid-cols-[20px_1fr_1fr_auto_auto] gap-2 mb-1 items-center">
+                                            <span className="text-[10px] text-gray-500 uppercase tracking-wider text-center">#</span>
+                                            <span className="text-[10px] text-gray-500 uppercase tracking-wider pl-3">Weight</span>
+                                            <span className="text-[10px] text-gray-500 uppercase tracking-wider pl-3">Reps</span>
+                                            <span className="text-[10px] text-gray-500 uppercase tracking-wider">RPE</span>
+                                            <span className="text-[10px] text-gray-500 uppercase tracking-wider">Done</span>
+                                          </div>
                                        {ex.sets.map((set, setIdx) => {
                                            return (
                                            <div key={setIdx} className="grid grid-cols-[20px_1fr_1fr_auto_auto] gap-2 items-center">
