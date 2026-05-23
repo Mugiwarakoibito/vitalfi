@@ -395,6 +395,7 @@ export function WorkoutLogger() {
   const [expandedExercises, setExpandedExercises] = useState<Set<string>>(new Set())
   const [showExercisePicker, setShowExercisePicker] = useState(false)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  const [showTypePicker, setShowTypePicker] = useState(false)
   const [deletingWorkout, setDeletingWorkout] = useState<Workout | null>(null)
   const [supersetGroups, setSupersetGroups] = useState<Record<string, string[]>>({})
   const [restTimerExercise, setRestTimerExercise] = useState<string | null>(null)
@@ -959,28 +960,27 @@ export function WorkoutLogger() {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Type</label>
-                  <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                    {(Object.entries(typeConfig) as [string, typeof typeConfig['strength']][]).map(([key, cfg]) => {
-                      const CfgIcon = cfg.icon
-                      const isActive = workoutType === key
+                  <button
+                    onClick={() => setShowTypePicker(true)}
+                    className="flex items-center gap-3 w-full rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 hover:bg-white/[0.04] hover:border-white/10 transition-all group"
+                  >
+                    {(() => {
+                      const cfg = typeConfig[workoutType]
+                      const CfgIcon = cfg?.icon || Dumbbell
                       return (
-                        <button
-                          key={key}
-                          onClick={() => setWorkoutType(key)}
-                          className={`flex flex-col items-center gap-1 rounded-xl border px-2.5 py-2 transition-all duration-200 shrink-0 min-w-[56px] ${
-                            isActive
-                              ? `${cfg.bg} ${cfg.color} shadow-[0_0_16px_rgba(139,92,246,0.08)]`
-                              : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white hover:bg-white/[0.04]'
-                          }`}
-                        >
-                          <CfgIcon className={`w-3.5 h-3.5 ${isActive ? '' : 'opacity-70'}`} />
-                          <span className="text-[9px] font-semibold leading-tight text-center whitespace-nowrap">
-                            {categoryLabels[key as ExerciseCategory] || key.charAt(0).toUpperCase() + key.slice(1)}
-                          </span>
-                        </button>
+                        <>
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${cfg?.bg || 'bg-white/10'}`}>
+                            <CfgIcon className={`w-4 h-4 ${cfg?.color || 'text-muted'}`} />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <p className="text-sm font-medium text-white">{categoryLabels[workoutType as ExerciseCategory] || workoutType}</p>
+                            <p className="text-[10px] text-muted mt-0.5">Click to change type</p>
+                          </div>
+                          <ChevronDown className="w-4 h-4 text-muted group-hover:text-white transition-colors" />
+                        </>
                       )
-                    })}
-                  </div>
+                    })()}
+                  </button>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1261,6 +1261,55 @@ export function WorkoutLogger() {
             onSelect={applyTemplate}
             onClose={() => setShowTemplatePicker(false)}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showTypePicker && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => setShowTypePicker(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg max-h-[80vh] overflow-hidden rounded-2xl border border-white/10 bg-gray-950/90 backdrop-blur-2xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-5 border-b border-white/5">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-white">Select Workout Type</h3>
+                  <button onClick={() => setShowTypePicker(false)} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 transition-all">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="overflow-y-auto max-h-[65vh] p-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {(Object.entries(typeConfig) as [string, typeof typeConfig['strength']][]).map(([key, cfg]) => {
+                    const CfgIcon = cfg.icon
+                    const isActive = workoutType === key
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => { setWorkoutType(key); setShowTypePicker(false) }}
+                        className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
+                          isActive
+                            ? `${cfg.bg} ${cfg.color} border-current`
+                            : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white hover:bg-white/[0.04] hover:border-white/10'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isActive ? cfg.bg : 'bg-white/5'}`}>
+                          <CfgIcon className={`w-4 h-4 ${isActive ? cfg.color : 'opacity-70'}`} />
+                        </div>
+                        <span className="text-xs font-medium">
+                          {categoryLabels[key as ExerciseCategory] || key.charAt(0).toUpperCase() + key.slice(1)}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
