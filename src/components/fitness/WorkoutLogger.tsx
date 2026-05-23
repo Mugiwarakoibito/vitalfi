@@ -1269,14 +1269,7 @@ export function WorkoutLogger() {
                                     exit={{ opacity: 0, height: 0 }}
                                      className="overflow-hidden"
                                    >
-                                     <div className="px-4 py-3 space-y-2">
-                                         <div className="grid grid-cols-[1fr_auto_1fr_auto_auto] gap-1 mb-1 items-center px-1">
-                                             <span className="text-[10px] text-gray-500 uppercase tracking-wider pl-3">Weight</span>
-                                             <span className="text-[10px] text-gray-500 uppercase tracking-wider text-center"></span>
-                                             <span className="text-[10px] text-gray-500 uppercase tracking-wider pl-3">Reps</span>
-                                             <span className="text-[10px] text-gray-500 uppercase tracking-wider pl-2">RPE</span>
-                                             <span className="text-[10px] text-gray-500 uppercase tracking-wider">Done</span>
-                                           </div>
+                                      <div className="px-4 py-3 space-y-2">
                                         {ex.sets.map((set, setIdx) => {
                                             return (
                                             <div key={setIdx} className="grid grid-cols-[1fr_auto_1fr_auto_auto] gap-1 items-center px-1">
