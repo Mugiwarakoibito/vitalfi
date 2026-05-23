@@ -61,31 +61,23 @@ export default function Fitness() {
   }
 
   return (
-    <div className="space-y-6 pb-20 max-w-7xl mx-auto">
-      {/* Compact Hero */}
-      <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-900 via-purple-950/20 to-slate-900 border border-purple-500/10 p-6 lg:p-8">
-        <div className="absolute top-0 right-0 p-12 opacity-[0.02] pointer-events-none">
-          <Heart size={280} />
+    <div className="space-y-8 pb-20 max-w-7xl mx-auto">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-slate-900 via-purple-950/20 to-slate-900 border border-purple-500/10 p-12">
+        <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
+          <Heart size={300} />
         </div>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(168,85,247,0.08),transparent_50%)]" />
-        <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/20 to-cyan-500/10 border border-purple-500/20">
-              <Heart size={24} className="text-purple-400" />
-            </div>
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-black text-white tracking-tight">
-                Life <span className="text-purple-500">Hub</span>
-              </h1>
-              <div className="flex items-center gap-2 mt-0.5">
-                <div className={`h-1.5 w-1.5 rounded-full animate-pulse ${hasData ? 'bg-purple-500' : 'bg-slate-600'}`} />
-                <p className="text-xs text-slate-500">
-                  {hasData
-                    ? `${workouts.length} workouts · ${meals.length} meals · ${sleep.length} sleep records`
-                    : 'Your health & fitness command center'}
-                </p>
-              </div>
-            </div>
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+          <div className="flex items-center gap-3">
+            <div className={`h-2 w-2 rounded-full animate-ping ${hasData ? 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'bg-slate-600'}`} />
+            <h2 className="text-[10px] font-black uppercase tracking-[0.4em]">
+              {hasData ? (
+                <span className="text-purple-400">Life Tracking Active</span>
+              ) : (
+                <span className="text-slate-500">Get Started</span>
+              )}
+            </h2>
           </div>
           <div className="flex items-center gap-2">
             <TrendingUp size={14} className="text-emerald-400" />
@@ -93,6 +85,16 @@ export default function Fitness() {
               {hasData ? `${totalSessions} total sessions` : 'Ready to start'}
             </span>
           </div>
+        </div>
+        <div className="relative z-10 mt-10">
+          <h1 className="text-5xl md:text-7xl font-black text-white tracking-tight">
+            Life <span className="text-purple-500">Hub</span>
+          </h1>
+          <p className="text-lg text-slate-400 mt-2 max-w-xl">
+            {hasData
+              ? `${workouts.length} workouts · ${meals.length} meals · ${sleep.length} sleep records`
+              : 'Your health & fitness command center'}
+          </p>
         </div>
       </div>
 

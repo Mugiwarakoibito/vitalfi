@@ -1,10 +1,10 @@
 # VitalFi Memory
 
-## Current Status (May 20, 2026)
+## Current Status (May 23, 2026)
 
 ### Latest Commit
-- **Hash:** 3c3a0fc
-- **Message:** "update"
+- **Hash:** 479f356
+- **Message:** "Enhance all fitness trackers with masterclass features..."
 - **Branch:** master
 - **Remote:** https://github.com/Mugiwarakoibito/vitalfi.git
 
@@ -12,78 +12,134 @@
 - **Vercel:** https://vitalfi.vercel.app
 
 ### Build Status
-- Build passes successfully (no TypeScript errors)
-- No pending changes in working tree
+- Build passes successfully (no TypeScript errors, clean prod build)
+- ~1.3MB JS, ~110KB CSS
+- Chunk size warning (≥500 KB) pre-existing from library bundling
 
-## Recent Features Added
+## Recent Features Added (May 23, 2026)
 
-### AI Exercise Creator
-- **Files:** `src/lib/ai-exercise.ts`, `src/components/fitness/AddExerciseModal.tsx`
-- **Purpose:** Natural language exercise creation using Ollama (local AI)
-- **How it works:** User describes exercise in plain language, AI parses into structured exercise with name, muscles, equipment, difficulty, instructions
-- **Requirement:** Ollama must be running locally at `http://localhost:11434` with `llama3.2` model
-- **Custom exercises:** AI-created exercises are stored in component state (session-only, not persisted)
+### Health Dashboard (New)
+- **File:** `src/components/fitness/HealthDashboard.tsx`
+- Health Score (0-100 composite SVG ring): workout consistency 30pts, sleep quality 20pts, nutrition 20pts, hydration 15pts, tracking frequency 15pts
+- Body composition: BMI, BMR (Mifflin-St Jeor), TDEE, target calories
+- Personalized macro targets (protein/fat/carbs)
+- Hydration & sleep recommendations
+- Smart insights based on user data
+- Today's quick snapshot + quick action buttons
+- Health profile prompt
 
-### Exercise Library Enhanced
-- **File:** `src/components/fitness/ExerciseLibrary.tsx`
-- **New features:**
-  - Image display for exercises (Unsplash URLs)
-  - "Add with AI" button to open AI exercise creator
-  - Expandable exercise details (instructions, tips, equipment)
-  - Custom exercise counter and clear button
-  - "AI" badge on custom exercises
-  - Muscle-group gradient fallbacks when images fail to load
-- **Type update:** `ExerciseDefinition` now has optional `imageUrl` field
+### All Fitness Trackers Enhanced (May 23, 2026)
 
-### Exercise Data
-- **File:** `src/lib/exercises.ts`
-- **Count:** ~70 exercises across all categories
-- **Images:** Each exercise has an `imageUrl` pointing to relevant Unsplash fitness images
-- **Categories:** Strength, Cardio, HIIT, Flexibility (with Plyometrics & Calisthenics category definitions)
+#### WorkoutLogger (`src/components/fitness/WorkoutLogger.tsx`)
+- 11 workout templates (Push/Pull/Legs, Upper/Lower, Full Body, 5-day split)
+- RPE tracking (1-10 per set)
+- Superset grouping
+- Rest timer (90s countdown)
+- Notes per exercise
+- Duplicate workout
+- Volume progression vs last session
+- Exercise picker with filters
+- Auto/manual duration
+
+#### ExerciseLibrary (`src/components/fitness/ExerciseLibrary.tsx`)
+- Category stats bar with exercise counts
+- Equipment filter dropdown
+- Favorites system (localStorage)
+- Grid/list view mode toggle
+- Color-coded muscle borders
+- Staggered animations (Framer Motion)
+- Active filter chips
+- Equipment badges
+- Sort options
+
+#### BodyMetricsTracker (`src/components/fitness/BodyMetricsTracker.tsx`)
+- Weight & body fat trend charts (recharts)
+- Goal weight with progress bar (localStorage)
+- 7-day & 30-day change indicators
+- Per-body-part measurement change tracking
+- BMI category with color-coded display
+
+#### NutritionLogger (`src/components/fitness/NutritionLogger.tsx`)
+- Macro distribution ring (CSS conic-gradient)
+- Editable daily targets with progress bars
+- Date navigation (prev/next)
+- 7-day calorie trend + bar charts
+- Weekly summary
+- Macro calculation helper (4/4/9 cal-per-gram)
+
+#### HydrationTracker (`src/components/fitness/HydrationTracker.tsx`)
+- Large SVG progress ring (animated dashoffset)
+- Hourly 8-glass schedule
+- 7-day bar chart trend
+- Editable daily goal via modal
+- Current & best streak tracking
+- Water type tagging
+
+#### SleepLogger (`src/components/fitness/SleepLogger.tsx`)
+- Sleep score 0-100 (duration + quality)
+- Dual trend chart (score + duration)
+- Consistency score
+- Sleep debt tracking
+- Smart text insights
+- Target sleep hours with goal-met indicators
+
+#### WorkoutStreak (`src/components/fitness/WorkoutStreak.tsx`)
+- 8 unlockable achievement badges (localStorage)
+- Streak prediction
+- Weekly average
+- Consistency %
+- Best month
+- Activity timeline with motivational messages
+
+#### PersonalRecords (`src/components/fitness/PersonalRecords.tsx`)
+- 1RM calculator (Epley formula)
+- Per-exercise progression line chart
+- Volume comparison bar chart
+- PR badges (New PR!/All-Time Best)
+- Record types (Weight/Reps/Volume PRs)
+- PR history timeline
+
+#### SupplementTracker (`src/components/fitness/SupplementTracker.tsx`)
+- 10 common supplements quick-add
+- Timing schedule grouped by time of day
+- Adherence % with progress bar
+- 7-day log history mini-calendar
+- Today's status banner
+
+### Bootstrap/Alignment Fix (May 23, 2026)
+- **Fix:** Page refresh no longer redirects — `appMode` persisted to localStorage in `useAppStore.ts`
+- **Normalization:** All 8 fitness components' stat cards aligned to `FinanceDashboard.tsx` MetricCard sizing: `p-6`, `text-3xl font-black`, `text-[10px] font-black uppercase`, `gap-6`, `md:grid-cols-2 lg:grid-cols-4`
 
 ## Ongoing Work
-
-### Placeholder & Default Values Fix
-**Goal:** Fix placeholder examples and default values in finance tracker forms
-
-**Completed fixes:**
-- TransactionForm: 3 examples based on transaction type
-- AccountForm: "Main Account, Emergency Fund, Business Account"
-- BudgetDashboard: "Monthly Budget, Weekly Spending, Savings Goal"
-- BillReminders: "Rent, Electric, Internet"
-- SubscriptionTracker: "Netflix, Spotify, Gym"
-- DebtTracker: "Chase Card, Car Loan, Mortgage"
-- InvestmentPortfolio: "Apple Inc., Microsoft, Bitcoin" with "AAPL, MSFT, BTC" symbol examples
-- vercel.json: Added rewrites for SPA routing (fix 404 errors)
-
-**Key decisions:**
-- No default values in number fields (locale formatting issues: 0,00 vs 0.00)
-- Use join(', ') to show all 3 examples consistently
-- Bill names should be actual bills (not subscriptions)
-- Budget names should be distinct from category names
-- Investment symbol shows related examples based on name chosen
-
-### Bug Fixed
-- BillReminders.tsx: Fixed syntax error in bills.map() return statement (malformed opening parenthesis structure) - build now passes
+- All planned fitness enhancements complete
+- Finance and AI exercise features stable
 
 ## Tech Stack
 - React 18 + TypeScript + Vite
 - Tailwind CSS + glassmorphism dark mode
 - Zustand for state management
-- Ollama (local AI) for exercise parsing
+- Framer Motion for animations
+- Recharts for charts
+- lucide-react for icons
 - Vercel deployment
 
 ## File Locations
 - Project: `C:\Users\WORK\VitalFi`
-- Bills component: `src/components/finance/BillReminders.tsx`
-- Account form: `src/components/finance/AccountForm.tsx`
-- Budget dashboard: `src/components/finance/BudgetDashboard.tsx`
-- Transaction form: `src/components/finance/TransactionForm.tsx`
-- Debt tracker: `src/components/finance/DebtTracker.tsx`
-- Investment portfolio: `src/components/finance/InvestmentPortfolio.tsx`
-- Subscription tracker: `src/components/finance/SubscriptionTracker.tsx`
-- Vercel config: `vercel.json`
+- Health Dashboard: `src/components/fitness/HealthDashboard.tsx`
+- Fitness page (tab router): `src/pages/Fitness.tsx`
+- Exercise Library: `src/components/fitness/ExerciseLibrary.tsx`
+- Workout Logger: `src/components/fitness/WorkoutLogger.tsx`
+- Body Metrics: `src/components/fitness/BodyMetricsTracker.tsx`
+- Nutrition Logger: `src/components/fitness/NutritionLogger.tsx`
+- Hydration Tracker: `src/components/fitness/HydrationTracker.tsx`
+- Sleep Logger: `src/components/fitness/SleepLogger.tsx`
+- Workout Streak: `src/components/fitness/WorkoutStreak.tsx`
+- Personal Records: `src/components/fitness/PersonalRecords.tsx`
+- Supplement Tracker: `src/components/fitness/SupplementTracker.tsx`
+- Medical calculations: `src/lib/calculations.ts`
+- Exercise definitions (150+): `src/lib/exercises.ts`
+- Types: `src/types/fitness.ts`
+- Zustand store: `src/store/useAppStore.ts`
 - AI exercise service: `src/lib/ai-exercise.ts`
 - AI exercise modal: `src/components/fitness/AddExerciseModal.tsx`
-- Exercise library: `src/components/fitness/ExerciseLibrary.tsx`
-- Exercise data: `src/lib/exercises.ts`
+- Finance components: `src/components/finance/`
