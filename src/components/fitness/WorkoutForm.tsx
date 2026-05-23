@@ -7,7 +7,7 @@ import type { ExerciseCategory } from '@/types/fitness'
 import type { Workout } from '@/lib/storage'
 import {
   Dumbbell, TrendingUp, Wind, Flame, Settings2, Move, StretchHorizontal, Zap, PersonStanding,
-  Timer, Gauge, Crosshair, Weight, Heart, Activity, Shield, Sword, Coffee, Equal, Footprints, Waves,
+  Gauge, Crosshair, Weight, Heart, Activity, Shield, Sword, Coffee, Equal, Footprints, Waves,
 } from 'lucide-react'
 
 interface WorkoutFormProps {
@@ -26,7 +26,7 @@ const categories: { value: ExerciseCategory; icon: React.ReactNode; label: strin
   { value: 'flexibility', icon: <StretchHorizontal size={14} />, label: 'Flexibility' },
   { value: 'plyo', icon: <Zap size={14} />, label: 'Plyo' },
   { value: 'calisthenics', icon: <PersonStanding size={14} />, label: 'Calisthenics' },
-  { value: 'endurance', icon: <Timer size={14} />, label: 'Endurance' },
+  { value: 'endurance', icon: <Activity size={14} />, label: 'Endurance' },
   { value: 'speed_agility', icon: <Gauge size={14} />, label: 'Speed & Agility' },
   { value: 'balance_stability', icon: <Crosshair size={14} />, label: 'Balance' },
   { value: 'core', icon: <Weight size={14} />, label: 'Core' },

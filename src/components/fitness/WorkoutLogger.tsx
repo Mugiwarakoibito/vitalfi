@@ -26,7 +26,7 @@ const typeConfig: Record<string, { icon: any; color: string; bg: string; gradien
   flexibility: { icon: StretchHorizontal, color: 'text-green-400', bg: 'bg-green-500/20 border-green-500/30', gradient: 'from-green-500/10 to-transparent' },
   plyo: { icon: Zap, color: 'text-violet-400', bg: 'bg-violet-500/20 border-violet-500/30', gradient: 'from-violet-500/10 to-transparent' },
   calisthenics: { icon: PersonStanding, color: 'text-amber-400', bg: 'bg-amber-500/20 border-amber-500/30', gradient: 'from-amber-500/10 to-transparent' },
-  endurance: { icon: Timer, color: 'text-blue-400', bg: 'bg-blue-500/20 border-blue-500/30', gradient: 'from-blue-500/10 to-transparent' },
+  endurance: { icon: Activity, color: 'text-blue-400', bg: 'bg-blue-500/20 border-blue-500/30', gradient: 'from-blue-500/10 to-transparent' },
   speed_agility: { icon: Gauge, color: 'text-yellow-400', bg: 'bg-yellow-500/20 border-yellow-500/30', gradient: 'from-yellow-500/10 to-transparent' },
   balance_stability: { icon: Crosshair, color: 'text-cyan-400', bg: 'bg-cyan-500/20 border-cyan-500/30', gradient: 'from-cyan-500/10 to-transparent' },
   core: { icon: Weight, color: 'text-orange-400', bg: 'bg-orange-600/20 border-orange-600/30', gradient: 'from-orange-600/10 to-transparent' },

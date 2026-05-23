@@ -8,7 +8,7 @@ import {
   X, Wand2, Sparkles, Grid3X3, List, Star, ChevronDown,
   Eye, Bookmark, BookmarkCheck,
   Weight, Settings2, GitBranch, Minus, Circle,
-  TrendingUp, Gauge, Crosshair, Timer, Activity, Heart, Shield, Sword, Coffee, Waves, Move, Footprints, Equal,
+  TrendingUp, Gauge, Crosshair, Activity, Heart, Shield, Sword, Coffee, Waves, Move, Footprints, Equal,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AddExerciseModal } from './AddExerciseModal'
@@ -29,7 +29,7 @@ const categories: { value: ExerciseCategory; icon: React.ReactNode; label: strin
   { value: 'flexibility', icon: <StretchHorizontal size={13} />, label: 'Flexibility' },
   { value: 'plyo', icon: <Zap size={13} />, label: 'Plyo' },
   { value: 'calisthenics', icon: <PersonStanding size={13} />, label: 'Calisthenics' },
-  { value: 'endurance', icon: <Timer size={13} />, label: 'Endurance' },
+  { value: 'endurance', icon: <Activity size={13} />, label: 'Endurance' },
   { value: 'speed_agility', icon: <Gauge size={13} />, label: 'Speed & Agility' },
   { value: 'balance_stability', icon: <Crosshair size={13} />, label: 'Balance' },
   { value: 'core', icon: <Weight size={13} />, label: 'Core' },
