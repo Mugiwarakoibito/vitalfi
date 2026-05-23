@@ -640,9 +640,13 @@ export function WorkoutLogger() {
 
   const toggleSuperset = useCallback((exerciseId: string) => {
     setSupersetGroups((prev) => {
-      const isSelected = Object.values(prev).some((ids) => ids.includes(exerciseId))
-      if (isSelected) return {} as Record<string, string[]>
-      return { selected: [exerciseId] }
+      const current = prev['selected'] || []
+      if (current.includes(exerciseId)) {
+        const filtered = current.filter((id) => id !== exerciseId)
+        if (filtered.length === 0) return { selected: [] }
+        return { selected: filtered }
+      }
+      return { selected: [...current, exerciseId] }
     })
   }, [])
 
