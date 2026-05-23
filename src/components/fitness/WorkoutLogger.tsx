@@ -1288,41 +1288,22 @@ export function WorkoutLogger() {
                                               onChange={(e) => updateSet(ex.id, setIdx, 'weight', parseFloat(e.target.value) || 0)}
                                               className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-rose-500/50 focus:outline-none placeholder-gray-600 transition-all"
                                             />
-                                            <span className="text-gray-500 text-xs">×</span>
-                                            <input
-                                              type="number"
-                                              placeholder="rpe"
+                                            <select
                                               value={(set as unknown as { rpe?: number }).rpe ?? ''}
-                                              onChange={(e) => updateSet(ex.id, setIdx, 'rpe', parseFloat(e.target.value) || 0)}
-                                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-rose-500/50 focus:outline-none placeholder-gray-600 transition-all"
-                                              step="0.5"
-                                            />
-                                            <div className="flex gap-1">
-                                              {[
-                                                { v: 6, c: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' },
-                                                { v: 6.5, c: 'bg-teal-500/15 border-teal-500/30 text-teal-300' },
-                                                { v: 7, c: 'bg-green-500/15 border-green-500/30 text-green-300' },
-                                                { v: 7.5, c: 'bg-lime-500/15 border-lime-500/30 text-lime-300' },
-                                                { v: 8, c: 'bg-amber-500/15 border-amber-500/30 text-amber-300' },
-                                                { v: 8.5, c: 'bg-orange-500/15 border-orange-500/30 text-orange-300' },
-                                                { v: 9, c: 'bg-red-500/15 border-red-500/30 text-red-300' },
-                                                { v: 9.5, c: 'bg-rose-500/15 border-rose-500/30 text-rose-300' },
-                                                { v: 10, c: 'bg-purple-500/15 border-purple-500/30 text-purple-300' },
-                                              ].map(({ v, c }) => {
-                                                const isSelected = (set as unknown as { rpe?: number }).rpe === v
-                                                return (
-                                                  <button
-                                                    key={v}
-                                                    onClick={() => updateSet(ex.id, setIdx, 'rpe', isSelected ? undefined : v)}
-                                                    className={`w-7 h-7 rounded-md border text-[10px] font-bold transition-all ${
-                                                      isSelected ? c : 'border-primary/[0.08] text-muted hover:border-primary/30 hover:text-primary-light'
-                                                    }`}
-                                                  >
-                                                    {v}
-                                                  </button>
-                                                )
-                                              })}
-                                            </div>
+                                              onChange={(e) => updateSet(ex.id, setIdx, 'rpe', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                              className="glass-input w-16 px-2 py-2 text-xs"
+                                            >
+                                              <option value="">RPE</option>
+                                              <option value="6" className="bg-emerald-900 text-emerald-300">6</option>
+                                              <option value="6.5" className="bg-teal-900 text-teal-300">6.5</option>
+                                              <option value="7" className="bg-green-900 text-green-300">7</option>
+                                              <option value="7.5" className="bg-lime-900 text-lime-300">7.5</option>
+                                              <option value="8" className="bg-amber-900 text-amber-300">8</option>
+                                              <option value="8.5" className="bg-orange-900 text-orange-300">8.5</option>
+                                              <option value="9" className="bg-red-900 text-red-300">9</option>
+                                              <option value="9.5" className="bg-rose-900 text-rose-300">9.5</option>
+                                              <option value="10" className="bg-purple-900 text-purple-300">10</option>
+                                            </select>
                                             <button
                                               onClick={() => updateSet(ex.id, setIdx, 'completed', !set.completed)}
                                               className={`w-7 h-7 rounded-md border flex items-center justify-center transition-all shrink-0 ${
