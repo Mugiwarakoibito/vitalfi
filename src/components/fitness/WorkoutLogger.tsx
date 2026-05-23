@@ -1270,8 +1270,9 @@ export function WorkoutLogger() {
                                     className="overflow-hidden"
                                   >
                                     <div className="px-4 py-3 space-y-2">
-                                      <div className="grid grid-cols-[1fr_1fr_auto] gap-2 px-1 mb-1">
+                                      <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 px-1 mb-1">
                                           <span className="text-[10px] text-gray-500 uppercase tracking-wider">Weight</span>
+                                          <span className="text-[10px] text-gray-500 uppercase tracking-wider">Reps</span>
                                           <span className="text-[10px] text-gray-500 uppercase tracking-wider">RPE</span>
                                           <span className="text-[10px] text-gray-500 uppercase tracking-wider">Done</span>
                                         </div>
@@ -1286,6 +1287,14 @@ export function WorkoutLogger() {
                                               placeholder="kg"
                                               value={set.weight ?? ''}
                                               onChange={(e) => updateSet(ex.id, setIdx, 'weight', parseFloat(e.target.value) || 0)}
+                                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-rose-500/50 focus:outline-none placeholder-gray-600 transition-all"
+                                            />
+                                            <span className="text-gray-500 text-xs">×</span>
+                                            <input
+                                              type="number"
+                                              placeholder="reps"
+                                              value={set.reps ?? ''}
+                                              onChange={(e) => updateSet(ex.id, setIdx, 'reps', parseInt(e.target.value) || 0)}
                                               className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-rose-500/50 focus:outline-none placeholder-gray-600 transition-all"
                                             />
                                             <select
