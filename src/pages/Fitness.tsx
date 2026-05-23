@@ -116,7 +116,7 @@ export default function Fitness() {
                 className="glass-card bg-purple-500/10 border-purple-500/20 px-8 py-4 rounded-2xl flex items-center gap-3 hover:bg-purple-500/20 transition-all group"
               >
                 <Plus size={20} className="text-purple-400 group-hover:rotate-90 transition-transform" />
-                <span className="text-xs font-black uppercase tracking-widest text-white">Log Workout</span>
+                <span className="text-xs font-black uppercase tracking-widest text-white">Add Workout</span>
               </button>
             ) : (
               <button

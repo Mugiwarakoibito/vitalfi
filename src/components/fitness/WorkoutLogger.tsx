@@ -605,7 +605,7 @@ export function WorkoutLogger() {
     const template: WorkoutTemplate = {
       id: generateId(),
       name: workoutName.trim(),
-      category: workoutType,
+      category: workoutType as ExerciseCategory,
       exercises: exercises.map((e) => ({
         exerciseId: e.exerciseId,
         name: e.name,
@@ -697,7 +697,7 @@ export function WorkoutLogger() {
           </Button>
           <Button variant="primary" size="sm" onClick={() => { resetForm(); setShowForm(true) }}>
             <Plus className="w-4 h-4 mr-1.5" />
-            Log Workout
+            Add Workout
           </Button>
         </div>
       </div>
@@ -781,7 +781,7 @@ export function WorkoutLogger() {
                 {workouts.length === 0 ? 'Start tracking your fitness journey' : 'Try adjusting your filter criteria'}
               </p>
               <Button variant="primary" onClick={() => { resetForm(); setShowForm(true) }}>
-                Log Your First Workout
+                Add Your First Workout
               </Button>
             </Card>
           </motion.div>
@@ -903,20 +903,22 @@ export function WorkoutLogger() {
             >
               <div className="p-6 space-y-5">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-white">Log Workout</h3>
+                  <h3 className="text-lg font-semibold text-white">Add Workout</h3>
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={saveAsTemplate}
-                      disabled={!workoutName.trim() || exercises.length === 0}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
-                        templateSaved
-                          ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400'
-                          : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/20 hover:text-white'
-                      }`}
-                    >
-                      {templateSaved ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      {templateSaved ? 'Saved!' : 'Save as Template'}
-                    </button>
+                    {exercises.length > 0 && (
+                      <button
+                        onClick={saveAsTemplate}
+                        disabled={!workoutName.trim()}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                          templateSaved
+                            ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400'
+                            : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/20 hover:text-white'
+                        }`}
+                      >
+                        {templateSaved ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                        {templateSaved ? 'Saved!' : 'Save Template'}
+                      </button>
+                    )}
                     <button onClick={() => setShowTemplatePicker(true)} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 transition-all">
                       <Layers className="w-4 h-4" />
                     </button>
