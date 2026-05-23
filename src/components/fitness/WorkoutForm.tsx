@@ -3,7 +3,6 @@ import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { generateId } from '@/lib/utils'
-import { categoryLabels } from '@/lib/exercises'
 import type { ExerciseCategory } from '@/types/fitness'
 import type { Workout } from '@/lib/storage'
 import {
