@@ -1270,8 +1270,7 @@ export function WorkoutLogger() {
                                      className="overflow-hidden"
                                    >
                                      <div className="px-4 py-3 space-y-2">
-                                        <div className="grid grid-cols-[auto_1fr_auto_1fr_auto_auto] gap-1 mb-1 items-center px-1">
-                                            <span className="text-[10px] text-gray-500 uppercase tracking-wider text-center w-5">#</span>
+                                        <div className="grid grid-cols-[1fr_auto_1fr_auto_auto] gap-1 mb-1 items-center px-1">
                                             <span className="text-[10px] text-gray-500 uppercase tracking-wider">Weight</span>
                                             <span className="text-[10px] text-gray-500 uppercase tracking-wider text-center"></span>
                                             <span className="text-[10px] text-gray-500 uppercase tracking-wider">Reps</span>
@@ -1280,10 +1279,7 @@ export function WorkoutLogger() {
                                           </div>
                                         {ex.sets.map((set, setIdx) => {
                                             return (
-                                            <div key={setIdx} className="grid grid-cols-[auto_1fr_auto_1fr_auto_auto] gap-1 items-center px-1">
-                                              <span className="text-[11px] text-gray-500 font-mono text-center w-5">
-                                                {setIdx + 1}
-                                              </span>
+                                            <div key={setIdx} className="grid grid-cols-[1fr_auto_1fr_auto_auto] gap-1 items-center px-1">
                                               <input
                                                 type="number"
                                                 placeholder="kg"
