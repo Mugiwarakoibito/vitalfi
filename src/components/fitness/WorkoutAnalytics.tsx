@@ -62,9 +62,26 @@ export function WorkoutAnalytics() {
 
   const typeLabels: Record<string, string> = {
     strength: '🏋️ Strength',
+    hypertrophy: '💪 Hypertrophy',
     cardio: '🏃 Cardio',
     hiit: '⚡ HIIT',
+    functional: '🏋️ Functional',
+    mobility: '🤸 Mobility',
     flexibility: '🧘 Flexibility',
+    plyo: '🦘 Plyo',
+    calisthenics: '🧗 Calisthenics',
+    endurance: '🏃 Endurance',
+    speed_agility: '🏃 Speed & Agility',
+    balance_stability: '⚖️ Balance',
+    core: '💪 Core',
+    yoga: '🧘 Yoga',
+    pilates: '🤸 Pilates',
+    crossfit: '⚡ CrossFit',
+    martial_arts: '🥋 Martial Arts',
+    recovery: '🛌 Recovery',
+    isometric: '🧊 Isometric',
+    animal_flow: '🐾 Animal Flow',
+    breathwork: '🌬️ Breathwork',
   }
 
   const weekData = getWeeklyData()

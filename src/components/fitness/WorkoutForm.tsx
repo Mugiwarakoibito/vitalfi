@@ -44,9 +44,26 @@ export function WorkoutForm({ isOpen, onClose, onSave }: WorkoutFormProps) {
             <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">Type</label>
             <select value={type} onChange={(e) => setType(e.target.value as any)} className="glass-input w-full">
               <option value="strength">Strength</option>
+              <option value="hypertrophy">Hypertrophy</option>
               <option value="cardio">Cardio</option>
               <option value="hiit">HIIT</option>
+              <option value="functional">Functional</option>
+              <option value="mobility">Mobility</option>
               <option value="flexibility">Flexibility</option>
+              <option value="plyo">Plyo</option>
+              <option value="calisthenics">Calisthenics</option>
+              <option value="endurance">Endurance</option>
+              <option value="speed_agility">Speed & Agility</option>
+              <option value="balance_stability">Balance</option>
+              <option value="core">Core</option>
+              <option value="yoga">Yoga</option>
+              <option value="pilates">Pilates</option>
+              <option value="crossfit">CrossFit</option>
+              <option value="martial_arts">Martial Arts</option>
+              <option value="recovery">Recovery</option>
+              <option value="isometric">Isometric</option>
+              <option value="animal_flow">Animal Flow</option>
+              <option value="breathwork">Breathwork</option>
             </select>
           </div>
           <Input label="Duration (min)" type="number" value={duration} onChange={(e) => setDuration(e.target.value)} />

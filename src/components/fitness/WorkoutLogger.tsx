@@ -360,7 +360,7 @@ function ExercisePicker({ onSelect, onClose }: { onSelect: (id: string) => void;
             />
           </div>
           <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-none">
-            {(['', 'strength', 'cardio', 'hiit', 'flexibility', 'plyo', 'calisthenics'] as const).map((cat) => (
+            {(['', ...Object.keys(categoryLabels)] as ('' | ExerciseCategory)[]).map((cat) => (
               <button
                 key={cat}
                 onClick={() => setCategory(cat === '' ? '' : cat)}
