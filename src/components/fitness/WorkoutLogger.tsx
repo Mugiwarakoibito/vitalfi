@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, Clock, Dumbbell, Flame, ChevronDown, ChevronUp, Check,
@@ -368,6 +369,23 @@ export function WorkoutLogger() {
       updatedAt: w.updatedAt,
     })) as WorkoutTemplate[]
   }, [workouts])
+  const [searchParams, setSearchParams] = useSearchParams()
+  useEffect(() => {
+    if (searchParams.get('add') === '1') {
+      setWorkoutName('')
+      setWorkoutType('strength')
+      setDuration('')
+      setDate(new Date().toISOString().split('T')[0])
+      setExercises([])
+      setExpandedExercises(new Set())
+      setSupersetGroups({})
+      setRestTimerExercise(null)
+      setShowForm(true)
+      const next = new URLSearchParams(searchParams)
+      next.delete('add')
+      setSearchParams(next, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
   const [showForm, setShowForm] = useState(false)
   const [workoutName, setWorkoutName] = useState('')
   const [workoutType, setWorkoutType] = useState<Workout['category']>('strength')
@@ -928,41 +946,42 @@ export function WorkoutLogger() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-2">Workout Name</label>
-                    <input
-                      type="text"
-                      value={workoutName}
-                      onChange={(e) => setWorkoutName(e.target.value)}
-                      className="glass-input w-full"
-                      placeholder="Push Day, Leg Day, etc."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-2">Type</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(Object.entries(typeConfig) as [Workout['category'], typeof typeConfig['strength']][]).map(([key, cfg]) => {
-                        const CfgIcon = cfg.icon
-                        return (
-                          <button
-                            key={key}
-                            onClick={() => setWorkoutType(key)}
-                            className={`p-2.5 rounded-xl text-xs font-medium flex items-center gap-2 transition-all ${
-                              workoutType === key
-                                ? `${cfg.bg} ${cfg.color}`
-                                : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/20'
-                            }`}
-                          >
-                            <CfgIcon className="w-3.5 h-3.5" />
-                            {key.charAt(0).toUpperCase() + key.slice(1)}
-                          </button>
-                        )
-                      })}
-                    </div>
+
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Workout Name</label>
+                  <input
+                    type="text"
+                    value={workoutName}
+                    onChange={(e) => setWorkoutName(e.target.value)}
+                    className="glass-input w-full"
+                    placeholder="Push Day, Leg Day, etc."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Type</label>
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                    {(Object.entries(typeConfig) as [string, typeof typeConfig['strength']][]).map(([key, cfg]) => {
+                      const CfgIcon = cfg.icon
+                      const isActive = workoutType === key
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => setWorkoutType(key)}
+                          className={`flex flex-col items-center gap-1 rounded-xl border px-2.5 py-2 transition-all duration-200 shrink-0 min-w-[56px] ${
+                            isActive
+                              ? `${cfg.bg} ${cfg.color} shadow-[0_0_16px_rgba(139,92,246,0.08)]`
+                              : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white hover:bg-white/[0.04]'
+                          }`}
+                        >
+                          <CfgIcon className={`w-3.5 h-3.5 ${isActive ? '' : 'opacity-70'}`} />
+                          <span className="text-[9px] font-semibold leading-tight text-center whitespace-nowrap">
+                            {categoryLabels[key as ExerciseCategory] || key.charAt(0).toUpperCase() + key.slice(1)}
+                          </span>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm text-gray-400 mb-2">Date</label>

@@ -112,7 +112,7 @@ export default function Fitness() {
           <div className="flex flex-wrap gap-4 mt-6">
             {hasData ? (
               <button
-                onClick={() => { setActiveTab('workouts'); setSearchParams({ tab: 'workouts' }) }}
+                onClick={() => { setActiveTab('workouts'); setSearchParams({ tab: 'workouts', add: '1' }) }}
                 className="glass-card bg-purple-500/10 border-purple-500/20 px-8 py-4 rounded-2xl flex items-center gap-3 hover:bg-purple-500/20 transition-all group"
               >
                 <Plus size={20} className="text-purple-400 group-hover:rotate-90 transition-transform" />
