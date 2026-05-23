@@ -1298,21 +1298,22 @@ export function WorkoutLogger() {
                                             />
                                             <div className="flex gap-1">
                                               {[
-                                                { v: 3, c: 'bg-rose-500/15 border-rose-500/30 text-rose-300' },
-                                                { v: 5, c: 'bg-orange-500/15 border-orange-500/30 text-orange-300' },
+                                                { v: 6, c: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' },
+                                                { v: 6.5, c: 'bg-teal-500/15 border-teal-500/30 text-teal-300' },
+                                                { v: 7, c: 'bg-green-500/15 border-green-500/30 text-green-300' },
+                                                { v: 7.5, c: 'bg-lime-500/15 border-lime-500/30 text-lime-300' },
                                                 { v: 8, c: 'bg-amber-500/15 border-amber-500/30 text-amber-300' },
-                                                { v: 10, c: 'bg-green-500/15 border-green-500/30 text-green-300' },
-                                                { v: 12, c: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' },
-                                                { v: 15, c: 'bg-teal-500/15 border-teal-500/30 text-teal-300' },
-                                                { v: 20, c: 'bg-cyan-500/15 border-cyan-500/30 text-cyan-300' },
-                                                { v: 30, c: 'bg-purple-500/15 border-purple-500/30 text-purple-300' },
+                                                { v: 8.5, c: 'bg-orange-500/15 border-orange-500/30 text-orange-300' },
+                                                { v: 9, c: 'bg-red-500/15 border-red-500/30 text-red-300' },
+                                                { v: 9.5, c: 'bg-rose-500/15 border-rose-500/30 text-rose-300' },
+                                                { v: 10, c: 'bg-purple-500/15 border-purple-500/30 text-purple-300' },
                                               ].map(({ v, c }) => {
-                                                const isSelected = set.reps === v
+                                                const isSelected = (set as unknown as { rpe?: number }).rpe === v
                                                 return (
                                                   <button
                                                     key={v}
-                                                    onClick={() => updateSet(ex.id, setIdx, 'reps', isSelected ? 0 : v)}
-                                                    className={`w-8 h-7 rounded-md border text-[10px] font-bold transition-all ${
+                                                    onClick={() => updateSet(ex.id, setIdx, 'rpe', isSelected ? undefined : v)}
+                                                    className={`w-7 h-7 rounded-md border text-[10px] font-bold transition-all ${
                                                       isSelected ? c : 'border-primary/[0.08] text-muted hover:border-primary/30 hover:text-primary-light'
                                                     }`}
                                                   >
