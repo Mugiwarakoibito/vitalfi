@@ -1272,7 +1272,7 @@ export function WorkoutLogger() {
                                     <div className="px-4 py-3 space-y-2">
                                       <div className="grid grid-cols-[1fr_1fr_auto] gap-2 px-1 mb-1">
                                           <span className="text-[10px] text-gray-500 uppercase tracking-wider">Weight</span>
-                                          <span className="text-[10px] text-gray-500 uppercase tracking-wider">Reps</span>
+                                          <span className="text-[10px] text-gray-500 uppercase tracking-wider">RPE</span>
                                           <span className="text-[10px] text-gray-500 uppercase tracking-wider">Done</span>
                                         </div>
                                       {ex.sets.map((set, setIdx) => {
