@@ -3,14 +3,43 @@ import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { generateId } from '@/lib/utils'
+import { categoryLabels } from '@/lib/exercises'
 import type { ExerciseCategory } from '@/types/fitness'
 import type { Workout } from '@/lib/storage'
+import {
+  Dumbbell, TrendingUp, Wind, Flame, Settings2, Move, StretchHorizontal, Zap, PersonStanding,
+  Timer, Gauge, Crosshair, Weight, Heart, Activity, Shield, Sword, Coffee, Equal, Footprints, Waves,
+} from 'lucide-react'
 
 interface WorkoutFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (workout: Workout) => Promise<void>;
 }
+
+const categories: { value: ExerciseCategory; icon: React.ReactNode; label: string }[] = [
+  { value: 'strength', icon: <Dumbbell size={14} />, label: 'Strength' },
+  { value: 'hypertrophy', icon: <TrendingUp size={14} />, label: 'Hypertrophy' },
+  { value: 'cardio', icon: <Wind size={14} />, label: 'Cardio' },
+  { value: 'hiit', icon: <Flame size={14} />, label: 'HIIT' },
+  { value: 'functional', icon: <Settings2 size={14} />, label: 'Functional' },
+  { value: 'mobility', icon: <Move size={14} />, label: 'Mobility' },
+  { value: 'flexibility', icon: <StretchHorizontal size={14} />, label: 'Flexibility' },
+  { value: 'plyo', icon: <Zap size={14} />, label: 'Plyo' },
+  { value: 'calisthenics', icon: <PersonStanding size={14} />, label: 'Calisthenics' },
+  { value: 'endurance', icon: <Timer size={14} />, label: 'Endurance' },
+  { value: 'speed_agility', icon: <Gauge size={14} />, label: 'Speed & Agility' },
+  { value: 'balance_stability', icon: <Crosshair size={14} />, label: 'Balance' },
+  { value: 'core', icon: <Weight size={14} />, label: 'Core' },
+  { value: 'yoga', icon: <Heart size={14} />, label: 'Yoga' },
+  { value: 'pilates', icon: <Activity size={14} />, label: 'Pilates' },
+  { value: 'crossfit', icon: <Shield size={14} />, label: 'CrossFit' },
+  { value: 'martial_arts', icon: <Sword size={14} />, label: 'Martial Arts' },
+  { value: 'recovery', icon: <Coffee size={14} />, label: 'Recovery' },
+  { value: 'isometric', icon: <Equal size={14} />, label: 'Isometric' },
+  { value: 'animal_flow', icon: <Footprints size={14} />, label: 'Animal Flow' },
+  { value: 'breathwork', icon: <Waves size={14} />, label: 'Breathwork' },
+]
 
 export function WorkoutForm({ isOpen, onClose, onSave }: WorkoutFormProps) {
   const [name, setName] = useState('')
@@ -39,36 +68,32 @@ export function WorkoutForm({ isOpen, onClose, onSave }: WorkoutFormProps) {
     <Modal isOpen={isOpen} onClose={onClose} title="Log Session">
       <div className="space-y-4">
         <Input label="Session Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Morning Lift" />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-4">
           <div>
             <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">Type</label>
-            <select value={type} onChange={(e) => setType(e.target.value as any)} className="glass-input w-full">
-              <option value="strength">Strength</option>
-              <option value="hypertrophy">Hypertrophy</option>
-              <option value="cardio">Cardio</option>
-              <option value="hiit">HIIT</option>
-              <option value="functional">Functional</option>
-              <option value="mobility">Mobility</option>
-              <option value="flexibility">Flexibility</option>
-              <option value="plyo">Plyo</option>
-              <option value="calisthenics">Calisthenics</option>
-              <option value="endurance">Endurance</option>
-              <option value="speed_agility">Speed & Agility</option>
-              <option value="balance_stability">Balance</option>
-              <option value="core">Core</option>
-              <option value="yoga">Yoga</option>
-              <option value="pilates">Pilates</option>
-              <option value="crossfit">CrossFit</option>
-              <option value="martial_arts">Martial Arts</option>
-              <option value="recovery">Recovery</option>
-              <option value="isometric">Isometric</option>
-              <option value="animal_flow">Animal Flow</option>
-              <option value="breathwork">Breathwork</option>
-            </select>
+            <div className="flex gap-1.5 flex-wrap">
+              {categories.map((cat) => (
+                <button
+                  key={cat.value}
+                  type="button"
+                  onClick={() => setType(cat.value)}
+                  className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all ${
+                    type === cat.value
+                      ? 'border-primary/40 bg-primary/10 text-primary-light shadow-[0_0_12px_rgba(139,92,246,0.1)]'
+                      : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <span className="opacity-70">{cat.icon}</span>
+                  {cat.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <Input label="Duration (min)" type="number" value={duration} onChange={(e) => setDuration(e.target.value)} />
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Duration (min)" type="number" value={duration} onChange={(e) => setDuration(e.target.value)} />
+            <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
         </div>
-        <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         <div className="flex gap-4 pt-4">
           <Button variant="ghost" onClick={onClose} className="flex-1">Cancel</Button>
           <Button variant="primary" onClick={handleSave} className="flex-1" disabled={!name}>Save Session</Button>
