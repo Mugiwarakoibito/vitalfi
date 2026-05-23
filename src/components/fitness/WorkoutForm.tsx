@@ -3,6 +3,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { generateId } from '@/lib/utils'
+import type { ExerciseCategory } from '@/types/fitness'
 import type { Workout } from '@/lib/storage'
 
 interface WorkoutFormProps {
@@ -13,7 +14,7 @@ interface WorkoutFormProps {
 
 export function WorkoutForm({ isOpen, onClose, onSave }: WorkoutFormProps) {
   const [name, setName] = useState('')
-  const [type, setType] = useState<Workout['type']>('strength')
+  const [type, setType] = useState<ExerciseCategory>('strength')
   const [duration, setDuration] = useState('60')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
 
@@ -22,7 +23,7 @@ export function WorkoutForm({ isOpen, onClose, onSave }: WorkoutFormProps) {
     const workout: Workout = {
       id: generateId(),
       name,
-      type,
+      category: type,
       duration: parseInt(duration) || 0,
       date,
       exercises: [],

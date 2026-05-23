@@ -127,21 +127,31 @@ export interface Workout {
   id: string;
   date: string;
   name: string;
-  type: 'strength' | 'cardio' | 'hiit' | 'flexibility';
+  category: string;
+  phase?: string;
+  week?: number;
+  isDeload?: boolean;
   exercises: WorkoutExercise[];
   duration: number;
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  // Legacy migration
+  type?: string;
 }
 
 export interface WorkoutTemplate {
   id: string;
   name: string;
-  type: 'strength' | 'cardio' | 'hiit' | 'flexibility';
+  category: string;
+  trainingGoal?: string;
+  phase?: string;
+  week?: number;
   exercises: TemplateExercise[];
   createdAt: string;
   updatedAt: string;
+  // Legacy migration
+  type?: string;
 }
 
 export interface TemplateExercise {
@@ -149,6 +159,8 @@ export interface TemplateExercise {
   name: string;
   targetSets: number;
   targetReps?: number;
+  targetRpe?: number;
+  restSeconds?: number;
 }
 
 export interface WorkoutExercise {
@@ -157,6 +169,9 @@ export interface WorkoutExercise {
   name: string;
   sets: ExerciseSet[];
   notes?: string;
+  rpe?: number;
+  isSupersetWith?: string;
+  supersetOrder?: number;
 }
 
 export interface ExerciseSet {
@@ -164,6 +179,7 @@ export interface ExerciseSet {
   weight?: number;
   duration?: number;
   distance?: number;
+  rpe?: number;
   completed?: boolean;
 }
 

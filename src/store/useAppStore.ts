@@ -768,7 +768,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           id: generateId(),
           date: now.split('T')[0],
           name,
-          type: 'strength',
+          category: 'strength',
           exercises: [],
           duration: data.duration || 30,
           createdAt: now,

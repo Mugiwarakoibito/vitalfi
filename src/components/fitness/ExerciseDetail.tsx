@@ -27,7 +27,8 @@ interface ExerciseDetailProps {
 const difficultyColors = {
   beginner: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
   intermediate: 'bg-amber-500/15 text-amber-400 border-amber-500/20',
-  advanced: 'bg-rose-500/15 text-rose-400 border-rose-500/20'
+  advanced: 'bg-rose-500/15 text-rose-400 border-rose-500/20',
+  elite: 'bg-violet-500/15 text-violet-400 border-violet-500/20'
 }
 
 export function ExerciseDetail({ exerciseId, onClose, onStartExercise }: ExerciseDetailProps) {

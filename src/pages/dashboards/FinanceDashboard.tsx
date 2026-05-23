@@ -164,18 +164,24 @@ export function FinanceDashboard() {
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-10">
           <StreakStatus />
           <div className="flex items-center gap-3">
-            <div className={cn("h-2 w-2 rounded-full", transactions.length > 0 || accounts.length > 0 ? "bg-emerald-400 animate-ping" : "bg-slate-400")} />
-            <h2 className="text-[10px] font-black uppercase tracking-[0.4em]">
-              {transactions.length === 0 && accounts.length === 0 ? (
-                <span className="text-slate-500">Get Started</span>
-              ) : cashFlow > 0 ? (
-                <span className="text-emerald-400">Money Flow: Positive</span>
-              ) : cashFlow < 0 ? (
-                <span className="text-rose-400">Money Flow: Negative</span>
-              ) : (
-                <span className="text-emerald-400">Money Status: On Track</span>
-              )}
-            </h2>
+            {(() => {
+              const hasNoFinanceData = transactions.length === 0 && accounts.length === 0
+              const s = hasNoFinanceData
+                ? { color: 'text-slate-500', ping: 'bg-slate-400', text: 'Get Started' }
+                : spendingHealth >= 20
+                ? { color: 'text-emerald-400', ping: 'bg-emerald-400', text: 'Money Flow: Thriving' }
+                : cashFlow > 0
+                ? { color: 'text-emerald-400', ping: 'bg-emerald-400', text: 'Money Flow: Positive' }
+                : cashFlow === 0
+                ? { color: 'text-cyan-400', ping: 'bg-cyan-400', text: 'Money Status: Balanced' }
+                : spendingHealth > -50
+                ? { color: 'text-amber-400', ping: 'bg-amber-400', text: 'Money Flow: Stretched' }
+                : { color: 'text-rose-400', ping: 'bg-rose-400', text: 'Money Flow: Critical' }
+              return <>
+                <div className={cn("h-2 w-2 rounded-full animate-ping", s.ping)} />
+                <h2 className="text-[10px] font-black uppercase tracking-[0.4em]"><span className={s.color}>{s.text}</span></h2>
+              </>
+            })()}
           </div>
         </div>
         <div className="relative z-10 space-y-6">

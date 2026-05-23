@@ -53,6 +53,15 @@ export default function Finance() {
     return accounts.reduce((sum, acc) => sum + acc.balance, 0)
   }, [accounts])
 
+  const now = new Date()
+  const thisMonthIncome = transactions
+    .filter(t => t.type === 'income' && new Date(t.date).getMonth() === now.getMonth() && new Date(t.date).getFullYear() === now.getFullYear())
+    .reduce((sum, t) => sum + t.amount, 0)
+  const thisMonthSpending = transactions
+    .filter(t => t.type === 'expense' && new Date(t.date).getMonth() === now.getMonth() && new Date(t.date).getFullYear() === now.getFullYear())
+    .reduce((sum, t) => sum + t.amount, 0)
+  const monthlyCashFlow = thisMonthIncome - thisMonthSpending
+
   const handleNaturalLanguageParsed = async (parsed: ParsedTransaction & { raw: string }) => {
     if (parsed.description && parsed.amount > 0) {
       const accountId = accounts[0]?.id
@@ -94,12 +103,14 @@ export default function Finance() {
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
           <StreakStatus />
           <div className="flex items-center gap-3">
-            <div className="h-2 w-2 rounded-full animate-ping bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+            <div className={cn("h-2 w-2 rounded-full animate-ping shadow-[0_0_8px_rgba(16,185,129,0.5)]", accounts.length === 0 && transactions.length === 0 ? "bg-slate-500" : monthlyCashFlow >= 0 ? "bg-emerald-500" : "bg-rose-500")} />
             <h2 className="text-[10px] font-black uppercase tracking-[0.4em]">
-              {accounts.length > 0 || transactions.length > 0 ? (
-                <span className="text-emerald-400">AI Active</span>
-              ) : (
+              {accounts.length === 0 && transactions.length === 0 ? (
                 <span className="text-slate-500">Get Started</span>
+              ) : monthlyCashFlow >= 0 ? (
+                <span className="text-emerald-400">+{formatCurrency(monthlyCashFlow, settings.currency || 'USD')} this month</span>
+              ) : (
+                <span className="text-rose-400">{formatCurrency(monthlyCashFlow, settings.currency || 'USD')} this month</span>
               )}
             </h2>
           </div>

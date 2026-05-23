@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Clock, Dumbbell, Flame, ChevronDown, ChevronUp, Check,
   AlertTriangle, Timer, RotateCcw, Copy, Search, Filter, X, Play, Pause,
   TrendingUp, TrendingDown, Minus, Layers, GripVertical,
-  FileText, Activity
+  FileText, Activity, Zap
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { generateId, formatDuration } from '@/lib/utils'
@@ -17,7 +17,7 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: 'push',
     name: 'Push Day',
-    type: 'strength',
+    category: 'strength',
     exercises: [
       { exerciseId: 'barbell_bench_press', name: 'Barbell Bench Press', targetSets: 4, targetReps: 8 },
       { exerciseId: 'incline_dumbbell_press', name: 'Incline Dumbbell Press', targetSets: 3, targetReps: 10 },
@@ -32,7 +32,7 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: 'pull',
     name: 'Pull Day',
-    type: 'strength',
+    category: 'strength',
     exercises: [
       { exerciseId: 'deadlift', name: 'Conventional Deadlift', targetSets: 3, targetReps: 5 },
       { exerciseId: 'pull_ups', name: 'Pull-ups', targetSets: 3, targetReps: 10 },
@@ -47,7 +47,7 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: 'legs',
     name: 'Leg Day',
-    type: 'strength',
+    category: 'strength',
     exercises: [
       { exerciseId: 'barbell_squat', name: 'Barbell Back Squat', targetSets: 4, targetReps: 8 },
       { exerciseId: 'romanian_deadlift', name: 'Romanian Deadlift', targetSets: 3, targetReps: 10 },
@@ -62,7 +62,7 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: 'upper',
     name: 'Upper Body',
-    type: 'strength',
+    category: 'strength',
     exercises: [
       { exerciseId: 'dumbbell_bench_press', name: 'Dumbbell Bench Press', targetSets: 3, targetReps: 10 },
       { exerciseId: 'barbell_row', name: 'Barbell Row', targetSets: 3, targetReps: 8 },
@@ -77,7 +77,7 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: 'lower',
     name: 'Lower Body',
-    type: 'strength',
+    category: 'strength',
     exercises: [
       { exerciseId: 'barbell_squat', name: 'Barbell Back Squat', targetSets: 3, targetReps: 8 },
       { exerciseId: 'romanian_deadlift', name: 'Romanian Deadlift', targetSets: 3, targetReps: 10 },
@@ -93,7 +93,7 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: 'full_body',
     name: 'Full Body',
-    type: 'strength',
+    category: 'strength',
     exercises: [
       { exerciseId: 'barbell_squat', name: 'Barbell Back Squat', targetSets: 3, targetReps: 8 },
       { exerciseId: 'barbell_bench_press', name: 'Barbell Bench Press', targetSets: 3, targetReps: 8 },
@@ -107,7 +107,7 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: 'five_day_1',
     name: 'Chest & Triceps',
-    type: 'strength',
+    category: 'strength',
     exercises: [
       { exerciseId: 'barbell_bench_press', name: 'Barbell Bench Press', targetSets: 4, targetReps: 8 },
       { exerciseId: 'incline_dumbbell_press', name: 'Incline Dumbbell Press', targetSets: 3, targetReps: 10 },
@@ -122,7 +122,7 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: 'five_day_2',
     name: 'Back & Biceps',
-    type: 'strength',
+    category: 'strength',
     exercises: [
       { exerciseId: 'deadlift', name: 'Conventional Deadlift', targetSets: 3, targetReps: 5 },
       { exerciseId: 'pull_ups', name: 'Pull-ups', targetSets: 3, targetReps: 10 },
@@ -137,7 +137,7 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: 'five_day_3',
     name: 'Legs & Abs',
-    type: 'strength',
+    category: 'strength',
     exercises: [
       { exerciseId: 'barbell_squat', name: 'Barbell Back Squat', targetSets: 4, targetReps: 8 },
       { exerciseId: 'romanian_deadlift', name: 'Romanian Deadlift', targetSets: 3, targetReps: 10 },
@@ -152,7 +152,7 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: 'five_day_4',
     name: 'Shoulders & Arms',
-    type: 'strength',
+    category: 'strength',
     exercises: [
       { exerciseId: 'seated_dumbbell_press', name: 'Seated Dumbbell Press', targetSets: 4, targetReps: 10 },
       { exerciseId: 'lateral_raises', name: 'Lateral Raises', targetSets: 3, targetReps: 15 },
@@ -167,7 +167,7 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: 'five_day_5',
     name: 'Full Body / Cardio',
-    type: 'strength',
+    category: 'strength',
     exercises: [
       { exerciseId: 'barbell_squat', name: 'Barbell Back Squat', targetSets: 3, targetReps: 8 },
       { exerciseId: 'barbell_bench_press', name: 'Barbell Bench Press', targetSets: 3, targetReps: 8 },
@@ -188,11 +188,28 @@ const FADE_SLIDE = {
   exit: { opacity: 0, y: -12 },
 }
 
-const typeConfig = {
+const typeConfig: Record<string, { icon: any; color: string; bg: string; gradient: string }> = {
   strength: { icon: Dumbbell, color: 'text-rose-400', bg: 'bg-rose-500/20 border-rose-500/30', gradient: 'from-rose-500/10 to-transparent' },
+  hypertrophy: { icon: Dumbbell, color: 'text-red-400', bg: 'bg-red-500/20 border-red-500/30', gradient: 'from-red-500/10 to-transparent' },
   cardio: { icon: Activity, color: 'text-sky-400', bg: 'bg-sky-500/20 border-sky-500/30', gradient: 'from-sky-500/10 to-transparent' },
   hiit: { icon: Flame, color: 'text-orange-400', bg: 'bg-orange-500/20 border-orange-500/30', gradient: 'from-orange-500/10 to-transparent' },
-  flexibility: { icon: Activity, color: 'text-emerald-400', bg: 'bg-emerald-500/20 border-emerald-500/30', gradient: 'from-emerald-500/10 to-transparent' },
+  functional: { icon: Activity, color: 'text-teal-400', bg: 'bg-teal-500/20 border-teal-500/30', gradient: 'from-teal-500/10 to-transparent' },
+  mobility: { icon: Activity, color: 'text-emerald-400', bg: 'bg-emerald-500/20 border-emerald-500/30', gradient: 'from-emerald-500/10 to-transparent' },
+  flexibility: { icon: Activity, color: 'text-green-400', bg: 'bg-green-500/20 border-green-500/30', gradient: 'from-green-500/10 to-transparent' },
+  plyo: { icon: Zap, color: 'text-violet-400', bg: 'bg-violet-500/20 border-violet-500/30', gradient: 'from-violet-500/10 to-transparent' },
+  calisthenics: { icon: Dumbbell, color: 'text-amber-400', bg: 'bg-amber-500/20 border-amber-500/30', gradient: 'from-amber-500/10 to-transparent' },
+  endurance: { icon: Activity, color: 'text-blue-400', bg: 'bg-blue-500/20 border-blue-500/30', gradient: 'from-blue-500/10 to-transparent' },
+  speed_agility: { icon: Zap, color: 'text-yellow-400', bg: 'bg-yellow-500/20 border-yellow-500/30', gradient: 'from-yellow-500/10 to-transparent' },
+  balance_stability: { icon: Activity, color: 'text-cyan-400', bg: 'bg-cyan-500/20 border-cyan-500/30', gradient: 'from-cyan-500/10 to-transparent' },
+  core: { icon: Activity, color: 'text-orange-400', bg: 'bg-orange-600/20 border-orange-600/30', gradient: 'from-orange-600/10 to-transparent' },
+  yoga: { icon: Activity, color: 'text-purple-400', bg: 'bg-purple-500/20 border-purple-500/30', gradient: 'from-purple-500/10 to-transparent' },
+  pilates: { icon: Activity, color: 'text-pink-400', bg: 'bg-pink-500/20 border-pink-500/30', gradient: 'from-pink-500/10 to-transparent' },
+  crossfit: { icon: Flame, color: 'text-stone-400', bg: 'bg-stone-500/20 border-stone-500/30', gradient: 'from-stone-500/10 to-transparent' },
+  martial_arts: { icon: Flame, color: 'text-red-400', bg: 'bg-red-600/20 border-red-600/30', gradient: 'from-red-600/10 to-transparent' },
+  recovery: { icon: Activity, color: 'text-blue-400', bg: 'bg-blue-400/20 border-blue-400/30', gradient: 'from-blue-400/10 to-transparent' },
+  isometric: { icon: Activity, color: 'text-zinc-400', bg: 'bg-zinc-500/20 border-zinc-500/30', gradient: 'from-zinc-500/10 to-transparent' },
+  animal_flow: { icon: Activity, color: 'text-lime-400', bg: 'bg-lime-500/20 border-lime-500/30', gradient: 'from-lime-500/10 to-transparent' },
+  breathwork: { icon: Activity, color: 'text-indigo-400', bg: 'bg-indigo-500/20 border-indigo-500/30', gradient: 'from-indigo-500/10 to-transparent' },
 }
 
 function calcVolume(exs: WorkoutExercise[]) {
@@ -489,7 +506,7 @@ export function WorkoutLogger() {
   const { workouts, addWorkout, deleteWorkout } = useAppStore()
   const [showForm, setShowForm] = useState(false)
   const [workoutName, setWorkoutName] = useState('')
-  const [workoutType, setWorkoutType] = useState<Workout['type']>('strength')
+  const [workoutType, setWorkoutType] = useState<Workout['category']>('strength')
   const [duration, setDuration] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [exercises, setExercises] = useState<WorkoutExercise[]>([])
@@ -507,7 +524,7 @@ export function WorkoutLogger() {
 
   const sortedWorkouts = useMemo(() => {
     let list = [...workouts]
-    if (filters.type) list = list.filter((w) => w.type === filters.type)
+    if (filters.category) list = list.filter((w) => w.category === filters.category)
     if (filters.dateFrom) list = list.filter((w) => w.date >= filters.dateFrom!)
     if (filters.dateTo) list = list.filter((w) => w.date <= filters.dateTo!)
     if (filters.search) {
@@ -565,7 +582,7 @@ export function WorkoutLogger() {
 
   const applyTemplate = useCallback((template: WorkoutTemplate) => {
     setWorkoutName(template.name)
-    setWorkoutType(template.type)
+    setWorkoutType(template.category)
     const mapped: WorkoutExercise[] = template.exercises.map((te) => ({
       id: generateId(),
       exerciseId: te.exerciseId,
@@ -716,7 +733,7 @@ export function WorkoutLogger() {
     const workout: Workout = {
       id: generateId(),
       name: workoutName.trim(),
-      type: workoutType,
+      category: workoutType,
       date,
       duration: finalDuration,
       exercises,
@@ -845,8 +862,8 @@ export function WorkoutLogger() {
                 <div>
                   <label className="block text-xs text-gray-400 mb-1.5">Type</label>
                   <select
-                    value={filters.type || ''}
-                    onChange={(e) => setFilters((f) => ({ ...f, type: (e.target.value || undefined) as Workout['type'] }))}
+                    value={filters.category || ''}
+                    onChange={(e) => setFilters((f) => ({ ...f, category: (e.target.value || undefined) as Workout['category'] }))}
                     className="glass-input w-full text-sm"
                   >
                     <option value="">All types</option>
@@ -920,7 +937,7 @@ export function WorkoutLogger() {
         <div className="space-y-4">
           <AnimatePresence>
             {sortedWorkouts.map((wo, index) => {
-              const config = typeConfig[wo.type]
+              const config = typeConfig[wo.category] || typeConfig.strength
               const Icon = config.icon
               const volume = calcVolume(wo.exercises)
               return (
@@ -944,7 +961,7 @@ export function WorkoutLogger() {
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold text-white tracking-tight">{wo.name}</h4>
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${config.bg} ${config.color}`}>
-                              {wo.type}
+                              {wo.category}
                             </span>
                           </div>
                           <p className="text-sm text-gray-400">
@@ -960,14 +977,14 @@ export function WorkoutLogger() {
                       </div>
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => handleDuplicate(wo)}
+                          onClick={() => handleDuplicate(wo as any)}
                           className="p-2 rounded-lg text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all opacity-0 group-hover:opacity-100"
                           title="Duplicate workout"
                         >
                           <Copy className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => setDeletingWorkout(wo)}
+                          onClick={() => setDeletingWorkout(wo as any)}
                           className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1075,7 +1092,7 @@ export function WorkoutLogger() {
                   <div>
                     <label className="block text-sm text-gray-400 mb-2">Type</label>
                     <div className="grid grid-cols-2 gap-2">
-                      {(Object.entries(typeConfig) as [Workout['type'], typeof typeConfig['strength']][]).map(([key, cfg]) => {
+                      {(Object.entries(typeConfig) as [Workout['category'], typeof typeConfig['strength']][]).map(([key, cfg]) => {
                         const CfgIcon = cfg.icon
                         return (
                           <button
@@ -1305,7 +1322,7 @@ export function WorkoutLogger() {
 
                                       <VolumeIndicator
                                         current={calcVolume([ex])}
-                                        previous={getLastVolumeForExercise(ex.exerciseId, workouts)}
+                                        previous={getLastVolumeForExercise(ex.exerciseId, workouts as any)}
                                       />
 
                                       <div className="flex gap-2 pt-2">

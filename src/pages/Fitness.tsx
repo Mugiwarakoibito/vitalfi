@@ -11,11 +11,12 @@ import { SleepLogger } from '@/components/fitness/SleepLogger'
 import { WorkoutStreak } from '@/components/fitness/WorkoutStreak'
 import { PersonalRecords } from '@/components/fitness/PersonalRecords'
 import { SupplementTracker } from '@/components/fitness/SupplementTracker'
+import { StreakStatus } from '@/components/dashboard/StreakStatus'
 import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/lib/utils'
 import {
   Dumbbell, BookOpen, Activity, Utensils, Droplets, Moon,
-  Flame, Trophy, Coffee, Heart, TrendingUp,
+  Flame, Trophy, Coffee, Heart, Plus,
 } from 'lucide-react'
 
 type TabId = 'health' | 'workouts' | 'body' | 'nutrition' | 'hydration' | 'sleep' | 'exercises' | 'records' | 'streak' | 'supplements'
@@ -39,10 +40,23 @@ export default function Fitness() {
   const actionFromUrl = searchParams.get('action')
   const [activeTab, setActiveTab] = useState<TabId>(tabFromUrl || 'health')
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null)
-  const { workouts, meals, sleep } = useAppStore()
+  const { workouts, meals, sleep, hydration } = useAppStore()
 
   const hasData = workouts.length > 0 || meals.length > 0 || sleep.length > 0
-  const totalSessions = workouts.length + meals.length + sleep.length
+  const today = new Date().toISOString().split('T')[0]
+  const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay()); weekStart.setHours(0,0,0,0)
+  const weekStartStr = weekStart.toISOString().split('T')[0]
+  const weeklyActiveDays = new Set([
+    ...workouts.filter(w => w.date >= weekStartStr).map(w => w.date),
+    ...meals.filter(m => m.date >= weekStartStr).map(m => m.date),
+    ...sleep.filter(s => s.date >= weekStartStr).map(s => s.date),
+    ...hydration.filter(h => h.date >= weekStartStr).map(h => h.date),
+  ]).size
+  const workoutDone = workouts.some(w => w.date === today)
+  const mealDone = meals.some(m => m.date === today)
+  const sleepDone = sleep.some(s => s.date === today)
+  const hydrationDone = hydration.some(h => h.date === today)
+  const habitsDone = [workoutDone, mealDone, sleepDone, hydrationDone].filter(Boolean).length
 
   useEffect(() => {
     if (tabFromUrl && tabFromUrl !== activeTab) {
@@ -69,20 +83,11 @@ export default function Fitness() {
         </div>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(168,85,247,0.08),transparent_50%)]" />
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-          <div className="flex items-center gap-3">
-            <div className={`h-2 w-2 rounded-full animate-ping ${hasData ? 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'bg-slate-600'}`} />
-            <h2 className="text-[10px] font-black uppercase tracking-[0.4em]">
-              {hasData ? (
-                <span className="text-purple-400">Life Tracking Active</span>
-              ) : (
-                <span className="text-slate-500">Get Started</span>
-              )}
-            </h2>
-          </div>
+          <StreakStatus />
           <div className="flex items-center gap-2">
-            <TrendingUp size={14} className="text-emerald-400" />
-            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
-              {hasData ? `${totalSessions} total sessions` : 'Ready to start'}
+            <div className="h-2 w-2 rounded-full animate-ping bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]" />
+            <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest">
+              {hasData ? `${weeklyActiveDays} active days` : 'Ready to start'}
             </span>
           </div>
         </div>
@@ -92,9 +97,40 @@ export default function Fitness() {
           </h1>
           <p className="text-lg text-slate-400 mt-2 max-w-xl">
             {hasData
-              ? `${workouts.length} workouts · ${meals.length} meals · ${sleep.length} sleep records`
+              ? <><span className="text-white font-bold">{habitsDone}/4</span> habits completed today</>
               : 'Your health & fitness command center'}
           </p>
+          <div className="flex items-center gap-4 mt-3">
+            {[{ label: 'Workout', done: workoutDone, icon: Dumbbell, color: 'text-rose-400' },
+              { label: 'Meals', done: mealDone, icon: Utensils, color: 'text-orange-400' },
+              { label: 'Sleep', done: sleepDone, icon: Moon, color: 'text-violet-400' },
+              { label: 'Hydration', done: hydrationDone, icon: Droplets, color: 'text-sky-400' },
+            ].map((h) => (
+              <div key={h.label} className={`flex items-center gap-1.5 ${h.done ? 'opacity-100' : 'opacity-40'}`}>
+                <h.icon size={14} className={h.color} />
+                <span className="text-xs font-bold text-slate-400">{h.label}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-4 mt-6">
+            {hasData ? (
+              <button
+                onClick={() => { setActiveTab('workouts'); setSearchParams({ tab: 'workouts' }) }}
+                className="glass-card bg-purple-500/10 border-purple-500/20 px-8 py-4 rounded-2xl flex items-center gap-3 hover:bg-purple-500/20 transition-all group"
+              >
+                <Plus size={20} className="text-purple-400 group-hover:rotate-90 transition-transform" />
+                <span className="text-xs font-black uppercase tracking-widest text-white">Log Workout</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => { setActiveTab('workouts'); setSearchParams({ tab: 'workouts' }) }}
+                className="glass-card bg-cyan-500/10 border-cyan-500/20 px-8 py-4 rounded-2xl flex items-center gap-3 hover:bg-cyan-500/20 transition-all"
+              >
+                <Plus size={20} className="text-cyan-400" />
+                <span className="text-xs font-black uppercase tracking-widest text-white">Start Tracking</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

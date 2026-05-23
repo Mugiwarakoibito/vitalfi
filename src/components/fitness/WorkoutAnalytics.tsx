@@ -11,7 +11,7 @@ export function WorkoutAnalytics() {
 
     const typeCount: Record<string, number> = {}
     workouts.forEach(w => {
-      typeCount[w.type] = (typeCount[w.type] || 0) + 1
+      typeCount[w.category] = (typeCount[w.category] || 0) + 1
     })
     const mostCommon = Object.entries(typeCount).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'
 
@@ -55,7 +55,7 @@ export function WorkoutAnalytics() {
   const getTypeDistribution = () => {
     const types: Record<string, number> = {}
     workouts.forEach(w => {
-      types[w.type] = (types[w.type] || 0) + 1
+      types[w.category] = (types[w.category] || 0) + 1
     })
     return Object.entries(types).map(([type, count]) => ({ type, count }))
   }

@@ -7,7 +7,7 @@ import { storage } from '@/lib/storage'
 import { generateId } from '@/lib/utils'
 import { exerciseLibrary, getExerciseById } from '@/lib/exercises'
 import type { WorkoutTemplate, TemplateExercise } from '@/types/fitness'
-import { Plus, Trash2, Save, Copy, Dumbbell, Flame, Wind, StretchHorizontal } from 'lucide-react'
+import { Plus, Trash2, Save, Copy, Dumbbell, Flame, Wind, StretchHorizontal, Heart, Activity, Zap, Crosshair, Sword } from 'lucide-react'
 
 interface WorkoutTemplateManagerProps {
   onUseTemplate?: (template: WorkoutTemplate) => void
@@ -15,9 +15,26 @@ interface WorkoutTemplateManagerProps {
 
 const typeConfig = {
   strength: { icon: <Dumbbell size={12} />, color: 'text-rose-400', bg: 'bg-rose-500/15' },
-  cardio: { icon: <Wind size={12} />, color: 'text-sky-400', bg: 'bg-sky-500/15' },
+  hypertrophy: { icon: <Dumbbell size={12} />, color: 'text-pink-400', bg: 'bg-pink-500/15' },
+  cardio: { icon: <Heart size={12} />, color: 'text-red-400', bg: 'bg-red-500/15' },
   hiit: { icon: <Flame size={12} />, color: 'text-orange-400', bg: 'bg-orange-500/15' },
+  functional: { icon: <Activity size={12} />, color: 'text-lime-400', bg: 'bg-lime-500/15' },
+  mobility: { icon: <StretchHorizontal size={12} />, color: 'text-teal-400', bg: 'bg-teal-500/15' },
   flexibility: { icon: <StretchHorizontal size={12} />, color: 'text-emerald-400', bg: 'bg-emerald-500/15' },
+  plyo: { icon: <Zap size={12} />, color: 'text-amber-400', bg: 'bg-amber-500/15' },
+  calisthenics: { icon: <Activity size={12} />, color: 'text-violet-400', bg: 'bg-violet-500/15' },
+  endurance: { icon: <Heart size={12} />, color: 'text-rose-400', bg: 'bg-rose-500/15' },
+  speed_agility: { icon: <Zap size={12} />, color: 'text-yellow-400', bg: 'bg-yellow-500/15' },
+  balance_stability: { icon: <Crosshair size={12} />, color: 'text-cyan-400', bg: 'bg-cyan-500/15' },
+  core: { icon: <Activity size={12} />, color: 'text-fuchsia-400', bg: 'bg-fuchsia-500/15' },
+  yoga: { icon: <StretchHorizontal size={12} />, color: 'text-indigo-400', bg: 'bg-indigo-500/15' },
+  pilates: { icon: <StretchHorizontal size={12} />, color: 'text-purple-400', bg: 'bg-purple-500/15' },
+  crossfit: { icon: <Flame size={12} />, color: 'text-orange-400', bg: 'bg-orange-500/15' },
+  martial_arts: { icon: <Sword size={12} />, color: 'text-red-400', bg: 'bg-red-500/15' },
+  recovery: { icon: <Heart size={12} />, color: 'text-green-400', bg: 'bg-green-500/15' },
+  isometric: { icon: <Activity size={12} />, color: 'text-slate-400', bg: 'bg-slate-500/15' },
+  animal_flow: { icon: <Activity size={12} />, color: 'text-amber-400', bg: 'bg-amber-500/15' },
+  breathwork: { icon: <Wind size={12} />, color: 'text-sky-400', bg: 'bg-sky-500/15' },
 }
 
 export function WorkoutTemplateManager({ onUseTemplate }: WorkoutTemplateManagerProps) {
@@ -32,7 +49,7 @@ export function WorkoutTemplateManager({ onUseTemplate }: WorkoutTemplateManager
     loadTemplates()
   }, [])
   const [name, setName] = useState('')
-  const [type, setType] = useState<WorkoutTemplate['type']>('strength')
+  const [type, setType] = useState<WorkoutTemplate['category']>('strength')
   const [exercises, setExercises] = useState<TemplateExercise[]>([])
   const [showPicker, setShowPicker] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -65,7 +82,7 @@ export function WorkoutTemplateManager({ onUseTemplate }: WorkoutTemplateManager
     const template: WorkoutTemplate = {
       id: generateId(),
       name: name.trim(),
-      type,
+      category: type,
       exercises,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -114,9 +131,9 @@ export function WorkoutTemplateManager({ onUseTemplate }: WorkoutTemplateManager
               <CardContent className="space-y-2">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
-                    <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase ${typeConfig[t.type].bg} ${typeConfig[t.type].color}`}>
-                      {typeConfig[t.type].icon}
-                      {t.type}
+                    <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase ${typeConfig[t.category].bg} ${typeConfig[t.category].color}`}>
+                      {typeConfig[t.category].icon}
+                      {t.category}
                     </span>
                     <h4 className="font-medium text-white">{t.name}</h4>
                   </div>
@@ -151,11 +168,28 @@ export function WorkoutTemplateManager({ onUseTemplate }: WorkoutTemplateManager
             <Input label="Template Name" placeholder="e.g. Upper Body A" value={name} onChange={(e) => setName(e.target.value)} />
             <div>
               <label className="mb-1.5 block text-sm font-medium text-muted">Type</label>
-              <select value={type} onChange={(e) => setType(e.target.value as WorkoutTemplate['type'])} className="glass-input w-full">
+              <select value={type} onChange={(e) => setType(e.target.value as WorkoutTemplate['category'])} className="glass-input w-full">
                 <option value="strength">Strength</option>
+                <option value="hypertrophy">Hypertrophy</option>
                 <option value="cardio">Cardio</option>
                 <option value="hiit">HIIT</option>
+                <option value="functional">Functional</option>
+                <option value="mobility">Mobility</option>
                 <option value="flexibility">Flexibility</option>
+                <option value="plyo">Plyo</option>
+                <option value="calisthenics">Calisthenics</option>
+                <option value="endurance">Endurance</option>
+                <option value="speed_agility">Speed & Agility</option>
+                <option value="balance_stability">Balance & Stability</option>
+                <option value="core">Core</option>
+                <option value="yoga">Yoga</option>
+                <option value="pilates">Pilates</option>
+                <option value="crossfit">CrossFit</option>
+                <option value="martial_arts">Martial Arts</option>
+                <option value="recovery">Recovery</option>
+                <option value="isometric">Isometric</option>
+                <option value="animal_flow">Animal Flow</option>
+                <option value="breathwork">Breathwork</option>
               </select>
             </div>
           </div>

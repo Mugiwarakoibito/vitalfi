@@ -104,7 +104,7 @@ export function HealthDashboard({ onNavigate }: HealthDashboardProps) {
     }
   }, [workouts, meals, hydration, sleep])
 
-  const healthScore = useMemo(() => computeHealthScore({ workouts, meals, sleep, hydration, bodyMetrics }), [workouts, meals, sleep, hydration, bodyMetrics])
+  const healthScore = useMemo(() => computeHealthScore({ workouts: workouts as any, meals, sleep, hydration, bodyMetrics }), [workouts, meals, sleep, hydration, bodyMetrics])
 
   const weekWorkouts = useMemo(() => {
     const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)

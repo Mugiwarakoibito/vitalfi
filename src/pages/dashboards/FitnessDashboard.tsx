@@ -56,6 +56,10 @@ export function FitnessDashboard() {
     workouts
   })
 
+  const avgPillarProgress = Math.round(pillars.reduce((a, p) => a + p.progress, 0) / pillars.length)
+  const healthScore = Math.round(readinessScore * 0.5 + avgPillarProgress * 0.5)
+  const hasNoFitnessData = workouts.length === 0 && meals.length === 0 && sleep.length === 0
+
   const forecast = generateForecast({
     workouts,
     meals,
@@ -79,18 +83,23 @@ export function FitnessDashboard() {
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-10">
           <StreakStatus />
           <div className="flex items-center gap-3">
-            <div className={cn("h-2 w-2 rounded-full animate-ping shadow-[0_0_8px_rgba(168,85,247,0.5)]", workouts.length === 0 && meals.length === 0 && sleep.length === 0 ? "bg-slate-400" : "bg-purple-500")} />
-            <h2 className="text-[10px] font-black uppercase tracking-[0.4em]">
-              {workouts.length === 0 && meals.length === 0 && sleep.length === 0 ? (
-                <span className="text-slate-500">Get Started</span>
-              ) : readinessScore > 70 ? (
-                <span className="text-purple-400">Health Status: Feeling Good</span>
-              ) : readinessScore > 0 ? (
-                <span className="text-amber-400">Health Status: Need Rest</span>
-              ) : (
-                <span className="text-purple-400">Health Status: On Track</span>
-              )}
-            </h2>
+            {(() => {
+            const s = hasNoFitnessData
+              ? { color: 'text-slate-500', ping: 'bg-slate-400', text: 'Get Started' }
+              : healthScore >= 80
+              ? { color: 'text-emerald-400', ping: 'bg-emerald-400', text: 'Health Status: Peak' }
+              : healthScore >= 60
+              ? { color: 'text-purple-400', ping: 'bg-purple-500', text: 'Health Status: Feeling Good' }
+              : healthScore >= 40
+              ? { color: 'text-blue-400', ping: 'bg-blue-400', text: 'Health Status: Steady' }
+              : healthScore >= 20
+              ? { color: 'text-amber-400', ping: 'bg-amber-400', text: 'Health Status: Need Rest' }
+              : { color: 'text-rose-400', ping: 'bg-rose-400', text: 'Health Status: Critical' }
+            return <>
+              <div className={cn("h-2 w-2 rounded-full animate-ping shadow-[0_0_8px_rgba(168,85,247,0.5)]", s.ping)} />
+              <h2 className="text-[10px] font-black uppercase tracking-[0.4em]"><span className={s.color}>{s.text}</span></h2>
+            </>
+          })()}
           </div>
         </div>
         <div className="relative z-10 space-y-6">
@@ -102,11 +111,11 @@ export function FitnessDashboard() {
             )}
           </h1>
           <p className="text-lg md:text-xl text-slate-400 max-w-xl font-medium">
-            {workouts.length === 0 && meals.length === 0 && sleep.length === 0 ? (
+            {hasNoFitnessData ? (
               <>Ignite your potential. Record your first workout and watch the transformation begin.</>
-            ) : readinessScore > 70 ? (
+            ) : healthScore >= 60 ? (
               <>Your energy levels are high! Today is a great day to get things done.</>
-            ) : readinessScore > 0 ? (
+            ) : healthScore > 0 ? (
               <>You might be a bit tired today. We recommend taking it easy and getting some rest.</>
             ) : (
               <>Keep tracking your health metrics to see your progress.</>
