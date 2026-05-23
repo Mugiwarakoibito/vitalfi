@@ -13,181 +13,6 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import type { Workout, WorkoutExercise, ExerciseSet, WorkoutTemplate, WorkoutFilter, ExerciseCategory, MuscleGroup } from '@/types/fitness'
 
-const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
-  {
-    id: 'push',
-    name: 'Push Day',
-    category: 'strength',
-    exercises: [
-      { exerciseId: 'barbell_bench_press', name: 'Barbell Bench Press', targetSets: 4, targetReps: 8 },
-      { exerciseId: 'incline_dumbbell_press', name: 'Incline Dumbbell Press', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'seated_dumbbell_press', name: 'Seated Dumbbell Press', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'lateral_raises', name: 'Lateral Raises', targetSets: 3, targetReps: 15 },
-      { exerciseId: 'tricep_pushdown', name: 'Tricep Pushdown', targetSets: 3, targetReps: 12 },
-      { exerciseId: 'overhead_tricep_extension', name: 'Overhead Tricep Extension', targetSets: 3, targetReps: 12 },
-    ],
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: 'pull',
-    name: 'Pull Day',
-    category: 'strength',
-    exercises: [
-      { exerciseId: 'deadlift', name: 'Conventional Deadlift', targetSets: 3, targetReps: 5 },
-      { exerciseId: 'pull_ups', name: 'Pull-ups', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'seated_cable_row', name: 'Seated Cable Row', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'barbell_curl', name: 'Barbell Curl', targetSets: 3, targetReps: 12 },
-      { exerciseId: 'hammer_curl', name: 'Hammer Curl', targetSets: 3, targetReps: 12 },
-      { exerciseId: 'face_pulls', name: 'Face Pulls', targetSets: 3, targetReps: 15 },
-    ],
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: 'legs',
-    name: 'Leg Day',
-    category: 'strength',
-    exercises: [
-      { exerciseId: 'barbell_squat', name: 'Barbell Back Squat', targetSets: 4, targetReps: 8 },
-      { exerciseId: 'romanian_deadlift', name: 'Romanian Deadlift', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'leg_press', name: 'Leg Press', targetSets: 3, targetReps: 12 },
-      { exerciseId: 'leg_extension', name: 'Leg Extension', targetSets: 3, targetReps: 12 },
-      { exerciseId: 'lying_leg_curl', name: 'Lying Leg Curl', targetSets: 3, targetReps: 12 },
-      { exerciseId: 'standing_calf_raise', name: 'Standing Calf Raise', targetSets: 4, targetReps: 15 },
-    ],
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: 'upper',
-    name: 'Upper Body',
-    category: 'strength',
-    exercises: [
-      { exerciseId: 'dumbbell_bench_press', name: 'Dumbbell Bench Press', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'barbell_row', name: 'Barbell Row', targetSets: 3, targetReps: 8 },
-      { exerciseId: 'seated_dumbbell_press', name: 'Seated Dumbbell Press', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'lat_pulldown', name: 'Lat Pulldown', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'dumbbell_curl', name: 'Dumbbell Curl', targetSets: 3, targetReps: 12 },
-      { exerciseId: 'tricep_pushdown', name: 'Tricep Pushdown', targetSets: 3, targetReps: 12 },
-    ],
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: 'lower',
-    name: 'Lower Body',
-    category: 'strength',
-    exercises: [
-      { exerciseId: 'barbell_squat', name: 'Barbell Back Squat', targetSets: 3, targetReps: 8 },
-      { exerciseId: 'romanian_deadlift', name: 'Romanian Deadlift', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'bulgarian_split_squat', name: 'Bulgarian Split Squat', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'leg_extension', name: 'Leg Extension', targetSets: 3, targetReps: 12 },
-      { exerciseId: 'lying_leg_curl', name: 'Lying Leg Curl', targetSets: 3, targetReps: 12 },
-      { exerciseId: 'standing_calf_raise', name: 'Standing Calf Raise', targetSets: 4, targetReps: 15 },
-      { exerciseId: 'barbell_hip_thrust', name: 'Barbell Hip Thrust', targetSets: 3, targetReps: 10 },
-    ],
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: 'full_body',
-    name: 'Full Body',
-    category: 'strength',
-    exercises: [
-      { exerciseId: 'barbell_squat', name: 'Barbell Back Squat', targetSets: 3, targetReps: 8 },
-      { exerciseId: 'barbell_bench_press', name: 'Barbell Bench Press', targetSets: 3, targetReps: 8 },
-      { exerciseId: 'barbell_row', name: 'Barbell Row', targetSets: 3, targetReps: 8 },
-      { exerciseId: 'overhead_press', name: 'Overhead Press', targetSets: 3, targetReps: 8 },
-      { exerciseId: 'romanian_deadlift', name: 'Romanian Deadlift', targetSets: 3, targetReps: 10 },
-    ],
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: 'five_day_1',
-    name: 'Chest & Triceps',
-    category: 'strength',
-    exercises: [
-      { exerciseId: 'barbell_bench_press', name: 'Barbell Bench Press', targetSets: 4, targetReps: 8 },
-      { exerciseId: 'incline_dumbbell_press', name: 'Incline Dumbbell Press', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'dumbbell_flyes', name: 'Dumbbell Flyes', targetSets: 3, targetReps: 12 },
-      { exerciseId: 'close_grip_bench_press', name: 'Close-Grip Bench Press', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'skull_crusher', name: 'Skull Crushers', targetSets: 3, targetReps: 12 },
-      { exerciseId: 'rope_pushdown', name: 'Rope Pushdown', targetSets: 3, targetReps: 15 },
-    ],
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: 'five_day_2',
-    name: 'Back & Biceps',
-    category: 'strength',
-    exercises: [
-      { exerciseId: 'deadlift', name: 'Conventional Deadlift', targetSets: 3, targetReps: 5 },
-      { exerciseId: 'pull_ups', name: 'Pull-ups', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'seated_cable_row', name: 'Seated Cable Row', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'single_arm_dumbbell_row', name: 'Single-Arm Dumbbell Row', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'barbell_curl', name: 'Barbell Curl', targetSets: 3, targetReps: 12 },
-      { exerciseId: 'incline_dumbbell_curl', name: 'Incline Dumbbell Curl', targetSets: 3, targetReps: 12 },
-    ],
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: 'five_day_3',
-    name: 'Legs & Abs',
-    category: 'strength',
-    exercises: [
-      { exerciseId: 'barbell_squat', name: 'Barbell Back Squat', targetSets: 4, targetReps: 8 },
-      { exerciseId: 'romanian_deadlift', name: 'Romanian Deadlift', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'leg_press', name: 'Leg Press', targetSets: 3, targetReps: 12 },
-      { exerciseId: 'walking_lunges', name: 'Walking Lunges', targetSets: 3, targetReps: 10 },
-      { exerciseId: 'standing_calf_raise', name: 'Standing Calf Raise', targetSets: 4, targetReps: 15 },
-      { exerciseId: 'hanging_leg_raises', name: 'Hanging Leg Raises', targetSets: 3, targetReps: 12 },
-    ],
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: 'five_day_4',
-    name: 'Shoulders & Arms',
-    category: 'strength',
-    exercises: [
-      { exerciseId: 'seated_dumbbell_press', name: 'Seated Dumbbell Press', targetSets: 4, targetReps: 10 },
-      { exerciseId: 'lateral_raises', name: 'Lateral Raises', targetSets: 3, targetReps: 15 },
-      { exerciseId: 'reverse_dumbbell_flyes', name: 'Reverse Dumbbell Flyes', targetSets: 3, targetReps: 15 },
-      { exerciseId: 'barbell_shrugs', name: 'Barbell Shrugs', targetSets: 3, targetReps: 12 },
-      { exerciseId: 'preacher_curl', name: 'Preacher Curl', targetSets: 3, targetReps: 12 },
-      { exerciseId: 'overhead_tricep_extension', name: 'Overhead Tricep Extension', targetSets: 3, targetReps: 12 },
-    ],
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: 'five_day_5',
-    name: 'Full Body / Cardio',
-    category: 'strength',
-    exercises: [
-      { exerciseId: 'barbell_squat', name: 'Barbell Back Squat', targetSets: 3, targetReps: 8 },
-      { exerciseId: 'barbell_bench_press', name: 'Barbell Bench Press', targetSets: 3, targetReps: 8 },
-      { exerciseId: 'barbell_row', name: 'Barbell Row', targetSets: 3, targetReps: 8 },
-      { exerciseId: 'thrusters_hiit', name: 'Thrusters', targetSets: 3, targetReps: 12 },
-      { exerciseId: 'box_jumps_hiit', name: 'Box Jumps', targetSets: 3, targetReps: 8 },
-      { exerciseId: 'plank', name: 'Plank', targetSets: 3, targetReps: 1 },
-    ],
-    createdAt: '',
-    updatedAt: '',
-  },
-]
-
-const REST_TIMER_DURATION = 90
-const FADE_SLIDE = {
-  initial: { opacity: 0, y: 12 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -12 },
-}
-
 const typeConfig: Record<string, { icon: any; color: string; bg: string; gradient: string }> = {
   strength: { icon: Dumbbell, color: 'text-rose-400', bg: 'bg-rose-500/20 border-rose-500/30', gradient: 'from-rose-500/10 to-transparent' },
   hypertrophy: { icon: Dumbbell, color: 'text-red-400', bg: 'bg-red-500/20 border-red-500/30', gradient: 'from-red-500/10 to-transparent' },
@@ -420,7 +245,7 @@ function ExercisePicker({ onSelect, onClose }: { onSelect: (id: string) => void;
   )
 }
 
-function TemplatePicker({ onSelect, onClose }: { onSelect: (template: WorkoutTemplate) => void; onClose: () => void }) {
+function TemplatePicker({ templates, onSelect, onClose }: { templates: WorkoutTemplate[]; onSelect: (template: WorkoutTemplate) => void; onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={onClose}>
       <motion.div
@@ -437,27 +262,35 @@ function TemplatePicker({ onSelect, onClose }: { onSelect: (template: WorkoutTem
               <X className="w-4 h-4" />
             </button>
           </div>
-          <p className="text-sm text-gray-400 mt-1">Quick-start a workout from a template</p>
+          <p className="text-sm text-gray-400 mt-1">Quick-start a workout from your past sessions</p>
         </div>
         <div className="overflow-y-auto max-h-[60vh] p-3 space-y-2">
-          {WORKOUT_TEMPLATES.map((template) => (
-            <button
-              key={template.id}
-              onClick={() => onSelect(template)}
-              className="flex w-full items-center gap-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/10 p-4 text-left transition-all group"
-            >
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/20 flex items-center justify-center shrink-0">
-                <Layers className="w-5 h-5 text-indigo-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-medium text-white text-sm">{template.name}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {template.exercises.length} exercises
-                </p>
-              </div>
-              <Plus className="w-4 h-4 text-indigo-400 shrink-0 opacity-0 group-hover:opacity-100 transition-all" />
-            </button>
-          ))}
+          {templates.length === 0 ? (
+            <div className="text-center py-12">
+              <Layers className="w-10 h-10 text-gray-500 mx-auto mb-3" />
+              <p className="text-gray-400 text-sm">No templates yet</p>
+              <p className="text-gray-500 text-xs mt-1">Log a workout and it will appear here as a template</p>
+            </div>
+          ) : (
+            templates.map((template) => (
+              <button
+                key={template.id}
+                onClick={() => onSelect(template)}
+                className="flex w-full items-center gap-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/10 p-4 text-left transition-all group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/20 flex items-center justify-center shrink-0">
+                  <Layers className="w-5 h-5 text-indigo-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-white text-sm">{template.name}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {template.exercises.length} exercises — {template.category ? categoryLabels[template.category as ExerciseCategory] || template.category : 'General'}
+                  </p>
+                </div>
+                <Plus className="w-4 h-4 text-indigo-400 shrink-0 opacity-0 group-hover:opacity-100 transition-all" />
+              </button>
+            ))
+          )}
         </div>
       </motion.div>
     </div>
@@ -504,6 +337,26 @@ function ConfirmDialog({
 
 export function WorkoutLogger() {
   const { workouts, addWorkout, deleteWorkout } = useAppStore()
+  const derivedTemplates = useMemo(() => {
+    const seen = new Map<string, Workout>()
+    for (const w of [...workouts].reverse()) {
+      if (!w.name || seen.has(w.name)) continue
+      seen.set(w.name, w)
+    }
+    return Array.from(seen.entries()).map(([name, w]) => ({
+      id: `template_${w.id}`,
+      name,
+      category: w.category,
+      exercises: w.exercises.map((e) => ({
+        exerciseId: e.exerciseId,
+        name: e.name,
+        targetSets: e.sets.length,
+        targetReps: e.sets[0]?.reps,
+      })),
+      createdAt: w.createdAt,
+      updatedAt: w.updatedAt,
+    })) as WorkoutTemplate[]
+  }, [workouts])
   const [showForm, setShowForm] = useState(false)
   const [workoutName, setWorkoutName] = useState('')
   const [workoutType, setWorkoutType] = useState<Workout['category']>('strength')
@@ -1392,6 +1245,7 @@ export function WorkoutLogger() {
       <AnimatePresence>
         {showTemplatePicker && (
           <TemplatePicker
+            templates={derivedTemplates}
             onSelect={applyTemplate}
             onClose={() => setShowTemplatePicker(false)}
           />
