@@ -4,37 +4,40 @@ import {
   Plus, Trash2, Clock, Dumbbell, Flame, ChevronDown, ChevronUp, Check,
   AlertTriangle, Timer, RotateCcw, Copy, Search, Filter, X, Play, Pause,
   TrendingUp, TrendingDown, Minus, Layers, GripVertical,
-  FileText, Activity, Zap
+  FileText, Activity, Zap, Wind, Settings2, Move, StretchHorizontal,
+  PersonStanding, Gauge, Crosshair, Weight, Heart, Shield, Sword, Coffee,
+  Equal, Footprints, Waves,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { generateId, formatDuration } from '@/lib/utils'
 import { exerciseLibrary, getExerciseById, getAllMuscleGroups, categoryLabels } from '@/lib/exercises'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import type { Workout, WorkoutExercise, ExerciseSet, WorkoutTemplate, WorkoutFilter, ExerciseCategory, MuscleGroup } from '@/types/fitness'
+import type { WorkoutExercise, ExerciseSet, WorkoutTemplate, WorkoutFilter, ExerciseCategory, MuscleGroup } from '@/types/fitness'
+import type { Workout } from '@/lib/storage'
 
 const typeConfig: Record<string, { icon: any; color: string; bg: string; gradient: string }> = {
   strength: { icon: Dumbbell, color: 'text-rose-400', bg: 'bg-rose-500/20 border-rose-500/30', gradient: 'from-rose-500/10 to-transparent' },
-  hypertrophy: { icon: Dumbbell, color: 'text-red-400', bg: 'bg-red-500/20 border-red-500/30', gradient: 'from-red-500/10 to-transparent' },
-  cardio: { icon: Activity, color: 'text-sky-400', bg: 'bg-sky-500/20 border-sky-500/30', gradient: 'from-sky-500/10 to-transparent' },
+  hypertrophy: { icon: TrendingUp, color: 'text-red-400', bg: 'bg-red-500/20 border-red-500/30', gradient: 'from-red-500/10 to-transparent' },
+  cardio: { icon: Wind, color: 'text-sky-400', bg: 'bg-sky-500/20 border-sky-500/30', gradient: 'from-sky-500/10 to-transparent' },
   hiit: { icon: Flame, color: 'text-orange-400', bg: 'bg-orange-500/20 border-orange-500/30', gradient: 'from-orange-500/10 to-transparent' },
-  functional: { icon: Activity, color: 'text-teal-400', bg: 'bg-teal-500/20 border-teal-500/30', gradient: 'from-teal-500/10 to-transparent' },
-  mobility: { icon: Activity, color: 'text-emerald-400', bg: 'bg-emerald-500/20 border-emerald-500/30', gradient: 'from-emerald-500/10 to-transparent' },
-  flexibility: { icon: Activity, color: 'text-green-400', bg: 'bg-green-500/20 border-green-500/30', gradient: 'from-green-500/10 to-transparent' },
+  functional: { icon: Settings2, color: 'text-teal-400', bg: 'bg-teal-500/20 border-teal-500/30', gradient: 'from-teal-500/10 to-transparent' },
+  mobility: { icon: Move, color: 'text-emerald-400', bg: 'bg-emerald-500/20 border-emerald-500/30', gradient: 'from-emerald-500/10 to-transparent' },
+  flexibility: { icon: StretchHorizontal, color: 'text-green-400', bg: 'bg-green-500/20 border-green-500/30', gradient: 'from-green-500/10 to-transparent' },
   plyo: { icon: Zap, color: 'text-violet-400', bg: 'bg-violet-500/20 border-violet-500/30', gradient: 'from-violet-500/10 to-transparent' },
-  calisthenics: { icon: Dumbbell, color: 'text-amber-400', bg: 'bg-amber-500/20 border-amber-500/30', gradient: 'from-amber-500/10 to-transparent' },
-  endurance: { icon: Activity, color: 'text-blue-400', bg: 'bg-blue-500/20 border-blue-500/30', gradient: 'from-blue-500/10 to-transparent' },
-  speed_agility: { icon: Zap, color: 'text-yellow-400', bg: 'bg-yellow-500/20 border-yellow-500/30', gradient: 'from-yellow-500/10 to-transparent' },
-  balance_stability: { icon: Activity, color: 'text-cyan-400', bg: 'bg-cyan-500/20 border-cyan-500/30', gradient: 'from-cyan-500/10 to-transparent' },
-  core: { icon: Activity, color: 'text-orange-400', bg: 'bg-orange-600/20 border-orange-600/30', gradient: 'from-orange-600/10 to-transparent' },
-  yoga: { icon: Activity, color: 'text-purple-400', bg: 'bg-purple-500/20 border-purple-500/30', gradient: 'from-purple-500/10 to-transparent' },
+  calisthenics: { icon: PersonStanding, color: 'text-amber-400', bg: 'bg-amber-500/20 border-amber-500/30', gradient: 'from-amber-500/10 to-transparent' },
+  endurance: { icon: Timer, color: 'text-blue-400', bg: 'bg-blue-500/20 border-blue-500/30', gradient: 'from-blue-500/10 to-transparent' },
+  speed_agility: { icon: Gauge, color: 'text-yellow-400', bg: 'bg-yellow-500/20 border-yellow-500/30', gradient: 'from-yellow-500/10 to-transparent' },
+  balance_stability: { icon: Crosshair, color: 'text-cyan-400', bg: 'bg-cyan-500/20 border-cyan-500/30', gradient: 'from-cyan-500/10 to-transparent' },
+  core: { icon: Weight, color: 'text-orange-400', bg: 'bg-orange-600/20 border-orange-600/30', gradient: 'from-orange-600/10 to-transparent' },
+  yoga: { icon: Heart, color: 'text-purple-400', bg: 'bg-purple-500/20 border-purple-500/30', gradient: 'from-purple-500/10 to-transparent' },
   pilates: { icon: Activity, color: 'text-pink-400', bg: 'bg-pink-500/20 border-pink-500/30', gradient: 'from-pink-500/10 to-transparent' },
-  crossfit: { icon: Flame, color: 'text-stone-400', bg: 'bg-stone-500/20 border-stone-500/30', gradient: 'from-stone-500/10 to-transparent' },
-  martial_arts: { icon: Flame, color: 'text-red-400', bg: 'bg-red-600/20 border-red-600/30', gradient: 'from-red-600/10 to-transparent' },
-  recovery: { icon: Activity, color: 'text-blue-400', bg: 'bg-blue-400/20 border-blue-400/30', gradient: 'from-blue-400/10 to-transparent' },
-  isometric: { icon: Activity, color: 'text-zinc-400', bg: 'bg-zinc-500/20 border-zinc-500/30', gradient: 'from-zinc-500/10 to-transparent' },
-  animal_flow: { icon: Activity, color: 'text-lime-400', bg: 'bg-lime-500/20 border-lime-500/30', gradient: 'from-lime-500/10 to-transparent' },
-  breathwork: { icon: Activity, color: 'text-indigo-400', bg: 'bg-indigo-500/20 border-indigo-500/30', gradient: 'from-indigo-500/10 to-transparent' },
+  crossfit: { icon: Shield, color: 'text-stone-400', bg: 'bg-stone-500/20 border-stone-500/30', gradient: 'from-stone-500/10 to-transparent' },
+  martial_arts: { icon: Sword, color: 'text-red-400', bg: 'bg-red-600/20 border-red-600/30', gradient: 'from-red-600/10 to-transparent' },
+  recovery: { icon: Coffee, color: 'text-blue-400', bg: 'bg-blue-400/20 border-blue-400/30', gradient: 'from-blue-400/10 to-transparent' },
+  isometric: { icon: Equal, color: 'text-zinc-400', bg: 'bg-zinc-500/20 border-zinc-500/30', gradient: 'from-zinc-500/10 to-transparent' },
+  animal_flow: { icon: Footprints, color: 'text-lime-400', bg: 'bg-lime-500/20 border-lime-500/30', gradient: 'from-lime-500/10 to-transparent' },
+  breathwork: { icon: Waves, color: 'text-indigo-400', bg: 'bg-indigo-500/20 border-indigo-500/30', gradient: 'from-indigo-500/10 to-transparent' },
 }
 
 function calcVolume(exs: WorkoutExercise[]) {
@@ -333,6 +336,13 @@ function ConfirmDialog({
       </motion.div>
     </div>
   )
+}
+
+const REST_TIMER_DURATION = 90
+const FADE_SLIDE = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -12 },
 }
 
 export function WorkoutLogger() {
@@ -716,7 +726,7 @@ export function WorkoutLogger() {
                   <label className="block text-xs text-gray-400 mb-1.5">Type</label>
                   <select
                     value={filters.category || ''}
-                    onChange={(e) => setFilters((f) => ({ ...f, category: (e.target.value || undefined) as Workout['category'] }))}
+                    onChange={(e) => setFilters((f) => ({ ...f, category: (e.target.value || undefined) as ExerciseCategory | undefined }))}
                     className="glass-input w-full text-sm"
                   >
                     <option value="">All types</option>
