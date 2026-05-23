@@ -44,14 +44,7 @@ export default function Fitness() {
 
   const hasData = workouts.length > 0 || meals.length > 0 || sleep.length > 0
   const today = new Date().toISOString().split('T')[0]
-  const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay()); weekStart.setHours(0,0,0,0)
-  const weekStartStr = weekStart.toISOString().split('T')[0]
-  const weeklyActiveDays = new Set([
-    ...workouts.filter(w => w.date >= weekStartStr).map(w => w.date),
-    ...meals.filter(m => m.date >= weekStartStr).map(m => m.date),
-    ...sleep.filter(s => s.date >= weekStartStr).map(s => s.date),
-    ...hydration.filter(h => h.date >= weekStartStr).map(h => h.date),
-  ]).size
+  const todayCalories = meals.filter(m => m.date === today).reduce((sum, m) => sum + (m.calories || 0), 0)
   const workoutDone = workouts.some(w => w.date === today)
   const mealDone = meals.some(m => m.date === today)
   const sleepDone = sleep.some(s => s.date === today)
@@ -84,10 +77,14 @@ export default function Fitness() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(168,85,247,0.08),transparent_50%)]" />
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
           <StreakStatus />
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full animate-ping bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]" />
-            <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest">
-              {hasData ? `${weeklyActiveDays} active days` : 'Ready to start'}
+          <div className="flex items-center gap-3">
+            <Flame size={16} className={hasData && todayCalories > 0 ? 'text-orange-400' : 'text-slate-600'} />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+              {todayCalories > 0 ? (
+                <span className="text-orange-400">{todayCalories.toLocaleString()} cal</span>
+              ) : (
+                <span className="text-slate-500">-- cal</span>
+              )}
             </span>
           </div>
         </div>

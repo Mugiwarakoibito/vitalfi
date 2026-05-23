@@ -8,6 +8,7 @@ import {
   X, Wand2, Sparkles, Grid3X3, List, Star, ChevronDown,
   Eye, Bookmark, BookmarkCheck,
   Weight, Settings2, GitBranch, Minus, Circle,
+  TrendingUp, Gauge, Crosshair, Timer, Activity, Heart, Shield, Sword, Coffee, Waves, Move, Footprints,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AddExerciseModal } from './AddExerciseModal'
@@ -19,12 +20,27 @@ interface ExerciseLibraryProps {
 }
 
 const categories: { value: ExerciseCategory; icon: React.ReactNode; label: string }[] = [
-  { value: 'strength', icon: <Dumbbell size={14} />, label: 'Strength' },
-  { value: 'cardio', icon: <Wind size={14} />, label: 'Cardio' },
-  { value: 'hiit', icon: <Flame size={14} />, label: 'HIIT' },
-  { value: 'flexibility', icon: <StretchHorizontal size={14} />, label: 'Flexibility' },
-  { value: 'plyo', icon: <Zap size={14} />, label: 'Plyo' },
-  { value: 'calisthenics', icon: <PersonStanding size={14} />, label: 'Calisthenics' },
+  { value: 'strength', icon: <Dumbbell size={13} />, label: 'Strength' },
+  { value: 'hypertrophy', icon: <TrendingUp size={13} />, label: 'Hypertrophy' },
+  { value: 'cardio', icon: <Wind size={13} />, label: 'Cardio' },
+  { value: 'hiit', icon: <Flame size={13} />, label: 'HIIT' },
+  { value: 'functional', icon: <Settings2 size={13} />, label: 'Functional' },
+  { value: 'mobility', icon: <Move size={13} />, label: 'Mobility' },
+  { value: 'flexibility', icon: <StretchHorizontal size={13} />, label: 'Flexibility' },
+  { value: 'plyo', icon: <Zap size={13} />, label: 'Plyo' },
+  { value: 'calisthenics', icon: <PersonStanding size={13} />, label: 'Calisthenics' },
+  { value: 'endurance', icon: <Timer size={13} />, label: 'Endurance' },
+  { value: 'speed_agility', icon: <Gauge size={13} />, label: 'Speed & Agility' },
+  { value: 'balance_stability', icon: <Crosshair size={13} />, label: 'Balance' },
+  { value: 'core', icon: <Weight size={13} />, label: 'Core' },
+  { value: 'yoga', icon: <Heart size={13} />, label: 'Yoga' },
+  { value: 'pilates', icon: <Activity size={13} />, label: 'Pilates' },
+  { value: 'crossfit', icon: <Shield size={13} />, label: 'CrossFit' },
+  { value: 'martial_arts', icon: <Sword size={13} />, label: 'Martial Arts' },
+  { value: 'recovery', icon: <Coffee size={13} />, label: 'Recovery' },
+  { value: 'isometric', icon: <Minus size={13} />, label: 'Isometric' },
+  { value: 'animal_flow', icon: <Footprints size={13} />, label: 'Animal Flow' },
+  { value: 'breathwork', icon: <Waves size={13} />, label: 'Breathwork' },
 ]
 
 const equipmentIcons: Record<string, React.ReactNode> = {
@@ -131,9 +147,8 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
 
   const stats = useMemo(() => {
     const categoryCounts: Record<string, number> = {}
-    categories.forEach(c => { categoryCounts[c.value] = 0 })
     allExercises.forEach(ex => {
-      if (categoryCounts[ex.category] !== undefined) categoryCounts[ex.category]++
+      categoryCounts[ex.category] = (categoryCounts[ex.category] || 0) + 1
     })
     return {
       total: allExercises.length,
@@ -238,20 +253,20 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
       </div>
 
       {/* Category Stats Bar */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+      <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent -mx-1 px-1">
         {categories.map((cat) => (
           <button
             key={cat.value}
             onClick={() => setActiveCategory(activeCategory === cat.value ? null : cat.value)}
-            className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3 transition-all duration-200 ${
+            className={`flex flex-col items-center gap-1 rounded-xl border px-2.5 py-2 transition-all duration-200 shrink-0 min-w-[64px] ${
               activeCategory === cat.value
                 ? 'border-primary/40 bg-primary/10 text-primary-light shadow-[0_0_20px_rgba(139,92,246,0.1)]'
                 : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white hover:bg-white/[0.04]'
             }`}
           >
             <span className="opacity-70">{cat.icon}</span>
-            <span className="text-[11px] font-semibold">{cat.label}</span>
-            <span className="text-[10px] opacity-60">{stats.categories[cat.value]}</span>
+            <span className="text-[10px] font-semibold leading-tight text-center">{cat.label}</span>
+            <span className="text-[9px] opacity-60">{stats.categories[cat.value] || 0}</span>
           </button>
         ))}
       </div>
