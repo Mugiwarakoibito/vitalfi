@@ -1,9 +1,9 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, Clock, Dumbbell, Flame, ChevronDown, ChevronUp, Check,
-  AlertTriangle, Timer, RotateCcw, Copy, Search, Filter, X, Play, Pause,
+  AlertTriangle, Copy, Search, Filter, X,
   TrendingUp, TrendingDown, Minus, Layers, GripVertical,
   FileText, Activity, Zap, Wind, Settings2, Move, StretchHorizontal,
   PersonStanding, Gauge, Crosshair, Weight, Heart, Shield, Sword, Coffee,
@@ -15,8 +15,8 @@ import { storage } from '@/lib/storage'
 import { exerciseLibrary, getExerciseById, getAllMuscleGroups, categoryLabels, muscleGroupColors } from '@/lib/exercises'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import type { WorkoutExercise, ExerciseSet, WorkoutTemplate, WorkoutFilter, ExerciseCategory, MuscleGroup } from '@/types/fitness'
-import type { Workout } from '@/lib/storage'
+import type { WorkoutExercise, ExerciseSet, WorkoutFilter, ExerciseCategory, MuscleGroup } from '@/types/fitness'
+import type { Workout, WorkoutTemplate } from '@/lib/storage'
 
 const typeConfig: Record<string, { icon: any; color: string; bg: string; gradient: string }> = {
   strength: { icon: Dumbbell, color: 'text-rose-400', bg: 'bg-rose-500/20 border-rose-500/30', gradient: 'from-rose-500/10 to-transparent' },
@@ -76,67 +76,6 @@ function VolumeIndicator({ current, previous }: { current: number; previous: num
       <TrendingDown className="w-3.5 h-3.5" />
       {diff.toLocaleString()}kg
     </span>
-  )
-}
-
-function RestTimer({ onComplete }: { onComplete: () => void }) {
-  const [remaining, setRemaining] = useState(REST_TIMER_DURATION)
-  const [running, setRunning] = useState(false)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
-  }, [])
-
-  const start = () => {
-    setRunning(true)
-    intervalRef.current = setInterval(() => {
-      setRemaining((prev) => {
-        if (prev <= 1) {
-          if (intervalRef.current) clearInterval(intervalRef.current)
-          setRunning(false)
-          onComplete()
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-  }
-
-  const stop = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current)
-    setRunning(false)
-  }
-
-  const reset = () => {
-    stop()
-    setRemaining(REST_TIMER_DURATION)
-  }
-
-  const mins = Math.floor(remaining / 60)
-  const secs = remaining % 60
-
-  return (
-    <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
-      <Timer className="w-4 h-4 text-indigo-400" />
-      <span className="font-mono text-indigo-200 font-bold tabular-nums min-w-[4ch]">
-        {mins}:{secs.toString().padStart(2, '0')}
-      </span>
-      {!running ? (
-        <button onClick={start} className="p-1 rounded-md hover:bg-indigo-500/20 text-indigo-400 transition-all">
-          <Play className="w-4 h-4" />
-        </button>
-      ) : (
-        <button onClick={stop} className="p-1 rounded-md hover:bg-indigo-500/20 text-indigo-400 transition-all">
-          <Pause className="w-4 h-4" />
-        </button>
-      )}
-      <button onClick={reset} className="p-1 rounded-md hover:bg-indigo-500/20 text-indigo-400/60 transition-all">
-        <RotateCcw className="w-3.5 h-3.5" />
-      </button>
-    </div>
   )
 }
 
@@ -483,7 +422,6 @@ function ConfirmDialog({
   )
 }
 
-const REST_TIMER_DURATION = 90
 const FADE_SLIDE = {
   initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0 },
@@ -492,13 +430,21 @@ const FADE_SLIDE = {
 
 export function WorkoutLogger() {
   const { workouts, addWorkout, deleteWorkout } = useAppStore()
+  const [savedTemplates, setSavedTemplates] = useState<WorkoutTemplate[]>([])
+
+  useEffect(() => {
+    storage.getAll('workoutTemplates').then((t) => {
+      if (t) setSavedTemplates(t as WorkoutTemplate[])
+    })
+  }, [])
+
   const derivedTemplates = useMemo(() => {
     const seen = new Map<string, Workout>()
     for (const w of [...workouts].reverse()) {
       if (!w.name || seen.has(w.name)) continue
       seen.set(w.name, w)
     }
-    return Array.from(seen.entries()).map(([name, w]) => ({
+    const fromHistory: WorkoutTemplate[] = Array.from(seen.entries()).map(([name, w]) => ({
       id: `template_${w.id}`,
       name,
       category: w.category,
@@ -510,8 +456,15 @@ export function WorkoutLogger() {
       })),
       createdAt: w.createdAt,
       updatedAt: w.updatedAt,
-    })) as WorkoutTemplate[]
-  }, [workouts])
+    }))
+
+    const all = [...fromHistory, ...savedTemplates]
+    const unique = new Map<string, WorkoutTemplate>()
+    for (const t of all) {
+      if (!unique.has(t.name)) unique.set(t.name, t)
+    }
+    return Array.from(unique.values())
+  }, [workouts, savedTemplates])
   const [searchParams, setSearchParams] = useSearchParams()
   useEffect(() => {
     if (searchParams.get('add') === '1') {
@@ -522,7 +475,6 @@ export function WorkoutLogger() {
       setExercises([])
       setExpandedExercises(new Set())
       setSupersetGroups({})
-      setRestTimerExercise(null)
       setShowForm(true)
       const next = new URLSearchParams(searchParams)
       next.delete('add')
@@ -541,7 +493,6 @@ export function WorkoutLogger() {
   const [showTypePicker, setShowTypePicker] = useState(false)
   const [deletingWorkout, setDeletingWorkout] = useState<Workout | null>(null)
   const [supersetGroups, setSupersetGroups] = useState<Record<string, string[]>>({})
-  const [restTimerExercise, setRestTimerExercise] = useState<string | null>(null)
   const [templateSaved, setTemplateSaved] = useState(false)
 
   const [filters, setFilters] = useState<WorkoutFilter>({})
@@ -575,7 +526,6 @@ export function WorkoutLogger() {
     setExercises([])
     setExpandedExercises(new Set())
     setSupersetGroups({})
-    setRestTimerExercise(null)
   }, [])
 
   const applyTemplate = useCallback((template: WorkoutTemplate) => {
@@ -780,6 +730,9 @@ export function WorkoutLogger() {
     await storage.put('workoutTemplates', template)
     setTemplateSaved(true)
     setTimeout(() => setTemplateSaved(false), 2000)
+    storage.getAll('workoutTemplates').then((t) => {
+      if (t) setSavedTemplates(t as WorkoutTemplate[])
+    })
   }, [workoutName, workoutType, exercises])
 
   return (
@@ -1210,20 +1163,6 @@ export function WorkoutLogger() {
                                   </button>
                                 </div>
                                 <div className="flex items-center gap-1 shrink-0">
-                                  {restTimerExercise === ex.id && (
-                                    <RestTimer onComplete={() => setRestTimerExercise(null)} />
-                                  )}
-                                  <button
-                                    onClick={() => setRestTimerExercise(restTimerExercise === ex.id ? null : ex.id)}
-                                    className={`p-1.5 rounded-lg transition-all ${
-                                      restTimerExercise === ex.id
-                                        ? 'bg-indigo-500/20 text-indigo-400'
-                                        : 'text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10'
-                                    }`}
-                                    title="Rest timer"
-                                  >
-                                    <Timer className="w-3.5 h-3.5" />
-                                  </button>
                                   <button
                                     onClick={() => toggleSuperset(ex.id)}
                                     className={`p-1.5 rounded-lg transition-all ${
