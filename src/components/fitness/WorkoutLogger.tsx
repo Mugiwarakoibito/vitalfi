@@ -640,27 +640,11 @@ export function WorkoutLogger() {
 
   const toggleSuperset = useCallback((exerciseId: string) => {
     setSupersetGroups((prev) => {
-      const next = { ...prev }
-      const existingGroup = Object.entries(next).find(([, ids]) => ids.includes(exerciseId))
-      if (existingGroup) {
-        const [key, ids] = existingGroup
-        const filtered = ids.filter((id) => id !== exerciseId)
-        if (filtered.length < 2) delete next[key]
-        else next[key] = filtered
-      } else {
-        const firstUngrouped = exercises.find(
-          (e) =>
-            e.id !== exerciseId &&
-            !Object.values(next).some((ids) => ids.includes(e.id))
-        )
-        if (firstUngrouped) {
-          const key = generateId()
-          next[key] = [firstUngrouped.id, exerciseId]
-        }
-      }
-      return next
+      const isSelected = Object.values(prev).some((ids) => ids.includes(exerciseId))
+      if (isSelected) return {} as Record<string, string[]>
+      return { selected: [exerciseId] }
     })
-  }, [exercises])
+  }, [])
 
   const getSupersetPair = useCallback(
     (exerciseId: string): string[] | null => {
@@ -1158,7 +1142,7 @@ export function WorkoutLogger() {
                                   >
                                     <span className="font-medium text-white text-sm truncate">{ex.name}</span>
                                     {isInSuperset && (
-                                      <span className="text-[10px] text-indigo-400/70 shrink-0">(superset)</span>
+                                      <span className="text-[10px] text-indigo-400/70 shrink-0">(selected)</span>
                                     )}
                                   </button>
                                 </div>
@@ -1170,7 +1154,7 @@ export function WorkoutLogger() {
                                         ? 'bg-indigo-500/20 text-indigo-400'
                                         : 'text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10'
                                     }`}
-                                    title={isInSuperset ? 'Remove from superset' : 'Add to superset'}
+                                    title={isInSuperset ? 'Deselect exercise' : 'Select exercise'}
                                   >
                                     <Layers className="w-3.5 h-3.5" />
                                   </button>
