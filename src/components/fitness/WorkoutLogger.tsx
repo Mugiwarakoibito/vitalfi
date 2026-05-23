@@ -1291,10 +1291,11 @@ export function WorkoutLogger() {
                                             <span className="text-gray-500 text-xs">×</span>
                                             <input
                                               type="number"
-                                              placeholder="reps"
-                                              value={set.reps ?? ''}
-                                              onChange={(e) => updateSet(ex.id, setIdx, 'reps', parseInt(e.target.value) || 0)}
+                                              placeholder="rpe"
+                                              value={(set as unknown as { rpe?: number }).rpe ?? ''}
+                                              onChange={(e) => updateSet(ex.id, setIdx, 'rpe', parseFloat(e.target.value) || 0)}
                                               className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-rose-500/50 focus:outline-none placeholder-gray-600 transition-all"
+                                              step="0.5"
                                             />
                                             <div className="flex gap-1">
                                               {[
