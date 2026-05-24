@@ -2,9 +2,9 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Plus, Trash2, Clock, Dumbbell, Flame, ChevronDown, ChevronUp, Check,
+  Plus, Trash2, Pencil, Dumbbell, Flame, ChevronDown, ChevronUp, Check,
   AlertTriangle, Copy, Search, Filter, X,
-  TrendingUp, TrendingDown, Minus, Layers, GripVertical,
+  TrendingUp, TrendingDown, Minus, Layers,
   FileText, Activity, Zap, Wind, Settings2, Move, StretchHorizontal,
   PersonStanding, Gauge, Crosshair, Weight, Heart, Shield, Sword, Coffee,
   Equal, Footprints, Waves,
@@ -105,7 +105,7 @@ function ExercisePicker({ onSelect, onClose }: { onSelect: (id: string) => void;
   }, [search, category, muscle])
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[70] p-4" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -332,52 +332,142 @@ function ExercisePicker({ onSelect, onClose }: { onSelect: (id: string) => void;
   )
 }
 
-function TemplatePicker({ templates, onSelect, onClose }: { templates: WorkoutTemplate[]; onSelect: (template: WorkoutTemplate) => void; onClose: () => void }) {
+function TemplatePicker({
+  savedTemplates,
+  onSelect,
+  onDelete,
+  onClose,
+  onEditTemplate,
+  onNewTemplate,
+}: {
+  savedTemplates: WorkoutTemplate[]
+  onSelect: (template: WorkoutTemplate) => void
+  onDelete: (template: WorkoutTemplate) => void
+  onClose: () => void
+  onEditTemplate?: (template: WorkoutTemplate) => void
+  onNewTemplate?: () => void
+}) {
+  const [search, setSearch] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+
+  const categories = useMemo(() => {
+    const set = new Set<string>()
+    savedTemplates.forEach((t) => { if (t.category) set.add(t.category) })
+    return Array.from(set).sort()
+  }, [savedTemplates])
+
+  function filterList(list: WorkoutTemplate[]) {
+    let result = list
+    if (search) {
+      const q = search.toLowerCase()
+      result = result.filter((t) => t.name.toLowerCase().includes(q) || t.exercises.some((e) => e.name.toLowerCase().includes(q)))
+    }
+    if (categoryFilter) result = result.filter((t) => t.category === categoryFilter)
+    return result
+  }
+
+  const filteredSaved = useMemo(() => filterList(savedTemplates), [savedTemplates, search, categoryFilter])
+
+  function renderCard(template: WorkoutTemplate, isSaved: boolean) {
+    const preview = template.exercises.slice(0, 4)
+    const remaining = template.exercises.length - preview.length
+    const cfg = typeConfig[template.category]
+    const CatIcon = cfg?.icon || Dumbbell
+
+    if (confirmDelete === template.id) {
+      return (
+        <div className="flex items-center gap-2 p-4 rounded-xl border border-red-500/20 bg-red-500/[0.04]">
+          <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+          <span className="text-xs text-red-300 flex-1">Delete "{template.name}"?</span>
+          <button onClick={() => { onDelete(template); setConfirmDelete(null) }} className="px-2.5 py-1 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-xs hover:bg-red-500/30 transition-all">Delete</button>
+          <button onClick={() => setConfirmDelete(null)} className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-400 text-xs hover:bg-white/10 transition-all">Cancel</button>
+        </div>
+      )
+    }
+
+    return (
+      <button onClick={() => onSelect(template)} className="flex w-full items-start gap-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/10 p-4 text-left transition-all group">
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${cfg?.bg || 'bg-white/10'}`}>
+          <CatIcon className={`w-4 h-4 ${cfg?.color || 'text-muted'}`} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="font-medium text-white text-sm">{template.name}</p>
+            <span className="text-[10px] text-gray-500">· {template.exercises.length} ex</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            {preview.map((ex) => (
+              <span key={ex.exerciseId} className="px-1.5 py-0.5 rounded-md bg-white/5 text-[10px] text-gray-400 truncate max-w-[100px]">{ex.name}</span>
+            ))}
+            {remaining > 0 && <span className="px-1.5 py-0.5 rounded-md bg-white/5 text-[10px] text-gray-500">+{remaining} more</span>}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0 self-start">
+          {isSaved && (
+            <>
+              <span onClick={(e) => { e.stopPropagation(); onEditTemplate?.(template) }} className="p-1.5 rounded-lg text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10 opacity-0 group-hover:opacity-100 transition-all" title="Edit template">
+                <Pencil className="w-3.5 h-3.5" />
+              </span>
+              <span onClick={(e) => { e.stopPropagation(); setConfirmDelete(template.id) }} className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all" title="Delete template">
+                <Trash2 className="w-3.5 h-3.5" />
+              </span>
+            </>
+          )}
+          {!isSaved && <Plus className="w-4 h-4 text-indigo-400 shrink-0 opacity-0 group-hover:opacity-100 transition-all" />}
+        </div>
+      </button>
+    )
+  }
+
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="w-full max-w-lg max-h-[80vh] overflow-hidden rounded-2xl border border-white/10 bg-gray-950/90 backdrop-blur-2xl shadow-2xl"
+        className="w-full max-w-xl max-h-[85vh] overflow-hidden rounded-2xl border border-white/10 bg-gray-950/90 backdrop-blur-2xl shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-5 border-b border-white/5">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-white">Workout Templates</h3>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 transition-all">
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 transition-all"><X className="w-4 h-4" /></button>
+            </div>
           </div>
-          <p className="text-sm text-gray-400 mt-1">Quick-start a workout from your past sessions</p>
+          <div className="flex items-center gap-2 mt-3">
+            <button onClick={onNewTemplate} className="shrink-0 p-2 rounded-lg bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/30 transition-all" title="Create new template">
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted" />
+              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} className="glass-input w-full pl-8 text-xs" placeholder="Search templates..." />
+            </div>
+            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="glass-input text-xs w-auto">
+              <option value="">All</option>
+              {categories.map((cat) => <option key={cat} value={cat}>{categoryLabels[cat as ExerciseCategory] || cat}</option>)}
+            </select>
+          </div>
         </div>
-        <div className="overflow-y-auto max-h-[60vh] p-3 space-y-2">
-          {templates.length === 0 ? (
+        <div className="overflow-y-auto max-h-[55vh] p-3 space-y-4">
+          {savedTemplates.length === 0 ? (
             <div className="text-center py-12">
               <Layers className="w-10 h-10 text-gray-500 mx-auto mb-3" />
               <p className="text-gray-400 text-sm">No templates yet</p>
-              <p className="text-gray-500 text-xs mt-1">Log a workout and it will appear here as a template</p>
+              <p className="text-gray-500 text-xs mt-1">Click the + button to create your first template</p>
             </div>
+          ) : filteredSaved.length > 0 ? (
+            <div className="space-y-2">{filteredSaved.map((t) => <div key={t.id}>{renderCard(t, true)}</div>)}</div>
           ) : (
-            templates.map((template) => (
-              <button
-                key={template.id}
-                onClick={() => onSelect(template)}
-                className="flex w-full items-center gap-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/10 p-4 text-left transition-all group"
-              >
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/20 flex items-center justify-center shrink-0">
-                  <Layers className="w-5 h-5 text-indigo-400" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-white text-sm">{template.name}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {template.exercises.length} exercises — {template.category ? categoryLabels[template.category as ExerciseCategory] || template.category : 'General'}
-                  </p>
-                </div>
-                <Plus className="w-4 h-4 text-indigo-400 shrink-0 opacity-0 group-hover:opacity-100 transition-all" />
-              </button>
-            ))
+            <div className="text-center py-8">
+              <p className="text-gray-500 text-sm">No matching templates</p>
+              <p className="text-gray-600 text-xs mt-1">Try a different search or filter</p>
+            </div>
           )}
+        </div>
+        <div className="p-3 border-t border-white/5 text-center">
+          <p className="text-[10px] text-gray-600">{savedTemplates.length} saved · {filteredSaved.length} shown</p>
         </div>
       </motion.div>
     </div>
@@ -438,33 +528,6 @@ export function WorkoutLogger() {
     })
   }, [])
 
-  const derivedTemplates = useMemo(() => {
-    const seen = new Map<string, Workout>()
-    for (const w of [...workouts].reverse()) {
-      if (!w.name || seen.has(w.name)) continue
-      seen.set(w.name, w)
-    }
-    const fromHistory: WorkoutTemplate[] = Array.from(seen.entries()).map(([name, w]) => ({
-      id: `template_${w.id}`,
-      name,
-      category: w.category,
-      exercises: w.exercises.map((e) => ({
-        exerciseId: e.exerciseId,
-        name: e.name,
-        targetSets: e.sets.length,
-        targetReps: e.sets[0]?.reps,
-      })),
-      createdAt: w.createdAt,
-      updatedAt: w.updatedAt,
-    }))
-
-    const all = [...fromHistory, ...savedTemplates]
-    const unique = new Map<string, WorkoutTemplate>()
-    for (const t of all) {
-      if (!unique.has(t.name)) unique.set(t.name, t)
-    }
-    return Array.from(unique.values())
-  }, [workouts, savedTemplates])
   const [searchParams, setSearchParams] = useSearchParams()
   useEffect(() => {
     if (searchParams.get('add') === '1') {
@@ -474,7 +537,6 @@ export function WorkoutLogger() {
       setDate(new Date().toISOString().split('T')[0])
       setExercises([])
       setExpandedExercises(new Set())
-      setSupersetGroups({})
       setShowForm(true)
       const next = new URLSearchParams(searchParams)
       next.delete('add')
@@ -492,8 +554,14 @@ export function WorkoutLogger() {
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [showTypePicker, setShowTypePicker] = useState(false)
   const [deletingWorkout, setDeletingWorkout] = useState<Workout | null>(null)
-  const [supersetGroups, setSupersetGroups] = useState<Record<string, string[]>>({})
-  const [templateSaved, setTemplateSaved] = useState(false)
+
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [saveTemplateExercises, setSaveTemplateExercises] = useState<Set<string>>(new Set())
+  const [saveName, setSaveName] = useState('')
+  const [saveMode, setSaveMode] = useState<'new' | 'existing' | 'edit'>('new')
+  const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplate | null>(null)
+  const [stashedExercises, setStashedExercises] = useState<WorkoutExercise[]>([])
+  const [pendingExerciseConfig, setPendingExerciseConfig] = useState<{ id: string; name: string; targetSets: number; targetReps: string; targetRpe: string; editExerciseId?: string } | null>(null)
 
   const [filters, setFilters] = useState<WorkoutFilter>({})
   const [showFilters, setShowFilters] = useState(false)
@@ -525,32 +593,39 @@ export function WorkoutLogger() {
     setDate(new Date().toISOString().split('T')[0])
     setExercises([])
     setExpandedExercises(new Set())
-    setSupersetGroups({})
+    setSaveTemplateExercises(new Set())
+    setEditingTemplate(null)
   }, [])
 
   const applyTemplate = useCallback((template: WorkoutTemplate) => {
-    setWorkoutName(template.name)
     setWorkoutType(template.category)
     const mapped: WorkoutExercise[] = template.exercises.map((te) => ({
       id: generateId(),
       exerciseId: te.exerciseId,
       name: te.name,
-      sets: Array.from({ length: te.targetSets }, () => ({
-        reps: te.targetReps,
-        weight: undefined,
-        completed: false,
-      })) as ExerciseSet[],
-      notes: '',
+      sets: te.sets && te.sets.length > 0
+        ? te.sets.map((s) => ({ ...s })) as ExerciseSet[]
+        : Array.from({ length: te.targetSets }, () => ({
+            reps: te.targetReps,
+            weight: undefined,
+            completed: false,
+          })) as ExerciseSet[],
+      notes: te.notes || '',
     }))
     setExercises(mapped)
     setExpandedExercises(new Set(mapped.map((e) => e.id)))
     setShowTemplatePicker(false)
+
+    setEditingTemplate(null)
   }, [])
 
   const addExercise = useCallback(
     (exerciseId: string) => {
       const ex = getExerciseById(exerciseId)
       if (!ex) return
+      if (exercises.length === 0) {
+        setWorkoutType(ex.category as ExerciseCategory)
+      }
       const newExercise: WorkoutExercise = {
         id: generateId(),
         exerciseId: ex.id,
@@ -562,19 +637,39 @@ export function WorkoutLogger() {
       setExpandedExercises((prev) => new Set(prev).add(newExercise.id))
       setShowExercisePicker(false)
     },
-    []
+    [exercises.length]
+  )
+
+  const addExerciseWithConfig = useCallback(
+    (exerciseId: string, targetSets: number, targetReps: string, targetRpe: string) => {
+      const ex = getExerciseById(exerciseId)
+      if (!ex) return
+      if (exercises.length === 0) {
+        setWorkoutType(ex.category as ExerciseCategory)
+      }
+      const sets: ExerciseSet[] = Array.from({ length: targetSets }, () => ({
+        reps: targetReps ? parseInt(targetReps) || undefined : undefined,
+        weight: undefined,
+        rpe: targetRpe ? parseFloat(targetRpe) || undefined : undefined,
+        completed: false,
+      }))
+      const newExercise: WorkoutExercise = {
+        id: generateId(),
+        exerciseId: ex.id,
+        name: ex.name,
+        sets,
+        notes: '',
+      }
+      setExercises((prev) => [...prev, newExercise])
+      setExpandedExercises((prev) => new Set(prev).add(newExercise.id))
+      setShowExercisePicker(false)
+      setPendingExerciseConfig(null)
+    },
+    [exercises.length]
   )
 
   const removeExercise = useCallback((id: string) => {
     setExercises((prev) => prev.filter((e) => e.id !== id))
-    setSupersetGroups((prev) => {
-      const next = { ...prev }
-      for (const [key, ids] of Object.entries(next)) {
-        next[key] = ids.filter((i) => i !== id)
-        if (next[key].length < 2) delete next[key]
-      }
-      return next
-    })
   }, [])
 
   const duplicateExercise = useCallback((ex: WorkoutExercise) => {
@@ -638,28 +733,6 @@ export function WorkoutLogger() {
     })
   }, [])
 
-  const toggleSuperset = useCallback((exerciseId: string) => {
-    setSupersetGroups((prev) => {
-      const current = prev['selected'] || []
-      if (current.includes(exerciseId)) {
-        const filtered = current.filter((id) => id !== exerciseId)
-        if (filtered.length === 0) return { selected: [] }
-        return { selected: filtered }
-      }
-      return { selected: [...current, exerciseId] }
-    })
-  }, [])
-
-  const getSupersetPair = useCallback(
-    (exerciseId: string): string[] | null => {
-      for (const ids of Object.values(supersetGroups)) {
-        if (ids.includes(exerciseId)) return ids
-      }
-      return null
-    },
-    [supersetGroups]
-  )
-
   const handleSave = useCallback(async () => {
     if (!workoutName.trim() || exercises.length === 0) return
     const finalDuration = parseInt(duration) || 0
@@ -700,88 +773,89 @@ export function WorkoutLogger() {
     setDeletingWorkout(null)
   }, [deletingWorkout, deleteWorkout])
 
-  const saveAsTemplate = useCallback(async () => {
-    if (!workoutName.trim() || exercises.length === 0) return
-    const template: WorkoutTemplate = {
-      id: generateId(),
-      name: workoutName.trim(),
-      category: workoutType as ExerciseCategory,
-      exercises: exercises.map((e) => ({
-        exerciseId: e.exerciseId,
-        name: e.name,
-        targetSets: e.sets.length,
-        targetReps: e.sets[0]?.reps,
+  const toTemplateExercises = (exs: WorkoutExercise[]) =>
+    exs.map((e) => ({
+      exerciseId: e.exerciseId,
+      name: e.name,
+      targetSets: e.sets.length,
+      targetReps: e.sets[0]?.reps,
+      sets: e.sets.map((s) => ({
+        weight: s.weight,
+        reps: s.reps,
+        rpe: s.rpe,
+        completed: s.completed,
+        duration: s.duration,
+        distance: s.distance,
       })),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      notes: e.notes,
+    }))
+
+  const saveAsTemplate = async (name: string) => {
+    if (exercises.length === 0 || !name.trim()) return
+    if (saveMode === 'edit' && editingTemplate) {
+      const updated: WorkoutTemplate = {
+        ...editingTemplate,
+        name: name.trim(),
+        exercises: toTemplateExercises(exercises),
+        updatedAt: new Date().toISOString(),
+      }
+      await storage.put('workoutTemplates', updated)
+    } else if (saveMode === 'new') {
+      const template: WorkoutTemplate = {
+        id: generateId(),
+        name: name.trim(),
+        category: workoutType as ExerciseCategory,
+        exercises: toTemplateExercises(exercises),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      await storage.put('workoutTemplates', template)
     }
-    await storage.put('workoutTemplates', template)
-    setTemplateSaved(true)
-    setTimeout(() => setTemplateSaved(false), 2000)
-    storage.getAll('workoutTemplates').then((t) => {
-      if (t) setSavedTemplates(t as WorkoutTemplate[])
-    })
-  }, [workoutName, workoutType, exercises])
+    const all = await storage.getAll('workoutTemplates')
+    if (all) setSavedTemplates(all as WorkoutTemplate[])
+    setShowSaveModal(false)
+    setSaveTemplateExercises(new Set())
+    setEditingTemplate(null)
+    if (stashedExercises.length > 0) {
+      setExercises(stashedExercises)
+      setStashedExercises([])
+    }
+  }
+
+  const deleteSavedTemplate = useCallback(async (template: WorkoutTemplate) => {
+    await storage.delete('workoutTemplates', template.id)
+    setSavedTemplates((prev) => prev.filter((t) => t.id !== template.id))
+  }, [])
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0 }}
-          className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/10 to-[#0d0d1a] p-6"
-        >
-          <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full -mr-12 -mt-12 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-16 h-16 bg-purple-500/5 rounded-full -ml-8 -mb-8 blur-lg" />
+      <div className="grid grid-cols-3 gap-4">
+        <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-rose-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
-            <div className="flex items-center gap-2 text-rose-400/80 text-sm mb-2">
-              <Dumbbell className="w-4 h-4" />
-              <span>Total Workouts</span>
-            </div>
-            <p className="text-3xl font-black text-white">{totalWorkouts}</p>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">All time logged</p>
+            <div className="text-rose-400/80 text-sm mb-2">Total Workouts</div>
+            <p className="text-3xl font-bold text-rose-400">{totalWorkouts}</p>
           </div>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="relative overflow-hidden rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/10 to-[#0d0d1a] p-6"
-        >
-          <div className="absolute top-0 right-0 w-24 h-24 bg-sky-500/10 rounded-full -mr-12 -mt-12 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-16 h-16 bg-purple-500/5 rounded-full -ml-8 -mb-8 blur-lg" />
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-sky-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
-            <div className="flex items-center gap-2 text-sky-400/80 text-sm mb-2">
-              <Clock className="w-4 h-4" />
-              <span>Time Spent</span>
-            </div>
-            <p className="text-3xl font-black text-white">{formatDuration(totalDuration)}</p>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Training total</p>
+            <div className="text-sky-400/80 text-sm mb-2">Time Spent</div>
+            <p className="text-3xl font-bold text-sky-400">{formatDuration(totalDuration)}</p>
           </div>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-[#0d0d1a] p-6"
-        >
-          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full -mr-12 -mt-12 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-16 h-16 bg-purple-500/5 rounded-full -ml-8 -mb-8 blur-lg" />
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
-            <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-2">
-              <Flame className="w-4 h-4" />
-              <span>Total Volume</span>
-            </div>
-            <p className="text-3xl font-black text-white">{totalVolume.toLocaleString()}kg</p>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Lifetime lifted</p>
+            <div className="text-emerald-400/80 text-sm mb-2">Total Volume</div>
+            <p className="text-3xl font-bold text-emerald-400">{totalVolume.toLocaleString()}kg</p>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
-          <h3 className="text-lg font-semibold text-white">Workout History</h3>
+          <h3 className="text-sm font-semibold text-white uppercase tracking-[0.15em]">Workout History</h3>
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`p-2 rounded-lg transition-all ${
@@ -794,14 +868,10 @@ export function WorkoutLogger() {
           </button>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <Button variant="ghost" size="sm" onClick={() => setShowTemplatePicker(true)} className="text-xs">
-            <Layers className="w-3.5 h-3.5 mr-1.5" />
+          <button onClick={() => { setShowTemplatePicker(true) }} className="text-sm font-semibold text-white uppercase tracking-[0.15em] flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-all">
+            <Layers className="w-3.5 h-3.5 text-indigo-400" />
             Templates
-          </Button>
-          <Button variant="primary" size="sm" onClick={() => { resetForm(); setShowForm(true) }}>
-            <Plus className="w-4 h-4 mr-1.5" />
-            Add Workout
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -917,7 +987,7 @@ export function WorkoutLogger() {
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold text-white tracking-tight">{wo.name}</h4>
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${config.bg} ${config.color}`}>
-                              {wo.category}
+                              {categoryLabels[wo.category as ExerciseCategory] || wo.category}
                             </span>
                           </div>
                           <p className="text-sm text-gray-400">
@@ -995,8 +1065,152 @@ export function WorkoutLogger() {
       />
 
       <AnimatePresence>
+        {showSaveModal && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[60] p-4" onClick={() => { setShowSaveModal(false); setSaveTemplateExercises(new Set()); const wasEditing = saveMode === 'edit'; setEditingTemplate(null); if (wasEditing) setShowTemplatePicker(true) }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg rounded-2xl border border-white/10 bg-gray-950/90 backdrop-blur-2xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-5 border-b border-white/5">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-white">{saveMode === 'edit' ? 'Edit Template' : 'Add Workout Template'}</h3>
+                  <button onClick={() => { setShowSaveModal(false); setSaveTemplateExercises(new Set()); const wasEditing = saveMode === 'edit'; setEditingTemplate(null); if (wasEditing) setShowTemplatePicker(true) }} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 transition-all">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-5 space-y-3">
+                {saveMode === 'edit' ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Template Name</label>
+                      <input
+                        type="text"
+                        value={saveName}
+                        onChange={(e) => setSaveName(e.target.value)}
+                        className="glass-input w-full"
+                        autoFocus
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm text-gray-400">Exercises</label>
+                        <button onClick={() => setShowExercisePicker(true)} className="text-xs text-indigo-400 hover:text-indigo-300 transition-all flex items-center gap-1">
+                          <Plus className="w-3 h-3" />
+                          Add Exercise
+                        </button>
+                      </div>
+                      <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                        {exercises.map((ex) => {
+                          const cfg = typeConfig[workoutType as ExerciseCategory]
+                          const CfgIcon = cfg?.icon || Dumbbell
+                          return (
+                            <div key={ex.id} className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
+                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${cfg?.bg || 'bg-white/10'}`}>
+                                <CfgIcon className={`w-3.5 h-3.5 ${cfg?.color || 'text-gray-400'}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-white truncate">{ex.name}</p>
+                                <p className="text-[10px] text-gray-500">{ex.sets.length} sets · {ex.sets[0]?.reps || '--'} reps{ex.sets[0]?.rpe ? ` · RPE ${ex.sets[0].rpe}` : ''}</p>
+                              </div>
+                              <button
+                                onClick={() => setPendingExerciseConfig({ id: ex.exerciseId, name: ex.name, targetSets: ex.sets.length, targetReps: String(ex.sets[0]?.reps || ''), targetRpe: String(ex.sets[0]?.rpe || ''), editExerciseId: ex.id })}
+                                className="p-1 rounded-lg text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                              <button onClick={() => removeExercise(ex.id)} className="p-1 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )
+                        })}
+                        {exercises.length === 0 && (
+                          <p className="text-xs text-gray-500 text-center py-4">No exercises in this template</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Template Name</label>
+                      <input
+                        type="text"
+                        value={saveName}
+                        onChange={(e) => setSaveName(e.target.value)}
+                        className="glass-input w-full"
+                        placeholder="e.g. Push Day, Upper Body Strength"
+                        autoFocus
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm text-gray-400">Exercises</label>
+                        <button onClick={() => setShowExercisePicker(true)} className="text-xs text-indigo-400 hover:text-indigo-300 transition-all flex items-center gap-1">
+                          <Plus className="w-3 h-3" />
+                          Add Exercise
+                        </button>
+                      </div>
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                        {exercises.map((ex) => {
+                          const cfg = typeConfig[workoutType as ExerciseCategory]
+                          const CfgIcon = cfg?.icon || Dumbbell
+                          return (
+                            <div key={ex.id} className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
+                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${cfg?.bg || 'bg-white/10'}`}>
+                                <CfgIcon className={`w-3.5 h-3.5 ${cfg?.color || 'text-gray-400'}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-white truncate">{ex.name}</p>
+                                <p className="text-[10px] text-gray-500">{ex.sets.length} sets · {ex.sets[0]?.reps || '--'} reps{ex.sets[0]?.rpe ? ` · RPE ${ex.sets[0].rpe}` : ''}</p>
+                              </div>
+                              <button
+                                onClick={() => setPendingExerciseConfig({ id: ex.exerciseId, name: ex.name, targetSets: ex.sets.length, targetReps: String(ex.sets[0]?.reps || ''), targetRpe: String(ex.sets[0]?.rpe || ''), editExerciseId: ex.id })}
+                                className="p-1 rounded-lg text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                              <button onClick={() => removeExercise(ex.id)} className="p-1 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )
+                        })}
+                        {exercises.length === 0 && (
+                          <p className="text-xs text-gray-500 text-center py-4">No exercises added yet</p>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {exercises.length} exercise{exercises.length !== 1 ? 's' : ''} in this template
+                    </p>
+                  </>
+                )}
+              </div>
+              <div className="p-5 border-t border-white/5 flex gap-3">
+                <button onClick={() => { setShowSaveModal(false); setSaveTemplateExercises(new Set()); if (stashedExercises.length > 0) { setExercises(stashedExercises); setStashedExercises([]) }; const wasEditing = saveMode === 'edit'; setEditingTemplate(null); if (wasEditing) setShowTemplatePicker(true) }} className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all text-sm">
+                  Cancel
+                </button>
+                <button
+                  onClick={() => saveAsTemplate(saveName)}
+                  disabled={!saveName.trim() || exercises.length === 0}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/30 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saveMode === 'edit' ? 'Update Template' : 'Save Template'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {showForm && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => setShowForm(false)}>
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => { setShowForm(false); setSaveTemplateExercises(new Set()); setEditingTemplate(null) }}>
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1006,25 +1220,26 @@ export function WorkoutLogger() {
             >
               <div className="p-6 space-y-5">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-white">Add Workout</h3>
+                  <h3 className="text-lg font-semibold text-white">{editingTemplate ? 'Edit Template' : 'Add Workout'}</h3>
                   <div className="flex items-center gap-2">
-                    {exercises.length > 0 && (
-                      <button
-                        onClick={saveAsTemplate}
-                        disabled={!workoutName.trim()}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
-                          templateSaved
-                            ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400'
-                            : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/20 hover:text-white'
-                        }`}
-                      >
-                        {templateSaved ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                        {templateSaved ? 'Saved!' : 'Save Template'}
+                    {!editingTemplate && (
+                      <button onClick={() => setShowTemplatePicker(true)} className="p-1.5 rounded-lg transition-all hover:bg-white/10 text-gray-400" title="Use a template">
+                        <Layers className="w-4 h-4" />
                       </button>
                     )}
-                    <button onClick={() => setShowTemplatePicker(true)} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 transition-all">
-                      <Layers className="w-4 h-4" />
-                    </button>
+                    {saveTemplateExercises.size > 0 && (
+                      <button
+                        onClick={() => {
+                          setSaveName(workoutName.trim());
+                          setSaveMode('new');
+                          setShowSaveModal(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/30"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        Save Template
+                      </button>
+                    )}
                     <button onClick={() => { setShowForm(false); resetForm() }} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 transition-all">
                       <X className="w-4 h-4" />
                     </button>
@@ -1041,30 +1256,6 @@ export function WorkoutLogger() {
                     className="glass-input w-full"
                     placeholder="Push Day, Leg Day, etc."
                   />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Type</label>
-                  <button
-                    onClick={() => setShowTypePicker(true)}
-                    className="flex items-center gap-3 w-full rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 hover:bg-white/[0.04] hover:border-white/10 transition-all group"
-                  >
-                    {(() => {
-                      const cfg = typeConfig[workoutType]
-                      const CfgIcon = cfg?.icon || Dumbbell
-                      return (
-                        <>
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${cfg?.bg || 'bg-white/10'}`}>
-                            <CfgIcon className={`w-4 h-4 ${cfg?.color || 'text-muted'}`} />
-                          </div>
-                          <div className="flex-1 text-left">
-                            <p className="text-sm font-medium text-white">{categoryLabels[workoutType as ExerciseCategory] || workoutType}</p>
-                            <p className="text-[10px] text-muted mt-0.5">Click to change type</p>
-                          </div>
-                          <ChevronDown className="w-4 h-4 text-muted group-hover:text-white transition-colors" />
-                        </>
-                      )
-                    })()}
-                  </button>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1116,9 +1307,6 @@ export function WorkoutLogger() {
                     <div className="space-y-3">
                       <AnimatePresence>
                         {exercises.map((ex) => {
-                          const supersetPair = getSupersetPair(ex.id)
-                          const isInSuperset = supersetPair !== null
-                          const supersetIndex = supersetPair?.indexOf(ex.id) ?? 0
                           return (
                             <motion.div
                               key={ex.id}
@@ -1126,39 +1314,27 @@ export function WorkoutLogger() {
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
                               exit={{ opacity: 0, x: -10, height: 0, marginBottom: 0 }}
-                              className={`rounded-xl border ${
-                                isInSuperset
-                                  ? 'border-indigo-500/30 bg-indigo-500/[0.04]'
-                                  : 'border-white/10 bg-white/[0.03]'
-                              }`}
+                              className="rounded-xl border border-white/10 bg-white/[0.03]"
                             >
                               <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  {isInSuperset && (
-                                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-500/20 text-indigo-300 shrink-0">
-                                      <GripVertical className="w-3 h-3" />
-                                      SS{supersetIndex + 1}
-                                    </span>
-                                  )}
                                   <button
                                     onClick={() => toggleExpand(ex.id)}
                                     className="flex items-center gap-2 min-w-0 flex-1 text-left"
                                   >
                                     <span className="font-medium text-white text-sm truncate">{ex.name}</span>
-                                    {isInSuperset && (
-                                      <span className="text-[10px] text-indigo-400/70 shrink-0">(selected)</span>
-                                    )}
                                   </button>
                                 </div>
                                 <div className="flex items-center gap-1 shrink-0">
                                   <button
-                                    onClick={() => toggleSuperset(ex.id)}
-                                    className={`p-1.5 rounded-lg transition-all ${
-                                      isInSuperset
-                                        ? 'bg-indigo-500/20 text-indigo-400'
-                                        : 'text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10'
-                                    }`}
-                                    title={isInSuperset ? 'Deselect exercise' : 'Select exercise'}
+                                    onClick={() => setSaveTemplateExercises((prev) => {
+                                      const next = new Set(prev)
+                                      if (next.has(ex.id)) next.delete(ex.id)
+                                      else next.add(ex.id)
+                                      return next
+                                    })}
+                                    className={`p-1.5 rounded-lg transition-all ${saveTemplateExercises.has(ex.id) ? 'bg-indigo-500/20 text-indigo-400' : 'text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10'}`}
+                                    title="Save as template"
                                   >
                                     <Layers className="w-3.5 h-3.5" />
                                   </button>
@@ -1216,7 +1392,7 @@ export function WorkoutLogger() {
                                                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-rose-500/50 focus:outline-none placeholder-gray-600 transition-all"
                                               />
                                               <select
-                                                value={(set as unknown as { rpe?: number }).rpe ?? ''}
+                                                value={set.rpe ?? ''}
                                                 onChange={(e) => updateSet(ex.id, setIdx, 'rpe', e.target.value ? parseFloat(e.target.value) : undefined)}
                                                 className="glass-input w-16 px-2 py-2 text-xs"
                                               >
@@ -1316,42 +1492,142 @@ export function WorkoutLogger() {
       <AnimatePresence>
         {showExercisePicker && (
           <ExercisePicker
-            onSelect={addExercise}
+            onSelect={(id) => {
+              if (showSaveModal) {
+                const ex = getExerciseById(id)
+                if (!ex) return
+                setPendingExerciseConfig({ id, name: ex.name, targetSets: 3, targetReps: '', targetRpe: '' })
+              } else {
+                addExercise(id)
+              }
+            }}
             onClose={() => setShowExercisePicker(false)}
           />
         )}
       </AnimatePresence>
 
       <AnimatePresence>
+        {pendingExerciseConfig && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[80] p-4" onClick={() => setPendingExerciseConfig(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-sm rounded-2xl border border-white/10 bg-gray-950/90 backdrop-blur-2xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-5 border-b border-white/5">
+                <h3 className="text-sm font-semibold text-white">{pendingExerciseConfig.editExerciseId ? 'Edit Exercise' : 'Configure Exercise'}</h3>
+                <p className="text-xs text-gray-400 mt-1">{pendingExerciseConfig.name}</p>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Number of Sets</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={pendingExerciseConfig.targetSets}
+                    onChange={(e) => setPendingExerciseConfig((prev) => prev ? { ...prev, targetSets: parseInt(e.target.value) || 1 } : null)}
+                    className="glass-input w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Target Reps</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={pendingExerciseConfig.targetReps}
+                    onChange={(e) => setPendingExerciseConfig((prev) => prev ? { ...prev, targetReps: e.target.value } : null)}
+                    className="glass-input w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Target RPE</label>
+                  <select
+                    value={pendingExerciseConfig.targetRpe}
+                    onChange={(e) => setPendingExerciseConfig((prev) => prev ? { ...prev, targetRpe: e.target.value } : null)}
+                    className="glass-input w-full"
+                  >
+                    <option value="">None</option>
+                    <option value="6">6</option>
+                    <option value="6.5">6.5</option>
+                    <option value="7">7</option>
+                    <option value="7.5">7.5</option>
+                    <option value="8">8</option>
+                    <option value="8.5">8.5</option>
+                    <option value="9">9</option>
+                    <option value="9.5">9.5</option>
+                    <option value="10">10</option>
+                  </select>
+                </div>
+              </div>
+              <div className="p-5 border-t border-white/5 flex gap-3">
+                <button onClick={() => setPendingExerciseConfig(null)} className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all text-sm">
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (!pendingExerciseConfig) return
+                    if (pendingExerciseConfig.editExerciseId) {
+                      const idx = exercises.findIndex((ex) => ex.id === pendingExerciseConfig.editExerciseId)
+                      if (idx === -1) { setPendingExerciseConfig(null); return }
+                      const updatedExercises = [...exercises]
+                      const existing = updatedExercises[idx]
+                      const newSets: ExerciseSet[] = Array.from({ length: pendingExerciseConfig.targetSets }, (_, i) => ({
+                        ...(existing.sets[i] || { weight: undefined, completed: false }),
+                        reps: pendingExerciseConfig.targetReps ? parseInt(pendingExerciseConfig.targetReps) || undefined : existing.sets[i]?.reps,
+                        rpe: pendingExerciseConfig.targetRpe ? parseFloat(pendingExerciseConfig.targetRpe) || undefined : existing.sets[i]?.rpe,
+                      }))
+                      updatedExercises[idx] = { ...existing, sets: newSets }
+                      setExercises(updatedExercises)
+                      setPendingExerciseConfig(null)
+                    } else {
+                      addExerciseWithConfig(pendingExerciseConfig.id, pendingExerciseConfig.targetSets, pendingExerciseConfig.targetReps, pendingExerciseConfig.targetRpe)
+                    }
+                  }}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/30 transition-all text-sm font-medium"
+                >
+                  {pendingExerciseConfig.editExerciseId ? 'Update' : 'Add'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {showTemplatePicker && (
           <TemplatePicker
-            templates={derivedTemplates}
+            savedTemplates={savedTemplates}
             onSelect={applyTemplate}
+            onDelete={deleteSavedTemplate}
+            onEditTemplate={(t) => { applyTemplate(t); setShowTemplatePicker(false); setEditingTemplate(t); setSaveName(t.name); setSaveMode('edit'); setShowSaveModal(true) }}
             onClose={() => setShowTemplatePicker(false)}
+            onNewTemplate={() => { setShowTemplatePicker(false); setSaveName(''); setSaveMode('new'); setEditingTemplate(null); setStashedExercises(exercises); setExercises([]); setShowSaveModal(true) }}
           />
         )}
       </AnimatePresence>
 
       <AnimatePresence>
         {showTypePicker && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => setShowTypePicker(false)}>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[60] p-4" onClick={() => setShowTypePicker(false)}>
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg max-h-[80vh] overflow-hidden rounded-2xl border border-white/10 bg-gray-950/90 backdrop-blur-2xl shadow-2xl"
+              className="w-full max-w-lg max-h-[70vh] overflow-hidden rounded-2xl border border-white/10 bg-gray-950/90 backdrop-blur-2xl shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-5 border-b border-white/5">
+              <div className="p-4 border-b border-white/5">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-white">Select Workout Type</h3>
-                  <button onClick={() => setShowTypePicker(false)} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 transition-all">
-                    <X className="w-4 h-4" />
+                  <h4 className="text-sm font-semibold text-white">Select Workout Type</h4>
+                  <button onClick={() => setShowTypePicker(false)} className="p-1 rounded-lg hover:bg-white/10 text-gray-400 transition-all">
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
-              <div className="overflow-y-auto max-h-[65vh] p-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="overflow-y-auto max-h-[55vh] p-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                   {(Object.entries(typeConfig) as [string, typeof typeConfig['strength']][]).map(([key, cfg]) => {
                     const CfgIcon = cfg.icon
                     const isActive = workoutType === key
@@ -1359,14 +1635,14 @@ export function WorkoutLogger() {
                       <button
                         key={key}
                         onClick={() => { setWorkoutType(key); setShowTypePicker(false) }}
-                        className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
+                        className={`flex items-center gap-2 rounded-xl border p-2.5 text-left transition-all ${
                           isActive
                             ? `${cfg.bg} ${cfg.color} border-current`
-                            : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white hover:bg-white/[0.04] hover:border-white/10'
+                            : 'border-white/[0.06] bg-white/[0.02] text-muted hover:text-white hover:bg-white/[0.04]'
                         }`}
                       >
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isActive ? cfg.bg : 'bg-white/5'}`}>
-                          <CfgIcon className={`w-4 h-4 ${isActive ? cfg.color : 'opacity-70'}`} />
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isActive ? cfg.bg : 'bg-white/5'}`}>
+                          <CfgIcon className={`w-3.5 h-3.5 ${isActive ? cfg.color : 'opacity-70'}`} />
                         </div>
                         <span className="text-xs font-medium">
                           {categoryLabels[key as ExerciseCategory] || key.charAt(0).toUpperCase() + key.slice(1)}
