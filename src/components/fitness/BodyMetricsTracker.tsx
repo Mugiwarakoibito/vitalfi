@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from 'react'
 import {
   Plus, Trash2, TrendingDown, TrendingUp, Minus, Activity, AlertTriangle,
-  Target, Ruler, Flame, ChevronUp, ChevronDown, Minus as MinusIcon,
-  BarChart3, LineChart as LineChartIcon
+  Target, Flame, ChevronUp, ChevronDown, Minus as MinusIcon,
+  LineChart as LineChartIcon, Gauge, ArrowRight, Sparkles
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { generateId } from '@/lib/utils'
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button'
 import type { BodyMetric } from '@/types/fitness'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area
+  AreaChart, Area,
 } from 'recharts'
 
 const GOAL_STORAGE_KEY = 'vitalfi_body_goal_weight'
@@ -116,29 +116,29 @@ export function BodyMetricsTracker({ heightCm = 175 }: BodyMetricsTrackerProps) 
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/10 to-transparent p-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/10 to-transparent p-5">
           <div className="absolute top-0 right-0 w-20 h-20 bg-rose-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
-            <div className="flex items-center gap-2 text-rose-400/80 text-sm mb-2"><Activity className="w-4 h-4" /><span>Current Weight</span></div>
-            <div className="flex items-baseline gap-2"><p className="text-3xl font-black text-white">{latest?.weight?.toFixed(1) ?? '--'}</p><span className="text-sm text-gray-500">kg</span></div>
+            <div className="text-rose-400/80 text-sm mb-2">Current Weight</div>
+            <p className="text-3xl font-bold text-rose-400">{latest?.weight?.toFixed(1) ?? '--'}<span className="text-sm text-gray-500 ml-1">kg</span></p>
             {weightChange !== 0 && <div className={`mt-1 flex items-center gap-1 text-xs ${weightChange < 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{weightChange < 0 ? <TrendingDown size={12} /> : <TrendingUp size={12} />}{weightChange > 0 ? '+' : ''}{weightChange.toFixed(1)} kg</div>}
             {weightChange === 0 && previous && <div className="mt-1 flex items-center gap-1 text-xs text-gray-500"><Minus size={12} /> No change</div>}
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent p-6">
+        <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent p-5">
           <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
-            <div className="flex items-center gap-2 text-purple-400/80 text-sm mb-2"><BarChart3 className="w-4 h-4" /><span>BMI</span></div>
-            <p className="text-3xl font-black text-white">{bmi != null ? bmi.toFixed(1) : '--'}</p>
+            <div className="text-purple-400/80 text-sm mb-2">BMI</div>
+            <p className="text-3xl font-bold text-purple-400">{bmi != null ? bmi.toFixed(1) : '--'}</p>
             {bmiCat && <p className={`text-xs mt-1 ${bmiCat.color}`}>{bmiCat.label}</p>}
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent p-6">
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent p-5">
           <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
-            <div className="flex items-center gap-2 text-amber-400/80 text-sm mb-2"><Flame className="w-4 h-4" /><span>Body Fat</span></div>
-            <div className="flex items-baseline gap-2"><p className="text-3xl font-black text-white">{latest?.bodyFat?.toFixed(1) ?? '--'}</p><span className="text-sm text-gray-500">%</span></div>
+            <div className="text-amber-400/80 text-sm mb-2">Body Fat</div>
+            <p className="text-3xl font-bold text-amber-400">{latest?.bodyFat?.toFixed(1) ?? '--'}<span className="text-sm text-gray-500 ml-1">%</span></p>
             {previous?.bodyFat != null && latest?.bodyFat != null && (
               <div className="mt-1 flex items-center gap-1 text-xs text-gray-400">
                 {latest.bodyFat - previous.bodyFat > 0 ? <ChevronUp size={12} className="text-rose-400" /> : latest.bodyFat - previous.bodyFat < 0 ? <ChevronDown size={12} className="text-emerald-400" /> : null}
@@ -147,18 +147,18 @@ export function BodyMetricsTracker({ heightCm = 175 }: BodyMetricsTrackerProps) 
             )}
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-6">
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-5">
           <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -mr-10 -mt-10" />
           <div className="relative">
-            <div className="flex items-center gap-2 text-gray-400/80 text-sm mb-2"><Ruler className="w-4 h-4" /><span>Entries</span></div>
-            <p className="text-3xl font-black text-white">{bodyMetrics.length}</p>
+            <div className="text-gray-400/80 text-sm mb-2">Entries</div>
+            <p className="text-3xl font-bold text-gray-400">{bodyMetrics.length}</p>
             <p className="text-xs text-gray-500 mt-1">{sorted[sorted.length - 1]?.date ? new Date(sorted[sorted.length - 1].date).toLocaleDateString() : '--'}</p>
           </div>
         </div>
       </div>
 
       {bodyMetrics.length >= 2 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-4">
           <Card className="flex items-center gap-3 py-3 px-4">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${change7d != null && change7d < 0 ? 'bg-emerald-500/20' : change7d != null && change7d > 0 ? 'bg-rose-500/20' : 'bg-white/5'}`}>
               {change7d != null && change7d !== 0 ? (change7d < 0 ? <TrendingDown size={14} className="text-emerald-400" /> : <TrendingUp size={14} className="text-rose-400" />) : <MinusIcon size={14} className="text-gray-500" />}
@@ -279,6 +279,74 @@ export function BodyMetricsTracker({ heightCm = 175 }: BodyMetricsTrackerProps) 
           </ResponsiveContainer>
         </Card>
       )}
+
+      {goal && latest?.weight != null && (
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center"><Sparkles className="w-4 h-4 text-emerald-400" /></div>
+              <h3 className="font-semibold text-white">Goal Projection</h3>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="rounded-xl bg-white/[0.03] border border-white/5 p-4">
+              <p className="text-xs text-gray-500 mb-1">Current</p>
+              <p className="text-2xl font-bold text-white">{latest.weight.toFixed(1)} <span className="text-sm text-gray-500">kg</span></p>
+              <div className="flex items-center gap-1 mt-1">
+                <ArrowRight className="w-3 h-3 text-emerald-400" />
+                <span className="text-xs text-emerald-400">{goal.toFixed(1)} kg target</span>
+              </div>
+            </div>
+            <div className="rounded-xl bg-white/[0.03] border border-white/5 p-4">
+              <p className="text-xs text-gray-500 mb-1">Remaining</p>
+              <p className="text-2xl font-bold text-amber-400">{Math.abs(latest.weight - goal).toFixed(1)} <span className="text-sm text-gray-500">kg</span></p>
+              <p className="text-xs text-gray-500 mt-1">{latest.weight > goal ? 'to lose' : 'to gain'}</p>
+            </div>
+          </div>
+          {change7d != null && Math.abs(change7d) > 0 && (
+            <div className="mt-3 rounded-xl bg-gradient-to-r from-emerald-500/5 to-purple-500/5 border border-emerald-500/10 p-3">
+              <p className="text-xs text-gray-500">
+                At current rate (~{Math.abs(change7d).toFixed(2)} kg/week), you'll reach your goal in{' '}
+                <span className="text-white font-semibold">{Math.ceil(Math.abs(latest.weight - goal) / Math.abs(change7d))} weeks</span>
+              </p>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {chronological.length >= 3 && (() => {
+        const measureChartData = chronological.slice(-20).map(m => {
+          const entry: any = { date: new Date(m.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }
+          measurementFields.forEach(f => { if (m.measurements?.[f.key] != null) entry[f.key] = m.measurements[f.key] })
+          return entry
+        })
+        const hasMeasureData = measureChartData.some(d => measurementFields.some(f => d[f.key as string] != null))
+        if (!hasMeasureData) return null
+        const COLORS = ['#f43f5e', '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#6366f1', '#ec4899', '#14b8a6']
+        const activeFields = measurementFields.filter(f => measureChartData.some(d => d[f.key] != null))
+        return (
+          <Card>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center"><Gauge className="w-4 h-4 text-violet-400" /></div>
+              <h3 className="font-semibold text-white">Measurements Trend</h3>
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={measureChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                <XAxis dataKey="date" stroke="#ffffff40" fontSize={10} interval="preserveStartEnd" />
+                <YAxis stroke="#ffffff40" fontSize={10} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #ffffff20', borderRadius: '12px' }}
+                  labelStyle={{ color: '#fff' }}
+                />
+                {activeFields.map((f, i) => (
+                  <Line key={f.key} type="monotone" dataKey={f.key} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={false} activeDot={{ r: 4 }} name={f.label} />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+        )
+      })()}
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-white">Measurement History</h3>

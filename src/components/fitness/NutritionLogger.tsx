@@ -3,6 +3,7 @@ import {
   Plus, Trash2, Utensils, Flame, Beef, Wheat, Droplet,
   Pencil, AlertTriangle, ChevronLeft, ChevronRight,
   Calendar, BarChart3, TrendingUp, Target, Info, RotateCcw,
+  Activity, Gauge,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts'
@@ -353,24 +354,20 @@ export function NutritionLogger() {
       </motion.div>
 
       {/* Macro Cards with Progress Bars */}
-      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <motion.div variants={itemVariants} className="grid grid-cols-3 gap-4">
         {macroCardConfigs.map((macro) => {
           const progressPct = Math.round(progress[macro.key as keyof typeof progress] * 100)
-          const Icon = macro.icon
           return (
             <div
               key={macro.key}
-              className={`relative overflow-hidden rounded-2xl border ${macro.border} bg-gradient-to-br ${macro.bg} to-transparent p-6`}
+              className={`relative overflow-hidden rounded-2xl border ${macro.border} bg-gradient-to-br ${macro.bg} to-transparent p-5`}
             >
               <div className={`absolute top-0 right-0 w-20 h-20 ${macro.glow} rounded-full -mr-10 -mt-10`} />
               <div className="relative">
-                <div className={`flex items-center gap-2 ${macro.textMuted} text-sm mb-2`}>
-                  <Icon className="w-4 h-4" />
-                  <span>{macro.label}</span>
-                </div>
-                <p className={`text-3xl font-black ${macro.text}`}>
+                <div className={`${macro.textMuted} text-sm mb-2`}>{macro.label}</div>
+                <p className={`text-3xl font-bold ${macro.text}`}>
                   {Math.round(macro.value)}
-                  <span className="text-lg text-gray-500 ml-1">{macro.unit}</span>
+                  <span className="text-sm text-gray-500 ml-1">{macro.unit}</span>
                 </p>
                 <div className="mt-3 space-y-1">
                   <div className="flex justify-between text-xs">
@@ -388,6 +385,49 @@ export function NutritionLogger() {
             </div>
           )
         })}
+      </motion.div>
+
+      {/* Calorie Balance & Weekly Avg */}
+      <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4">
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/[0.07] to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+              <Activity className="w-3.5 h-3.5 text-emerald-400" />
+              Calorie Balance
+            </div>
+            <p className={`text-3xl font-bold ${summary.calories <= targets.calories ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {Math.abs(summary.calories - targets.calories).toLocaleString()}
+              <span className="text-sm text-gray-500 ml-1">kcal</span>
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {summary.calories <= targets.calories ? 'under' : 'over'} target
+            </p>
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-500/[0.07] to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+              <Gauge className="w-3.5 h-3.5 text-indigo-400" />
+              Daily Avg (week)
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              {(['calories', 'protein', 'carbs', 'fat'] as const).map((k) => {
+                const total = weeklyData.reduce((s, d) => s + d[k], 0)
+                const avg = weeklyData.length > 0 ? Math.round(total / weeklyData.length) : 0
+                const colors: Record<string, string> = { calories: 'text-rose-400', protein: 'text-emerald-400', carbs: 'text-amber-400', fat: 'text-sky-400' }
+                const labels: Record<string, string> = { calories: 'Cal', protein: 'Pro', carbs: 'Carbs', fat: 'Fat' }
+                return (
+                  <div key={k} className="rounded-lg bg-white/[0.03] p-2 text-center">
+                    <p className={`text-xs font-bold ${colors[k]}`}>{avg}{k === 'calories' ? '' : 'g'}</p>
+                    <p className="text-[10px] text-gray-500">{labels[k]}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
       </motion.div>
 
       {/* Weekly Summary Toggle */}

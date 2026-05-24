@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Pill, Plus, Check, Clock, X, AlertTriangle, Calendar, TrendingUp, List,
-  Trash2, Sunrise, Sunset, Moon, Sun, Sparkles, Target
+  Trash2, Sunrise, Sunset, Moon, Sun, Sparkles, Target, Flame, Activity,
 } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -148,6 +149,42 @@ export function SupplementTracker() {
     return total > 0 ? Math.round((taken / total) * 100) : 0
   }, [adherenceWeek])
 
+  const adherenceTrend = useMemo(() => {
+    const days: { date: string; pct: number }[] = []
+    const now = new Date()
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now)
+      d.setDate(d.getDate() - i)
+      const dateStr = d.toISOString().split('T')[0]
+      const dayLogs = logs.filter((l) => l.date === dateStr)
+      const taken = new Set(dayLogs.map((l) => l.supplementId)).size
+      const total = dailySupps.length
+      days.push({
+        date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        pct: total > 0 ? Math.round((taken / total) * 100) : 0,
+      })
+    }
+    return days
+  }, [logs, dailySupps])
+
+  const suppStreak = useMemo(() => {
+    let streak = 0
+    const now = new Date()
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(now)
+      d.setDate(d.getDate() - i)
+      const dateStr = d.toISOString().split('T')[0]
+      const dayLogs = logs.filter((l) => l.date === dateStr)
+      const taken = new Set(dayLogs.map((l) => l.supplementId)).size
+      if (dailySupps.length > 0 && taken === dailySupps.length) {
+        streak++
+      } else if (dailySupps.length > 0) {
+        break
+      }
+    }
+    return streak
+  }, [logs, dailySupps])
+
   const supplementsByTime = useMemo(() => {
     const grouped: Record<TimeOfDay, Supplement[]> = {
       Morning: [],
@@ -246,39 +283,35 @@ export function SupplementTracker() {
     <div className="space-y-5">
       <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-5">
         {/* Stats Dashboard */}
-        <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            { label: 'Total', value: totalCount, icon: Pill, color: 'purple' },
-            { label: 'Taken Today', value: takenTodayCount, icon: Check, color: 'green' },
-            { label: 'Remaining', value: remainingCount, icon: Clock, color: 'amber' },
-            { label: 'Adherence', value: `${weekAdherence}%`, icon: TrendingUp, color: 'violet' },
-          ].map((stat) => (
-            <motion.div key={stat.label} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Card
-                className={cn(
-                  'backdrop-blur-xl border',
-                  stat.color === 'purple' && 'bg-purple-900/10 border-purple-700/30',
-                  stat.color === 'green' && 'bg-green-900/10 border-green-700/30',
-                  stat.color === 'amber' && 'bg-amber-900/10 border-amber-700/30',
-                  stat.color === 'violet' && 'bg-violet-900/10 border-violet-700/30',
-                )}
-              >
-                <CardContent className="p-6 text-center">
-                  <stat.icon
-                    className={cn(
-                      'w-5 h-5 mx-auto mb-1.5',
-                      stat.color === 'purple' && 'text-purple-400',
-                      stat.color === 'green' && 'text-green-400',
-                      stat.color === 'amber' && 'text-amber-400',
-                      stat.color === 'violet' && 'text-violet-400',
-                    )}
-                  />
-                  <div className="text-3xl font-black text-white">{stat.value}</div>
-                  <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{stat.label}</div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+        <motion.div variants={itemVariants} className="grid grid-cols-3 gap-4">
+          <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent p-5">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10" />
+            <div className="relative">
+              <div className="text-purple-400/80 text-sm mb-2">Total</div>
+              <p className="text-3xl font-bold text-purple-400">{totalCount}</p>
+            </div>
+          </div>
+          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent p-5">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10" />
+            <div className="relative">
+              <div className="text-emerald-400/80 text-sm mb-2">Taken Today</div>
+              <p className="text-3xl font-bold text-emerald-400">{takenTodayCount}</p>
+            </div>
+          </div>
+          <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent p-5">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full -mr-10 -mt-10" />
+            <div className="relative">
+              <div className="text-amber-400/80 text-sm mb-2">Remaining</div>
+              <p className="text-3xl font-bold text-amber-400">{remainingCount}</p>
+            </div>
+          </div>
+          <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-transparent p-5">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/10 rounded-full -mr-10 -mt-10" />
+            <div className="relative">
+              <div className="text-violet-400/80 text-sm mb-2">Adherence</div>
+              <p className="text-3xl font-bold text-violet-400">{weekAdherence}%</p>
+            </div>
+          </div>
         </motion.div>
 
         {/* Today's Status Banner */}
@@ -328,27 +361,59 @@ export function SupplementTracker() {
 
         {/* Adherence Progress Bar */}
         {dailySupps.length > 0 && (
-          <motion.div variants={itemVariants}>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-violet-400" />
-                    <span className="text-sm font-semibold text-white">Weekly Adherence</span>
+          <>
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-violet-400" />
+                      <span className="text-sm font-semibold text-white">Weekly Adherence</span>
+                    </div>
+                    <span className="text-sm font-bold text-violet-400">{weekAdherence}%</span>
                   </div>
-                  <span className="text-sm font-bold text-violet-400">{weekAdherence}%</span>
+                  <div className="h-2.5 bg-white/10 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${weekAdherence}%` }}
+                      transition={{ duration: 1, ease: 'easeOut' }}
+                      className="h-full rounded-full bg-gradient-to-r from-purple-500 via-violet-400 to-purple-400"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Streak + Trend */}
+            <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4">
+              <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent p-5">
+                <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                  <Flame className="w-4 h-4 text-amber-400" />
+                  Current Streak
                 </div>
-                <div className="h-2.5 bg-white/10 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${weekAdherence}%` }}
-                    transition={{ duration: 1, ease: 'easeOut' }}
-                    className="h-full rounded-full bg-gradient-to-r from-purple-500 via-violet-400 to-purple-400"
-                  />
+                <p className="text-3xl font-bold text-amber-400">{suppStreak} <span className="text-sm font-normal text-gray-500">days</span></p>
+              </div>
+              <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-transparent p-5">
+                <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                  <Activity className="w-4 h-4 text-violet-400" />
+                  30-Day Trend
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                <div className="h-12">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={adherenceTrend}>
+                      <XAxis dataKey="date" tick={false} axisLine={false} />
+                      <YAxis hide domain={[0, 100]} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
+                        formatter={(value: number) => [`${value}%`, 'Adherence']}
+                      />
+                      <Line type="monotone" dataKey="pct" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
 
         {/* Timing Schedule */}

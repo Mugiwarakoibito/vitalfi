@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Moon, Star, Clock, Plus, Trash2, AlertTriangle, Brain, Target, TrendingUp } from 'lucide-react'
+import { Moon, Star, Clock, Plus, Trash2, AlertTriangle, Brain, Target, TrendingUp, Sparkles, Activity, BarChart3 } from 'lucide-react'
 import { generateId, formatSleepDuration } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 import { Card } from '@/components/ui/Card'
@@ -87,6 +87,37 @@ export function SleepLogger() {
       })
     }
     return days
+  }, [sleep])
+
+  const last30Days = useMemo(() => {
+    const today = new Date()
+    const days = []
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      const dateStr = d.toISOString().split('T')[0]
+      const entry = sleep.find(e => e.date === dateStr)
+      days.push({
+        date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        duration: entry ? entry.duration : null,
+        quality: entry ? entry.quality : null,
+        hasData: !!entry,
+      })
+    }
+    return days
+  }, [sleep])
+
+  const weekComparison = useMemo(() => {
+    if (sleep.length < 2) return null
+    const sorted = [...sleep].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    const thisWeek = sorted.slice(0, 7)
+    const lastWeek = sorted.slice(7, 14)
+    if (thisWeek.length === 0 || lastWeek.length === 0) return null
+    const thisAvg = thisWeek.reduce((s, e) => s + e.duration, 0) / thisWeek.length
+    const lastAvg = lastWeek.reduce((s, e) => s + e.duration, 0) / lastWeek.length
+    const thisQual = thisWeek.reduce((s, e) => s + e.quality, 0) / thisWeek.length
+    const lastQual = lastWeek.reduce((s, e) => s + e.quality, 0) / lastWeek.length
+    return { thisAvg, lastAvg, thisQual, lastQual, diffDuration: thisAvg - lastAvg, diffQuality: thisQual - lastQual }
   }, [sleep])
 
   const durationDist = useMemo(() => {
@@ -257,53 +288,41 @@ export function SleepLogger() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        className="grid grid-cols-3 gap-4"
       >
-        <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-transparent p-6">
+        <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-transparent p-5">
           <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
-            <div className="flex items-center gap-2 text-violet-400/80 text-xs sm:text-sm mb-2">
-              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>Avg Duration</span>
-            </div>
-            <p className="text-3xl font-black text-white">
+            <div className="text-violet-400/80 text-sm mb-2">Avg Duration</div>
+            <p className="text-3xl font-bold text-violet-400">
               {sleep.length > 0 ? formatSleepDuration(avgDuration) : '--'}
             </p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent p-6">
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent p-5">
           <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
-            <div className="flex items-center gap-2 text-amber-400/80 text-xs sm:text-sm mb-2">
-              <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>Avg Quality</span>
-            </div>
+            <div className="text-amber-400/80 text-sm mb-2">Avg Quality</div>
             <div className="flex items-center gap-1 mt-0.5">
               {qualityStars(Math.round(avgQuality), 14)}
               <span className="text-white/50 text-xs ml-1">{avgQuality > 0 ? avgQuality.toFixed(1) : ''}</span>
             </div>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-transparent p-6">
+        <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-transparent p-5">
           <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
-            <div className="flex items-center gap-2 text-blue-400/80 text-xs sm:text-sm mb-2">
-              <Brain className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>Sleep Score</span>
-            </div>
-            <p className={`text-3xl font-black tracking-tight ${scoreColor(sleepScore)}`}>
+            <div className="text-blue-400/80 text-sm mb-2">Sleep Score</div>
+            <p className={`text-3xl font-bold tracking-tight ${scoreColor(sleepScore)}`}>
               {sleep.length > 0 ? sleepScore : '--'}
             </p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-6">
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-5">
           <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -mr-10 -mt-10" />
           <div className="relative">
-            <div className="flex items-center gap-2 text-gray-400/80 text-xs sm:text-sm mb-2">
-              <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>Total Nights</span>
-            </div>
-            <p className="text-3xl font-black text-white">{sleep.length}</p>
+            <div className="text-gray-400/80 text-sm mb-2">Total Nights</div>
+            <p className="text-3xl font-bold text-gray-400">{sleep.length}</p>
           </div>
         </div>
       </motion.div>
@@ -644,6 +663,71 @@ export function SleepLogger() {
                 <span className="text-gray-300">{insight.text}</span>
               </div>
             ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* 30-Day Trend */}
+      {sleep.length >= 3 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-4 sm:p-5"
+        >
+          <h4 className="text-sm font-medium text-gray-400 mb-4 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-violet-400" />
+            30-Day Trend
+          </h4>
+          <ResponsiveContainer width="100%" height={140}>
+            <BarChart data={last30Days}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
+              <XAxis dataKey="date" stroke="#ffffff40" fontSize={9} interval={4} tickMargin={2} />
+              <YAxis hide />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#1a1a2ee6', border: '1px solid #ffffff20', borderRadius: '12px', fontSize: '12px' }}
+                labelStyle={{ color: '#fff' }}
+                formatter={(value: number, name: string) => [name === 'duration' ? `${value.toFixed(1)}h` : `${value}/5`, name === 'duration' ? 'Duration' : 'Quality']}
+              />
+              <Bar dataKey="duration" radius={[3, 3, 0, 0]} maxBarSize={8}>
+                {last30Days.map((entry, idx) => (
+                  <rect key={idx} fill={entry.duration != null && entry.duration >= targetHours ? '#8B5CF6' : '#4B5563'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </motion.div>
+      )}
+
+      {/* Week-over-Week Comparison */}
+      {weekComparison && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="grid grid-cols-2 gap-4"
+        >
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-4 sm:p-5">
+            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+              <Activity className="w-3.5 h-3.5 text-violet-400" />
+              Duration vs Last Week
+            </div>
+            <p className="text-2xl font-bold text-white">{formatSleepDuration(weekComparison.thisAvg)}</p>
+            <div className={`flex items-center gap-1 text-xs mt-1 ${weekComparison.diffDuration >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {weekComparison.diffDuration >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingUp className="w-3 h-3 rotate-180" />}
+              {weekComparison.diffDuration >= 0 ? '+' : ''}{weekComparison.diffDuration.toFixed(1)}h vs last week
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-4 sm:p-5">
+            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              Quality vs Last Week
+            </div>
+            <p className="text-2xl font-bold text-white">{weekComparison.thisQual.toFixed(1)}</p>
+            <div className={`flex items-center gap-1 text-xs mt-1 ${weekComparison.diffQuality >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {weekComparison.diffQuality >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingUp className="w-3 h-3 rotate-180" />}
+              {weekComparison.diffQuality >= 0 ? '+' : ''}{weekComparison.diffQuality.toFixed(2)} vs last week
+            </div>
           </div>
         </motion.div>
       )}

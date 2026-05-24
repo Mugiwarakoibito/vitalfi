@@ -1,10 +1,22 @@
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Flame, Zap, Target, Calendar, Award, Trophy, Star, TrendingUp, Medal
+  Flame, Zap, Target, Award, Trophy, Star, TrendingUp, Medal,
+  BarChart3, Crown, Activity,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import type { Workout } from '@/lib/storage'
+
+const LEVEL_THRESHOLDS = [
+  { level: 1, min: 0, title: 'Beginner', icon: '🌱' },
+  { level: 2, min: 10, title: 'Consistent', icon: '🔥' },
+  { level: 3, min: 30, title: 'Dedicated', icon: '⚡' },
+  { level: 4, min: 60, title: 'Warrior', icon: '💪' },
+  { level: 5, min: 100, title: 'Elite', icon: '👑' },
+  { level: 6, min: 200, title: 'Legend', icon: '⭐' },
+  { level: 7, min: 365, title: 'Immortal', icon: '🏆' },
+]
 
 interface Achievement {
   id: string
@@ -221,39 +233,75 @@ export function WorkoutStreak() {
     return ''
   })()
 
+  const levelData = useMemo(() => {
+    const currentLevel = LEVEL_THRESHOLDS.slice().reverse().find(t => stats.totalWorkouts >= t.min)
+    const current = currentLevel || LEVEL_THRESHOLDS[0]
+    const next = LEVEL_THRESHOLDS.find(t => t.min > stats.totalWorkouts)
+    const progress = next ? ((stats.totalWorkouts - current.min) / (next.min - current.min)) * 100 : 100
+    return { current, next, progress: Math.min(100, Math.max(0, progress)) }
+  }, [stats.totalWorkouts])
+
+  const monthlyData = useMemo(() => {
+    const map = new Map<string, number>()
+    workouts.forEach(w => {
+      const key = w.date.slice(0, 7)
+      map.set(key, (map.get(key) || 0) + 1)
+    })
+    const now = new Date()
+    const months: { month: string; count: number; label: string }[] = []
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const key = d.toISOString().slice(0, 7)
+      months.push({
+        month: key,
+        count: map.get(key) || 0,
+        label: d.toLocaleDateString('en-US', { month: 'short' }),
+      })
+    }
+    return months
+  }, [workouts])
+
+  const weeklyDistData = useMemo(() => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const counts = [0, 0, 0, 0, 0, 0, 0]
+    workouts.forEach(w => {
+      const day = new Date(w.date).getDay()
+      counts[day]++
+    })
+    return days.map((day, i) => ({ day, count: counts[i] }))
+  }, [workouts])
+
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {([
-          { icon: Flame, label: 'Current Streak', value: stats.currentStreak, suffix: 'days', gradient: 'from-orange-500/10', border: 'border-orange-500/20', iconColor: 'text-orange-400' },
-          { icon: Zap, label: 'Best Streak', value: stats.longestStreak, suffix: 'days', gradient: 'from-amber-400/10', border: 'border-amber-400/20', iconColor: 'text-amber-400' },
-          { icon: Target, label: 'Total Workouts', value: stats.totalWorkouts, suffix: '', gradient: 'from-purple-500/10', border: 'border-purple-500/20', iconColor: 'text-purple-400' },
-          { icon: Calendar, label: 'This Month', value: stats.thisMonthWorkouts, suffix: '', gradient: 'from-blue-500/10', border: 'border-blue-500/20', iconColor: 'text-blue-400' },
-        ] as const).map((card, i) => (
-          <motion.div
-            key={card.label}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: i * 0.08 }}
-            className={`relative overflow-hidden rounded-2xl border ${card.border} bg-gradient-to-br ${card.gradient} to-transparent p-6 text-center backdrop-blur-sm`}
-          >
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/[0.03] to-transparent rounded-full -mr-12 -mt-12" />
-            <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-white/[0.02] to-transparent rounded-full -ml-8 -mb-8" />
-            <div className="relative">
-              <card.icon className={`w-5 h-5 md:w-6 md:h-6 ${card.iconColor} mx-auto mb-2 drop-shadow-[0_0_8px_currentColor]`} />
-              <motion.div
-                key={card.value}
-                initial={{ scale: 1.4, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="text-3xl font-black text-white"
-              >
-                {card.value}
-                {card.suffix && <span className="text-sm md:text-base font-normal text-gray-400 ml-1">{card.suffix}</span>}
-              </motion.div>
-              <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{card.label}</div>
-            </div>
-          </motion.div>
-        ))}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="relative overflow-hidden rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-orange-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="text-orange-400/80 text-sm mb-2">Current Streak</div>
+            <p className="text-3xl font-bold text-orange-400">{stats.currentStreak} <span className="text-sm font-normal text-gray-500">days</span></p>
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-amber-400/20 bg-gradient-to-br from-amber-400/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-amber-400/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="text-amber-400/80 text-sm mb-2">Best Streak</div>
+            <p className="text-3xl font-bold text-amber-400">{stats.longestStreak} <span className="text-sm font-normal text-gray-500">days</span></p>
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="text-purple-400/80 text-sm mb-2">Total Workouts</div>
+            <p className="text-3xl font-bold text-purple-400">{stats.totalWorkouts}</p>
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="text-blue-400/80 text-sm mb-2">This Month</div>
+            <p className="text-3xl font-bold text-blue-400">{stats.thisMonthWorkouts}</p>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -327,6 +375,91 @@ export function WorkoutStreak() {
           </p>
         </div>
       </Container>
+
+      {/* Level & Monthly Activity */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Container>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-600/10">
+              <Crown className="w-4 h-4 text-amber-400" />
+            </div>
+            <span className="text-sm font-semibold text-white">Level</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">{levelData.current.icon}</span>
+            <div>
+              <p className="text-lg font-bold text-white">{levelData.current.title}</p>
+              <p className="text-xs text-gray-500">{stats.totalWorkouts} total workouts</p>
+            </div>
+          </div>
+          {levelData.next && (
+            <div className="mt-3">
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <span>Next: {levelData.next.title}</span>
+                <span>{stats.totalWorkouts}/{levelData.next.min}</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${levelData.progress}%` }}
+                  transition={{ duration: 1, ease: 'easeOut' }}
+                  className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-400"
+                />
+              </div>
+            </div>
+          )}
+        </Container>
+        <Container>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500/20 to-violet-600/10">
+              <BarChart3 className="w-4 h-4 text-violet-400" />
+            </div>
+            <span className="text-sm font-semibold text-white">12-Month Activity</span>
+          </div>
+          <div className="h-20">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} interval={0} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
+                  formatter={(value: number) => [`${value} workouts`, '']}
+                />
+                <Bar dataKey="count" radius={[3, 3, 0, 0]} maxBarSize={12}>
+                  {monthlyData.map((entry, idx) => (
+                    <Cell key={idx} fill={entry.count > 0 ? '#8b5cf6' : '#374151'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Container>
+      </div>
+
+      {/* Weekly Distribution */}
+      {workouts.length >= 7 && (
+        <Container>
+          <div className="flex items-center gap-2 mb-3">
+            <Activity className="w-4 h-4 text-emerald-400" />
+            <span className="text-sm font-semibold text-white">Workout Distribution by Day</span>
+          </div>
+          <div className="h-16">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weeklyDistData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                <XAxis dataKey="day" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
+                  formatter={(value: number) => [`${value} workouts`, '']}
+                />
+                <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={20}>
+                  {weeklyDistData.map((entry, idx) => (
+                    <Cell key={idx} fill={entry.count > 0 ? '#f97316' : '#374151'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Container>
+      )}
 
       <Container>
         <div className="flex items-center justify-between mb-4">

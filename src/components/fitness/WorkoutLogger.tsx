@@ -15,6 +15,7 @@ import { storage } from '@/lib/storage'
 import { exerciseLibrary, getExerciseById, getAllMuscleGroups, categoryLabels, muscleGroupColors } from '@/lib/exercises'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import type { WorkoutExercise, ExerciseSet, WorkoutFilter, ExerciseCategory, MuscleGroup } from '@/types/fitness'
 import type { Workout, WorkoutTemplate } from '@/lib/storage'
 
@@ -587,6 +588,37 @@ export function WorkoutLogger() {
   const totalDuration = workouts.reduce((sum, w) => sum + (w.duration || 0), 0)
   const totalVolume = workouts.reduce((sum, w) => sum + calcVolume(w.exercises), 0)
 
+  const weeklyVolumeData = useMemo(() => {
+    const map = new Map<string, number>()
+    workouts.forEach(w => {
+      const weekStart = new Date(w.date)
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+      const key = weekStart.toISOString().split('T')[0]
+      map.set(key, (map.get(key) || 0) + calcVolume(w.exercises))
+    })
+    const sorted = [...map.entries()].sort(([a], [b]) => a.localeCompare(b)).slice(-12)
+    return sorted.map(([date, vol]) => ({
+      week: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      volume: Math.round(vol),
+    }))
+  }, [workouts])
+
+  const monthlyFreqData = useMemo(() => {
+    const map = new Map<string, number>()
+    workouts.forEach(w => {
+      const key = w.date.slice(0, 7)
+      map.set(key, (map.get(key) || 0) + 1)
+    })
+    const now = new Date()
+    const months: { month: string; count: number; label: string }[] = []
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const key = d.toISOString().slice(0, 7)
+      months.push({ month: key, count: map.get(key) || 0, label: d.toLocaleDateString('en-US', { month: 'short' }) })
+    }
+    return months
+  }, [workouts])
+
   const resetForm = useCallback(() => {
     setWorkoutName('')
     setWorkoutType('strength')
@@ -852,6 +884,56 @@ export function WorkoutLogger() {
           </div>
         </div>
       </div>
+
+      {/* Charts Row */}
+      {weeklyVolumeData.length > 1 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Activity className="w-4 h-4 text-rose-400" />
+              <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Weekly Volume</h4>
+            </div>
+            <div className="h-20">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={weeklyVolumeData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                  <XAxis dataKey="week" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(weeklyVolumeData.length / 4))} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
+                    formatter={(value: number) => [`${value.toLocaleString()}kg`, 'Volume']}
+                  />
+                  <Bar dataKey="volume" radius={[4, 4, 0, 0]} maxBarSize={16}>
+                    {weeklyVolumeData.map((entry, idx) => (
+                      <Cell key={idx} fill={entry.volume > 0 ? '#f43f5e' : '#374151'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="w-4 h-4 text-sky-400" />
+              <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Monthly Frequency</h4>
+            </div>
+            <div className="h-20">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyFreqData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                  <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} interval={0} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
+                    formatter={(value: number) => [`${value} workouts`, '']}
+                  />
+                  <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={16}>
+                    {monthlyFreqData.map((entry, idx) => (
+                      <Cell key={idx} fill={entry.count > 0 ? '#06b6d4' : '#374151'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">

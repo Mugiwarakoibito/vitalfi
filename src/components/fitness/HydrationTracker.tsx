@@ -1,11 +1,11 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Droplets, Plus, Trash2, GlassWater, Target, AlertTriangle,
+  Plus, Trash2, GlassWater, AlertTriangle,
   Settings, TrendingUp, Zap, Flame, Clock, CheckCircle2,
-  Sparkles, ChevronDown, CalendarDays, Ban, X
+  ChevronDown, CalendarDays, Ban, X, Activity
 } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts'
 import { useAppStore } from '@/store/useAppStore'
 import { generateId, cn } from '@/lib/utils'
 import { Card } from '@/components/ui/Card'
@@ -142,6 +142,22 @@ export function HydrationTracker({ dailyGoal: defaultGoal }: HydrationTrackerPro
     [totalAmount, glassSize],
   )
 
+  const timeDistribution = useMemo(() => {
+    const slots = [
+      { label: 'Morning (6-12)', min: 6, max: 12, color: '#f59e0b' },
+      { label: 'Afternoon (12-18)', min: 12, max: 18, color: '#06b6d4' },
+      { label: 'Evening (18-24)', min: 18, max: 24, color: '#8b5cf6' },
+      { label: 'Night (0-6)', min: 0, max: 6, color: '#6366f1' },
+    ]
+    return slots.map(slot => {
+      const entries = todayEntries.filter(e => {
+        const h = new Date(e.timestamp).getHours()
+        return h >= slot.min && h < slot.max
+      })
+      return { ...slot, amount: entries.reduce((s, e) => s + e.amount, 0), count: entries.length }
+    })
+  }, [todayEntries])
+
   const addEntry = (amount: number) => {
     const note = waterType || undefined
     const entry: HydrationEntry = {
@@ -206,31 +222,28 @@ export function HydrationTracker({ dailyGoal: defaultGoal }: HydrationTrackerPro
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-6">
-        {[
-          { label: 'Goal', value: `${dailyGoal}ml`, icon: Target, color: 'from-violet-500/10', border: 'border-violet-500/20', text: 'text-violet-400' },
-          { label: 'Consumed', value: `${totalAmount}ml`, icon: Droplets, color: 'from-cyan-500/10', border: 'border-cyan-500/20', text: 'text-cyan-400' },
-          { label: 'Remaining', value: `${remaining}ml`, icon: Sparkles, color: 'from-white/5', border: 'border-white/10', text: 'text-gray-300' },
-        ].map((stat) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-2xl border bg-gradient-to-br p-6"
-            style={{
-              borderColor: `color-mix(in srgb, ${stat.border.replace('border-', '')} 20%, transparent)`,
-              backgroundImage: `linear-gradient(to bottom right, ${stat.color}, transparent)`,
-            }}
-          >
-            <div className="relative">
-              <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1.5">
-                <stat.icon className="w-3.5 h-3.5" />
-                <span>{stat.label}</span>
-              </div>
-              <p className="text-3xl font-black text-white">{stat.value}</p>
-            </div>
-          </motion.div>
-        ))}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="text-violet-400/80 text-sm mb-2">Goal</div>
+            <p className="text-3xl font-bold text-violet-400">{dailyGoal}ml</p>
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="text-cyan-400/80 text-sm mb-2">Consumed</div>
+            <p className="text-3xl font-bold text-cyan-400">{totalAmount}ml</p>
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -mr-10 -mt-10" />
+          <div className="relative">
+            <div className="text-gray-400/80 text-sm mb-2">Remaining</div>
+            <p className="text-3xl font-bold text-gray-300">{remaining}ml</p>
+          </div>
+        </div>
       </div>
 
       {/* Progress Ring + Quick Add Row */}
@@ -460,6 +473,46 @@ export function HydrationTracker({ dailyGoal: defaultGoal }: HydrationTrackerPro
           </ResponsiveContainer>
         </div>
       </motion.div>
+
+      {/* Time-of-Day Distribution */}
+      {todayEntries.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"
+        >
+          <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+            <Activity className="w-4 h-4 text-cyan-400" />
+            Consumption Pattern
+          </h3>
+          <div className="grid grid-cols-4 gap-3">
+            {timeDistribution.map(slot => (
+              <div key={slot.label} className="text-center">
+                <div className="text-2xl font-bold text-white mb-1">{Math.round(slot.amount / 100) * 100}ml</div>
+                <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mb-1">
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${totalAmount > 0 ? (slot.amount / totalAmount) * 100 : 0}%`, backgroundColor: slot.color }} />
+                </div>
+                <p className="text-[10px] text-gray-500">{slot.label.split('(')[0].trim()}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 h-24">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={timeDistribution} cx="50%" cy="50%" innerRadius={28} outerRadius={40} dataKey="amount" paddingAngle={2}>
+                  {timeDistribution.map((entry, idx) => (
+                    <Cell key={idx} fill={entry.color} stroke="transparent" />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
+                  formatter={(value: number) => [`${value}ml`, 'Consumed']}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+      )}
 
       {/* Streak Stats */}
       <div className="grid grid-cols-2 gap-6">

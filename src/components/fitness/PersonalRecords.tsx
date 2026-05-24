@@ -230,6 +230,27 @@ export function PersonalRecords() {
         </div>
       </div>
 
+      {records.length > 0 && (
+        <div className="grid grid-cols-4 gap-3">
+          <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent p-4">
+            <p className="text-xs text-amber-400/80 mb-1">Total PRs</p>
+            <p className="text-2xl font-bold text-amber-400">{records.length}</p>
+          </div>
+          <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent p-4">
+            <p className="text-xs text-purple-400/80 mb-1">Exercises</p>
+            <p className="text-2xl font-bold text-purple-400">{exercises.length}</p>
+          </div>
+          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent p-4">
+            <p className="text-xs text-emerald-400/80 mb-1">Total Volume</p>
+            <p className="text-2xl font-bold text-emerald-400">{records.reduce((s, r) => s + r.weight * r.reps, 0).toLocaleString()}</p>
+          </div>
+          <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-transparent p-4">
+            <p className="text-xs text-violet-400/80 mb-1">Best 1RM</p>
+            <p className="text-2xl font-bold text-violet-400">{Math.max(...records.map(r => estimateOneRM(r.weight, r.reps)))}</p>
+          </div>
+        </div>
+      )}
+
       <AnimatePresence>
         {showCalculator && (
           <motion.div
@@ -370,6 +391,18 @@ export function PersonalRecords() {
                       : 'Volume'
                 }
               />
+              {chartMetric === 'weight' && (
+                <Line
+                  type="monotone"
+                  dataKey="estimated1RM"
+                  stroke={chartColor}
+                  strokeWidth={1.5}
+                  strokeDasharray="4 4"
+                  dot={false}
+                  opacity={0.5}
+                  name="Est. 1RM"
+                />
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>
