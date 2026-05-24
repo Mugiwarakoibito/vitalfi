@@ -561,6 +561,7 @@ export function WorkoutLogger() {
   const [saveMode, setSaveMode] = useState<'new' | 'existing' | 'edit'>('new')
   const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplate | null>(null)
   const [stashedExercises, setStashedExercises] = useState<WorkoutExercise[]>([])
+  const [saveModalFromPicker, setSaveModalFromPicker] = useState(false)
   const [pendingExerciseConfig, setPendingExerciseConfig] = useState<{ id: string; name: string; targetSets: number; targetReps: string; targetRpe: string; editExerciseId?: string } | null>(null)
 
   const [filters, setFilters] = useState<WorkoutFilter>({})
@@ -614,7 +615,6 @@ export function WorkoutLogger() {
     }))
     setExercises(mapped)
     setExpandedExercises(new Set(mapped.map((e) => e.id)))
-    setShowTemplatePicker(false)
 
     setEditingTemplate(null)
   }, [])
@@ -1066,7 +1066,7 @@ export function WorkoutLogger() {
 
       <AnimatePresence>
         {showSaveModal && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[60] p-4" onClick={() => { setShowSaveModal(false); setSaveTemplateExercises(new Set()); const wasEditing = saveMode === 'edit'; setEditingTemplate(null); if (wasEditing) setShowTemplatePicker(true) }}>
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[60] p-4" onClick={() => { setShowSaveModal(false); setSaveTemplateExercises(new Set()); const wasEditing = saveMode === 'edit'; setEditingTemplate(null); if (saveModalFromPicker) { setSaveModalFromPicker(false); setShowTemplatePicker(true) } else if (wasEditing) { setShowTemplatePicker(true) } }}>
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -1077,7 +1077,7 @@ export function WorkoutLogger() {
               <div className="p-5 border-b border-white/5">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-white">{saveMode === 'edit' ? 'Edit Template' : 'Add Workout Template'}</h3>
-                  <button onClick={() => { setShowSaveModal(false); setSaveTemplateExercises(new Set()); const wasEditing = saveMode === 'edit'; setEditingTemplate(null); if (wasEditing) setShowTemplatePicker(true) }} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 transition-all">
+                  <button onClick={() => { setShowSaveModal(false); setSaveTemplateExercises(new Set()); const wasEditing = saveMode === 'edit'; setEditingTemplate(null); if (saveModalFromPicker) { setSaveModalFromPicker(false); setShowTemplatePicker(true) } else if (wasEditing) { setShowTemplatePicker(true) } }} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 transition-all">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
@@ -1192,7 +1192,7 @@ export function WorkoutLogger() {
                 )}
               </div>
               <div className="p-5 border-t border-white/5 flex gap-3">
-                <button onClick={() => { setShowSaveModal(false); setSaveTemplateExercises(new Set()); if (stashedExercises.length > 0) { setExercises(stashedExercises); setStashedExercises([]) }; const wasEditing = saveMode === 'edit'; setEditingTemplate(null); if (wasEditing) setShowTemplatePicker(true) }} className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all text-sm">
+                <button onClick={() => { setShowSaveModal(false); setSaveTemplateExercises(new Set()); if (stashedExercises.length > 0) { setExercises(stashedExercises); setStashedExercises([]) }; const wasEditing = saveMode === 'edit'; setEditingTemplate(null); if (saveModalFromPicker) { setSaveModalFromPicker(false); setShowTemplatePicker(true) } else if (wasEditing) { setShowTemplatePicker(true) } }} className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all text-sm">
                   Cancel
                 </button>
                 <button
@@ -1603,7 +1603,7 @@ export function WorkoutLogger() {
             onDelete={deleteSavedTemplate}
             onEditTemplate={(t) => { applyTemplate(t); setShowTemplatePicker(false); setEditingTemplate(t); setSaveName(t.name); setSaveMode('edit'); setShowSaveModal(true) }}
             onClose={() => setShowTemplatePicker(false)}
-            onNewTemplate={() => { setShowTemplatePicker(false); setSaveName(''); setSaveMode('new'); setEditingTemplate(null); setStashedExercises(exercises); setExercises([]); setShowSaveModal(true) }}
+            onNewTemplate={() => { setShowTemplatePicker(false); setSaveName(''); setSaveMode('new'); setEditingTemplate(null); setStashedExercises(exercises); setExercises([]); setSaveModalFromPicker(true); setShowSaveModal(true) }}
           />
         )}
       </AnimatePresence>
