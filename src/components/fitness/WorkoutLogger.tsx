@@ -1234,8 +1234,7 @@ export function WorkoutLogger() {
                                   month: 'short',
                                   day: 'numeric',
                                   year: 'numeric',
-                                })}{' '}
-                                {wo.duration > 0 && `• ${formatDuration(wo.duration)}`}
+                                })}
                               </p>
                             </div>
                           </div>
