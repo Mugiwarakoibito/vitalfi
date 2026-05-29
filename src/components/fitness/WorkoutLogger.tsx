@@ -686,23 +686,23 @@ export function WorkoutLogger() {
     weekStart.setDate(weekStart.getDate() - weekStart.getDay())
     weekStart.setHours(0, 0, 0, 0)
 
-    const currentWeekVol = workouts
-      .filter(w => new Date(w.date) >= weekStart)
-      .reduce((s, w) => s + calcVolume(w.exercises), 0)
+    const currentWeekWorkouts = workouts.filter(w => new Date(w.date) >= weekStart)
+    const currentWeekCount = currentWeekWorkouts.length
+    const currentWeekVol = currentWeekWorkouts.reduce((s, w) => s + calcVolume(w.exercises), 0)
 
-    const weeksWithData = new Set(workouts.map(w => {
-      const d = new Date(w.date)
-      d.setDate(d.getDate() - d.getDay())
-      return d.toISOString().split('T')[0]
-    })).size
-
-    if (weeksWithData === 0 || currentWeekVol === 0) {
-      return { score: currentWeekVol > 0 ? 20 : 0, label: 'Rest', flames: 0 }
+    if (currentWeekCount === 0) {
+      return { score: 0, label: 'Rest', flames: 0 }
     }
 
-    const avgWeeklyVol = workouts.reduce((s, w) => s + calcVolume(w.exercises), 0) / weeksWithData
-    const raw = Math.round((currentWeekVol / avgWeeklyVol) * 50)
-    const score = Math.min(100, Math.max(0, raw))
+    const allDates = workouts.map(w => new Date(w.date)).sort((a, b) => a.getTime() - b.getTime())
+    const weeksRange = Math.max(1, Math.ceil((allDates[allDates.length - 1].getTime() - allDates[0].getTime()) / 604800000) || 1)
+
+    const avgWeeklyCount = workouts.length / weeksRange
+    const avgWeeklyVol = workouts.reduce((s, w) => s + calcVolume(w.exercises), 0) / weeksRange
+
+    const freqScore = Math.min(50, Math.round((currentWeekCount / Math.max(avgWeeklyCount, 0.5)) * 25))
+    const volScore = Math.min(50, Math.round((currentWeekVol / Math.max(avgWeeklyVol, 1)) * 25))
+    const score = Math.min(100, Math.max(1, freqScore + volScore))
 
     const label = score >= 80 ? 'On Fire' : score >= 60 ? 'Hot' : score >= 40 ? 'Warm' : score >= 20 ? 'Mild' : 'Cool'
     const flames = score >= 80 ? 3 : score >= 60 ? 2 : score >= 40 ? 1 : 0
