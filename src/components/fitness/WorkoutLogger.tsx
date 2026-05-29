@@ -1271,17 +1271,11 @@ export function WorkoutLogger() {
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {wo.exercises.filter((ex, i, arr) => arr.findIndex(e => e.exerciseId === ex.exerciseId) === i).slice(0, 5).map((ex) => {
-                            const bestSet = ex.sets.reduce((best, s) => Math.max(best, s.weight || 0), 0)
-                            const totalReps = ex.sets.reduce((sum, s) => sum + (s.reps || 0), 0)
-                            return (
-                              <span key={ex.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/5 text-xs text-gray-300">
-                                {ex.name}
-                                {bestSet > 0 && <span className="text-emerald-400 font-medium">{bestSet}kg</span>}
-                                {totalReps > 0 && <span className="text-gray-500">×{totalReps}</span>}
-                              </span>
-                            )
-                          })}
+                          {wo.exercises.filter((ex, i, arr) => arr.findIndex(e => e.exerciseId === ex.exerciseId) === i).slice(0, 5).map((ex) => (
+                            <span key={ex.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/5 text-xs text-gray-300">
+                              {ex.name}
+                            </span>
+                          ))}
                           {(() => {
                             const uniqueCount = new Set(wo.exercises.map(e => e.exerciseId)).size
                             return uniqueCount > 5 ? (
