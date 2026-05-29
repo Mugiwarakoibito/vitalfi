@@ -657,20 +657,6 @@ export function WorkoutLogger() {
     return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [workouts, filters])
 
-  const volumeChange = useMemo(() => {
-    const now = new Date()
-    const thisStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const lastStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    const lastEnd = new Date(now.getFullYear(), now.getMonth(), 0)
-
-    const thisVol = workouts.filter(w => new Date(w.date) >= thisStart).reduce((s, w) => s + calcVolume(w.exercises), 0)
-    const lastVol = workouts.filter(w => { const d = new Date(w.date); return d >= lastStart && d <= lastEnd }).reduce((s, w) => s + calcVolume(w.exercises), 0)
-
-    if (lastVol === 0) return { pct: 0, hasPrev: false, thisVol, direction: 0 }
-    const pct = Math.round(((thisVol - lastVol) / lastVol) * 100)
-    return { pct: Math.abs(pct), hasPrev: true, thisVol, direction: pct > 0 ? 1 : pct < 0 ? -1 : 0 }
-  }, [workouts])
-
   const thisWeek = useMemo(() => {
     const now = new Date()
     const weekStart = new Date(now)
@@ -975,19 +961,7 @@ export function WorkoutLogger() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/20 via-emerald-500/5 to-transparent p-6 shadow-lg shadow-emerald-500/5">
-          <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-20 h-20 bg-teal-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
-          <div className="relative">
-            <div className="text-emerald-400/80 text-xs font-medium uppercase tracking-wider mb-2">Volume Δ</div>
-            <div className="flex items-center gap-2">
-              {volumeChange.direction === 1 ? <TrendingUp className="w-5 h-5 text-emerald-400" /> : volumeChange.direction === -1 ? <TrendingDown className="w-5 h-5 text-rose-400" /> : <Minus className="w-5 h-5 text-gray-500" />}
-              <p className={`text-3xl font-bold drop-shadow-lg ${volumeChange.direction === 1 ? 'text-emerald-400' : volumeChange.direction === -1 ? 'text-rose-400' : 'text-gray-400'}`}>{volumeChange.hasPrev ? `${volumeChange.pct}%` : '--'}</p>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">vs last month</p>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 gap-4">
         <div className="relative overflow-hidden rounded-2xl border border-sky-500/30 bg-gradient-to-br from-sky-500/20 via-sky-500/5 to-transparent p-6 shadow-lg shadow-sky-500/5">
           <div className="absolute top-0 right-0 w-28 h-28 bg-sky-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
           <div className="absolute bottom-0 left-0 w-20 h-20 bg-cyan-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
