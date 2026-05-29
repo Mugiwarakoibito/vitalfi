@@ -93,33 +93,36 @@ setFormData({ name: '', target: '', current: '', category: 'other', deadline: ''
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-purple-500/5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-violet-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
             <div className="flex items-center gap-2 text-purple-400/80 text-sm mb-2">
               <span>Total Goals</span>
             </div>
-            <p className="text-3xl font-bold text-purple-400">{financialGoals.length}</p>
+            <p className="text-3xl font-bold text-purple-400 drop-shadow-lg">{financialGoals.length}</p>
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-emerald-500/5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-teal-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
             <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-2">
               <span>Total Saved</span>
             </div>
-            <p className="text-3xl font-bold text-emerald-400">{formatCurrency(totalSaved, currency)}</p>
+            <p className="text-3xl font-bold text-emerald-400 drop-shadow-lg">{formatCurrency(totalSaved, currency)}</p>
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-blue-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-blue-500/5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-sky-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
             <div className="flex items-center gap-2 text-blue-400/80 text-sm mb-2">
               <span>Overall Progress</span>
             </div>
-            <p className="text-3xl font-bold text-blue-400">
+            <p className="text-3xl font-bold text-blue-400 drop-shadow-lg">
               {totalTarget > 0 ? Math.round((totalSaved / totalTarget) * 100) : 0}%
             </p>
           </div>

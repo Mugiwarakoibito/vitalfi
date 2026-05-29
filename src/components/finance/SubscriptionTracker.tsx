@@ -112,31 +112,34 @@ export function SubscriptionTracker() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-purple-500/5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-violet-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
             <div className="flex items-center gap-2 text-purple-400/80 text-sm mb-2">
               <span>Active Subs</span>
             </div>
-            <p className="text-3xl font-bold text-purple-400">{activeSubs.length}</p>
+            <p className="text-3xl font-bold text-purple-400 drop-shadow-lg">{activeSubs.length}</p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-pink-500/20 bg-gradient-to-br from-pink-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-pink-500/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-pink-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-pink-500/5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-pink-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-rose-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
             <div className="flex items-center gap-2 text-pink-400/80 text-sm mb-2">
               <span>Monthly Cost</span>
             </div>
-            <p className="text-3xl font-bold text-pink-400">{formatCurrency(totalMonthly, currency)}</p>
+            <p className="text-3xl font-bold text-pink-400 drop-shadow-lg">{formatCurrency(totalMonthly, currency)}</p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-cyan-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-cyan-500/5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-sky-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
             <div className="flex items-center gap-2 text-cyan-400/80 text-sm mb-2">
               <span>Yearly Cost</span>
             </div>
-            <p className="text-3xl font-bold text-cyan-400">{formatCurrency(totalMonthly * 12, currency)}</p>
+            <p className="text-3xl font-bold text-cyan-400 drop-shadow-lg">{formatCurrency(totalMonthly * 12, currency)}</p>
           </div>
         </div>
       </div>

@@ -515,29 +515,34 @@ export function FinanceDashboard() {
 
 function MetricCard({ label, value, trend, positive, icon: Icon, color, onClick, showVsLastMonth = true }: any) {
   const hasData = trend && trend !== 'No Data' && trend !== 'First Month' && trend !== 'Start' && trend !== 'History' && trend !== 'No Last Month' && trend !== 'Add your first goal'
-  const colorMap = {
-    cyan: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20 shadow-cyan-500/10",
-    emerald: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20 shadow-emerald-500/10",
-    purple: "text-purple-400 bg-purple-500/10 border-purple-500/20 shadow-purple-500/10",
-    amber: "text-amber-400 bg-amber-500/10 border-amber-500/20 shadow-amber-500/10",
+  const gradientMap: Record<string, { border: string; circle: string; circle2: string; text: string; accent: string }> = {
+    cyan: { border: 'border-cyan-500/30', circle: 'bg-cyan-500/15', circle2: 'bg-sky-500/10', text: 'text-cyan-400/80', accent: 'text-cyan-400' },
+    emerald: { border: 'border-emerald-500/30', circle: 'bg-emerald-500/15', circle2: 'bg-teal-500/10', text: 'text-emerald-400/80', accent: 'text-emerald-400' },
+    purple: { border: 'border-purple-500/30', circle: 'bg-purple-500/15', circle2: 'bg-violet-500/10', text: 'text-purple-400/80', accent: 'text-purple-400' },
+    amber: { border: 'border-amber-500/30', circle: 'bg-amber-500/15', circle2: 'bg-orange-500/10', text: 'text-amber-400/80', accent: 'text-amber-400' },
   }
+  const g = gradientMap[color as keyof typeof gradientMap] || gradientMap.cyan
   
   return (
-    <div onClick={onClick} className="glass-card p-6 border-white/5 group hover:border-white/10 transition-all cursor-pointer relative overflow-hidden">
-      <div className={cn("absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity", colorMap[color as keyof typeof colorMap].split(' ')[0])}>
+    <div onClick={onClick} className={`relative overflow-hidden rounded-2xl border ${g.border} bg-black/60 backdrop-blur-[12px] p-6 shadow-lg shadow-${color}-500/5 cursor-pointer transition-all hover:brightness-110`}>
+      <div className={`absolute top-0 right-0 w-24 h-24 ${g.circle} rounded-full -mr-12 -mt-12 blur-xl`} />
+      <div className={`absolute bottom-0 left-0 w-16 h-16 ${g.circle2} rounded-full -ml-8 -mb-8 blur-lg`} />
+      <div className={`absolute top-0 right-0 p-4 opacity-10 ${g.accent}`}>
         <Icon size={40} />
       </div>
-      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">{label}</p>
-      <div className="space-y-1">
-        <p className="text-3xl font-black text-white tracking-tighter">{value}</p>
-        {hasData && (
-          <div className="flex items-center gap-1.5">
-            <span className={cn("text-[10px] font-bold uppercase", positive ? "text-emerald-400" : "text-rose-500")}>
-              {trend}
-            </span>
-            {showVsLastMonth && <span className="text-[10px] font-bold text-slate-700 uppercase tracking-tighter">vs Last Month</span>}
-          </div>
-        )}
+      <div className="relative">
+        <p className={`text-[10px] font-black ${g.text} uppercase tracking-[0.2em] mb-3`}>{label}</p>
+        <div className="space-y-1">
+          <p className="text-3xl font-black text-white tracking-tighter drop-shadow-lg">{value}</p>
+          {hasData && (
+            <div className="flex items-center gap-1.5">
+              <span className={cn("text-[10px] font-bold uppercase", positive ? "text-emerald-400" : "text-rose-500")}>
+                {trend}
+              </span>
+              {showVsLastMonth && <span className="text-[10px] font-bold text-slate-700 uppercase tracking-tighter">vs Last Month</span>}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

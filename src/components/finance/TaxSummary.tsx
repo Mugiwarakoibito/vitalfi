@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { Scale, Receipt, DollarSign, Percent } from 'lucide-react'
-import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { useAppStore } from '@/store/useAppStore'
 
 export function TaxSummary() {
@@ -51,55 +50,54 @@ export function TaxSummary() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-white/5 border-white/10">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-500/10 rounded-xl">
-                <DollarSign className="w-5 h-5 text-emerald-400" />
-              </div>
-              <div>
-                <p className="text-[10px] text-slate-500 font-bold uppercase">Gross Income</p>
-                <p className="text-xl font-black text-white">${taxData.grossIncome.toLocaleString()}</p>
-              </div>
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-emerald-500/5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-teal-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
+          <div className="relative flex items-center gap-3">
+            <div className="p-2 bg-emerald-500/20 rounded-xl">
+              <DollarSign className="w-5 h-5 text-emerald-400" />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <p className="text-[10px] text-emerald-400/80 font-bold uppercase">Gross Income</p>
+              <p className="text-xl font-black text-white drop-shadow-lg">${taxData.grossIncome.toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
 
-        <Card className="bg-white/5 border-white/10">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-cyan-500/10 rounded-xl">
-                <Receipt className="w-5 h-5 text-cyan-400" />
-              </div>
-              <div>
-                <p className="text-[10px] text-slate-500 font-bold uppercase">Deductible (Est.)</p>
-                <p className="text-xl font-black text-white">${taxData.deductibleAmount.toLocaleString()}</p>
-              </div>
+        <div className="relative overflow-hidden rounded-2xl border border-cyan-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-cyan-500/5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-sky-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
+          <div className="relative flex items-center gap-3">
+            <div className="p-2 bg-cyan-500/20 rounded-xl">
+              <Receipt className="w-5 h-5 text-cyan-400" />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <p className="text-[10px] text-cyan-400/80 font-bold uppercase">Deductible (Est.)</p>
+              <p className="text-xl font-black text-white drop-shadow-lg">${taxData.deductibleAmount.toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
 
-        <Card className="bg-white/5 border-white/10">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-500/10 rounded-xl">
-                <Percent className="w-5 h-5 text-amber-400" />
-              </div>
-              <div>
-                <p className="text-[10px] text-slate-500 font-bold uppercase">Est. Tax</p>
-                <p className="text-xl font-black text-white">${taxData.estimatedTax.toLocaleString()}</p>
-                <p className="text-[10px] text-slate-500">{taxData.effectiveRate.toFixed(1)}% effective rate</p>
-              </div>
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-amber-500/5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-orange-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
+          <div className="relative flex items-center gap-3">
+            <div className="p-2 bg-amber-500/20 rounded-xl">
+              <Percent className="w-5 h-5 text-amber-400" />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <p className="text-[10px] text-amber-400/80 font-bold uppercase">Est. Tax</p>
+              <p className="text-xl font-black text-white drop-shadow-lg">${taxData.estimatedTax.toLocaleString()}</p>
+              <p className="text-[10px] text-slate-500">{taxData.effectiveRate.toFixed(1)}% effective rate</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <Card className="bg-white/5 border-white/10">
-        <CardHeader className="border-b border-white/5">
-          <h3 className="text-sm font-black text-white uppercase tracking-widest">Deduction Breakdown</h3>
-        </CardHeader>
-        <CardContent className="p-4">
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-xl" />
+        <div className="relative">
+          <h3 className="text-sm font-black text-white uppercase tracking-widest mb-4 pb-2 border-b border-white/5">Deduction Breakdown</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center py-2 border-b border-white/5">
               <span className="text-slate-400 text-sm">Standard Deduction</span>
@@ -118,8 +116,8 @@ export function TaxSummary() {
               <span className="text-white font-bold">${taxData.capitalGains.toLocaleString()}</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <p className="text-xs text-slate-600 text-center">
         * This is an estimate only. Consult a tax professional for accurate filing.
