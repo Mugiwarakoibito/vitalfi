@@ -694,11 +694,24 @@ export function WorkoutLogger() {
       return { score: 0, label: 'Rest', flames: 0 }
     }
 
-    const allDates = workouts.map(w => new Date(w.date)).sort((a, b) => a.getTime() - b.getTime())
-    const weeksRange = Math.max(1, Math.ceil((allDates[allDates.length - 1].getTime() - allDates[0].getTime()) / 604800000) || 1)
+    const historicalWorkouts = workouts.filter(w => new Date(w.date) < weekStart)
 
-    const avgWeeklyCount = workouts.length / weeksRange
-    const avgWeeklyVol = workouts.reduce((s, w) => s + calcVolume(w.exercises), 0) / weeksRange
+    if (historicalWorkouts.length === 0) {
+      const base = Math.min(60, currentWeekCount * 15 + Math.round(currentWeekVol / 2000) * 5)
+      const score = Math.min(100, Math.max(1, base))
+      const label = score >= 80 ? 'On Fire' : score >= 60 ? 'Hot' : score >= 40 ? 'Warm' : score >= 20 ? 'Mild' : 'Cool'
+      const flames = score >= 80 ? 3 : score >= 60 ? 2 : score >= 40 ? 1 : 0
+      return { score, label, flames }
+    }
+
+    const historicalWeeks = new Set(historicalWorkouts.map(w => {
+      const d = new Date(w.date)
+      d.setDate(d.getDate() - d.getDay())
+      return d.toISOString().split('T')[0]
+    })).size
+
+    const avgWeeklyCount = historicalWorkouts.length / historicalWeeks
+    const avgWeeklyVol = historicalWorkouts.reduce((s, w) => s + calcVolume(w.exercises), 0) / historicalWeeks
 
     const freqScore = Math.min(50, Math.round((currentWeekCount / Math.max(avgWeeklyCount, 0.5)) * 25))
     const volScore = Math.min(50, Math.round((currentWeekVol / Math.max(avgWeeklyVol, 1)) * 25))
