@@ -635,7 +635,7 @@ export function WorkoutLogger() {
   const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplate | null>(null)
   const [stashedExercises, setStashedExercises] = useState<WorkoutExercise[]>([])
   const [saveModalFromPicker, setSaveModalFromPicker] = useState(false)
-  const [pendingExerciseConfig, setPendingExerciseConfig] = useState<{ id: string; name: string; targetSets: number; targetReps: string; targetRpe: string; editExerciseId?: string } | null>(null)
+  const [pendingExerciseConfig, setPendingExerciseConfig] = useState<{ id: string; name: string; targetSets: string; targetReps: string; targetRpe: string; editExerciseId?: string } | null>(null)
 
   const [filters, setFilters] = useState<WorkoutFilter>({})
   const [showFilters, setShowFilters] = useState(false)
@@ -778,13 +778,13 @@ export function WorkoutLogger() {
   )
 
   const addExerciseWithConfig = useCallback(
-    (exerciseId: string, targetSets: number, targetReps: string, targetRpe: string) => {
+    (exerciseId: string, targetSets: string, targetReps: string, targetRpe: string) => {
       const ex = getExerciseById(exerciseId)
       if (!ex) return
       if (exercises.length === 0) {
         setWorkoutType(ex.category as ExerciseCategory)
       }
-      const sets: ExerciseSet[] = Array.from({ length: targetSets }, () => ({
+      const sets: ExerciseSet[] = Array.from({ length: parseInt(targetSets) || 1 }, () => ({
         reps: targetReps ? parseInt(targetReps) || undefined : undefined,
         weight: undefined,
         rpe: targetRpe ? parseFloat(targetRpe) || undefined : undefined,
@@ -1338,7 +1338,7 @@ export function WorkoutLogger() {
                                 <p className="text-[10px] text-gray-500">{ex.sets.length} sets · {ex.sets[0]?.reps || '--'} reps{ex.sets[0]?.rpe ? ` · RPE ${ex.sets[0].rpe}` : ''}</p>
                               </div>
                               <button
-                                onClick={() => setPendingExerciseConfig({ id: ex.exerciseId, name: ex.name, targetSets: ex.sets.length, targetReps: String(ex.sets[0]?.reps || ''), targetRpe: String(ex.sets[0]?.rpe || ''), editExerciseId: ex.id })}
+                                onClick={() => setPendingExerciseConfig({ id: ex.exerciseId, name: ex.name, targetSets: String(ex.sets.length), targetReps: String(ex.sets[0]?.reps || ''), targetRpe: String(ex.sets[0]?.rpe || ''), editExerciseId: ex.id })}
                                 className="p-1 rounded-lg text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
                               >
                                 <Pencil className="w-3 h-3" />
@@ -1390,7 +1390,7 @@ export function WorkoutLogger() {
                                 <p className="text-[10px] text-gray-500">{ex.sets.length} sets · {ex.sets[0]?.reps || '--'} reps{ex.sets[0]?.rpe ? ` · RPE ${ex.sets[0].rpe}` : ''}</p>
                               </div>
                               <button
-                                onClick={() => setPendingExerciseConfig({ id: ex.exerciseId, name: ex.name, targetSets: ex.sets.length, targetReps: String(ex.sets[0]?.reps || ''), targetRpe: String(ex.sets[0]?.rpe || ''), editExerciseId: ex.id })}
+                                onClick={() => setPendingExerciseConfig({ id: ex.exerciseId, name: ex.name, targetSets: String(ex.sets.length), targetReps: String(ex.sets[0]?.reps || ''), targetRpe: String(ex.sets[0]?.rpe || ''), editExerciseId: ex.id })}
                                 className="p-1 rounded-lg text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
                               >
                                 <Pencil className="w-3 h-3" />
@@ -1717,7 +1717,7 @@ export function WorkoutLogger() {
               if (showSaveModal) {
                 const ex = getExerciseById(id)
                 if (!ex) return
-                setPendingExerciseConfig({ id, name: ex.name, targetSets: 3, targetReps: '', targetRpe: '' })
+                setPendingExerciseConfig({ id, name: ex.name, targetSets: '3', targetReps: '', targetRpe: '' })
               } else {
                 addExercise(id)
               }
@@ -1746,9 +1746,8 @@ export function WorkoutLogger() {
                   <label className="block text-sm text-gray-400 mb-2">Number of Sets</label>
                   <input
                     type="number"
-                    min={1}
                     value={pendingExerciseConfig.targetSets}
-                    onChange={(e) => setPendingExerciseConfig((prev) => prev ? { ...prev, targetSets: parseInt(e.target.value) || 1 } : null)}
+                    onChange={(e) => setPendingExerciseConfig((prev) => prev ? { ...prev, targetSets: e.target.value } : null)}
                     className="glass-input w-full"
                   />
                 </div>
@@ -1794,7 +1793,7 @@ export function WorkoutLogger() {
                       if (idx === -1) { setPendingExerciseConfig(null); return }
                       const updatedExercises = [...exercises]
                       const existing = updatedExercises[idx]
-                      const newSets: ExerciseSet[] = Array.from({ length: pendingExerciseConfig.targetSets }, (_, i) => ({
+                      const newSets: ExerciseSet[] = Array.from({ length: parseInt(pendingExerciseConfig.targetSets) || 1 }, (_, i) => ({
                         ...(existing.sets[i] || { weight: undefined, completed: false }),
                         reps: pendingExerciseConfig.targetReps ? parseInt(pendingExerciseConfig.targetReps) || undefined : existing.sets[i]?.reps,
                         rpe: pendingExerciseConfig.targetRpe ? parseFloat(pendingExerciseConfig.targetRpe) || undefined : existing.sets[i]?.rpe,
