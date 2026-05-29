@@ -108,7 +108,7 @@ export function FinancialCalendar({ initialTransactions = [] }: FinancialCalenda
 
       {/* Month summary */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-emerald-500/5">
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-emerald-500/5">
           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
           <div className="absolute bottom-0 left-0 w-16 h-16 bg-teal-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
@@ -121,7 +121,7 @@ export function FinancialCalendar({ initialTransactions = [] }: FinancialCalenda
             </p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-red-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-red-500/5">
+        <div className="relative overflow-hidden rounded-2xl border border-red-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-red-500/5">
           <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
           <div className="absolute bottom-0 left-0 w-16 h-16 bg-rose-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">

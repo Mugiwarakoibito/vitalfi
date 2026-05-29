@@ -27,7 +27,7 @@ export function FinancialOverview({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
-        <div className="relative overflow-hidden rounded-2xl border border-violet-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-4 shadow-lg shadow-violet-500/5">
+        <div className="relative overflow-hidden rounded-2xl border border-violet-500/30 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg shadow-violet-500/5">
           <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
           <div className="absolute bottom-0 left-0 w-14 h-14 bg-purple-500/10 rounded-full -ml-7 -mb-7 blur-lg" />
           <div className="relative flex items-center gap-3">
@@ -44,7 +44,7 @@ export function FinancialOverview({
             </div>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-4 shadow-lg shadow-emerald-500/5">
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg shadow-emerald-500/5">
           <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
           <div className="absolute bottom-0 left-0 w-14 h-14 bg-teal-500/10 rounded-full -ml-7 -mb-7 blur-lg" />
           <div className="relative flex items-center gap-3">
@@ -61,7 +61,7 @@ export function FinancialOverview({
             </div>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-rose-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-4 shadow-lg shadow-rose-500/5">
+        <div className="relative overflow-hidden rounded-2xl border border-rose-500/30 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg shadow-rose-500/5">
           <div className="absolute top-0 right-0 w-20 h-20 bg-rose-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
           <div className="absolute bottom-0 left-0 w-14 h-14 bg-red-500/10 rounded-full -ml-7 -mb-7 blur-lg" />
           <div className="relative flex items-center gap-3">
@@ -78,7 +78,7 @@ export function FinancialOverview({
             </div>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-4 shadow-lg shadow-amber-500/5">
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg shadow-amber-500/5">
           <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
           <div className="absolute bottom-0 left-0 w-14 h-14 bg-orange-500/10 rounded-full -ml-7 -mb-7 blur-lg" />
           <div className="relative flex items-center gap-3">
@@ -98,7 +98,7 @@ export function FinancialOverview({
       </div>
 
       {spendingByCategory.length > 0 && (
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg">
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-xl" />
           <div className="relative">
             <h3 className="text-xs font-black text-white uppercase tracking-widest mb-4">Top Spending</h3>

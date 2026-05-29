@@ -112,7 +112,7 @@ export function SubscriptionTracker() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-purple-500/5">
+        <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-purple-500/5">
           <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
           <div className="absolute bottom-0 left-0 w-16 h-16 bg-violet-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
@@ -122,7 +122,7 @@ export function SubscriptionTracker() {
             <p className="text-3xl font-bold text-purple-400 drop-shadow-lg">{activeSubs.length}</p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-pink-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-pink-500/5">
+        <div className="relative overflow-hidden rounded-2xl border border-pink-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-pink-500/5">
           <div className="absolute top-0 right-0 w-24 h-24 bg-pink-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
           <div className="absolute bottom-0 left-0 w-16 h-16 bg-rose-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
@@ -132,7 +132,7 @@ export function SubscriptionTracker() {
             <p className="text-3xl font-bold text-pink-400 drop-shadow-lg">{formatCurrency(totalMonthly, currency)}</p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-cyan-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-cyan-500/5">
+        <div className="relative overflow-hidden rounded-2xl border border-cyan-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-cyan-500/5">
           <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
           <div className="absolute bottom-0 left-0 w-16 h-16 bg-sky-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
@@ -170,7 +170,7 @@ export function SubscriptionTracker() {
               <div className="relative z-10">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500/25 to-pink-500/25 border border-purple-500/30 flex items-center justify-center text-lg shadow-lg" style={{boxShadow: '0 0 20px rgba(168,85,247,0.15)'}}>
+                    <div className="w-11 h-11 rounded-xl from-purple-500/25 to-pink-500/25 border border-purple-500/30 flex items-center justify-center text-lg shadow-lg" style={{boxShadow: '0 0 20px rgba(168,85,247,0.15)'}}>
                       📱
                     </div>
                     <div>

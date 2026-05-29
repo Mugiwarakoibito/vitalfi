@@ -27,7 +27,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             className={cn(
               'glass-input w-full',
-              icon && 'pl-10',
+              icon && 'pl-9',
               error && 'border-error/50 focus:border-error/70',
               className
             )}

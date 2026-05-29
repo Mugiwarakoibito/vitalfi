@@ -132,7 +132,7 @@ export function DebtTracker() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-red-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-red-500/5">
+        <div className="relative overflow-hidden rounded-2xl border border-red-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-red-500/5">
           <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
           <div className="absolute bottom-0 left-0 w-16 h-16 bg-rose-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
@@ -143,7 +143,7 @@ export function DebtTracker() {
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-green-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-green-500/5">
+        <div className="relative overflow-hidden rounded-2xl border border-green-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-green-500/5">
           <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
           <div className="absolute bottom-0 left-0 w-16 h-16 bg-emerald-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
@@ -154,7 +154,7 @@ export function DebtTracker() {
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-purple-500/5">
+        <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-purple-500/5">
           <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
           <div className="absolute bottom-0 left-0 w-16 h-16 bg-violet-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
@@ -165,7 +165,7 @@ export function DebtTracker() {
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-amber-500/5">
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-amber-500/5">
           <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
           <div className="absolute bottom-0 left-0 w-16 h-16 bg-orange-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
@@ -210,7 +210,7 @@ export function DebtTracker() {
                 <div className="relative z-10">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-red-500/25 to-orange-500/25 border border-red-500/30 flex items-center justify-center text-xl shadow-lg" style={{boxShadow: '0 0 20px rgba(239,68,68,0.15)'}}>
+                      <div className="w-11 h-11 rounded-xl from-red-500/25 to-orange-500/25 border border-red-500/30 flex items-center justify-center text-xl shadow-lg" style={{boxShadow: '0 0 20px rgba(239,68,68,0.15)'}}>
                         {typeInfo?.icon || '💳'}
                       </div>
                       <div>
