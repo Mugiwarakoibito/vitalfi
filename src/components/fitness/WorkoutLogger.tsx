@@ -678,6 +678,38 @@ export function WorkoutLogger() {
     return best
   }, [workouts])
 
+  const heatScore = useMemo(() => {
+    if (workouts.length === 0) return { score: 0, label: 'Rest', flames: 0 }
+
+    const now = new Date()
+    const weekStart = new Date(now)
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+    weekStart.setHours(0, 0, 0, 0)
+
+    const currentWeekVol = workouts
+      .filter(w => new Date(w.date) >= weekStart)
+      .reduce((s, w) => s + calcVolume(w.exercises), 0)
+
+    const weeksWithData = new Set(workouts.map(w => {
+      const d = new Date(w.date)
+      d.setDate(d.getDate() - d.getDay())
+      return d.toISOString().split('T')[0]
+    })).size
+
+    if (weeksWithData === 0 || currentWeekVol === 0) {
+      return { score: currentWeekVol > 0 ? 20 : 0, label: 'Rest', flames: 0 }
+    }
+
+    const avgWeeklyVol = workouts.reduce((s, w) => s + calcVolume(w.exercises), 0) / weeksWithData
+    const raw = Math.round((currentWeekVol / avgWeeklyVol) * 50)
+    const score = Math.min(100, Math.max(0, raw))
+
+    const label = score >= 80 ? 'On Fire' : score >= 60 ? 'Hot' : score >= 40 ? 'Warm' : score >= 20 ? 'Mild' : 'Cool'
+    const flames = score >= 80 ? 3 : score >= 60 ? 2 : score >= 40 ? 1 : 0
+
+    return { score, label, flames }
+  }, [workouts])
+
   const weeklyVolumeData = useMemo(() => {
     const map = new Map<string, number>()
     workouts.forEach(w => {
@@ -961,7 +993,23 @@ export function WorkoutLogger() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
+        <div className="relative overflow-hidden rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/20 via-orange-500/5 to-transparent p-6 shadow-lg shadow-orange-500/5">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-orange-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-rose-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
+          <div className="relative">
+            <div className="text-orange-400/80 text-xs font-medium uppercase tracking-wider mb-2">Heat Score</div>
+            <div className="flex items-center gap-2">
+              <p className="text-3xl font-bold text-orange-400 drop-shadow-lg">{heatScore.score}</p>
+              <div className="flex gap-0.5">
+                {[1, 2, 3].map(i => (
+                  <Flame key={i} className={`w-4 h-4 transition-all ${i <= heatScore.flames ? 'text-orange-400 drop-shadow-[0_0_6px_rgba(251,146,60,0.6)]' : 'text-white/10'}`} />
+                ))}
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">{heatScore.label}</p>
+          </div>
+        </div>
         <div className="relative overflow-hidden rounded-2xl border border-sky-500/30 bg-gradient-to-br from-sky-500/20 via-sky-500/5 to-transparent p-6 shadow-lg shadow-sky-500/5">
           <div className="absolute top-0 right-0 w-28 h-28 bg-sky-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
           <div className="absolute bottom-0 left-0 w-20 h-20 bg-cyan-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
@@ -1224,22 +1272,31 @@ export function WorkoutLogger() {
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {wo.exercises.slice(0, 5).map((ex) => {
-                            const bestSet = ex.sets.reduce((best, s) => Math.max(best, s.weight || 0), 0)
-                            const totalReps = ex.sets.reduce((sum, s) => sum + (s.reps || 0), 0)
-                            return (
-                              <span key={ex.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/5 text-xs text-gray-300">
-                                {ex.name}
-                                {bestSet > 0 && <span className="text-emerald-400 font-medium">{bestSet}kg</span>}
-                                {totalReps > 0 && <span className="text-gray-500">×{totalReps}</span>}
-                              </span>
-                            )
-                          })}
-                          {wo.exercises.length > 5 && (
-                            <span className="px-2.5 py-1 rounded-full bg-white/5 text-xs text-gray-400">
-                              +{wo.exercises.length - 5} more
+                          {(() => {
+                            const grouped = wo.exercises.reduce<Record<string, { name: string; bestSet: number; totalReps: number }>>((acc, ex) => {
+                              if (!acc[ex.exerciseId]) {
+                                acc[ex.exerciseId] = { name: ex.name, bestSet: 0, totalReps: 0 }
+                              }
+                              acc[ex.exerciseId].bestSet = Math.max(acc[ex.exerciseId].bestSet, ...ex.sets.map(s => s.weight || 0))
+                              acc[ex.exerciseId].totalReps += ex.sets.reduce((s, set) => s + (set.reps || 0), 0)
+                              return acc
+                            }, {})
+                            return Object.values(grouped)
+                          })().slice(0, 5).map((ex) => (
+                            <span key={ex.name} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/5 text-xs text-gray-300">
+                              {ex.name}
+                              {ex.bestSet > 0 && <span className="text-emerald-400 font-medium">{ex.bestSet}kg</span>}
+                              {ex.totalReps > 0 && <span className="text-gray-500">×{ex.totalReps}</span>}
                             </span>
-                          )}
+                          ))}
+                          {(() => {
+                            const uniqueCount = new Set(wo.exercises.map(e => e.exerciseId)).size
+                            return uniqueCount > 5 ? (
+                              <span className="px-2.5 py-1 rounded-full bg-white/5 text-xs text-gray-400">
+                                +{uniqueCount - 5} more
+                              </span>
+                            ) : null
+                          })()}
                         </div>
                       </div>
                     </motion.div>
