@@ -351,6 +351,7 @@ function TemplatePicker({
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null)
 
   const categories = useMemo(() => {
     const set = new Set<string>()
@@ -388,7 +389,7 @@ function TemplatePicker({
     }
 
     return (
-      <button onClick={() => onSelect(template)} className="flex w-full items-start gap-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/10 p-4 text-left transition-all group">
+      <button onClick={() => setPreviewTemplate(template)} className="flex w-full items-start gap-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/10 p-4 text-left transition-all group">
         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${cfg?.bg || 'bg-white/10'}`}>
           <CatIcon className={`w-4 h-4 ${cfg?.color || 'text-muted'}`} />
         </div>
@@ -471,6 +472,76 @@ function TemplatePicker({
           <p className="text-[10px] text-gray-600">{savedTemplates.length} saved · {filteredSaved.length} shown</p>
         </div>
       </motion.div>
+
+      <AnimatePresence>
+        {previewTemplate && (() => {
+          const cfg = typeConfig[previewTemplate.category]
+          const CatIcon = cfg?.icon || Dumbbell
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[60] p-4"
+              onClick={() => setPreviewTemplate(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.92, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.92, opacity: 0 }}
+                className="w-full max-w-lg max-h-[80vh] overflow-hidden rounded-2xl border border-white/10 bg-gray-950/95 backdrop-blur-2xl shadow-2xl"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="p-5 border-b border-white/5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${cfg?.bg || 'bg-white/10'}`}>
+                        <CatIcon className={`w-5 h-5 ${cfg?.color || 'text-muted'}`} />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">{previewTemplate.name}</h3>
+                        <p className="text-xs text-gray-500">{previewTemplate.exercises.length} exercises</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setPreviewTemplate(null)} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 transition-all"><X className="w-4 h-4" /></button>
+                  </div>
+                </div>
+                <div className="overflow-y-auto max-h-[50vh] p-4 space-y-2">
+                  {previewTemplate.exercises.map((ex, i) => (
+                    <div key={ex.exerciseId || i} className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium text-white">{ex.name}</p>
+                        <span className="text-[10px] text-gray-500">{ex.targetSets} sets</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="rounded-lg bg-white/5 p-2">
+                          <p className="text-xs text-gray-400">Sets</p>
+                          <p className="text-sm font-bold text-white">{ex.targetSets}</p>
+                        </div>
+                        <div className="rounded-lg bg-white/5 p-2">
+                          <p className="text-xs text-gray-400">Reps</p>
+                          <p className="text-sm font-bold text-white">{ex.targetReps || '--'}</p>
+                        </div>
+                        <div className="rounded-lg bg-white/5 p-2">
+                          <p className="text-xs text-gray-400">RPE</p>
+                          <p className="text-sm font-bold text-white">{ex.targetRpe || '--'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="p-4 border-t border-white/5 flex gap-3">
+                  <button onClick={() => setPreviewTemplate(null)} className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all text-sm font-medium">Back</button>
+                  <button onClick={() => { onSelect(previewTemplate); setPreviewTemplate(null) }} className="flex-1 px-4 py-2.5 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/30 transition-all text-sm font-semibold flex items-center justify-center gap-2">
+                    <Dumbbell className="w-4 h-4" />
+                    Apply Template
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )
+        })()}
+      </AnimatePresence>
     </div>
   )
 }
@@ -520,7 +591,7 @@ const FADE_SLIDE = {
 }
 
 export function WorkoutLogger() {
-  const { workouts, addWorkout, deleteWorkout } = useAppStore()
+  const { workouts, addWorkout, updateWorkout, deleteWorkout } = useAppStore()
   const [savedTemplates, setSavedTemplates] = useState<WorkoutTemplate[]>([])
 
   useEffect(() => {
@@ -555,6 +626,7 @@ export function WorkoutLogger() {
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [showTypePicker, setShowTypePicker] = useState(false)
   const [deletingWorkout, setDeletingWorkout] = useState<Workout | null>(null)
+  const [editingWorkoutId, setEditingWorkoutId] = useState<string | null>(null)
 
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveTemplateExercises, setSaveTemplateExercises] = useState<Set<string>>(new Set())
@@ -567,6 +639,7 @@ export function WorkoutLogger() {
 
   const [filters, setFilters] = useState<WorkoutFilter>({})
   const [showFilters, setShowFilters] = useState(false)
+  const [showHistory, setShowHistory] = useState(true)
 
   const sortedWorkouts = useMemo(() => {
     let list = [...workouts]
@@ -584,9 +657,40 @@ export function WorkoutLogger() {
     return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [workouts, filters])
 
-  const totalWorkouts = workouts.length
-  const totalDuration = workouts.reduce((sum, w) => sum + (w.duration || 0), 0)
-  const totalVolume = workouts.reduce((sum, w) => sum + calcVolume(w.exercises), 0)
+  const volumeChange = useMemo(() => {
+    const now = new Date()
+    const thisStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const lastStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const lastEnd = new Date(now.getFullYear(), now.getMonth(), 0)
+
+    const thisVol = workouts.filter(w => new Date(w.date) >= thisStart).reduce((s, w) => s + calcVolume(w.exercises), 0)
+    const lastVol = workouts.filter(w => { const d = new Date(w.date); return d >= lastStart && d <= lastEnd }).reduce((s, w) => s + calcVolume(w.exercises), 0)
+
+    if (lastVol === 0) return { pct: 0, hasPrev: false, thisVol, direction: 0 }
+    const pct = Math.round(((thisVol - lastVol) / lastVol) * 100)
+    return { pct: Math.abs(pct), hasPrev: true, thisVol, direction: pct > 0 ? 1 : pct < 0 ? -1 : 0 }
+  }, [workouts])
+
+  const thisWeek = useMemo(() => {
+    const now = new Date()
+    const weekStart = new Date(now)
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+    weekStart.setHours(0, 0, 0, 0)
+    return workouts.filter(w => new Date(w.date) >= weekStart).length
+  }, [workouts])
+
+  const bestStreak = useMemo(() => {
+    if (workouts.length === 0) return 0
+    const dates = [...new Set(workouts.map(w => w.date))].sort()
+    let best = 1
+    let current = 1
+    for (let i = 1; i < dates.length; i++) {
+      const diff = (new Date(dates[i]).getTime() - new Date(dates[i - 1]).getTime()) / 86400000
+      if (diff === 1) { current++; best = Math.max(best, current) }
+      else current = 1
+    }
+    return best
+  }, [workouts])
 
   const weeklyVolumeData = useMemo(() => {
     const map = new Map<string, number>()
@@ -620,6 +724,7 @@ export function WorkoutLogger() {
   }, [workouts])
 
   const resetForm = useCallback(() => {
+    setEditingWorkoutId(null)
     setWorkoutName('')
     setWorkoutType('strength')
     setDuration('')
@@ -768,36 +873,45 @@ export function WorkoutLogger() {
   const handleSave = useCallback(async () => {
     if (!workoutName.trim() || exercises.length === 0) return
     const finalDuration = parseInt(duration) || 0
-    const workout: Workout = {
-      id: generateId(),
-      name: workoutName.trim(),
-      category: workoutType,
-      date,
-      duration: finalDuration,
-      exercises,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    if (editingWorkoutId) {
+      const workout: Workout = {
+        id: editingWorkoutId,
+        name: workoutName.trim(),
+        category: workoutType,
+        date,
+        duration: finalDuration,
+        exercises,
+        createdAt: '',
+        updatedAt: new Date().toISOString(),
+      }
+      await updateWorkout(workout)
+    } else {
+      const workout: Workout = {
+        id: generateId(),
+        name: workoutName.trim(),
+        category: workoutType,
+        date,
+        duration: finalDuration,
+        exercises,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      await addWorkout(workout)
     }
-    await addWorkout(workout)
     resetForm()
     setShowForm(false)
-  }, [workoutName, exercises, workoutType, date, duration, addWorkout, resetForm])
+  }, [workoutName, exercises, workoutType, date, duration, editingWorkoutId, addWorkout, updateWorkout, resetForm])
 
-  const handleDuplicate = useCallback(async (wo: Workout) => {
-    const duplicate: Workout = {
-      ...wo,
-      id: generateId(),
-      date: new Date().toISOString().split('T')[0],
-      exercises: wo.exercises.map((ex) => ({
-        ...ex,
-        id: generateId(),
-        sets: ex.sets.map((s) => ({ ...s })),
-      })),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    await addWorkout(duplicate)
-  }, [addWorkout])
+  const handleEdit = useCallback((wo: Workout) => {
+    setEditingWorkoutId(wo.id)
+    setWorkoutName(wo.name)
+    setWorkoutType(wo.category)
+    setDuration(wo.duration?.toString() || '')
+    setDate(wo.date)
+    setExercises(wo.exercises.map(ex => ({ ...ex, id: generateId(), sets: ex.sets.map(s => ({ ...s })) })))
+    setExpandedExercises(new Set(wo.exercises.map(e => e.id)))
+    setShowForm(true)
+  }, [])
 
   const handleDelete = useCallback(async () => {
     if (!deletingWorkout) return
@@ -862,25 +976,41 @@ export function WorkoutLogger() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-3 gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-rose-500/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/20 via-emerald-500/5 to-transparent p-6 shadow-lg shadow-emerald-500/5">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-teal-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
           <div className="relative">
-            <div className="text-rose-400/80 text-sm mb-2">Total Workouts</div>
-            <p className="text-3xl font-bold text-rose-400">{totalWorkouts}</p>
+            <div className="text-emerald-400/80 text-xs font-medium uppercase tracking-wider mb-2">Volume Δ</div>
+            <div className="flex items-center gap-2">
+              {volumeChange.direction === 1 ? <TrendingUp className="w-5 h-5 text-emerald-400" /> : volumeChange.direction === -1 ? <TrendingDown className="w-5 h-5 text-rose-400" /> : <Minus className="w-5 h-5 text-gray-500" />}
+              <p className={`text-3xl font-bold drop-shadow-lg ${volumeChange.direction === 1 ? 'text-emerald-400' : volumeChange.direction === -1 ? 'text-rose-400' : 'text-gray-400'}`}>{volumeChange.hasPrev ? `${volumeChange.pct}%` : '--'}</p>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">vs last month</p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-sky-500/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-sky-500/30 bg-gradient-to-br from-sky-500/20 via-sky-500/5 to-transparent p-6 shadow-lg shadow-sky-500/5">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-sky-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-cyan-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
           <div className="relative">
-            <div className="text-sky-400/80 text-sm mb-2">Time Spent</div>
-            <p className="text-3xl font-bold text-sky-400">{formatDuration(totalDuration)}</p>
+            <div className="text-sky-400/80 text-xs font-medium uppercase tracking-wider mb-2">This Week</div>
+            <div className="flex items-center gap-2">
+              <p className="text-3xl font-bold text-sky-400 drop-shadow-lg">{thisWeek}</p>
+              <div className="flex gap-0.5 items-end pb-1">
+                {[1, 2, 3, 4, 5, 6, 7].map(d => (
+                  <div key={d} className={`w-1.5 rounded-full transition-all ${d <= thisWeek ? 'bg-sky-400 shadow-sm shadow-sky-400/50' : 'bg-white/10'}`} style={{ height: `${Math.min(16, 8 + d * 2)}px` }} />
+                ))}
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">workouts this week</p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/20 via-amber-500/5 to-transparent p-6 shadow-lg shadow-amber-500/5">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-amber-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-orange-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
           <div className="relative">
-            <div className="text-emerald-400/80 text-sm mb-2">Total Volume</div>
-            <p className="text-3xl font-bold text-emerald-400">{totalVolume.toLocaleString()}kg</p>
+            <div className="text-amber-400/80 text-xs font-medium uppercase tracking-wider mb-2">Best Streak</div>
+            <p className="text-3xl font-bold text-amber-400 drop-shadow-lg">{bestStreak}<span className="text-sm text-amber-500/60 ml-1 font-normal">days</span></p>
+            <p className="text-xs text-gray-500 mt-1">your record to beat</p>
           </div>
         </div>
       </div>
@@ -888,73 +1018,73 @@ export function WorkoutLogger() {
       {/* Charts Row */}
       {weeklyVolumeData.length > 1 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Activity className="w-4 h-4 text-rose-400" />
-              <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Weekly Volume</h4>
-            </div>
-            <div className="h-20">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weeklyVolumeData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                  <XAxis dataKey="week" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(weeklyVolumeData.length / 4))} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
-                    formatter={(value: number) => [`${value.toLocaleString()}kg`, 'Volume']}
-                  />
-                  <Bar dataKey="volume" radius={[4, 4, 0, 0]} maxBarSize={16}>
-                    {weeklyVolumeData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.volume > 0 ? '#f43f5e' : '#374151'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+          <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/[0.08] to-transparent p-5 shadow-lg shadow-rose-500/5">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full -mr-12 -mt-12 blur-lg" />
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center"><Activity className="w-4 h-4 text-rose-400" /></div>
+                <h4 className="text-xs font-semibold text-white uppercase tracking-wider">Weekly Volume</h4>
+              </div>
+              <div className="h-32">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weeklyVolumeData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                    <XAxis dataKey="week" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(weeklyVolumeData.length / 4))} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px', backdropFilter: 'blur(12px)' }}
+                      formatter={(value: number) => [`${value.toLocaleString()}kg`, 'Volume']}
+                    />
+                    <Bar dataKey="volume" radius={[6, 6, 0, 0]} maxBarSize={24}>
+                      {weeklyVolumeData.map((entry, idx) => (
+                        <Cell key={idx} fill={entry.volume > 0 ? '#f43f5e' : '#374151'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="w-4 h-4 text-sky-400" />
-              <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Monthly Frequency</h4>
-            </div>
-            <div className="h-20">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyFreqData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                  <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} interval={0} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
-                    formatter={(value: number) => [`${value} workouts`, '']}
-                  />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={16}>
-                    {monthlyFreqData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.count > 0 ? '#06b6d4' : '#374151'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+          <div className="relative overflow-hidden rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/[0.08] to-transparent p-5 shadow-lg shadow-sky-500/5">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-sky-500/10 rounded-full -mr-12 -mt-12 blur-lg" />
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-sky-500/20 flex items-center justify-center"><TrendingUp className="w-4 h-4 text-sky-400" /></div>
+                <h4 className="text-xs font-semibold text-white uppercase tracking-wider">Monthly Frequency</h4>
+              </div>
+              <div className="h-32">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyFreqData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                    <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} interval={0} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px', backdropFilter: 'blur(12px)' }}
+                      formatter={(value: number) => [`${value} workouts`, '']}
+                    />
+                    <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={24}>
+                      {monthlyFreqData.map((entry, idx) => (
+                        <Cell key={idx} fill={entry.count > 0 ? '#06b6d4' : '#374151'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div className="flex items-center gap-3">
-          <h3 className="text-sm font-semibold text-white uppercase tracking-[0.15em]">Workout History</h3>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`p-2 rounded-lg transition-all ${
-              Object.values(filters).some(Boolean)
-                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                : 'bg-white/5 text-gray-400 border border-white/10 hover:border-white/20'
-            }`}
-          >
-            <Filter className="w-4 h-4" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowHistory(!showHistory)} className={`text-sm font-semibold uppercase tracking-[0.15em] flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all ${showHistory ? 'bg-indigo-500/15 border-indigo-500/30 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:border-white/20'}`}>
+            <Activity className="w-3.5 h-3.5 text-indigo-400" />
+            History
           </button>
-        </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <button onClick={() => { setShowTemplatePicker(true) }} className="text-sm font-semibold text-white uppercase tracking-[0.15em] flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-all">
+          <button onClick={() => setShowTemplatePicker(true)} className="text-sm font-semibold text-white uppercase tracking-[0.15em] flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-all">
             <Layers className="w-3.5 h-3.5 text-indigo-400" />
             Templates
           </button>
         </div>
+        <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-lg transition-all ${Object.values(filters).some(Boolean) ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-white/5 text-gray-400 border border-white/10 hover:border-white/20'}`}>
+          <Filter className="w-4 h-4" />
+        </button>
       </div>
 
       <AnimatePresence>
@@ -965,14 +1095,16 @@ export function WorkoutLogger() {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 space-y-3">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="relative overflow-hidden rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-500/[0.06] via-purple-500/[0.03] to-transparent p-5 space-y-4 shadow-lg shadow-indigo-500/5">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-16 -mt-16 blur-xl" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500/5 rounded-full -ml-12 -mb-12 blur-lg" />
+              <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1.5">Type</label>
+                  <label className="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-medium">Type</label>
                   <select
                     value={filters.category || ''}
                     onChange={(e) => setFilters((f) => ({ ...f, category: (e.target.value || undefined) as ExerciseCategory | undefined }))}
-                    className="glass-input w-full text-sm"
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:border-indigo-500/40 focus:outline-none focus:shadow-lg focus:shadow-indigo-500/5 transition-all"
                   >
                     <option value="">All types</option>
                     {Object.entries(typeConfig).map(([key]) => (
@@ -981,162 +1113,169 @@ export function WorkoutLogger() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1.5">From</label>
+                  <label className="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-medium">From</label>
                   <input
                     type="date"
                     value={filters.dateFrom || ''}
                     onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value || undefined }))}
-                    className="glass-input w-full text-sm"
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:border-indigo-500/40 focus:outline-none focus:shadow-lg focus:shadow-indigo-500/5 transition-all [color-scheme:dark]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1.5">To</label>
+                  <label className="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-medium">To</label>
                   <input
                     type="date"
                     value={filters.dateTo || ''}
                     onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value || undefined }))}
-                    className="glass-input w-full text-sm"
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:border-indigo-500/40 focus:outline-none focus:shadow-lg focus:shadow-indigo-500/5 transition-all [color-scheme:dark]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1.5">Search</label>
+                  <label className="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-medium">Search</label>
                   <input
                     type="text"
                     placeholder="Search workouts..."
                     value={filters.search || ''}
                     onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value || undefined }))}
-                    className="glass-input w-full text-sm"
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 text-sm focus:border-indigo-500/40 focus:outline-none focus:shadow-lg focus:shadow-indigo-500/5 transition-all"
                   />
                 </div>
               </div>
               {Object.values(filters).some(Boolean) && (
-                <button
-                  onClick={() => setFilters({})}
-                  className="text-xs text-rose-400 hover:text-rose-300 transition-all"
-                >
-                  Clear filters
-                </button>
+                <div className="relative flex justify-end">
+                  <button
+                    onClick={() => setFilters({})}
+                    className="px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 hover:bg-rose-500/20 hover:shadow-lg hover:shadow-rose-500/5 transition-all text-xs font-medium flex items-center gap-1.5"
+                  >
+                    <X className="w-3 h-3" />
+                    Clear filters
+                  </button>
+                </div>
               )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {sortedWorkouts.length === 0 ? (
-        <AnimatePresence>
-          <motion.div key="empty" {...FADE_SLIDE}>
-            <Card className="py-12 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4">
-                <Dumbbell className="w-8 h-8 text-rose-400/50" />
-              </div>
-              <p className="text-gray-400 mb-1">
-                {workouts.length === 0 ? 'No workouts logged yet' : 'No workouts match your filters'}
-              </p>
-              <p className="text-gray-500 text-sm mb-4">
-                {workouts.length === 0 ? 'Start tracking your fitness journey' : 'Try adjusting your filter criteria'}
-              </p>
-              <Button variant="primary" onClick={() => { resetForm(); setShowForm(true) }}>
-                Add Your First Workout
-              </Button>
-            </Card>
-          </motion.div>
-        </AnimatePresence>
-      ) : (
-        <div className="space-y-4">
-          <AnimatePresence>
-            {sortedWorkouts.map((wo, index) => {
-              const config = typeConfig[wo.category] || typeConfig.strength
-              const Icon = config.icon
-              const volume = calcVolume(wo.exercises)
-              return (
-                <motion.div
-                  key={wo.id}
-                  layout
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ delay: index * 0.03 }}
-                  className="group relative overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent hover:border-white/[0.12] transition-all"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-rose-500/[0.02] to-transparent pointer-events-none" />
-                  <div className="relative z-10 p-5">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-11 h-11 rounded-xl ${config.bg} flex items-center justify-center`}>
-                          <Icon className={`w-5 h-5 ${config.color}`} />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold text-white tracking-tight">{wo.name}</h4>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${config.bg} ${config.color}`}>
-                              {categoryLabels[wo.category as ExerciseCategory] || wo.category}
-                            </span>
+      <AnimatePresence>
+        {showHistory && (
+          sortedWorkouts.length === 0 ? (
+            <motion.div key="empty" {...FADE_SLIDE}>
+              <Card className="py-12 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4">
+                  <Dumbbell className="w-8 h-8 text-rose-400/50" />
+                </div>
+                <p className="text-gray-400 mb-1">
+                  {workouts.length === 0 ? 'No workouts logged yet' : 'No workouts match your filters'}
+                </p>
+                <p className="text-gray-500 text-sm mb-4">
+                  {workouts.length === 0 ? 'Start tracking your fitness journey' : 'Try adjusting your filter criteria'}
+                </p>
+                <Button variant="primary" onClick={() => { resetForm(); setShowForm(true) }}>
+                  Add Your First Workout
+                </Button>
+              </Card>
+            </motion.div>
+          ) : (
+            <motion.div key="list" {...FADE_SLIDE}>
+              <div className="space-y-4">
+                {sortedWorkouts.map((wo, index) => {
+                  const config = typeConfig[wo.category] || typeConfig.strength
+                  const Icon = config.icon
+                  return (
+                    <motion.div
+                      key={wo.id}
+                      layout
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ delay: index * 0.03 }}
+                      className="group relative overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent hover:border-white/[0.12] transition-all"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-rose-500/[0.02] to-transparent pointer-events-none" />
+                      <div className="relative z-10 p-5">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-11 h-11 rounded-xl ${config.bg} flex items-center justify-center`}>
+                              <Icon className={`w-5 h-5 ${config.color}`} />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-semibold text-white tracking-tight">{wo.name}</h4>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${config.bg} ${config.color}`}>
+                                  {categoryLabels[wo.category as ExerciseCategory] || wo.category}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-400">
+                                {new Date(wo.date).toLocaleDateString('en-US', {
+                                  weekday: 'short',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                })}{' '}
+                                {wo.duration > 0 && `• ${formatDuration(wo.duration)}`}
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-400">
-                            {new Date(wo.date).toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}{' '}
-                            {wo.duration > 0 && `• ${formatDuration(wo.duration)}`}
-                          </p>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleEdit(wo as any)}
+                              className="p-2 rounded-lg text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all opacity-0 group-hover:opacity-100"
+                              title="Edit workout"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeletingWorkout(wo as any)}
+                              className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 mb-4">
+                          <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-center">
+                            <p className="text-2xl font-bold text-white">{wo.exercises.length}</p>
+                            <p className="text-xs text-gray-500">Exercises</p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-center">
+                            <p className="text-2xl font-bold text-white">
+                              {wo.exercises.reduce((acc, ex) => acc + ex.sets.length, 0)}
+                            </p>
+                            <p className="text-xs text-gray-500">Sets</p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-center">
+                            <p className="text-2xl font-bold text-sky-400">{formatDuration(wo.duration || 0)}</p>
+                            <p className="text-xs text-sky-400/80">Duration</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {wo.exercises.slice(0, 5).map((ex) => {
+                            const bestSet = ex.sets.reduce((best, s) => Math.max(best, s.weight || 0), 0)
+                            const totalReps = ex.sets.reduce((sum, s) => sum + (s.reps || 0), 0)
+                            return (
+                              <span key={ex.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/5 text-xs text-gray-300">
+                                {ex.name}
+                                {bestSet > 0 && <span className="text-emerald-400 font-medium">{bestSet}kg</span>}
+                                {totalReps > 0 && <span className="text-gray-500">×{totalReps}</span>}
+                              </span>
+                            )
+                          })}
+                          {wo.exercises.length > 5 && (
+                            <span className="px-2.5 py-1 rounded-full bg-white/5 text-xs text-gray-400">
+                              +{wo.exercises.length - 5} more
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleDuplicate(wo as any)}
-                          className="p-2 rounded-lg text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all opacity-0 group-hover:opacity-100"
-                          title="Duplicate workout"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeletingWorkout(wo as any)}
-                          className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-3 mb-4">
-                      <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-center">
-                        <p className="text-2xl font-bold text-white">{wo.exercises.length}</p>
-                        <p className="text-xs text-gray-500">Exercises</p>
-                      </div>
-                      <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-center">
-                        <p className="text-2xl font-bold text-white">
-                          {wo.exercises.reduce((acc, ex) => acc + ex.sets.length, 0)}
-                        </p>
-                        <p className="text-xs text-gray-500">Sets</p>
-                      </div>
-                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
-                        <p className="text-2xl font-bold text-emerald-400">{volume.toLocaleString()}kg</p>
-                        <p className="text-xs text-emerald-400/80">Volume</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {wo.exercises.slice(0, 5).map((ex) => (
-                        <span
-                          key={ex.id}
-                          className="px-2.5 py-1 rounded-full bg-white/5 border border-white/5 text-xs text-gray-300"
-                        >
-                          {ex.name}
-                        </span>
-                      ))}
-                      {wo.exercises.length > 5 && (
-                        <span className="px-2.5 py-1 rounded-full bg-white/5 text-xs text-gray-400">
-                          +{wo.exercises.length - 5} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              )
-            })}
-          </AnimatePresence>
-        </div>
-      )}
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </motion.div>
+          )
+        )}
+      </AnimatePresence>
 
       <ConfirmDialog
         open={!!deletingWorkout}
@@ -1681,7 +1820,7 @@ export function WorkoutLogger() {
         {showTemplatePicker && (
           <TemplatePicker
             savedTemplates={savedTemplates}
-            onSelect={applyTemplate}
+            onSelect={(t) => { applyTemplate(t); setShowTemplatePicker(false) }}
             onDelete={deleteSavedTemplate}
             onEditTemplate={(t) => { applyTemplate(t); setShowTemplatePicker(false); setEditingTemplate(t); setSaveName(t.name); setSaveMode('edit'); setShowSaveModal(true) }}
             onClose={() => setShowTemplatePicker(false)}

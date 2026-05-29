@@ -362,7 +362,7 @@ export const exerciseLibrary: ExerciseDefinition[] = [
     tips: ['Keep slight bend in elbows.', 'Focus on the stretch at the bottom.'],
   },
   {
-    id: 'dumbbell_pullover',
+    id: 'dumbbell_pullover_hyp',
     name: 'Dumbbell Pullover',
     category: 'hypertrophy',
     primaryMuscles: ['chest'],

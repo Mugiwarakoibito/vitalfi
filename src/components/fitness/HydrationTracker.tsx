@@ -2,10 +2,10 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, GlassWater, AlertTriangle,
-  Settings, TrendingUp, Zap, Flame, Clock, CheckCircle2,
+  Settings, Zap, Flame, Clock, CheckCircle2,
   ChevronDown, CalendarDays, Ban, X, Activity
 } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, CartesianGrid } from 'recharts'
 import { useAppStore } from '@/store/useAppStore'
 import { generateId, cn } from '@/lib/utils'
 import { Card } from '@/components/ui/Card'
@@ -223,25 +223,28 @@ export function HydrationTracker({ dailyGoal: defaultGoal }: HydrationTrackerPro
 
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-500/20 via-violet-500/5 to-transparent p-6 shadow-lg shadow-violet-500/5">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/15 rounded-full -mr-16 -mt-16 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500/10 rounded-full -ml-12 -mb-12 blur-lg" />
           <div className="relative">
-            <div className="text-violet-400/80 text-sm mb-2">Goal</div>
-            <p className="text-3xl font-bold text-violet-400">{dailyGoal}ml</p>
+            <div className="text-violet-400/80 text-xs font-medium uppercase tracking-wider mb-2">Goal</div>
+            <p className="text-3xl font-bold text-violet-400 drop-shadow-lg">{dailyGoal}<span className="text-sm text-gray-500 ml-1 font-normal">ml</span></p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-cyan-500/30 bg-gradient-to-br from-cyan-500/20 via-cyan-500/5 to-transparent p-6 shadow-lg shadow-cyan-500/5">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/15 rounded-full -mr-16 -mt-16 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-sky-500/10 rounded-full -ml-12 -mb-12 blur-lg" />
           <div className="relative">
-            <div className="text-cyan-400/80 text-sm mb-2">Consumed</div>
-            <p className="text-3xl font-bold text-cyan-400">{totalAmount}ml</p>
+            <div className="text-cyan-400/80 text-xs font-medium uppercase tracking-wider mb-2">Consumed</div>
+            <p className="text-3xl font-bold text-cyan-400 drop-shadow-lg">{totalAmount}<span className="text-sm text-gray-500 ml-1 font-normal">ml</span></p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/20 via-amber-500/5 to-transparent p-6 shadow-lg shadow-amber-500/5">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/15 rounded-full -mr-16 -mt-16 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-orange-500/10 rounded-full -ml-12 -mb-12 blur-lg" />
           <div className="relative">
-            <div className="text-gray-400/80 text-sm mb-2">Remaining</div>
-            <p className="text-3xl font-bold text-gray-300">{remaining}ml</p>
+            <div className="text-amber-400/80 text-xs font-medium uppercase tracking-wider mb-2">Remaining</div>
+            <p className="text-3xl font-bold text-amber-400 drop-shadow-lg">{remaining}<span className="text-sm text-gray-500 ml-1 font-normal">ml</span></p>
           </div>
         </div>
       </div>
@@ -252,9 +255,11 @@ export function HydrationTracker({ dailyGoal: defaultGoal }: HydrationTrackerPro
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="md:col-span-2 rounded-2xl border border-white/10 bg-white/[0.02] p-6 flex flex-col items-center justify-center"
+          className="md:col-span-2 rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/[0.08] to-transparent p-6 shadow-lg shadow-cyan-500/5 flex flex-col items-center justify-center"
         >
-          <div className="relative w-44 h-44">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-cyan-500/10 rounded-full -mr-20 -mt-20 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-violet-500/8 rounded-full -ml-16 -mb-16 blur-lg" />
+          <div className="relative w-48 h-48">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
               <defs>
                 <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -272,7 +277,7 @@ export function HydrationTracker({ dailyGoal: defaultGoal }: HydrationTrackerPro
                 strokeDasharray={progressRingCircumference}
                 initial={{ strokeDashoffset: progressRingCircumference }}
                 animate={{ strokeDashoffset: progressRingOffset }}
-                transition={{ duration: 1, ease: 'easeOut' }}
+                transition={{ duration: 1.5, ease: 'easeOut' }}
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -280,18 +285,15 @@ export function HydrationTracker({ dailyGoal: defaultGoal }: HydrationTrackerPro
                 key={Math.round(percentage)}
                 initial={{ scale: 1.2 }}
                 animate={{ scale: 1 }}
-                className="text-3xl font-bold text-white"
+                className="text-4xl font-bold text-white drop-shadow-lg"
               >
                 {Math.round(percentage)}%
               </motion.span>
-              <span className="text-xs text-gray-400 mt-0.5">of goal</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 mt-4 text-sm">
-            <div className="flex items-center gap-1.5 text-gray-400">
-              <GlassWater className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-white font-medium">{todayEntries.length}</span>
-              <span>entries</span>
+              <span className="text-xs text-gray-400 mt-0.5">of daily goal</span>
+              <div className="flex items-center gap-1.5 mt-2 text-xs text-cyan-400">
+                <GlassWater className="w-3 h-3" />
+                <span>{totalAmount}/{dailyGoal}ml</span>
+              </div>
             </div>
           </div>
         </motion.div>
@@ -327,31 +329,32 @@ export function HydrationTracker({ dailyGoal: defaultGoal }: HydrationTrackerPro
             <div className="relative flex-shrink-0">
               <button
                 onClick={() => setShowWaterDropdown(!showWaterDropdown)}
-                className="h-full px-3 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all flex items-center gap-1.5 text-sm"
+                className="h-full px-3 rounded-xl bg-gradient-to-br from-cyan-500/10 to-transparent border border-cyan-500/20 text-gray-300 hover:text-white hover:border-cyan-500/40 hover:shadow-lg hover:shadow-cyan-500/5 transition-all flex items-center gap-1.5 text-sm"
               >
-                <span>{WATER_TYPES.find(w => w.value === waterType)?.icon || '💧'}</span>
-                <span className="hidden sm:inline">{WATER_TYPES.find(w => w.value === waterType)?.label || 'Plain'}</span>
-                <ChevronDown className="w-3 h-3" />
+                <span className="text-base">{WATER_TYPES.find(w => w.value === waterType)?.icon || '💧'}</span>
+                <span className="hidden sm:inline text-xs font-medium">{WATER_TYPES.find(w => w.value === waterType)?.label || 'Plain'}</span>
+                <ChevronDown className="w-3 h-3 text-gray-500" />
               </button>
               <AnimatePresence>
                 {showWaterDropdown && (
                   <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    className="absolute bottom-full mb-2 left-0 bg-gray-900 border border-white/10 rounded-xl overflow-hidden shadow-xl min-w-[140px] z-10"
+                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                    className="absolute bottom-full mb-2 left-0 bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-xl shadow-cyan-500/5 min-w-[150px] z-10"
                   >
                     {WATER_TYPES.map((wt) => (
                       <button
                         key={wt.value}
                         onClick={() => { setWaterType(wt.value); setShowWaterDropdown(false) }}
                         className={cn(
-                          'w-full px-4 py-2.5 text-sm flex items-center gap-2 transition-all hover:bg-white/5',
-                          waterType === wt.value ? 'text-cyan-400 bg-cyan-500/10' : 'text-gray-300',
+                          'w-full px-4 py-2.5 text-sm flex items-center gap-2.5 transition-all hover:bg-white/5',
+                          waterType === wt.value ? 'text-cyan-300 bg-gradient-to-r from-cyan-500/15 to-transparent' : 'text-gray-400',
                         )}
                       >
-                        <span>{wt.icon}</span>
-                        {wt.label}
+                        <span className="text-base">{wt.icon}</span>
+                        <span className="font-medium">{wt.label}</span>
+                        {waterType === wt.value && <CheckCircle2 className="w-3.5 h-3.5 ml-auto text-cyan-400" />}
                       </button>
                     ))}
                   </motion.div>
@@ -381,61 +384,64 @@ export function HydrationTracker({ dailyGoal: defaultGoal }: HydrationTrackerPro
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"
+        className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.08] to-transparent p-6 shadow-lg shadow-violet-500/5"
       >
-        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Clock className="w-4 h-4 text-cyan-400" />
-          Daily Water Schedule
-          <span className="text-xs text-gray-500 font-normal ml-auto">{(dailyGoal / 8).toFixed(0)}ml per glass</span>
-        </h3>
-        <div className="space-y-2">
-          {scheduleStatus.map((slot) => {
-            const isUpcoming = !slot.isPast
-            const isMissed = slot.isPast && !slot.full && !slot.partial
-            return (
-              <div key={slot.label} className="flex items-center gap-3">
-                <div className={cn(
-                  'w-16 text-xs font-medium flex-shrink-0',
-                  isUpcoming ? 'text-gray-500' : 'text-gray-300',
-                )}>
-                  {slot.label}
-                </div>
-                <div className="flex-1 h-8 rounded-lg bg-white/[0.03] border border-white/[0.05] relative overflow-hidden">
-                  <motion.div
-                    className={cn(
-                      'absolute inset-0 rounded-lg',
-                      slot.full ? 'bg-gradient-to-r from-cyan-500/30 to-cyan-400/20' :
-                      slot.partial ? 'bg-gradient-to-r from-violet-500/20 to-violet-400/10' :
-                      isMissed ? 'bg-gradient-to-r from-red-500/10 to-transparent' : '',
-                    )}
-                    initial={{ width: 0 }}
-                    animate={{ width: slot.full ? '100%' : slot.partial ? '50%' : '0%' }}
-                    transition={{ duration: 0.5 }}
-                  />
-                  <div className="relative flex items-center gap-2 px-3 h-full">
-                    {slot.full ? (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                    ) : isMissed ? (
-                      <Ban className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
-                    ) : isUpcoming ? (
-                      <GlassWater className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
-                    ) : (
-                      <Clock className="w-3.5 h-3.5 text-violet-400 flex-shrink-0" />
-                    )}
-                    <span className={cn(
-                      'text-xs',
-                      slot.full ? 'text-cyan-300' : isMissed ? 'text-red-300' : isUpcoming ? 'text-gray-500' : 'text-violet-300',
-                    )}>
-                      {slot.full ? 'Done' : isMissed ? 'Missed' : isUpcoming ? `${(slot.expectedAmount).toFixed(0)}ml` : 'Partial'}
-                    </span>
-                    {!slot.full && !isMissed && (
-                      <span className="text-[10px] text-gray-600 ml-auto">{(slot.expectedAmount).toFixed(0)}ml</span>
-                    )}
+        <div className="absolute top-0 left-0 w-40 h-40 bg-violet-500/10 rounded-full -ml-20 -mt-20 blur-xl" />
+        <div className="relative">
+          <h3 className="text-sm font-semibold text-white mb-5 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-cyan-400" />
+            Daily Water Schedule
+            <span className="text-xs text-gray-500 font-normal ml-auto">{(dailyGoal / 8).toFixed(0)}ml per glass</span>
+          </h3>
+          <div className="space-y-2.5">
+            {scheduleStatus.map((slot) => {
+              const isUpcoming = !slot.isPast
+              const isMissed = slot.isPast && !slot.full && !slot.partial
+              return (
+                <div key={slot.label} className="flex items-center gap-3">
+                  <div className={cn(
+                    'w-16 text-xs font-medium flex-shrink-0',
+                    isUpcoming ? 'text-gray-500' : 'text-gray-300',
+                  )}>
+                    {slot.label}
+                  </div>
+                  <div className="flex-1 h-10 rounded-xl bg-white/[0.03] border border-white/[0.06] relative overflow-hidden">
+                    <motion.div
+                      className={cn(
+                        'absolute inset-0 rounded-xl',
+                        slot.full ? 'bg-gradient-to-r from-cyan-500/30 to-cyan-400/20 shadow-inner' :
+                        slot.partial ? 'bg-gradient-to-r from-violet-500/20 to-violet-400/10' :
+                        isMissed ? 'bg-gradient-to-r from-red-500/10 to-transparent' : '',
+                      )}
+                      initial={{ width: 0 }}
+                      animate={{ width: slot.full ? '100%' : slot.partial ? '50%' : '0%' }}
+                      transition={{ duration: 0.5 }}
+                    />
+                    <div className="relative flex items-center gap-2.5 px-3 h-full">
+                      {slot.full ? (
+                        <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                      ) : isMissed ? (
+                        <Ban className="w-4 h-4 text-red-400 flex-shrink-0" />
+                      ) : isUpcoming ? (
+                        <GlassWater className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                      ) : (
+                        <Clock className="w-4 h-4 text-violet-400 flex-shrink-0" />
+                      )}
+                      <span className={cn(
+                        'text-xs font-medium',
+                        slot.full ? 'text-cyan-300' : isMissed ? 'text-red-300' : isUpcoming ? 'text-gray-500' : 'text-violet-300',
+                      )}>
+                        {slot.full ? 'Done' : isMissed ? 'Missed' : isUpcoming ? `${(slot.expectedAmount).toFixed(0)}ml expected` : 'Partial'}
+                      </span>
+                      {!slot.full && !isMissed && (
+                        <span className="text-[10px] text-gray-600 ml-auto">{(slot.expectedAmount).toFixed(0)}ml</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </motion.div>
 
@@ -443,30 +449,29 @@ export function HydrationTracker({ dailyGoal: defaultGoal }: HydrationTrackerPro
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"
+        className="relative overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/[0.08] to-transparent p-6 shadow-lg shadow-cyan-500/5"
       >
-        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-cyan-400" />
-          7-Day Trend
-        </h3>
-        <div className="h-40">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={last7Days} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-              <XAxis dataKey="day" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+        <div className="absolute top-0 right-0 w-40 h-40 bg-cyan-500/10 rounded-full -mr-20 -mt-20 blur-xl" />
+        <div className="relative">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center shadow-lg shadow-cyan-500/10"><Activity className="w-5 h-5 text-cyan-400" /></div>
+              <h3 className="font-semibold text-white text-lg">7-Day Trend</h3>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={last7Days}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+              <XAxis dataKey="day" stroke="#ffffff40" fontSize={11} />
+              <YAxis stroke="#ffffff40" fontSize={11} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: '#111827',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                }}
-                labelStyle={{ color: '#9ca3af' }}
+                contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #ffffff20', borderRadius: '12px', backdropFilter: 'blur(12px)' }}
+                labelStyle={{ color: '#fff' }}
                 formatter={(value: number) => [`${value}ml`, 'Consumed']}
               />
-              <Bar dataKey="amount" radius={[6, 6, 0, 0]} maxBarSize={32}>
+              <Bar dataKey="amount" radius={[6, 6, 0, 0]} maxBarSize={40}>
                 {last7Days.map((entry, idx) => (
-                  <rect key={idx} fill={entry.fill} />
+                  <Cell key={idx} fill={entry.fill} />
                 ))}
               </Bar>
             </BarChart>
@@ -479,37 +484,44 @@ export function HydrationTracker({ dailyGoal: defaultGoal }: HydrationTrackerPro
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"
+          className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.08] to-transparent p-6 shadow-lg shadow-violet-500/5"
         >
-          <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-            <Activity className="w-4 h-4 text-cyan-400" />
-            Consumption Pattern
-          </h3>
-          <div className="grid grid-cols-4 gap-3">
-            {timeDistribution.map(slot => (
-              <div key={slot.label} className="text-center">
-                <div className="text-2xl font-bold text-white mb-1">{Math.round(slot.amount / 100) * 100}ml</div>
-                <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mb-1">
-                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${totalAmount > 0 ? (slot.amount / totalAmount) * 100 : 0}%`, backgroundColor: slot.color }} />
-                </div>
-                <p className="text-[10px] text-gray-500">{slot.label.split('(')[0].trim()}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 h-24">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={timeDistribution} cx="50%" cy="50%" innerRadius={28} outerRadius={40} dataKey="amount" paddingAngle={2}>
-                  {timeDistribution.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.color} stroke="transparent" />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
-                  formatter={(value: number) => [`${value}ml`, 'Consumed']}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="absolute bottom-0 right-0 w-40 h-40 bg-violet-500/10 rounded-full -mr-20 -mb-20 blur-xl" />
+          <div className="relative">
+            <h3 className="text-sm font-semibold text-white mb-5 flex items-center gap-2">
+              <Activity className="w-4 h-4 text-cyan-400" />
+              Consumption Pattern
+            </h3>
+            <div className="grid grid-cols-4 gap-4">
+              {timeDistribution.map(slot => {
+                const pct = totalAmount > 0 ? (slot.amount / totalAmount) * 100 : 0
+                return (
+                  <div key={slot.label} className="text-center p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                    <div className="text-2xl font-bold text-white mb-2 drop-shadow-lg">{Math.round(slot.amount / 100) * 100}<span className="text-xs text-gray-500 ml-0.5">ml</span></div>
+                    <div className="h-2 rounded-full bg-white/10 overflow-hidden shadow-inner mb-1.5">
+                      <div className="h-full rounded-full transition-all duration-700 ease-out shadow-sm" style={{ width: `${pct}%`, backgroundColor: slot.color }} />
+                    </div>
+                    <p className="text-[10px] text-gray-500 font-medium">{slot.label.split('(')[0].trim()}</p>
+                    <p className="text-[9px] text-gray-600">{pct.toFixed(0)}%</p>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="mt-5 h-32">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={timeDistribution} cx="50%" cy="50%" innerRadius={36} outerRadius={50} dataKey="amount" paddingAngle={3}>
+                    {timeDistribution.map((entry, idx) => (
+                      <Cell key={idx} fill={entry.color} stroke="transparent" />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px', backdropFilter: 'blur(12px)' }}
+                    formatter={(value: number) => [`${value}ml`, 'Consumed']}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </motion.div>
       )}
@@ -519,26 +531,34 @@ export function HydrationTracker({ dailyGoal: defaultGoal }: HydrationTrackerPro
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-amber-500/10 bg-gradient-to-br from-amber-500/[0.03] to-transparent p-6"
+          className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent p-6 shadow-lg shadow-amber-500/5"
         >
-          <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">
-            <Flame className="w-4 h-4" />
-            <span>Current Streak</span>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-orange-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">
+              <Flame className="w-4 h-4 text-amber-400" />
+              <span>Current Streak</span>
+            </div>
+            <p className="text-4xl font-black text-amber-400 drop-shadow-lg">{currentStreak}</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">consecutive days</p>
           </div>
-          <p className="text-3xl font-black text-amber-400">{currentStreak}</p>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">consecutive days</p>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-violet-500/10 bg-gradient-to-br from-violet-500/[0.03] to-transparent p-6"
+          className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/15 via-violet-500/5 to-transparent p-6 shadow-lg shadow-violet-500/5"
         >
-          <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">
-            <Zap className="w-4 h-4" />
-            <span>Best Streak</span>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-purple-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">
+              <Zap className="w-4 h-4 text-violet-400" />
+              <span>Best Streak</span>
+            </div>
+            <p className="text-4xl font-black text-violet-400 drop-shadow-lg">{bestStreak}</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">all time</p>
           </div>
-          <p className="text-3xl font-black text-violet-400">{bestStreak}</p>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">all time</p>
         </motion.div>
       </div>
 
@@ -653,50 +673,66 @@ export function HydrationTracker({ dailyGoal: defaultGoal }: HydrationTrackerPro
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
             onClick={() => setShowGoalModal(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl mx-4"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-gray-900 to-gray-950 p-6 shadow-2xl shadow-cyan-500/5"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-white">Daily Goal</h3>
-                <button
-                  onClick={() => setShowGoalModal(false)}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <p className="text-sm text-gray-400 mb-4">Set your daily water intake goal (100-20000ml)</p>
-              <input
-                type="number"
-                value={goalInput}
-                onChange={(e) => setGoalInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSetGoal()}
-                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-cyan-500/50 focus:outline-none transition-all text-sm mb-4"
-                autoFocus
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowGoalModal(false)}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all text-sm font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSetGoal}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/30 transition-all text-sm font-medium"
-                >
-                  Save Goal
-                </button>
-              </div>
-              <div className="mt-4 pt-4 border-t border-white/5">
-                <p className="text-xs text-gray-500">Recommended: 2000-3000ml per day</p>
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-cyan-500/10 to-blue-500/5 rounded-full -mr-20 -mt-20 blur-2xl" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-500/5 rounded-full -ml-12 -mb-12 blur-xl" />
+              <div className="relative">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/10 flex items-center justify-center shadow-lg"><Settings className="w-5 h-5 text-cyan-400" /></div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">Daily Hydration Goal</h3>
+                      <p className="text-xs text-gray-500">Set your water intake target</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowGoalModal(false)}
+                    className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="rounded-xl bg-gradient-to-br from-cyan-500/5 to-blue-500/5 border border-cyan-500/10 p-4 mb-4">
+                  <p className="text-xs text-gray-400 mb-3">Daily water intake goal (100–20,000 ml)</p>
+                  <input
+                    type="number"
+                    value={goalInput}
+                    onChange={(e) => setGoalInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSetGoal()}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-cyan-500/30 text-white text-lg font-semibold placeholder-gray-600 focus:border-cyan-400/60 focus:outline-none focus:shadow-lg focus:shadow-cyan-500/5 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    autoFocus
+                    placeholder="e.g. 2500"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowGoalModal(false)}
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all text-sm font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSetGoal}
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 text-cyan-300 hover:from-cyan-500/30 hover:to-blue-500/30 hover:shadow-lg hover:shadow-cyan-500/5 transition-all text-sm font-semibold"
+                  >
+                    Save Goal
+                  </button>
+                </div>
+                <div className="mt-4 pt-4 border-t border-white/5">
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <Zap className="w-3 h-3 text-cyan-400/60" />
+                    Recommended: 2,000–3,000 ml per day
+                  </div>
+                </div>
               </div>
             </motion.div>
           </motion.div>

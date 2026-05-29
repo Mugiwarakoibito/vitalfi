@@ -147,12 +147,21 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
 
   const stats = useMemo(() => {
     const categoryCounts: Record<string, number> = {}
+    const muscleCounts: Record<string, number> = {}
     allExercises.forEach(ex => {
       categoryCounts[ex.category] = (categoryCounts[ex.category] || 0) + 1
+      ex.primaryMuscles.forEach(m => {
+        muscleCounts[m] = (muscleCounts[m] || 0) + 1
+      })
     })
+    const maxCategory = Math.max(...Object.values(categoryCounts), 1)
+    const maxMuscle = Math.max(...Object.values(muscleCounts), 1)
     return {
       total: allExercises.length,
       categories: categoryCounts,
+      maxCategory,
+      muscles: muscleCounts,
+      maxMuscle,
       customCount: customExercises.length,
     }
   }, [allExercises, customExercises])
@@ -253,53 +262,76 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
       </div>
 
       {/* Category Stats Bar */}
-      <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent -mx-1 px-1">
-        {categories.map((cat) => (
-          <button
-            key={cat.value}
-            onClick={() => setActiveCategory(activeCategory === cat.value ? null : cat.value)}
-            className={`flex flex-col items-center gap-1 rounded-xl border px-2.5 py-2 transition-all duration-200 shrink-0 min-w-[64px] ${
-              activeCategory === cat.value
-                ? 'border-primary/40 bg-primary/10 text-primary-light shadow-[0_0_20px_rgba(139,92,246,0.1)]'
-                : 'border-primary/[0.08] bg-primary/[0.02] text-muted hover:text-primary-light hover:bg-primary/[0.05]'
-            }`}
-          >
-            <span className="opacity-70">{cat.icon}</span>
-            <span className="text-[10px] font-semibold leading-tight text-center">{cat.label}</span>
-            <span className="text-[9px] opacity-60">{stats.categories[cat.value] || 0}</span>
-          </button>
-        ))}
+      <div className="relative rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/10 p-1.5 shadow-lg shadow-black/20">
+        <div className="absolute inset-0 bg-gradient-to-r from-violet-500/[0.03] via-transparent to-emerald-500/[0.03] rounded-xl pointer-events-none" />
+        <div className="relative flex gap-1.5 overflow-x-auto pb-0.5">
+          {categories.map((cat) => {
+            const catCount = stats.categories[cat.value] || 0
+            const barWidth = (catCount / stats.maxCategory) * 100
+            return (
+            <button
+              key={cat.value}
+              onClick={() => setActiveCategory(activeCategory === cat.value ? null : cat.value)}
+              className={`flex flex-col items-center gap-1 rounded-lg border px-2.5 py-2 transition-all duration-200 shrink-0 min-w-[64px] ${
+                activeCategory === cat.value
+                  ? 'border-violet-500/50 bg-gradient-to-b from-violet-500/25 to-violet-500/10 text-violet-200 shadow-[0_0_30px_rgba(139,92,246,0.2)]'
+                  : 'border-white/[0.08] bg-white/[0.03] text-gray-400 hover:text-gray-200 hover:bg-white/[0.08] hover:border-white/20'
+              }`}
+            >
+              <span className="text-base drop-shadow-sm">{cat.icon}</span>
+              <span className="text-[10px] font-semibold leading-tight text-center">{cat.label}</span>
+              <span className="text-[9px] font-medium">{catCount}</span>
+              <div className="w-full h-1 rounded-full bg-white/5 overflow-hidden">
+                <div className="h-full rounded-full bg-gradient-to-r from-violet-500/60 to-violet-400/60 transition-all duration-300" style={{ width: `${barWidth}%` }} />
+              </div>
+            </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Muscle Group Bar */}
-      <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent -mx-1 px-1">
-        <button
-          onClick={() => setActiveMuscles([])}
-          className={`flex flex-col items-center gap-1 rounded-xl border px-2.5 py-2 transition-all duration-200 shrink-0 min-w-[56px] ${
-            activeMuscles.length === 0
-              ? 'border-primary/40 bg-primary/10 text-primary-light shadow-[0_0_20px_rgba(139,92,246,0.1)]'
-              : 'border-primary/[0.08] bg-primary/[0.02] text-muted hover:text-primary-light hover:bg-primary/[0.05]'
-          }`}
-        >
-          <span className="text-[10px] font-semibold leading-tight text-center">All</span>
-        </button>
-        {allMuscles.map((muscle) => (
+      <div className="relative rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/10 p-1.5 shadow-lg shadow-black/20">
+        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/[0.03] via-transparent to-violet-500/[0.03] rounded-xl pointer-events-none" />
+        <div className="relative flex gap-1 overflow-x-auto pb-0.5">
           <button
-            key={muscle}
-            onClick={() => setActiveMuscles(prev =>
-              prev.includes(muscle)
-                ? prev.filter(m => m !== muscle)
-                : [...prev, muscle]
-            )}
-            className={`rounded-xl border px-3 py-2 transition-all duration-200 shrink-0 text-xs font-medium whitespace-nowrap ${
-              activeMuscles.includes(muscle)
-                ? 'border-primary/40 bg-primary/10 text-primary-light'
-                : 'border-primary/[0.08] bg-primary/[0.02] text-muted hover:text-primary-light hover:bg-primary/[0.05]'
+            onClick={() => setActiveMuscles([])}
+            className={`rounded-lg border px-2.5 py-2 transition-all duration-200 shrink-0 text-[10px] font-semibold whitespace-nowrap ${
+              activeMuscles.length === 0
+                ? 'border-violet-500/50 bg-gradient-to-b from-violet-500/25 to-violet-500/10 text-violet-200 shadow-[0_0_30px_rgba(139,92,246,0.2)]'
+                : 'border-white/[0.08] bg-white/[0.03] text-gray-400 hover:text-gray-200 hover:bg-white/[0.08] hover:border-white/20'
             }`}
           >
-            {formatMuscle(muscle)}
+            All
           </button>
-        ))}
+          {allMuscles.map((muscle) => {
+            const muscleCount = stats.muscles[muscle] || 0
+            const barWidth = (muscleCount / stats.maxMuscle) * 100
+            return (
+            <button
+              key={muscle}
+              onClick={() => setActiveMuscles(prev =>
+                prev.includes(muscle)
+                  ? prev.filter(m => m !== muscle)
+                  : [...prev, muscle]
+              )}
+              className={`rounded-lg border px-2.5 py-2 transition-all duration-200 shrink-0 text-[10px] font-medium whitespace-nowrap ${
+                activeMuscles.includes(muscle)
+                  ? 'border-violet-500/50 bg-gradient-to-b from-violet-500/25 to-violet-500/10 text-violet-200 shadow-[0_0_30px_rgba(139,92,246,0.2)]'
+                  : 'border-white/[0.08] bg-white/[0.03] text-gray-400 hover:text-gray-200 hover:bg-white/[0.08] hover:border-white/20'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span>{formatMuscle(muscle)}</span>
+                <span className="text-[8px] opacity-60">{muscleCount}</span>
+              </div>
+              <div className="w-full h-1 rounded-full bg-white/5 overflow-hidden mt-1">
+                <div className="h-full rounded-full bg-gradient-to-r from-emerald-500/60 to-emerald-400/60 transition-all duration-300" style={{ width: `${barWidth}%` }} />
+              </div>
+            </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Search & Controls */}

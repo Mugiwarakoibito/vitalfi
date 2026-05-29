@@ -148,32 +148,35 @@ export default function Finance() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 overflow-x-auto pb-4 scrollbar-none">
-        {[
-          { id: 'transactions', label: 'Transactions', icon: Wallet },
-          { id: 'wealth', label: 'Wealth', icon: CreditCard },
-          { id: 'budgets', label: 'Budgets', icon: PiggyBank },
-          { id: 'goals', label: 'Goals', icon: Target },
-          { id: 'bills', label: 'Bills', icon: Calendar },
-          { id: 'subscriptions', label: 'Subs', icon: Gem },
-          { id: 'debts', label: 'Debts', icon: CreditCard },
-          { id: 'investments', label: 'Invest', icon: TrendingUp },
-          { id: 'calendar', label: 'Calendar', icon: Calendar },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => { setActiveTab(tab.id as Tab); setSearchParams({ tab: tab.id }) }}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-[11px] font-bold uppercase tracking-[0.15em] transition-all duration-300",
-              activeTab === tab.id 
-                ? "bg-white/10 text-white shadow-[0_0_30px_rgba(255,255,255,0.05)] border border-white/10" 
-                : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
-            )}
-          >
-            <tab.icon size={16} />
-            {tab.label}
-          </button>
-        ))}
+      <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-500/[0.02] to-transparent pointer-events-none" />
+        <div className="relative flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none rounded-2xl bg-white/[0.02] border border-white/5 p-1.5">
+          {[
+            { id: 'transactions', label: 'Transactions', icon: Wallet },
+            { id: 'wealth', label: 'Wealth', icon: CreditCard },
+            { id: 'budgets', label: 'Budgets', icon: PiggyBank },
+            { id: 'goals', label: 'Goals', icon: Target },
+            { id: 'bills', label: 'Bills', icon: Calendar },
+            { id: 'subscriptions', label: 'Subs', icon: Gem },
+            { id: 'debts', label: 'Debts', icon: CreditCard },
+            { id: 'investments', label: 'Invest', icon: TrendingUp },
+            { id: 'calendar', label: 'Calendar', icon: Calendar },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id as Tab); setSearchParams({ tab: tab.id }) }}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 rounded-xl px-3.5 py-3 text-[10px] font-bold uppercase tracking-[0.15em] transition-all duration-300 shrink-0 whitespace-nowrap",
+                activeTab === tab.id 
+                  ? "bg-gradient-to-br from-white/15 to-white/5 text-white shadow-[0_0_30px_rgba(255,255,255,0.08)] border border-white/15 backdrop-blur-sm" 
+                  : "text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent"
+              )}
+            >
+              <tab.icon size={14} className="opacity-70" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {activeTab === 'transactions' && (

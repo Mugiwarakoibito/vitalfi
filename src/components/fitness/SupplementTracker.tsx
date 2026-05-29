@@ -283,33 +283,37 @@ export function SupplementTracker() {
     <div className="space-y-5">
       <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-5">
         {/* Stats Dashboard */}
-        <motion.div variants={itemVariants} className="grid grid-cols-3 gap-4">
-          <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent p-5">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10" />
+        <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/20 via-purple-500/5 to-transparent p-6 shadow-lg shadow-purple-500/5">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+            <div className="absolute bottom-0 left-0 w-16 h-16 bg-violet-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
             <div className="relative">
-              <div className="text-purple-400/80 text-sm mb-2">Total</div>
-              <p className="text-3xl font-bold text-purple-400">{totalCount}</p>
+              <div className="text-purple-400/80 text-xs font-medium uppercase tracking-wider mb-2">Total Doses</div>
+              <p className="text-3xl font-bold text-purple-400 drop-shadow-lg">{totalCount}</p>
             </div>
           </div>
-          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent p-5">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/20 via-emerald-500/5 to-transparent p-6 shadow-lg shadow-emerald-500/5">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+            <div className="absolute bottom-0 left-0 w-16 h-16 bg-teal-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
             <div className="relative">
-              <div className="text-emerald-400/80 text-sm mb-2">Taken Today</div>
-              <p className="text-3xl font-bold text-emerald-400">{takenTodayCount}</p>
+              <div className="text-emerald-400/80 text-xs font-medium uppercase tracking-wider mb-2">Taken Today</div>
+              <p className="text-3xl font-bold text-emerald-400 drop-shadow-lg">{takenTodayCount}</p>
             </div>
           </div>
-          <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent p-5">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/20 via-amber-500/5 to-transparent p-6 shadow-lg shadow-amber-500/5">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+            <div className="absolute bottom-0 left-0 w-16 h-16 bg-orange-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
             <div className="relative">
-              <div className="text-amber-400/80 text-sm mb-2">Remaining</div>
-              <p className="text-3xl font-bold text-amber-400">{remainingCount}</p>
+              <div className="text-amber-400/80 text-xs font-medium uppercase tracking-wider mb-2">Remaining</div>
+              <p className="text-3xl font-bold text-amber-400 drop-shadow-lg">{remainingCount}</p>
             </div>
           </div>
-          <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-transparent p-5">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/10 rounded-full -mr-10 -mt-10" />
+          <div className="relative overflow-hidden rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-500/20 via-violet-500/5 to-transparent p-6 shadow-lg shadow-violet-500/5">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+            <div className="absolute bottom-0 left-0 w-16 h-16 bg-indigo-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
             <div className="relative">
-              <div className="text-violet-400/80 text-sm mb-2">Adherence</div>
-              <p className="text-3xl font-bold text-violet-400">{weekAdherence}%</p>
+              <div className="text-violet-400/80 text-xs font-medium uppercase tracking-wider mb-2">Adherence</div>
+              <p className="text-3xl font-bold text-violet-400 drop-shadow-lg">{weekAdherence}%</p>
             </div>
           </div>
         </motion.div>
@@ -386,32 +390,38 @@ export function SupplementTracker() {
 
             {/* Streak + Trend */}
             <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4">
-              <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent p-5">
-                <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                  <Flame className="w-4 h-4 text-amber-400" />
-                  Current Streak
+              <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/20 via-amber-500/5 to-transparent p-6 shadow-lg shadow-amber-500/5">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/15 rounded-full -mr-10 -mt-10 blur-lg" />
+                <div className="relative">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium uppercase tracking-wider mb-2">
+                    <Flame className="w-4 h-4 text-amber-400" />
+                    Current Streak
+                  </div>
+                  <p className="text-3xl font-bold text-amber-400 drop-shadow-lg">{suppStreak} <span className="text-sm font-normal text-gray-500">days</span></p>
                 </div>
-                <p className="text-3xl font-bold text-amber-400">{suppStreak} <span className="text-sm font-normal text-gray-500">days</span></p>
               </div>
-              <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-transparent p-5">
-                <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                  <Activity className="w-4 h-4 text-violet-400" />
-                  30-Day Trend
-                </div>
-                <div className="h-12">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={adherenceTrend}>
-                      <XAxis dataKey="date" tick={false} axisLine={false} />
-                      <YAxis hide domain={[0, 100]} />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
-                        formatter={(value: number) => [`${value}%`, 'Adherence']}
+              <div className="relative overflow-hidden rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-500/20 via-violet-500/5 to-transparent p-6 shadow-lg shadow-violet-500/5">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/15 rounded-full -mr-10 -mt-10 blur-lg" />
+                <div className="relative">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium uppercase tracking-wider mb-2">
+                    <Activity className="w-4 h-4 text-violet-400" />
+                    30-Day Trend
+                  </div>
+                  <div className="h-16">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={adherenceTrend}>
+                        <XAxis dataKey="date" tick={false} axisLine={false} />
+                        <YAxis hide domain={[0, 100]} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px', backdropFilter: 'blur(12px)' }}
+                          formatter={(value: number) => [`${value}%`, 'Adherence']}
                       />
                       <Line type="monotone" dataKey="pct" stroke="#8b5cf6" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
+            </div>
             </motion.div>
           </>
         )}
@@ -652,14 +662,14 @@ export function SupplementTracker() {
 
       {/* Add Supplement Modal */}
       <Modal isOpen={showModal} onClose={() => { setShowModal(false); resetForm() }} title="Add Supplement">
-        <div className="space-y-4">
+        <div className="space-y-5">
           {/* Quick Add */}
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-2 flex items-center gap-1.5">
+            <label className="block text-[10px] font-medium text-gray-400 mb-2.5 uppercase tracking-wider flex items-center gap-1.5">
               <Sparkles className="w-3 h-3 text-purple-400" />
               Quick Add from Common
             </label>
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-2 gap-2">
               {commonSupplements.map((s) => (
                 <motion.button
                   key={s.name}
@@ -667,20 +677,20 @@ export function SupplementTracker() {
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleQuickAdd(s.name, s.dosage)}
                   className={cn(
-                    'text-left px-3 py-2 rounded-lg text-xs border transition-all',
+                    'text-left px-3 py-2.5 rounded-xl text-xs border transition-all duration-200',
                     formData.name === s.name
-                      ? 'bg-purple-500/15 border-purple-500/40 text-white'
-                      : 'bg-white/[0.03] border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06]',
+                      ? 'bg-gradient-to-br from-purple-500/20 to-violet-500/10 border-purple-500/40 text-white shadow-lg shadow-purple-500/5'
+                      : 'bg-white/[0.03] border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06] hover:border-white/20',
                   )}
                 >
-                  <div className="font-medium">{s.name}</div>
-                  <div className="text-[10px] opacity-70">{s.dosage}</div>
+                  <div className="font-semibold">{s.name}</div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">{s.dosage}</div>
                 </motion.button>
               ))}
             </div>
           </div>
 
-          <div className="h-px bg-white/[0.06]" />
+          <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
           {/* Name */}
           <Input
@@ -701,7 +711,7 @@ export function SupplementTracker() {
 
           {/* Frequency */}
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-muted">Frequency</label>
+            <label className="mb-2 block text-[10px] font-medium text-gray-400 uppercase tracking-wider">Frequency</label>
             <div className="flex gap-2">
               {(['daily', 'weekly', 'custom'] as const).map((freq) => (
                 <button
@@ -709,10 +719,10 @@ export function SupplementTracker() {
                   type="button"
                   onClick={() => setFormData({ ...formData, frequency: freq })}
                   className={cn(
-                    'flex-1 px-3 py-2 rounded-xl text-xs font-medium border transition-all capitalize',
+                    'flex-1 px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all duration-200 capitalize',
                     formData.frequency === freq
-                      ? 'bg-purple-500/15 border-purple-500/40 text-white'
-                      : 'bg-white/[0.03] border-white/[0.06] text-gray-400 hover:text-white',
+                      ? 'bg-gradient-to-br from-purple-500/20 to-violet-500/10 border-purple-500/40 text-white shadow-lg shadow-purple-500/5'
+                      : 'bg-white/[0.03] border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06]',
                   )}
                 >
                   {freq}
@@ -723,7 +733,7 @@ export function SupplementTracker() {
 
           {/* Times */}
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-muted">Times of Day</label>
+            <label className="mb-2 block text-[10px] font-medium text-gray-400 uppercase tracking-wider">Times of Day</label>
             <div className="grid grid-cols-4 gap-2">
               {timeOptions.map(({ value, icon: Icon }) => (
                 <button
@@ -731,10 +741,10 @@ export function SupplementTracker() {
                   type="button"
                   onClick={() => toggleTime(value)}
                   className={cn(
-                    'flex flex-col items-center gap-1 px-2 py-3 rounded-xl text-xs font-medium border transition-all',
+                    'flex flex-col items-center gap-1.5 px-2 py-3.5 rounded-xl text-xs font-medium border transition-all duration-200',
                     formData.times.includes(value)
-                      ? 'bg-purple-500/15 border-purple-500/40 text-white'
-                      : 'bg-white/[0.03] border-white/[0.06] text-gray-400 hover:text-white',
+                      ? 'bg-gradient-to-br from-purple-500/20 to-violet-500/10 border-purple-500/40 text-white shadow-lg shadow-purple-500/5'
+                      : 'bg-white/[0.03] border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06]',
                   )}
                 >
                   <Icon className="w-4 h-4" />
@@ -775,42 +785,49 @@ export function SupplementTracker() {
             onClick={() => setDeleteTarget(null)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="relative z-10 w-full max-w-sm mx-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <Card className="p-6">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center mb-4">
-                    <AlertTriangle className="w-6 h-6 text-red-400" />
+              <div className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-gradient-to-br from-gray-900 to-gray-950 p-6 shadow-2xl shadow-red-500/5">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+                <div className="relative flex flex-col items-center text-center">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-red-500/20 to-rose-500/10 flex items-center justify-center mb-4 shadow-lg shadow-red-500/10">
+                    <AlertTriangle className="w-7 h-7 text-red-400 drop-shadow-sm" />
                   </div>
                   <h3 className="text-lg font-semibold text-white mb-2">Delete Supplement?</h3>
                   <p className="text-sm text-gray-400 mb-1">
                     Are you sure you want to delete
                   </p>
-                  <p className="text-sm font-semibold text-white mb-6">
-                    {deleteTarget.name} ({deleteTarget.dosage})
+                  <p className="text-base font-semibold text-white mb-4">
+                    <span className="text-rose-300">{deleteTarget.name}</span>
+                    <span className="text-gray-500"> ({deleteTarget.dosage})</span>
                   </p>
-                  <p className="text-xs text-gray-500 mb-6">
-                    This will also remove all logs for this supplement.
-                  </p>
+                  <div className="px-4 py-2 rounded-xl bg-rose-500/5 border border-rose-500/10 mb-5">
+                    <p className="text-xs text-gray-500">
+                      <X className="w-3 h-3 inline mr-1 text-rose-400/60" />
+                      This will also remove all logs for this supplement.
+                    </p>
+                  </div>
                   <div className="flex gap-3 w-full">
-                    <Button
-                      variant="ghost"
+                    <button
                       onClick={() => setDeleteTarget(null)}
-                      className="flex-1"
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all text-sm font-medium"
                     >
                       Cancel
-                    </Button>
-                    <Button variant="danger" onClick={deleteSupplement} className="flex-1">
-                      <X className="w-4 h-4 mr-1" />
+                    </button>
+                    <button
+                      onClick={deleteSupplement}
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-500/20 to-rose-500/20 border border-red-500/30 text-red-300 hover:from-red-500/30 hover:to-rose-500/30 hover:shadow-lg hover:shadow-red-500/10 transition-all text-sm font-semibold flex items-center justify-center gap-1.5"
+                    >
+                      <Trash2 className="w-4 h-4" />
                       Delete
-                    </Button>
+                    </button>
                   </div>
                 </div>
-              </Card>
+              </div>
             </motion.div>
           </motion.div>
         )}

@@ -161,6 +161,8 @@ export interface TemplateExercise {
   targetReps?: number;
   targetRpe?: number;
   restSeconds?: number;
+  sets?: { weight?: number; reps?: number; rpe?: number; completed?: boolean; duration?: number; distance?: number }[];
+  notes?: string;
 }
 
 export interface WorkoutExercise {

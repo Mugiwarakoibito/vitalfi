@@ -58,7 +58,7 @@ export function RecentActivity({ items, currency }: RecentActivityProps) {
       <CardHeader className="pb-2">
         <CardTitle className="text-sm">Recent Activity</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-1 max-h-[320px] overflow-auto scrollbar-thin">
+      <CardContent className="space-y-1 max-h-[320px] overflow-auto">
         {items.map((item) => {
           const iconKey = item.icon || 'Activity'
           const colorKey = item.color || 'primary'

@@ -27,6 +27,10 @@ export default function MovementTracker() {
       return diff < 7 * 24 * 60 * 60 * 1000
     })
     
+    const activeDays = new Set(last7Days.map(w => 
+      new Date(w.date).toDateString()
+    )).size
+
     const calculateVolume = (wo: any) => {
       return (wo.exercises || []).reduce((acc: number, ex: any) => {
         return acc + (ex.sets || []).reduce((setAcc: number, set: any) => {
@@ -41,7 +45,8 @@ export default function MovementTracker() {
       avgDuration: last7Days.length > 0 
         ? Math.round(last7Days.reduce((acc, w) => acc + w.duration, 0) / last7Days.length)
         : 0,
-      targetProgress: Math.min(Math.round((last7Days.length / 4) * 100), 100)
+      targetProgress: Math.min(Math.round((last7Days.length / 4) * 100), 100),
+      consistencyScore: Math.round((activeDays / 7) * 100)
     }
   }, [workouts])
 
@@ -72,12 +77,12 @@ export default function MovementTracker() {
 
       {/* Stats Grid */}
       <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
-         {[
-           { label: 'Weekly Volume', value: `${stats.totalVolume} kg`, icon: TrendingUp, color: 'neon-text-cyan' },
-           { label: 'Sessions', value: stats.weeklyCount, icon: Activity, color: 'neon-text-purple' },
-           { label: 'Avg Duration', value: `${stats.avgDuration} min`, icon: Clock, color: 'neon-text-amber' },
-           { label: 'System Load', value: `${stats.targetProgress}%`, icon: Zap, color: 'neon-text-rose' },
-         ].map((stat, i) => (
+          {[
+            { label: 'Consistency', value: `${stats.consistencyScore}%`, icon: Target, color: 'neon-text-emerald' },
+            { label: 'Sessions', value: stats.weeklyCount, icon: Activity, color: 'neon-text-purple' },
+            { label: 'Avg Duration', value: `${stats.avgDuration} min`, icon: Clock, color: 'neon-text-amber' },
+            { label: 'System Load', value: `${stats.targetProgress}%`, icon: Zap, color: 'neon-text-rose' },
+          ].map((stat, i) => (
            <motion.div 
              key={i}
              initial={{ opacity: 0, y: 20 }}

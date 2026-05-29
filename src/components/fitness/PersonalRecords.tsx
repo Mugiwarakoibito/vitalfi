@@ -218,7 +218,7 @@ export function PersonalRecords() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setShowCalculator(!showCalculator)}
-            className="glass-button px-3 py-2 rounded-xl text-sm flex items-center gap-1.5 text-gray-300 hover:text-white transition-colors"
+            className="px-3 py-2 rounded-xl bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/20 text-gray-300 hover:text-white hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/5 transition-all text-sm font-medium flex items-center gap-1.5"
           >
             <Calculator className="w-4 h-4 text-amber-400" />
             1RM
@@ -231,22 +231,34 @@ export function PersonalRecords() {
       </div>
 
       {records.length > 0 && (
-        <div className="grid grid-cols-4 gap-3">
-          <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent p-4">
-            <p className="text-xs text-amber-400/80 mb-1">Total PRs</p>
-            <p className="text-2xl font-bold text-amber-400">{records.length}</p>
+        <div className="grid grid-cols-4 gap-4">
+          <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/20 via-amber-500/5 to-transparent p-5 shadow-lg shadow-amber-500/5">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/15 rounded-full -mr-10 -mt-10 blur-lg" />
+            <div className="relative">
+              <p className="text-xs text-amber-400/80 font-medium uppercase tracking-wider mb-1">Total PRs</p>
+              <p className="text-3xl font-bold text-amber-400 drop-shadow-lg">{records.length}</p>
+            </div>
           </div>
-          <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent p-4">
-            <p className="text-xs text-purple-400/80 mb-1">Exercises</p>
-            <p className="text-2xl font-bold text-purple-400">{exercises.length}</p>
+          <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/20 via-purple-500/5 to-transparent p-5 shadow-lg shadow-purple-500/5">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/15 rounded-full -mr-10 -mt-10 blur-lg" />
+            <div className="relative">
+              <p className="text-xs text-purple-400/80 font-medium uppercase tracking-wider mb-1">Exercises</p>
+              <p className="text-3xl font-bold text-purple-400 drop-shadow-lg">{exercises.length}</p>
+            </div>
           </div>
-          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent p-4">
-            <p className="text-xs text-emerald-400/80 mb-1">Total Volume</p>
-            <p className="text-2xl font-bold text-emerald-400">{records.reduce((s, r) => s + r.weight * r.reps, 0).toLocaleString()}</p>
+          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/20 via-emerald-500/5 to-transparent p-5 shadow-lg shadow-emerald-500/5">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/15 rounded-full -mr-10 -mt-10 blur-lg" />
+            <div className="relative">
+              <p className="text-xs text-emerald-400/80 font-medium uppercase tracking-wider mb-1">Total Volume</p>
+              <p className="text-3xl font-bold text-emerald-400 drop-shadow-lg">{records.reduce((s, r) => s + r.weight * r.reps, 0).toLocaleString()}</p>
+            </div>
           </div>
-          <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-transparent p-4">
-            <p className="text-xs text-violet-400/80 mb-1">Best 1RM</p>
-            <p className="text-2xl font-bold text-violet-400">{Math.max(...records.map(r => estimateOneRM(r.weight, r.reps)))}</p>
+          <div className="relative overflow-hidden rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-500/20 via-violet-500/5 to-transparent p-5 shadow-lg shadow-violet-500/5">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/15 rounded-full -mr-10 -mt-10 blur-lg" />
+            <div className="relative">
+              <p className="text-xs text-violet-400/80 font-medium uppercase tracking-wider mb-1">Best 1RM</p>
+              <p className="text-3xl font-bold text-violet-400 drop-shadow-lg">{Math.max(...records.map(r => estimateOneRM(r.weight, r.reps)))}</p>
+            </div>
           </div>
         </div>
       )}
@@ -610,32 +622,33 @@ export function PersonalRecords() {
             )
             return (
               <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-center">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">
-                      Best Weight
-                    </p>
-                    <p className="text-lg font-bold text-amber-300">
-                      {bestWeight}{' '}
-                      <span className="text-xs text-gray-500">lbs</span>
-                    </p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="relative overflow-hidden rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/20 to-transparent p-3 text-center shadow-lg shadow-amber-500/5">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/15 rounded-full -mr-8 -mt-8 blur-lg" />
+                    <div className="relative">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Best Weight</p>
+                      <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-400 drop-shadow-sm">
+                        {bestWeight} <span className="text-xs text-gray-500 font-normal">lbs</span>
+                      </p>
+                    </div>
                   </div>
-                  <div className="rounded-xl border border-purple-500/20 bg-purple-500/10 p-3 text-center">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">
-                      Best Reps
-                    </p>
-                    <p className="text-lg font-bold text-purple-300">
-                      {bestReps}{' '}
-                      <span className="text-xs text-gray-500">reps</span>
-                    </p>
+                  <div className="relative overflow-hidden rounded-xl border border-purple-500/30 bg-gradient-to-br from-purple-500/20 to-transparent p-3 text-center shadow-lg shadow-purple-500/5">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-purple-500/15 rounded-full -mr-8 -mt-8 blur-lg" />
+                    <div className="relative">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Best Reps</p>
+                      <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-purple-400 drop-shadow-sm">
+                        {bestReps} <span className="text-xs text-gray-500 font-normal">reps</span>
+                      </p>
+                    </div>
                   </div>
-                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-center">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">
-                      Best Volume
-                    </p>
-                    <p className="text-lg font-bold text-emerald-300">
-                      {bestVolume.toLocaleString()}
-                    </p>
+                  <div className="relative overflow-hidden rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/20 to-transparent p-3 text-center shadow-lg shadow-emerald-500/5">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/15 rounded-full -mr-8 -mt-8 blur-lg" />
+                    <div className="relative">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Best Volume</p>
+                      <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-200 to-emerald-400 drop-shadow-sm">
+                        {bestVolume.toLocaleString()}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -649,7 +662,7 @@ export function PersonalRecords() {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.03 }}
-                        className="relative flex items-center gap-3 rounded-xl border border-gray-700/30 bg-gray-800/30 p-3 group hover:border-gray-600/50 transition-colors"
+                        className="relative flex items-center gap-3 rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-3 group hover:border-indigo-500/30 hover:from-indigo-500/5 hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
@@ -670,15 +683,15 @@ export function PersonalRecords() {
                           </div>
                           <div className="flex items-center gap-3 text-sm">
                             <span className="text-amber-300 font-medium">
-                              {r.weight} lbs
+                              {r.weight} <span className="text-xs text-gray-500">lbs</span>
                             </span>
                             <span className="text-gray-600">&times;</span>
                             <span className="text-purple-300 font-medium">
-                              {r.reps} reps
+                              {r.reps} <span className="text-xs text-gray-500">reps</span>
                             </span>
                             <span className="text-gray-500">&middot;</span>
                             <span className="text-emerald-300 font-medium">
-                              {volume.toLocaleString()} vol
+                              {volume.toLocaleString()} <span className="text-xs text-gray-500">vol</span>
                             </span>
                           </div>
                         </div>
@@ -754,9 +767,7 @@ export function PersonalRecords() {
             }
           />
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Record Type
-            </label>
+            <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">Record Type</label>
             <div className="grid grid-cols-3 gap-2">
               {([
                 { value: 'weight' as const, label: 'Weight PR', icon: Award },
@@ -766,17 +777,17 @@ export function PersonalRecords() {
                 const isActive = formData.type === value
                 const borderCls = isActive
                   ? value === 'weight'
-                    ? 'border-amber-500/50 bg-amber-500/20'
+                    ? 'border-amber-500/50 bg-gradient-to-br from-amber-500/20 to-amber-500/5 shadow-lg shadow-amber-500/10'
                     : value === 'reps'
-                      ? 'border-purple-500/50 bg-purple-500/20'
-                      : 'border-emerald-500/50 bg-emerald-500/20'
-                  : 'border-gray-700/50 bg-gray-800/30'
+                      ? 'border-purple-500/50 bg-gradient-to-br from-purple-500/20 to-purple-500/5 shadow-lg shadow-purple-500/10'
+                      : 'border-emerald-500/50 bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 shadow-lg shadow-emerald-500/10'
+                  : 'border-white/10 bg-white/5 hover:bg-white/10'
                 const iconCls = isActive
                   ? value === 'weight'
-                    ? 'text-amber-400'
+                    ? 'text-amber-300'
                     : value === 'reps'
-                      ? 'text-purple-400'
-                      : 'text-emerald-400'
+                      ? 'text-purple-300'
+                      : 'text-emerald-300'
                   : 'text-gray-500'
                 return (
                   <button
@@ -785,12 +796,12 @@ export function PersonalRecords() {
                     onClick={() =>
                       setFormData({ ...formData, type: value })
                     }
-                    className={`flex flex-col items-center gap-1 p-3 rounded-xl border text-sm transition-all ${borderCls} ${
-                      isActive ? 'text-white' : 'text-gray-400 hover:text-white hover:border-gray-600/50'
+                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-sm transition-all duration-300 ${borderCls} ${
+                      isActive ? 'text-white' : 'text-gray-400 hover:text-white'
                     }`}
                   >
-                    <Icon className={`w-5 h-5 ${iconCls}`} />
-                    <span className="text-xs font-medium">{label}</span>
+                    <Icon className={`w-5 h-5 ${iconCls} ${isActive ? 'drop-shadow-sm' : ''}`} />
+                    <span className="text-xs font-semibold">{label}</span>
                   </button>
                 )
               })}

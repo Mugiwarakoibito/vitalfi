@@ -288,41 +288,45 @@ export function SleepLogger() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-3 gap-4"
+        className="grid grid-cols-4 gap-4"
       >
-        <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-500/20 via-violet-500/5 to-transparent p-6 shadow-lg shadow-violet-500/5">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-violet-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-purple-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
           <div className="relative">
-            <div className="text-violet-400/80 text-sm mb-2">Avg Duration</div>
-            <p className="text-3xl font-bold text-violet-400">
+            <div className="text-violet-400/80 text-xs font-medium uppercase tracking-wider mb-2">Avg Duration</div>
+            <p className="text-3xl font-bold text-violet-400 drop-shadow-lg">
               {sleep.length > 0 ? formatSleepDuration(avgDuration) : '--'}
             </p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/20 via-amber-500/5 to-transparent p-6 shadow-lg shadow-amber-500/5">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-amber-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-orange-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
           <div className="relative">
-            <div className="text-amber-400/80 text-sm mb-2">Avg Quality</div>
+            <div className="text-amber-400/80 text-xs font-medium uppercase tracking-wider mb-2">Avg Quality</div>
             <div className="flex items-center gap-1 mt-0.5">
-              {qualityStars(Math.round(avgQuality), 14)}
+              {qualityStars(Math.round(avgQuality), 16)}
               <span className="text-white/50 text-xs ml-1">{avgQuality > 0 ? avgQuality.toFixed(1) : ''}</span>
             </div>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/20 via-emerald-500/5 to-transparent p-6 shadow-lg shadow-emerald-500/5">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-teal-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
           <div className="relative">
-            <div className="text-blue-400/80 text-sm mb-2">Sleep Score</div>
-            <p className={`text-3xl font-bold tracking-tight ${scoreColor(sleepScore)}`}>
+            <div className="text-emerald-400/80 text-xs font-medium uppercase tracking-wider mb-2">Sleep Score</div>
+            <p className={`text-3xl font-bold tracking-tight drop-shadow-lg ${scoreColor(sleepScore)}`}>
               {sleep.length > 0 ? sleepScore : '--'}
             </p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-6 shadow-lg">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-white/10 rounded-full -mr-14 -mt-14 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/5 rounded-full -ml-10 -mb-10 blur-lg" />
           <div className="relative">
-            <div className="text-gray-400/80 text-sm mb-2">Total Nights</div>
-            <p className="text-3xl font-bold text-gray-400">{sleep.length}</p>
+            <div className="text-gray-400/80 text-xs font-medium uppercase tracking-wider mb-2">Total Nights</div>
+            <p className="text-3xl font-bold text-gray-400 drop-shadow-lg">{sleep.length}</p>
           </div>
         </div>
       </motion.div>
@@ -332,61 +336,66 @@ export function SleepLogger() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="rounded-2xl border border-violet-500/15 bg-gradient-to-br from-violet-500/5 to-transparent p-4 sm:p-5"
+        className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/12 via-violet-500/5 to-transparent p-5 shadow-lg shadow-violet-500/5"
       >
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center">
-              <Target className="w-4 h-4 text-violet-400" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-white">Daily Sleep Goal</p>
-              <p className="text-xs text-gray-500">
-                {goalMetCount}/{sleep.length} nights met ({goalMetPct}%)
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setTargetHours(h => Math.max(4, +(h - 0.5).toFixed(1)))}
-                className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 flex items-center justify-center text-sm transition-all"
-              >
-                -
-              </button>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.5"
-                  min={4}
-                  max={12}
-                  value={targetHours}
-                  onChange={e => setTargetHours(Math.max(4, Math.min(12, parseFloat(e.target.value) || 8)))}
-                  className="w-16 text-center px-2 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium focus:border-violet-500/50 focus:outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-                <span className="absolute -right-0.5 top-1/2 -translate-y-1/2 text-xs text-gray-500 pointer-events-none">h</span>
+        <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full -mr-16 -mt-16 blur-xl" />
+        <div className="absolute bottom-0 left-0 w-20 h-20 bg-emerald-500/5 rounded-full -ml-10 -mb-10 blur-lg" />
+        <div className="relative">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/30 to-purple-500/10 flex items-center justify-center shadow-lg shadow-violet-500/10">
+                <Target className="w-5 h-5 text-violet-300" />
               </div>
-              <button
-                onClick={() => setTargetHours(h => Math.min(12, +(h + 0.5).toFixed(1)))}
-                className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 flex items-center justify-center text-sm transition-all"
-              >
-                +
-              </button>
+              <div>
+                <p className="text-sm font-semibold text-white">Daily Sleep Goal</p>
+                <p className="text-xs text-gray-500">
+                  <span className={goalMetPct >= 80 ? 'text-green-400' : goalMetPct >= 50 ? 'text-amber-400' : 'text-rose-400'}>{goalMetPct}%</span> of nights met
+                  <span className="text-gray-600 ml-1">({goalMetCount}/{sleep.length})</span>
+                </p>
+              </div>
             </div>
-            <div className="hidden sm:flex items-center gap-1.5 text-xs">
-              <span className="text-gray-500">Avg:</span>
-              <span className={`font-medium ${avgDuration >= targetHours ? 'text-green-400' : 'text-amber-400'}`}>
-                {formatSleepDuration(avgDuration)}
-              </span>
-              <span className="text-gray-500">/ {formatSleepDuration(targetHours)}</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-white/[0.03] rounded-xl p-1 border border-white/5">
+                <button
+                  onClick={() => setTargetHours(h => Math.max(4, +(h - 0.5).toFixed(1)))}
+                  className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 text-white/70 hover:bg-gradient-to-br hover:from-violet-500/20 hover:to-transparent hover:border-violet-500/30 hover:text-white hover:shadow-lg hover:shadow-violet-500/5 flex items-center justify-center text-sm transition-all duration-200"
+                >
+                  -
+                </button>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.5"
+                    min={4}
+                    max={12}
+                    value={targetHours}
+                    onChange={e => setTargetHours(Math.max(4, Math.min(12, parseFloat(e.target.value) || 8)))}
+                    className="w-16 text-center px-2 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium focus:border-violet-500/50 focus:outline-none focus:shadow-lg focus:shadow-violet-500/5 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <span className="absolute -right-0.5 top-1/2 -translate-y-1/2 text-xs text-gray-500 pointer-events-none">h</span>
+                </div>
+                <button
+                  onClick={() => setTargetHours(h => Math.min(12, +(h + 0.5).toFixed(1)))}
+                  className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 text-white/70 hover:bg-gradient-to-br hover:from-violet-500/20 hover:to-transparent hover:border-violet-500/30 hover:text-white hover:shadow-lg hover:shadow-violet-500/5 flex items-center justify-center text-sm transition-all duration-200"
+                >
+                  +
+                </button>
+              </div>
+              <div className="hidden sm:flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+                <span className="text-gray-500">Avg:</span>
+                <span className={`font-semibold ${avgDuration >= targetHours ? 'text-green-400' : 'text-amber-400'}`}>
+                  {formatSleepDuration(avgDuration)}
+                </span>
+                <span className="text-gray-500">/ {formatSleepDuration(targetHours)}</span>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="mt-3 h-1.5 rounded-full bg-white/5 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-violet-500 to-blue-500 transition-all duration-500"
-            style={{ width: `${Math.min(100, (avgDuration / targetHours) * 100)}%` }}
-          />
+          <div className="mt-4 h-2.5 rounded-full bg-white/5 overflow-hidden shadow-inner">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-violet-500 via-purple-400 to-emerald-400 transition-all duration-700 ease-out shadow-sm shadow-violet-500/30"
+              style={{ width: `${Math.min(100, (avgDuration / targetHours) * 100)}%` }}
+            />
+          </div>
         </div>
       </motion.div>
 
@@ -397,63 +406,66 @@ export function SleepLogger() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-4 sm:p-5"
+          className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.08] to-transparent p-5 shadow-lg shadow-violet-500/5"
         >
-          <h4 className="text-sm font-medium text-gray-400 mb-4 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-violet-400" />
-            7-Day Trend
-          </h4>
-          {last7Days.some(d => d.hasData) ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={last7Days}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                <XAxis dataKey="date" stroke="#ffffff40" fontSize={11} tickMargin={4} />
-                <YAxis
-                  yAxisId="left"
-                  stroke="#8B5CF6"
-                  fontSize={11}
-                  domain={[0, 'auto']}
-                  tickMargin={4}
-                />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  stroke="#F59E0B"
-                  fontSize={11}
-                  domain={[0, 5]}
-                  ticks={[1, 2, 3, 4, 5]}
-                  tickMargin={4}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="duration"
-                  stroke="#8B5CF6"
-                  strokeWidth={2.5}
-                  dot={{ fill: '#8B5CF6', strokeWidth: 0, r: 4 }}
-                  activeDot={{ r: 6, fill: '#8B5CF6', stroke: '#1a1a2e', strokeWidth: 2 }}
-                  name="Duration"
-                  connectNulls
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="quality"
-                  stroke="#F59E0B"
-                  strokeWidth={2.5}
-                  dot={{ fill: '#F59E0B', strokeWidth: 0, r: 4 }}
-                  activeDot={{ r: 6, fill: '#F59E0B', stroke: '#1a1a2e', strokeWidth: 2 }}
-                  name="Quality"
-                  connectNulls
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-[200px] flex items-center justify-center text-gray-500 text-sm">
-              No data yet
-            </div>
-          )}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full -mr-16 -mt-16 blur-xl" />
+          <div className="relative">
+            <h4 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-5 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-violet-400" />
+              7-Day Trend
+            </h4>
+            {last7Days.some(d => d.hasData) ? (
+              <ResponsiveContainer width="100%" height={240}>
+                <LineChart data={last7Days}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                  <XAxis dataKey="date" stroke="#ffffff40" fontSize={11} tickMargin={4} />
+                  <YAxis
+                    yAxisId="left"
+                    stroke="#8B5CF6"
+                    fontSize={11}
+                    domain={[0, 'auto']}
+                    tickMargin={4}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    stroke="#F59E0B"
+                    fontSize={11}
+                    domain={[0, 5]}
+                    ticks={[1, 2, 3, 4, 5]}
+                    tickMargin={4}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="duration"
+                    stroke="#8B5CF6"
+                    strokeWidth={3}
+                    dot={{ fill: '#8B5CF6', strokeWidth: 0, r: 4 }}
+                    activeDot={{ r: 7, fill: '#8B5CF6', stroke: '#1a1a2e', strokeWidth: 2 }}
+                    name="Duration"
+                    connectNulls
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="quality"
+                    stroke="#F59E0B"
+                    strokeWidth={3}
+                    dot={{ fill: '#F59E0B', strokeWidth: 0, r: 4 }}
+                    activeDot={{ r: 7, fill: '#F59E0B', stroke: '#1a1a2e', strokeWidth: 2 }}
+                    name="Quality"
+                    connectNulls
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[240px] flex items-center justify-center text-gray-500 text-sm">
+                No data yet
+              </div>
+            )}
+          </div>
         </motion.div>
 
         {/* Duration Distribution */}

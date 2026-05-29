@@ -105,9 +105,9 @@ export function FinancialOverview({
                       {formatCurrency(cat.amount, currency)}
                     </span>
                   </div>
-                  <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+                  <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden shadow-inner">
                     <div
-                      className="h-full rounded-full bg-primary/60 transition-all"
+                      className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-400 transition-all duration-700 ease-out shadow-sm"
                       style={{ width: `${cat.percentage}%` }}
                     />
                   </div>

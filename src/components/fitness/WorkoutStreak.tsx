@@ -273,33 +273,37 @@ export function WorkoutStreak() {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-3 gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-orange-500/10 rounded-full -mr-10 -mt-10" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="relative overflow-hidden rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/20 via-orange-500/5 to-transparent p-6 shadow-lg shadow-orange-500/5">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-orange-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-amber-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
           <div className="relative">
-            <div className="text-orange-400/80 text-sm mb-2">Current Streak</div>
-            <p className="text-3xl font-bold text-orange-400">{stats.currentStreak} <span className="text-sm font-normal text-gray-500">days</span></p>
+            <div className="text-orange-400/80 text-xs font-medium uppercase tracking-wider mb-2">Current Streak</div>
+            <p className="text-3xl font-bold text-orange-400 drop-shadow-lg">{stats.currentStreak} <span className="text-sm font-normal text-gray-500">days</span></p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-amber-400/20 bg-gradient-to-br from-amber-400/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-amber-400/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-400/20 via-amber-400/5 to-transparent p-6 shadow-lg shadow-amber-400/5">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-amber-400/15 rounded-full -mr-14 -mt-14 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-yellow-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
           <div className="relative">
-            <div className="text-amber-400/80 text-sm mb-2">Best Streak</div>
-            <p className="text-3xl font-bold text-amber-400">{stats.longestStreak} <span className="text-sm font-normal text-gray-500">days</span></p>
+            <div className="text-amber-400/80 text-xs font-medium uppercase tracking-wider mb-2">Best Streak</div>
+            <p className="text-3xl font-bold text-amber-400 drop-shadow-lg">{stats.longestStreak} <span className="text-sm font-normal text-gray-500">days</span></p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/20 via-purple-500/5 to-transparent p-6 shadow-lg shadow-purple-500/5">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-purple-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-violet-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
           <div className="relative">
-            <div className="text-purple-400/80 text-sm mb-2">Total Workouts</div>
-            <p className="text-3xl font-bold text-purple-400">{stats.totalWorkouts}</p>
+            <div className="text-purple-400/80 text-xs font-medium uppercase tracking-wider mb-2">Total Workouts</div>
+            <p className="text-3xl font-bold text-purple-400 drop-shadow-lg">{stats.totalWorkouts}</p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-transparent p-5">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 rounded-full -mr-10 -mt-10" />
+        <div className="relative overflow-hidden rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-500/20 via-blue-500/5 to-transparent p-6 shadow-lg shadow-blue-500/5">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-blue-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-sky-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
           <div className="relative">
-            <div className="text-blue-400/80 text-sm mb-2">This Month</div>
-            <p className="text-3xl font-bold text-blue-400">{stats.thisMonthWorkouts}</p>
+            <div className="text-blue-400/80 text-xs font-medium uppercase tracking-wider mb-2">This Month</div>
+            <p className="text-3xl font-bold text-blue-400 drop-shadow-lg">{stats.thisMonthWorkouts}</p>
           </div>
         </div>
       </div>
@@ -379,52 +383,52 @@ export function WorkoutStreak() {
       {/* Level & Monthly Activity */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Container>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-600/10">
-              <Crown className="w-4 h-4 text-amber-400" />
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 shadow-lg shadow-amber-500/5">
+              <Crown className="w-5 h-5 text-amber-400" />
             </div>
             <span className="text-sm font-semibold text-white">Level</span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">{levelData.current.icon}</span>
+          <div className="flex items-center gap-4">
+            <span className="text-4xl drop-shadow-lg">{levelData.current.icon}</span>
             <div>
-              <p className="text-lg font-bold text-white">{levelData.current.title}</p>
-              <p className="text-xs text-gray-500">{stats.totalWorkouts} total workouts</p>
+              <p className="text-xl font-bold text-white">{levelData.current.title}</p>
+              <p className="text-sm text-gray-500">{stats.totalWorkouts} total workouts</p>
             </div>
           </div>
           {levelData.next && (
-            <div className="mt-3">
-              <div className="flex justify-between text-xs text-gray-500 mb-1">
-                <span>Next: {levelData.next.title}</span>
-                <span>{stats.totalWorkouts}/{levelData.next.min}</span>
+            <div className="mt-4">
+              <div className="flex justify-between text-xs text-gray-500 mb-1.5">
+                <span>Next: <span className="text-white font-medium">{levelData.next.title}</span></span>
+                <span className="font-medium">{stats.totalWorkouts}/{levelData.next.min}</span>
               </div>
-              <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div className="h-2 rounded-full bg-white/10 overflow-hidden shadow-inner">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${levelData.progress}%` }}
-                  transition={{ duration: 1, ease: 'easeOut' }}
-                  className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-400"
+                  transition={{ duration: 1.2, ease: 'easeOut' }}
+                  className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-400 shadow-sm"
                 />
               </div>
             </div>
           )}
         </Container>
         <Container>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500/20 to-violet-600/10">
-              <BarChart3 className="w-4 h-4 text-violet-400" />
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-600/10 shadow-lg shadow-violet-500/5">
+              <BarChart3 className="w-5 h-5 text-violet-400" />
             </div>
             <span className="text-sm font-semibold text-white">12-Month Activity</span>
           </div>
-          <div className="h-20">
+          <div className="h-28">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                 <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} interval={0} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px', backdropFilter: 'blur(12px)' }}
                   formatter={(value: number) => [`${value} workouts`, '']}
                 />
-                <Bar dataKey="count" radius={[3, 3, 0, 0]} maxBarSize={12}>
+                <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={16}>
                   {monthlyData.map((entry, idx) => (
                     <Cell key={idx} fill={entry.count > 0 ? '#8b5cf6' : '#374151'} />
                   ))}
@@ -438,19 +442,21 @@ export function WorkoutStreak() {
       {/* Weekly Distribution */}
       {workouts.length >= 7 && (
         <Container>
-          <div className="flex items-center gap-2 mb-3">
-            <Activity className="w-4 h-4 text-emerald-400" />
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/10">
+              <Activity className="w-4 h-4 text-emerald-400" />
+            </div>
             <span className="text-sm font-semibold text-white">Workout Distribution by Day</span>
           </div>
-          <div className="h-16">
+          <div className="h-24">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weeklyDistData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                <XAxis dataKey="day" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="day" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px', backdropFilter: 'blur(12px)' }}
                   formatter={(value: number) => [`${value} workouts`, '']}
                 />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={20}>
+                <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={28}>
                   {weeklyDistData.map((entry, idx) => (
                     <Cell key={idx} fill={entry.count > 0 ? '#f97316' : '#374151'} />
                   ))}
@@ -495,8 +501,11 @@ export function WorkoutStreak() {
 
       <Container>
         <div className="flex items-center justify-between mb-4">
-          <h4 className="font-semibold text-white text-sm">Achievements</h4>
-          <span className="text-[10px] text-gray-500 uppercase tracking-wider">{unlocked.size}/{ACHIEVEMENTS.length}</span>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-orange-500/20 flex items-center justify-center"><Award className="w-3.5 h-3.5 text-orange-400" /></div>
+            <h4 className="font-semibold text-white text-sm">Achievements</h4>
+          </div>
+          <div className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] text-gray-400 font-medium uppercase tracking-wider">{unlocked.size}/{ACHIEVEMENTS.length}</div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {ACHIEVEMENTS.map((ach, i) => {
@@ -508,22 +517,31 @@ export function WorkoutStreak() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className={`relative rounded-xl p-3 md:p-4 text-center border transition-all duration-300 ${
+                className={`relative overflow-hidden rounded-xl p-3 md:p-4 text-center border transition-all duration-500 ${
                   isUnlocked
-                    ? 'border-orange-500/30 bg-gradient-to-br from-orange-500/10 to-amber-500/5'
-                    : 'border-white/[0.04] bg-white/[0.02]'
+                    ? 'border-orange-500/30 bg-gradient-to-br from-orange-500/15 via-amber-500/10 to-transparent shadow-lg shadow-orange-500/5 hover:shadow-xl hover:shadow-orange-500/10 hover:border-orange-500/50'
+                    : 'border-white/[0.04] bg-white/[0.02] hover:bg-white/5 hover:border-white/10'
                 }`}
               >
                 {isUnlocked && (
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(251,146,60,0.06),transparent_70%)] pointer-events-none rounded-xl" />
+                  <>
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(251,146,60,0.08),transparent_70%)] pointer-events-none rounded-xl" />
+                    <div className="absolute top-0 right-0 w-12 h-12 bg-orange-500/10 rounded-full -mr-6 -mt-6 blur-md" />
+                  </>
                 )}
-                <div className={`relative ${isUnlocked ? '' : 'opacity-30 grayscale'}`}>
-                  <div className={`inline-flex p-2 rounded-full mb-2 ${
-                    isUnlocked ? 'bg-gradient-to-br from-orange-500/20 to-amber-500/10' : 'bg-white/[0.03]'
+                <div className={`relative ${isUnlocked ? '' : 'opacity-40 saturate-0'}`}>
+                  <div className={`inline-flex p-2.5 rounded-xl mb-2.5 transition-all duration-500 ${
+                    isUnlocked
+                      ? 'bg-gradient-to-br from-orange-500/25 to-amber-500/10 shadow-lg shadow-orange-500/10'
+                      : 'bg-white/[0.03]'
                   }`}>
-                    <IconComponent className={`w-5 h-5 md:w-6 md:h-6 ${isUnlocked ? 'text-orange-400 drop-shadow-[0_0_6px_rgba(251,146,60,0.3)]' : 'text-gray-600'}`} />
+                    <IconComponent className={`w-5 h-5 md:w-6 md:h-6 ${
+                      isUnlocked
+                        ? 'text-orange-300 drop-shadow-[0_0_8px_rgba(251,146,60,0.4)]'
+                        : 'text-gray-600'
+                    }`} />
                   </div>
-                  <p className={`text-xs font-semibold ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>{ach.name}</p>
+                  <p className={`text-xs font-bold ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>{ach.name}</p>
                   <p className="text-[10px] text-gray-600 mt-0.5 leading-tight">{ach.description}</p>
                 </div>
               </motion.div>

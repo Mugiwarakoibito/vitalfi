@@ -93,9 +93,9 @@ export function FitnessOverview({
                 <span className="text-white">{macro.label}</span>
                 <span className="text-muted">{macro.value}g</span>
               </div>
-              <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+              <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden shadow-inner">
                 <div
-                  className={`h-full rounded-full ${macro.color} transition-all`}
+                  className={`h-full rounded-full ${macro.color} transition-all duration-700 ease-out shadow-sm`}
                   style={{
                     width: `${Math.min((macro.value / macro.max) * 100, 100)}%`,
                   }}

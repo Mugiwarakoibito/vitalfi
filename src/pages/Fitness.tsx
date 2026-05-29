@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { HealthDashboard } from '@/components/fitness/HealthDashboard'
 import { WorkoutLogger } from '@/components/fitness/WorkoutLogger'
 import { ExerciseLibrary } from '@/components/fitness/ExerciseLibrary'
 import { ExerciseDetail } from '@/components/fitness/ExerciseDetail'
@@ -19,10 +18,9 @@ import {
   Flame, Trophy, Coffee, Heart, Plus,
 } from 'lucide-react'
 
-type TabId = 'health' | 'workouts' | 'body' | 'nutrition' | 'hydration' | 'sleep' | 'exercises' | 'records' | 'streak' | 'supplements'
+type TabId = 'workouts' | 'body' | 'nutrition' | 'hydration' | 'sleep' | 'exercises' | 'records' | 'streak' | 'supplements'
 
 const tabConfig: { id: TabId; label: string; icon: React.ElementType; color: string }[] = [
-  { id: 'health', label: 'Health', icon: Heart, color: 'text-purple-400' },
   { id: 'workouts', label: 'Workouts', icon: Dumbbell, color: 'text-rose-400' },
   { id: 'body', label: 'Body', icon: Activity, color: 'text-emerald-400' },
   { id: 'nutrition', label: 'Nutrition', icon: Utensils, color: 'text-orange-400' },
@@ -38,11 +36,11 @@ export default function Fitness() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tabFromUrl = searchParams.get('tab') as TabId | null
   const actionFromUrl = searchParams.get('action')
-  const [activeTab, setActiveTab] = useState<TabId>(tabFromUrl || 'health')
+  const [activeTab, setActiveTab] = useState<TabId>(tabFromUrl || 'workouts')
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null)
   const { workouts, meals, sleep, hydration } = useAppStore()
 
-  const hasData = workouts.length > 0 || meals.length > 0 || sleep.length > 0
+  const hasData = workouts.length > 0 || meals.length > 0 || sleep.length > 0 || hydration.length > 0
   const today = new Date().toISOString().split('T')[0]
   const todayCalories = meals.filter(m => m.date === today).reduce((sum, m) => sum + (m.calories || 0), 0)
   const workoutDone = workouts.some(w => w.date === today)
@@ -58,14 +56,13 @@ export default function Fitness() {
     if (actionFromUrl === 'add') {
       const targetTab = (tabFromUrl || 'workouts') as TabId
       setActiveTab(targetTab)
-      setSearchParams({ tab: targetTab })
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('tab', targetTab)
+        return next
+      })
     }
-  }, [tabFromUrl, actionFromUrl])
-
-  const handleNavigate = (tab: string) => {
-    setActiveTab(tab as TabId)
-    setSearchParams({ tab })
-  }
+  }, [tabFromUrl, actionFromUrl, activeTab])
 
   return (
     <div className="space-y-8 pb-20 max-w-7xl mx-auto">
@@ -112,7 +109,7 @@ export default function Fitness() {
           <div className="flex flex-wrap gap-4 mt-6">
             {hasData ? (
               <button
-                onClick={() => { setActiveTab('workouts'); setSearchParams({ tab: 'workouts', add: '1' }) }}
+                onClick={() => { setActiveTab('workouts'); setSearchParams((prev) => { const next = new URLSearchParams(prev); next.set('tab', 'workouts'); next.set('add', '1'); return next }) }}
                 className="glass-card bg-purple-500/10 border-purple-500/20 px-8 py-4 rounded-2xl flex items-center gap-3 hover:bg-purple-500/20 transition-all group"
               >
                 <Plus size={20} className="text-purple-400 group-hover:rotate-90 transition-transform" />
@@ -120,7 +117,7 @@ export default function Fitness() {
               </button>
             ) : (
               <button
-                onClick={() => { setActiveTab('workouts'); setSearchParams({ tab: 'workouts' }) }}
+                onClick={() => { setActiveTab('workouts'); setSearchParams((prev) => { const next = new URLSearchParams(prev); next.set('tab', 'workouts'); return next }) }}
                 className="glass-card bg-cyan-500/10 border-cyan-500/20 px-8 py-4 rounded-2xl flex items-center gap-3 hover:bg-cyan-500/20 transition-all"
               >
                 <Plus size={20} className="text-cyan-400" />
@@ -132,28 +129,29 @@ export default function Fitness() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-1 overflow-x-auto pb-2 scrollbar-none">
-        {tabConfig.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => { setActiveTab(tab.id); setSearchParams({ tab: tab.id }) }}
-            className={cn(
-              "flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] transition-all duration-300 shrink-0",
-              activeTab === tab.id
-                ? "bg-white/10 text-white shadow-[0_0_20px_rgba(255,255,255,0.03)] border border-white/10"
-                : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
-            )}
-          >
-            <tab.icon size={13} className={cn(activeTab === tab.id ? tab.color : '')} />
-            {tab.label}
-          </button>
-        ))}
+      <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-500/[0.02] to-transparent pointer-events-none" />
+        <div className="relative flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none rounded-2xl bg-white/[0.02] border border-white/5 p-1.5">
+          {tabConfig.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); setSearchParams((prev) => { const next = new URLSearchParams(prev); next.set('tab', tab.id); return next }) }}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-bold uppercase tracking-[0.15em] transition-all duration-300 shrink-0 whitespace-nowrap",
+                activeTab === tab.id
+                  ? "bg-gradient-to-br from-white/15 to-white/5 text-white shadow-[0_0_30px_rgba(255,255,255,0.08)] border border-white/15 backdrop-blur-sm"
+                  : "text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent"
+              )}
+            >
+              <tab.icon size={14} className={cn(activeTab === tab.id ? tab.color : 'opacity-50')} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tab Content */}
       <div>
-        {activeTab === 'health' && <HealthDashboard onNavigate={handleNavigate} />}
-
         {activeTab === 'workouts' && <WorkoutLogger />}
 
         {activeTab === 'body' && <BodyMetricsTracker />}

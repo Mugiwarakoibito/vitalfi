@@ -108,26 +108,26 @@ export function FinancialCalendar({ initialTransactions = [] }: FinancialCalenda
 
       {/* Month summary */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent p-4">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full -mr-8 -mt-8" />
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
-            <div className="flex items-center gap-2 text-emerald-400/80 text-xs mb-1">
-              <TrendingUp size={14} />
+            <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-2">
+              <TrendingUp size={16} />
               <span>Income</span>
             </div>
-            <p className="text-2xl font-bold text-emerald-400">
+            <p className="text-3xl font-bold text-emerald-400">
               {formatCurrency(totalIncomeMonth, settings.currency || 'USD')}
             </p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-gradient-to-br from-red-500/10 to-transparent p-4">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/10 rounded-full -mr-8 -mt-8" />
+        <div className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-gradient-to-br from-red-500/10 to-transparent p-5">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/10 rounded-full -mr-10 -mt-10" />
           <div className="relative">
-            <div className="flex items-center gap-2 text-red-400/80 text-xs mb-1">
-              <TrendingDown size={14} />
+            <div className="flex items-center gap-2 text-red-400/80 text-sm mb-2">
+              <TrendingDown size={16} />
               <span>Expenses</span>
             </div>
-            <p className="text-2xl font-bold text-red-400">
+            <p className="text-3xl font-bold text-red-400">
               {formatCurrency(totalExpenseMonth, settings.currency || 'USD')}
             </p>
           </div>

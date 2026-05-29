@@ -1,21 +1,22 @@
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import {
   TrendingUp, TrendingDown, Activity, Zap, Target,
-  ArrowUpRight, Brain, Globe, ShieldCheck
+  Brain, ShieldCheck
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency, cn } from '@/lib/utils'
-import { calculateReadinessScore } from '@/lib/pillars'
 import { CorrelationAnalytics } from '@/components/insights/CorrelationAnalytics'
+import { HealthDashboard } from '@/components/fitness/HealthDashboard'
 
 export default function Insights() {
+  const navigate = useNavigate()
   const { settings, transactions, workouts, sleep, loadAllData } = useAppStore()
   
   useEffect(() => { loadAllData() }, [loadAllData])
 
   const currency = settings.currency || 'USD'
-  const readiness = calculateReadinessScore({ sleep, workouts })
   
   const monthlyExpenses = transactions
     .filter(t => t.type === 'expense' && new Date(t.date).getMonth() === new Date().getMonth())
@@ -86,45 +87,16 @@ export default function Insights() {
         />
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-         <div className="glass-card p-10 border-white/5 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:rotate-12 transition-transform">
-               <Globe size={180} />
-            </div>
-            <div className="flex items-center justify-between mb-10">
-               <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
-                 <Activity size={16} className="text-indigo-400" />
-                 Body Stats
-               </h3>
-               <button className="text-[10px] font-black text-indigo-400 uppercase tracking-widest hover:text-white transition-colors">
-                 App Logs <ArrowUpRight size={14} className="inline ml-1" />
-               </button>
-            </div>
-            
-            <div className="space-y-10">
-               {[
-                 { label: 'Energy Level', val: workouts.length > 0 || sleep.length > 0 ? readiness : 0, target: 85, color: 'bg-indigo-500 shadow-indigo-500/20' },
-                 { label: 'Brain Rest', val: sleep.length > 0 ? 92 : 0, target: 90, color: 'bg-purple-500 shadow-purple-500/20' },
-                 { label: 'Food Balance', val: workouts.length > 0 ? 78 : 0, target: 95, color: 'bg-emerald-500 shadow-emerald-500/20' },
-               ].map((item, i) => (
-                 <div key={i} className="space-y-3">
-                    <div className="flex justify-between items-end">
-                       <p className="text-sm font-black text-white tracking-tight">{item.label}</p>
-                       <p className="text-sm font-black text-white">{item.val}% <span className="text-[10px] text-slate-600 font-bold ml-1 uppercase">Goal {item.target}%</span></p>
-                    </div>
-                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden p-[1px] border border-white/5">
-                       <motion.div 
-                         initial={{ width: 0 }}
-                         animate={{ width: `${item.val}%` }}
-                         transition={{ duration: 1.5, delay: 0.5 + (i * 0.1) }}
-                         className={cn("h-full rounded-full shadow-lg", item.color)} 
-                       />
-                    </div>
-                 </div>
-               ))}
-            </div>
-         </div>
+      {/* Health Overview */}
+      <section className="space-y-8 py-8 border-y border-white/5">
+        <div className="flex items-center gap-3">
+          <Activity size={16} className="text-purple-400" />
+          <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Health Overview</h3>
+        </div>
+        <HealthDashboard onNavigate={(tab) => navigate(`/fitness?tab=${tab}`)} />
+      </section>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
          <div className="glass-card p-10 border-white/5 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:-rotate-12 transition-transform">
                <Target size={180} />
