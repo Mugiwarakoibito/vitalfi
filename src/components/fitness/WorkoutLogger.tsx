@@ -1272,23 +1272,17 @@ export function WorkoutLogger() {
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {(() => {
-                            const grouped = wo.exercises.reduce<Record<string, { name: string; bestSet: number; totalReps: number }>>((acc, ex) => {
-                              if (!acc[ex.exerciseId]) {
-                                acc[ex.exerciseId] = { name: ex.name, bestSet: 0, totalReps: 0 }
-                              }
-                              acc[ex.exerciseId].bestSet = Math.max(acc[ex.exerciseId].bestSet, ...ex.sets.map(s => s.weight || 0))
-                              acc[ex.exerciseId].totalReps += ex.sets.reduce((s, set) => s + (set.reps || 0), 0)
-                              return acc
-                            }, {})
-                            return Object.values(grouped)
-                          })().slice(0, 5).map((ex) => (
-                            <span key={ex.name} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/5 text-xs text-gray-300">
-                              {ex.name}
-                              {ex.bestSet > 0 && <span className="text-emerald-400 font-medium">{ex.bestSet}kg</span>}
-                              {ex.totalReps > 0 && <span className="text-gray-500">×{ex.totalReps}</span>}
-                            </span>
-                          ))}
+                          {wo.exercises.filter((ex, i, arr) => arr.findIndex(e => e.exerciseId === ex.exerciseId) === i).slice(0, 5).map((ex) => {
+                            const bestSet = ex.sets.reduce((best, s) => Math.max(best, s.weight || 0), 0)
+                            const totalReps = ex.sets.reduce((sum, s) => sum + (s.reps || 0), 0)
+                            return (
+                              <span key={ex.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/5 text-xs text-gray-300">
+                                {ex.name}
+                                {bestSet > 0 && <span className="text-emerald-400 font-medium">{bestSet}kg</span>}
+                                {totalReps > 0 && <span className="text-gray-500">×{totalReps}</span>}
+                              </span>
+                            )
+                          })}
                           {(() => {
                             const uniqueCount = new Set(wo.exercises.map(e => e.exerciseId)).size
                             return uniqueCount > 5 ? (
