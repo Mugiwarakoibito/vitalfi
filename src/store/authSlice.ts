@@ -2,6 +2,7 @@ import type { StateCreator } from 'zustand';
 import { storage } from '../lib/storage';
 import type { AppSettings } from '../types/domain';
 import type { AppState, AuthSlice } from './types';
+import { seedIfNeeded } from '../lib/seed';
 
 const defaultSettings: AppSettings = {
   currency: 'USD',
@@ -61,6 +62,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
           set({ user: { email: savedEmail, name: savedName || savedEmail.split('@')[0] } });
         }
       }
+      await seedIfNeeded();
       await get().loadAllData().catch(console.error);
       await get().migrateLegacyTransfers().catch(console.error);
     } catch (error) {
