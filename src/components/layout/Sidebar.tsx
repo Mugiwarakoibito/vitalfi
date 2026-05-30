@@ -6,7 +6,6 @@ import {
   Droplets,
   Settings,
   ShieldCheck,
-  BarChart3,
   Wallet,
   TrendingUp,
   Target,
@@ -75,7 +74,7 @@ export function Sidebar() {
 
   const mainItems = [
     { label: 'Dashboard', path: '/', icon: LayoutDashboard, shortcut: 'D', color: appMode === 'finance' ? 'text-cyan-400' : 'text-purple-400' },
-    { label: 'Intelligence', path: '/insights', icon: BarChart3, shortcut: 'I', color: appMode === 'finance' ? 'text-emerald-400' : 'text-indigo-400' },
+
   ]
 
   const effectiveMode = location.pathname.startsWith('/fitness') ? 'fitness' : location.pathname.startsWith('/finance') ? 'finance' : appMode

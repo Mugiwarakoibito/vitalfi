@@ -8,7 +8,6 @@ import { useAppStore } from '@/store/useAppStore'
 import Dashboard from '@/pages/Dashboard'
 import Finance from '@/pages/Finance'
 import Fitness from '@/pages/Fitness'
-import Insights from '@/pages/Insights'
 import Settings from '@/pages/Settings'
 import Movement from '@/pages/trackers/Movement'
 import Nutrition from '@/pages/trackers/Nutrition'
@@ -60,7 +59,6 @@ function AppContent() {
           <Route path="/finance/:tab" element={<Finance />} />
           <Route path="/fitness" element={<Fitness />} />
           <Route path="/fitness/:tab" element={<Fitness />} />
-          <Route path="/insights" element={<Insights />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/pillars/movement" element={<Movement />} />
           <Route path="/pillars/nutrition" element={<Nutrition />} />
