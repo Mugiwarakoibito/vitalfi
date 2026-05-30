@@ -1151,16 +1151,16 @@ export function WorkoutLogger() {
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16 blur-xl" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <button onClick={() => setShowTemplatePicker(true)} className="text-[11px] font-bold uppercase tracking-[0.15em] flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/[0.06] bg-white/[0.03] text-gray-500 hover:text-white hover:bg-white/[0.06] hover:border-white/[0.12] transition-all duration-200">
-              <Layers className="w-4 h-4 text-cyan-400" />
+            <button onClick={() => setShowTemplatePicker(true)} className="text-xs rounded-lg px-2.5 py-1 font-medium border border-white/[0.06] text-gray-500 hover:text-white hover:bg-white/[0.06] hover:border-white/[0.12] transition-all flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-cyan-400" />
               Templates
             </button>
-            <button onClick={() => setShowFilters(!showFilters)} className={`text-[11px] font-bold uppercase tracking-[0.15em] flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all duration-200 ${
+            <button onClick={() => setShowFilters(!showFilters)} className={`text-xs rounded-lg px-2.5 py-1 font-medium border transition-all flex items-center gap-1.5 ${
               Object.values(filters).some(Boolean)
-                ? 'bg-rose-500/15 border-rose-500/30 text-rose-300 shadow-lg shadow-rose-500/10'
-                : 'bg-white/[0.03] border-white/[0.06] text-gray-500 hover:text-white hover:bg-white/[0.06] hover:border-white/[0.12]'
+                ? 'border-rose-500/30 bg-rose-500/10 text-rose-300'
+                : 'border-white/[0.06] text-gray-500 hover:text-white hover:bg-white/[0.06] hover:border-white/[0.12]'
             }`}>
-              <Filter className={`w-4 h-4 ${Object.values(filters).some(Boolean) ? 'text-rose-400' : 'text-gray-500'}`} />
+              <Filter className={`w-3.5 h-3.5 ${Object.values(filters).some(Boolean) ? 'text-rose-400' : 'text-gray-500'}`} />
               {Object.values(filters).some(Boolean) && (
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
               )}
