@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { generateId } from '@/lib/utils'
 import type { ExerciseCategory } from '@/types/fitness'
-import type { Workout } from '@/lib/storage'
+import type { Workout } from '@/types/domain'
 import {
   Dumbbell, TrendingUp, Wind, Flame, Settings2, Move, StretchHorizontal, Zap, PersonStanding,
   Gauge, Crosshair, Weight, Heart, Activity, Shield, Sword, Coffee, Equal, Footprints, Waves,

@@ -78,7 +78,8 @@ export function Sidebar() {
     { label: 'Intelligence', path: '/insights', icon: BarChart3, shortcut: 'I', color: appMode === 'finance' ? 'text-emerald-400' : 'text-indigo-400' },
   ]
 
-  const modeGroups = appMode === 'finance' ? financeGroups : fitnessGroups
+  const effectiveMode = location.pathname.startsWith('/fitness') ? 'fitness' : location.pathname.startsWith('/finance') ? 'finance' : appMode
+  const modeGroups = effectiveMode === 'finance' ? financeGroups : fitnessGroups
 
   // Check if a nav path matches the current location (handles ?tab= query params)
   const isActive = (path: string) => {

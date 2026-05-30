@@ -3,7 +3,7 @@ import { Search, Filter, X, ArrowUpDown, Receipt, Pencil, Trash2 } from 'lucide-
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { type Transaction as DBTransaction, type Transaction } from '@/lib/storage'
+import { type Transaction as DBTransaction, type Transaction } from '@/types/domain'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 import { ALL_CATEGORIES, getCategoryByName } from '@/lib/categories'

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Wallet, CreditCard, Gem, Calendar, TrendingUp, Plus, Target, PiggyBank } from 'lucide-react'
-import { type Transaction } from '@/lib/storage'
+import { type Transaction } from '@/types/domain'
 import { AccountList } from '@/components/finance/AccountList'
 import { TransactionList } from '@/components/finance/TransactionList'
 import { NaturalLanguageInput } from '@/components/finance/NaturalLanguageInput'

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -7,7 +7,7 @@ import {
   TrendingUp, TrendingDown, Minus, Layers,
   FileText, Activity, Zap, Wind, Settings2, Move, StretchHorizontal,
   PersonStanding, Gauge, Crosshair, Weight, Heart, Shield, Sword, Coffee,
-  Equal, Footprints, Waves,
+  Equal, Footprints, Waves, Clock,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { generateId, formatDuration } from '@/lib/utils'
@@ -15,9 +15,9 @@ import { storage } from '@/lib/storage'
 import { exerciseLibrary, getExerciseById, getAllMuscleGroups, categoryLabels, muscleGroupColors } from '@/lib/exercises'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, AreaChart, Area, CartesianGrid } from 'recharts'
+import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line } from 'recharts'
 import type { WorkoutExercise, ExerciseSet, WorkoutFilter, ExerciseCategory, MuscleGroup } from '@/types/fitness'
-import type { Workout, WorkoutTemplate } from '@/lib/storage'
+import type { Workout, WorkoutTemplate } from '@/types/domain'
 
 const typeConfig: Record<string, { icon: any; color: string; bg: string; gradient: string }> = {
   strength: { icon: Dumbbell, color: 'text-rose-400', bg: 'bg-rose-500/20 border-rose-500/30', gradient: 'from-rose-500/10 to-transparent' },
@@ -641,8 +641,73 @@ export function WorkoutLogger() {
   const [filters, setFilters] = useState<WorkoutFilter>({})
   const [showFilters, setShowFilters] = useState(false)
   const [showTypeDropdown, setShowTypeDropdown] = useState(false)
-  const [dateFromText, setDateFromText] = useState('')
-  const [dateToText, setDateToText] = useState('')
+  const fromDayRef = useRef<HTMLInputElement>(null)
+  const fromMonthRef = useRef<HTMLInputElement>(null)
+  const fromYearRef = useRef<HTMLInputElement>(null)
+  const toDayRef = useRef<HTMLInputElement>(null)
+  const toMonthRef = useRef<HTMLInputElement>(null)
+  const toYearRef = useRef<HTMLInputElement>(null)
+  const [fromDay, setFromDay] = useState('')
+  const [fromMonth, setFromMonth] = useState('')
+  const [fromYear, setFromYear] = useState('')
+  const [toDay, setToDay] = useState('')
+  const [toMonth, setToMonth] = useState('')
+  const [toYear, setToYear] = useState('')
+  const clearDates = useCallback(() => {
+    setFromDay(''); setFromMonth(''); setFromYear('')
+    setToDay(''); setToMonth(''); setToYear('')
+  }, [])
+
+  useEffect(() => {
+    const fromOk = fromDay.length === 2 && fromMonth.length === 2 && fromYear.length === 4
+    const toOk = toDay.length === 2 && toMonth.length === 2 && toYear.length === 4
+    setFilters((f) => ({
+      ...f,
+      dateFrom: fromOk ? `${fromYear}-${fromMonth}-${fromDay}` : undefined,
+      dateTo: toOk ? `${toYear}-${toMonth}-${toDay}` : undefined,
+    }))
+  }, [fromDay, fromMonth, fromYear, toDay, toMonth, toYear])
+
+  const handleSegChange = useCallback((value: string, setter: (v: string) => void, maxLen: number, validate: (current: string, digit: string, index: number) => boolean, nextRef?: React.RefObject<HTMLInputElement | null>) => {
+    const raw = value.replace(/\D/g, '').slice(0, maxLen)
+    let result = ''
+    for (let i = 0; i < raw.length; i++) {
+      if (validate(result, raw[i], i)) result += raw[i]
+      else break
+    }
+    setter(result)
+    if (result.length === maxLen && nextRef?.current) nextRef.current.focus()
+  }, [])
+
+  const handleSegKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, currentValue: string, prevRef?: React.RefObject<HTMLInputElement | null>) => {
+    if (e.key === 'Backspace' && currentValue.length === 0 && prevRef?.current) {
+      prevRef.current.focus()
+    }
+  }, [])
+
+  const validateDay = useCallback((_: string, d: string, i: number) => {
+    if (i === 0) return d >= '0' && d <= '3'
+    if (i === 1) {
+      const t = _[0]
+      if (t === '3') return d >= '0' && d <= '1'
+      if (t === '0') return d >= '1' && d <= '9'
+      return d >= '0' && d <= '9'
+    }
+    return false
+  }, [])
+
+  const validateMonth = useCallback((_: string, d: string, i: number) => {
+    if (i === 0) return d >= '0' && d <= '1'
+    if (i === 1) {
+      const t = _[0]
+      if (t === '1') return d >= '0' && d <= '2'
+      if (t === '0') return d >= '1' && d <= '9'
+      return d >= '0' && d <= '9'
+    }
+    return false
+  }, [])
+
+  const validateYear = useCallback((_: string, d: string, __: number) => d >= '0' && d <= '9', [])
 
   const sortedWorkouts = useMemo(() => {
     let list = [...workouts]
@@ -745,22 +810,6 @@ export function WorkoutLogger() {
     }))
   }, [workouts])
 
-  const monthlyFreqData = useMemo(() => {
-    const map = new Map<string, number>()
-    workouts.forEach(w => {
-      const key = w.date.slice(0, 7)
-      map.set(key, (map.get(key) || 0) + 1)
-    })
-    const now = new Date()
-    const months: { month: string; count: number; label: string }[] = []
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const key = d.toISOString().slice(0, 7)
-      months.push({ month: key, count: map.get(key) || 0, label: d.toLocaleDateString('en-US', { month: 'short' }) })
-    }
-    return months
-  }, [workouts])
-
   const analytics = useMemo(() => {
     const totalWorkouts = workouts.length
     const totalVolume = workouts.reduce((s, w) => s + calcVolume(w.exercises), 0)
@@ -794,7 +843,64 @@ export function WorkoutLogger() {
       }
     })
 
-    return { totalWorkouts, totalVolume, avgDuration, sortedTypes, totalSets, totalReps, typeChartData, volumeTimeline }
+    const avgVolume = totalWorkouts > 0 ? Math.round(totalVolume / totalWorkouts) : 0
+    const avgSets = totalWorkouts > 0 ? Math.round(totalSets / totalWorkouts) : 0
+    const totalExercises = workouts.reduce((s, w) => s + w.exercises.length, 0)
+    const activeMonths = [...new Set(workouts.map(w => w.date.slice(0, 7)))].length
+
+    let maxWorkoutVol = 0; let maxWorkoutName = ''; let maxWorkoutDate = ''
+    let bestSetWeight = 0; let bestSetReps = 0; let bestSetExercise = ''
+    const exCount = new Map<string, number>()
+    let totalWeightedSets = 0; let totalWeightSum = 0
+    const volByType: Record<string, number> = {}
+
+    for (const w of workouts) {
+      const vol = calcVolume(w.exercises)
+      if (vol > maxWorkoutVol) { maxWorkoutVol = vol; maxWorkoutName = w.name; maxWorkoutDate = w.date }
+      volByType[w.category] = (volByType[w.category] || 0) + vol
+      for (const ex of w.exercises) {
+        exCount.set(ex.name, (exCount.get(ex.name) || 0) + 1)
+        for (const s of ex.sets) {
+          if ((s.weight || 0) * (s.reps || 0) > bestSetWeight * bestSetReps && s.weight && s.reps) {
+            bestSetWeight = s.weight; bestSetReps = s.reps; bestSetExercise = ex.name
+          }
+          if (s.weight && s.weight > 0) { totalWeightedSets++; totalWeightSum += s.weight }
+        }
+      }
+    }
+
+    const topExercise = [...exCount.entries()].sort(([, a], [, b]) => b - a).slice(0, 3).map(([name, count]) => ({ name, count }))
+    const uniqueExercises = exCount.size
+    const avgWeight = totalWeightedSets > 0 ? Math.round(totalWeightSum / totalWeightedSets) : 0
+
+    const activeWeeks = Math.max(1, new Set(workouts.map(w => {
+      const d = new Date(w.date); d.setDate(d.getDate() - d.getDay())
+      return d.toISOString().slice(0, 10)
+    })).size)
+    const weeklyAvg = Math.round(totalWorkouts / activeWeeks * 10) / 10
+
+    const dayDist = [0, 0, 0, 0, 0, 0, 0]
+    for (const w of workouts) { dayDist[new Date(w.date).getDay()]++ }
+    const topDay = dayDist.indexOf(Math.max(...dayDist))
+
+    const sortedVolByType = Object.entries(volByType).sort(([, a], [, b]) => b - a)
+    const typeVolData = sortedVolByType.map(([type, vol], i) => ({
+      type: categoryLabels[type as ExerciseCategory] || type.charAt(0).toUpperCase() + type.slice(1),
+      volume: Math.round(vol),
+      pct: Math.round((vol / Math.max(totalVolume, 1)) * 100),
+      color: typeColors[i % typeColors.length],
+    }))
+
+    const last30d = workouts.filter(w => {
+      const diff = (Date.now() - new Date(w.date).getTime()) / 86400000
+      return diff <= 30
+    }).length
+
+    const topType = sortedTypes.length > 0
+      ? (categoryLabels[sortedTypes[0][0] as ExerciseCategory] || sortedTypes[0][0].charAt(0).toUpperCase() + sortedTypes[0][0].slice(1))
+      : '—'
+
+    return { totalWorkouts, totalVolume, avgDuration, sortedTypes, totalSets, totalReps, typeChartData, volumeTimeline, avgVolume, avgSets, totalExercises, activeMonths, topType, maxVolumeWorkout: { name: maxWorkoutName, volume: maxWorkoutVol, date: maxWorkoutDate }, bestSet: { weight: bestSetWeight, reps: bestSetReps, exercise: bestSetExercise }, topExercise, uniqueExercises, avgWeight, weeklyAvg, dayDist, topDay, typeVolData, last30d }
   }, [workouts])
 
   const resetForm = useCallback(() => {
@@ -1093,61 +1199,7 @@ export function WorkoutLogger() {
         </div>
       </div>
 
-      {/* Charts Row */}
-      {weeklyVolumeData.length > 1 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/[0.08] to-transparent p-5 shadow-lg shadow-rose-500/5">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full -mr-12 -mt-12 blur-lg" />
-            <div className="relative">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center"><Activity className="w-4 h-4 text-rose-400" /></div>
-                <h4 className="text-xs font-semibold text-white uppercase tracking-wider">Weekly Volume</h4>
-              </div>
-              <div className="h-32">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={weeklyVolumeData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                    <XAxis dataKey="week" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(weeklyVolumeData.length / 4))} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px', backdropFilter: 'blur(12px)' }}
-                      formatter={(value: number) => [`${value.toLocaleString()}kg`, 'Volume']}
-                    />
-                    <Bar dataKey="volume" radius={[6, 6, 0, 0]} maxBarSize={24}>
-                      {weeklyVolumeData.map((entry, idx) => (
-                        <Cell key={idx} fill={entry.volume > 0 ? '#f43f5e' : '#374151'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-          <div className="relative overflow-hidden rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/[0.08] to-transparent p-5 shadow-lg shadow-sky-500/5">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-sky-500/10 rounded-full -mr-12 -mt-12 blur-lg" />
-            <div className="relative">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-sky-500/20 flex items-center justify-center"><TrendingUp className="w-4 h-4 text-sky-400" /></div>
-                <h4 className="text-xs font-semibold text-white uppercase tracking-wider">Monthly Frequency</h4>
-              </div>
-              <div className="h-32">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyFreqData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                    <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} interval={0} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px', backdropFilter: 'blur(12px)' }}
-                      formatter={(value: number) => [`${value} workouts`, '']}
-                    />
-                    <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={24}>
-                      {monthlyFreqData.map((entry, idx) => (
-                        <Cell key={idx} fill={entry.count > 0 ? '#06b6d4' : '#374151'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-2">
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16 blur-xl" />
@@ -1196,39 +1248,47 @@ export function WorkoutLogger() {
                 </div>
                 <div>
                   <label className="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-medium">From</label>
-                  <input
-                    type="text"
-                    placeholder="DD/MM/YYYY"
-                    value={dateFromText}
-                    onChange={(e) => setDateFromText(e.target.value)}
-                    onBlur={() => {
-                      const parts = dateFromText.split('/')
-                      if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
-                        setFilters((f) => ({ ...f, dateFrom: `${parts[2]}-${parts[1]}-${parts[0]}` }))
-                      } else {
-                        setFilters((f) => ({ ...f, dateFrom: undefined }))
-                      }
-                    }}
-                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-gray-500 focus:border-indigo-500/40 focus:outline-none focus:shadow-lg focus:shadow-indigo-500/5 transition-all"
-                  />
+                  <div className="flex items-center gap-1">
+                    <input ref={fromDayRef} type="text" inputMode="numeric" maxLength={2} placeholder="DD"
+                      value={fromDay}
+                      onChange={(e) => handleSegChange(e.target.value, setFromDay, 2, validateDay, fromMonthRef)}
+                      onKeyDown={(e) => handleSegKeyDown(e, fromDay, undefined)}
+                      className="glass-input w-12 text-center text-sm" />
+                    <span className="text-gray-500 text-xs select-none">/</span>
+                    <input ref={fromMonthRef} type="text" inputMode="numeric" maxLength={2} placeholder="MM"
+                      value={fromMonth}
+                      onChange={(e) => handleSegChange(e.target.value, setFromMonth, 2, validateMonth, fromYearRef)}
+                      onKeyDown={(e) => handleSegKeyDown(e, fromMonth, fromDayRef)}
+                      className="glass-input w-12 text-center text-sm" />
+                    <span className="text-gray-500 text-xs select-none">/</span>
+                    <input ref={fromYearRef} type="text" inputMode="numeric" maxLength={4} placeholder="YYYY"
+                      value={fromYear}
+                      onChange={(e) => handleSegChange(e.target.value, setFromYear, 4, validateYear, undefined)}
+                      onKeyDown={(e) => handleSegKeyDown(e, fromYear, fromMonthRef)}
+                      className="glass-input w-20 text-center text-sm" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-medium">To</label>
-                  <input
-                    type="text"
-                    placeholder="DD/MM/YYYY"
-                    value={dateToText}
-                    onChange={(e) => setDateToText(e.target.value)}
-                    onBlur={() => {
-                      const parts = dateToText.split('/')
-                      if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
-                        setFilters((f) => ({ ...f, dateTo: `${parts[2]}-${parts[1]}-${parts[0]}` }))
-                      } else {
-                        setFilters((f) => ({ ...f, dateTo: undefined }))
-                      }
-                    }}
-                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-gray-500 focus:border-indigo-500/40 focus:outline-none focus:shadow-lg focus:shadow-indigo-500/5 transition-all"
-                  />
+                  <div className="flex items-center gap-1">
+                    <input ref={toDayRef} type="text" inputMode="numeric" maxLength={2} placeholder="DD"
+                      value={toDay}
+                      onChange={(e) => handleSegChange(e.target.value, setToDay, 2, validateDay, toMonthRef)}
+                      onKeyDown={(e) => handleSegKeyDown(e, toDay, undefined)}
+                      className="glass-input w-12 text-center text-sm" />
+                    <span className="text-gray-500 text-xs select-none">/</span>
+                    <input ref={toMonthRef} type="text" inputMode="numeric" maxLength={2} placeholder="MM"
+                      value={toMonth}
+                      onChange={(e) => handleSegChange(e.target.value, setToMonth, 2, validateMonth, toYearRef)}
+                      onKeyDown={(e) => handleSegKeyDown(e, toMonth, toDayRef)}
+                      className="glass-input w-12 text-center text-sm" />
+                    <span className="text-gray-500 text-xs select-none">/</span>
+                    <input ref={toYearRef} type="text" inputMode="numeric" maxLength={4} placeholder="YYYY"
+                      value={toYear}
+                      onChange={(e) => handleSegChange(e.target.value, setToYear, 4, validateYear, undefined)}
+                      onKeyDown={(e) => handleSegKeyDown(e, toYear, toMonthRef)}
+                      className="glass-input w-20 text-center text-sm" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-medium">Search</label>
@@ -1237,14 +1297,14 @@ export function WorkoutLogger() {
                     placeholder="Search workouts..."
                     value={filters.search || ''}
                     onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value || undefined }))}
-                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 text-sm focus:border-indigo-500/40 focus:outline-none focus:shadow-lg focus:shadow-indigo-500/5 transition-all"
+                    className="glass-input w-full text-sm"
                   />
                 </div>
               </div>
               {Object.values(filters).some(Boolean) && (
                 <div className="relative flex justify-end">
                   <button
-                    onClick={() => { setFilters({}); setDateFromText(''); setDateToText('') }}
+                    onClick={() => { setFilters({}); clearDates() }}
                     className="px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 hover:bg-rose-500/20 hover:shadow-lg hover:shadow-rose-500/5 transition-all text-xs font-medium flex items-center gap-1.5"
                   >
                     <X className="w-3 h-3" />
@@ -1314,117 +1374,191 @@ export function WorkoutLogger() {
 
       {workouts.length > 0 && (
         <AnimatePresence mode="wait">
-          <motion.div key="analytics" {...FADE_SLIDE} className="space-y-4 max-h-[600px] overflow-y-auto pr-1 scrollbar-none">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="relative overflow-hidden rounded-xl border border-indigo-500/20 bg-gradient-to-br from-indigo-500/[0.08] to-transparent p-4">
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-500/10 rounded-full -mr-8 -mt-8 blur-md" />
-                  <div className="relative">
-                    <Dumbbell className="w-4 h-4 text-indigo-400 mb-2" />
-                    <p className="text-2xl font-bold text-white">{analytics.totalWorkouts}</p>
-                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mt-0.5">Total Workouts</p>
+          <motion.div key="analytics" {...FADE_SLIDE}>
+            <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-5">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/5 rounded-full -mr-24 -mt-24 blur-2xl" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/5 rounded-full -ml-16 -mb-16 blur-xl" />
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-5">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center">
+                    <Activity className="w-4 h-4 text-indigo-400" />
                   </div>
+                  <h3 className="text-xs font-bold text-white uppercase tracking-[0.15em]">Analytics Overview</h3>
                 </div>
-                <div className="relative overflow-hidden rounded-xl border border-rose-500/20 bg-gradient-to-br from-rose-500/[0.08] to-transparent p-4">
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-rose-500/10 rounded-full -mr-8 -mt-8 blur-md" />
-                  <div className="relative">
-                    <Activity className="w-4 h-4 text-rose-400 mb-2" />
-                    <p className="text-2xl font-bold text-white">{analytics.totalVolume.toLocaleString()}<span className="text-sm text-gray-500 font-normal">kg</span></p>
-                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mt-0.5">Total Volume</p>
-                  </div>
-                </div>
-                <div className="relative overflow-hidden rounded-xl border border-sky-500/20 bg-gradient-to-br from-sky-500/[0.08] to-transparent p-4">
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-sky-500/10 rounded-full -mr-8 -mt-8 blur-md" />
-                  <div className="relative">
-                    <Zap className="w-4 h-4 text-sky-400 mb-2" />
-                    <p className="text-2xl font-bold text-white">{analytics.avgDuration}<span className="text-sm text-gray-500 font-normal">min</span></p>
-                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mt-0.5">Avg Duration</p>
-                  </div>
-                </div>
-                <div className="relative overflow-hidden rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.08] to-transparent p-4">
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/10 rounded-full -mr-8 -mt-8 blur-md" />
-                  <div className="relative">
-                    <Flame className="w-4 h-4 text-amber-400 mb-2" />
-                    <p className="text-2xl font-bold text-white">{bestStreak}<span className="text-sm text-gray-500 font-normal">d</span></p>
-                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mt-0.5">Best Streak</p>
-                  </div>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-5">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full -mr-12 -mt-12 blur-lg" />
-                  <div className="relative">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-7 h-7 rounded-lg bg-rose-500/20 flex items-center justify-center"><Activity className="w-3.5 h-3.5 text-rose-400" /></div>
-                      <h4 className="text-[10px] font-bold text-white uppercase tracking-[0.15em]">Volume Progression</h4>
+                {/* Core metrics */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3.5">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Dumbbell className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                      <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Workouts</p>
                     </div>
-                    <div className="h-48">
+                    <p className="text-2xl font-bold text-white">{analytics.totalWorkouts}</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">{analytics.last30d} last 30d · {thisWeek} this week</p>
+                  </div>
+                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3.5">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Weight className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                      <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Volume</p>
+                    </div>
+                    <p className="text-2xl font-bold text-white">{analytics.totalVolume.toLocaleString()}<span className="text-xs text-gray-500 font-normal"> kg</span></p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">{analytics.avgVolume.toLocaleString()} avg · {analytics.avgWeight} kg/set</p>
+                  </div>
+                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3.5">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Clock className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                      <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Duration</p>
+                    </div>
+                    <p className="text-2xl font-bold text-white">{analytics.avgDuration}<span className="text-xs text-gray-500 font-normal"> min</span></p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">{Math.round(workouts.reduce((s, w) => s + (w.duration || 0), 0) / 60)}h total</p>
+                  </div>
+                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3.5">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Consistency</p>
+                    </div>
+                    <p className="text-2xl font-bold text-white">{bestStreak}<span className="text-xs text-gray-500 font-normal">d streak</span></p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">{analytics.weeklyAvg}/wk · {analytics.activeMonths}mo active</p>
+                  </div>
+                </div>
+
+                {/* Volume & Frequency chart */}
+                <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-4 mb-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-3.5 h-3.5 text-rose-400" />
+                      <h4 className="text-[10px] font-bold text-white uppercase tracking-[0.12em]">Volume & Frequency</h4>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {analytics.typeChartData.map((entry) => (
+                        <div key={entry.name} className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                          <span className="text-[10px] text-gray-400">{entry.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="h-56">
+                    {weeklyVolumeData.length > 0 || analytics.totalVolume > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={analytics.volumeTimeline} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="volGradient" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
-                              <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                          <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(analytics.volumeTimeline.length / 6))} />
-                          <YAxis tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`} />
-                          <Tooltip
-                            contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px', backdropFilter: 'blur(12px)' }}
-                            formatter={(value: number) => [`${value.toLocaleString()} kg`, 'Cumulative Volume']}
-                            labelStyle={{ color: '#9ca3af' }}
-                          />
-                          <Area type="monotone" dataKey="volume" stroke="#f43f5e" strokeWidth={2} fill="url(#volGradient)" dot={{ r: 3, fill: '#f43f5e', stroke: '#1f2937', strokeWidth: 2 }} activeDot={{ r: 5, fill: '#f43f5e', stroke: '#fff', strokeWidth: 2 }} />
-                        </AreaChart>
+                        <ComposedChart
+                          data={weeklyVolumeData.length > 0 ? weeklyVolumeData.map(w => ({
+                            ...w,
+                            cumulative: analytics.volumeTimeline.find(t => t.date === w.week)?.volume || 0
+                          })) : []}
+                          margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff06" />
+                          <XAxis dataKey="week" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
+                          <YAxis yAxisId="left" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`} domain={[0, 'auto']} />
+                          <YAxis yAxisId="right" orientation="right" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
+                          <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px', backdropFilter: 'blur(12px)' }} />
+                          <Bar yAxisId="left" dataKey="volume" name="Weekly Volume" radius={[4, 4, 0, 0]} maxBarSize={28} fill="#f43f5e" />
+                          <Line yAxisId="right" type="monotone" dataKey="cumulative" name="Cumulative" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                        </ComposedChart>
                       </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center">
+                        <div className="text-center">
+                          <p className="text-xs text-gray-600">log workouts with weight to see data</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-white/[0.04] flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-3 text-[10px] text-gray-500">
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-rose-500/70" /> Volume</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-1.5 rounded-sm bg-purple-500/70" /> Cumulative</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.04] text-white font-medium">{heatScore.label}</span>
+                      {analytics.typeChartData.length > 0 && (
+                        <span className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: analytics.typeChartData[0].color }} />
+                          {analytics.typeChartData[0].name}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Flame className="w-3 h-3 text-amber-400" />
+                        {bestStreak}d
+                      </span>
                     </div>
                   </div>
                 </div>
-                <div className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-5">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full -mr-12 -mt-12 blur-lg" />
-                  <div className="relative">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-7 h-7 rounded-lg bg-purple-500/20 flex items-center justify-center"><Layers className="w-3.5 h-3.5 text-purple-400" /></div>
-                      <h4 className="text-[10px] font-bold text-white uppercase tracking-[0.15em]">Workout Types</h4>
+
+                {/* Performance insights */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+                  <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-3.5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Zap className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+                      <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Best Workout</p>
                     </div>
-                    <div className="h-48 flex items-center">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={analytics.typeChartData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={50}
-                            outerRadius={80}
-                            paddingAngle={3}
-                            dataKey="value"
-                            stroke="none"
-                            animationBegin={100}
-                            animationDuration={800}
-                          >
-                            {analytics.typeChartData.map((entry, i) => (
-                              <Cell key={i} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px', backdropFilter: 'blur(12px)' }}
-                            formatter={(value: number, name: string) => [`${value} workouts`, name]}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div className="flex flex-col gap-1.5 ml-1">
-                        {analytics.typeChartData.map((entry) => (
-                          <div key={entry.name} className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                            <span className="text-[10px] text-gray-400 whitespace-nowrap">{entry.name}</span>
+                    {analytics.maxVolumeWorkout.volume > 0 ? (
+                      <>
+                        <p className="text-sm font-semibold text-white truncate">{analytics.maxVolumeWorkout.name}</p>
+                        <p className="text-xs text-gray-500">{analytics.maxVolumeWorkout.volume.toLocaleString()} kg · {new Date(analytics.maxVolumeWorkout.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-gray-600">add weight to sets</p>
+                    )}
+                  </div>
+                  <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-3.5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Dumbbell className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Top Exercises</p>
+                    </div>
+                    {analytics.topExercise.length > 0 ? (
+                      <div className="space-y-1">
+                        {analytics.topExercise.map((ex) => (
+                          <div key={ex.name} className="flex items-center justify-between">
+                            <span className="text-xs text-white truncate">{ex.name}</span>
+                            <span className="text-[10px] text-gray-500 ml-2 shrink-0">×{ex.count}</span>
                           </div>
                         ))}
+                        <p className="text-[10px] text-gray-600 mt-1">{analytics.uniqueExercises} unique exercises</p>
                       </div>
+                    ) : (
+                      <p className="text-xs text-gray-600">log exercises</p>
+                    )}
+                  </div>
+                  <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-3.5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Crosshair className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Personal Best</p>
                     </div>
+                    {analytics.bestSet.weight > 0 ? (
+                      <>
+                        <p className="text-sm font-semibold text-white">{analytics.bestSet.weight} kg × {analytics.bestSet.reps}</p>
+                        <p className="text-xs text-gray-500">{analytics.bestSet.exercise} · {(analytics.bestSet.weight * analytics.bestSet.reps).toLocaleString()} kg volume</p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-gray-600">log weighted sets</p>
+                    )}
                   </div>
                 </div>
+
+                {/* Type volume distribution */}
+                {analytics.typeVolData.length > 1 && (
+                  <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-3.5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Activity className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                      <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Volume by Type</p>
+                    </div>
+                    <div className="space-y-2">
+                      {analytics.typeVolData.map((t) => (
+                        <div key={t.type} className="flex items-center gap-3">
+                          <span className="text-xs text-white w-20 shrink-0 truncate">{t.type}</span>
+                          <div className="flex-1 h-2 rounded-full bg-white/[0.04] overflow-hidden">
+                            <div className="h-full rounded-full transition-all" style={{ width: `${t.pct}%`, backgroundColor: t.color }} />
+                          </div>
+                          <span className="text-[10px] text-gray-500 w-16 text-right shrink-0">{t.pct}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
+            </div>
           </motion.div>
         </AnimatePresence>
       )}
@@ -1442,9 +1576,15 @@ export function WorkoutLogger() {
                 <p className="text-gray-500 text-sm mb-4">
                   {workouts.length === 0 ? 'Start tracking your fitness journey' : 'Try adjusting your filter criteria'}
                 </p>
-                <Button variant="primary" onClick={() => { resetForm(); setShowForm(true) }}>
-                  Add Your First Workout
-                </Button>
+                {workouts.length === 0 ? (
+                  <Button variant="primary" onClick={() => { resetForm(); setShowForm(true) }}>
+                    Add Your First Workout
+                  </Button>
+                ) : (
+                  <Button variant="ghost" onClick={() => { setFilters({}); clearDates() }}>
+                    Clear Filters
+                  </Button>
+                )}
               </Card>
             </motion.div>
           ) : (

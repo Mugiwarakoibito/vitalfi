@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import type { Workout } from '@/lib/storage'
+import type { Workout } from '@/types/domain'
 
 const LEVEL_THRESHOLDS = [
   { level: 1, min: 0, title: 'Beginner', icon: '🌱' },

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import type { Transaction as DBTransaction } from '@/lib/storage'
+import type { Transaction as DBTransaction } from '@/types/domain'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/lib/categories'
 import { generateId } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
@@ -165,33 +165,34 @@ export function TransactionForm({ isOpen, onClose, onSave, accounts, transaction
           ))}
         </div>
 
-        <Input
-          label="Description"
-          placeholder={placeholder}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          error={errors.description}
-        />
-
-        <div className="grid grid-cols-2 gap-3">
+        <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-5 space-y-4">
           <Input
-            label="Amount"
-            type="number"
-            step="0.01"
-            placeholder="0.00"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            error={errors.amount}
+            label="Description"
+            placeholder={placeholder}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            error={errors.description}
           />
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-muted">Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="glass-input w-full"
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Amount"
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              error={errors.amount}
             />
-            {errors.date && <p className="mt-1 text-xs text-error-light">{errors.date}</p>}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-muted">Date ↓</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="glass-input w-full"
+              />
+              {errors.date && <p className="mt-1 text-xs text-error-light">{errors.date}</p>}
+            </div>
           </div>
         </div>
 

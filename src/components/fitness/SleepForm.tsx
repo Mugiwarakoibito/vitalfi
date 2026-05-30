@@ -3,7 +3,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { generateId } from '@/lib/utils'
-import type { SleepEntry } from '@/lib/storage'
+import type { SleepEntry } from '@/types/domain'
 
 interface SleepFormProps {
   isOpen: boolean;

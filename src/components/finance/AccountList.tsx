@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Plus, Wallet, PiggyBank, CreditCard, TrendingUp, Banknote, Pencil, Trash2, AlertTriangle } from 'lucide-react'
-import type { Account } from '@/lib/storage'
+import type { Account } from '@/types/domain'
 import { formatCurrency } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 import { AccountForm } from './AccountForm'

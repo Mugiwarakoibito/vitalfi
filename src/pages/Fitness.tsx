@@ -38,7 +38,9 @@ export default function Fitness() {
   const actionFromUrl = searchParams.get('action')
   const [activeTab, setActiveTab] = useState<TabId>(tabFromUrl || 'workouts')
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null)
-  const { workouts, meals, sleep, hydration } = useAppStore()
+  const { workouts, meals, sleep, hydration, loadAllData } = useAppStore()
+
+  useEffect(() => { loadAllData() }, [loadAllData])
 
   const hasData = workouts.length > 0 || meals.length > 0 || sleep.length > 0 || hydration.length > 0
   const today = new Date().toISOString().split('T')[0]

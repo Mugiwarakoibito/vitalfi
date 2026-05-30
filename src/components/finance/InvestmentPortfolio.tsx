@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { useAppStore } from '@/store/useAppStore'
-import type { Investment } from '@/lib/storage'
+import type { Investment } from '@/types/domain'
 import { formatCurrency } from '@/lib/utils'
 
 const investmentTypes = [

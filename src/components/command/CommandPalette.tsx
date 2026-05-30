@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import type { CommandAction } from '@/hooks/useCommandPalette'
 import { Command as CompCommand, Sparkles, Plus } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
-import { parseActivityNLP } from '@/lib/nlp-activity'
+import { parseActivityNLP } from '@/lib/nlpActivity'
 import { useAppStore } from '@/store/useAppStore'
 
 interface CommandPaletteProps {

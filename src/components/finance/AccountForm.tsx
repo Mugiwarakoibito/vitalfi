@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import type { Account } from '@/lib/storage'
+import type { Account } from '@/types/domain'
 import { generateId } from '@/lib/utils'
 
 const ACCOUNT_TYPES: { value: Account['type']; label: string }[] = [

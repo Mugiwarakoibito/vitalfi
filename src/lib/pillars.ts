@@ -1,4 +1,4 @@
-import { Workout, Meal, SleepEntry } from './storage';
+import type { Workout, Meal, SleepEntry } from '../types/domain';
 import { calculateSleepNeeds, ActivityLevel } from './calculations';
 
 export interface PillarStatus {

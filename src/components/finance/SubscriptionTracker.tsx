@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency } from '@/lib/utils'
-import type { Subscription } from '@/lib/storage'
+import type { Subscription } from '@/types/domain'
 
 const billingCycles = ['weekly', 'monthly', 'yearly'] as const
 const categories = ['entertainment', 'productivity', 'fitness', 'news', 'cloud', 'other'] as const

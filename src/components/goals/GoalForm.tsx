@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import type { Goal } from '@/lib/storage'
+import type { Goal } from '@/types/domain'
 import { storage } from '@/lib/storage'
 import { generateId } from '@/lib/utils'
 

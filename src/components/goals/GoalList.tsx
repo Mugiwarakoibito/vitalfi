@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import type { Goal } from '@/lib/storage'
+import type { Goal } from '@/types/domain'
 import { formatCurrency } from '@/lib/utils'
 import { Target, Trash2, TrendingUp, Dumbbell, Pencil } from 'lucide-react'
 import { useState } from 'react'
