@@ -15,7 +15,7 @@ import { storage } from '@/lib/storage'
 import { exerciseLibrary, getExerciseById, getAllMuscleGroups, categoryLabels, muscleGroupColors } from '@/lib/exercises'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, AreaChart, Area, CartesianGrid } from 'recharts'
 import type { WorkoutExercise, ExerciseSet, WorkoutFilter, ExerciseCategory, MuscleGroup } from '@/types/fitness'
 import type { Workout, WorkoutTemplate } from '@/lib/storage'
 
@@ -446,7 +446,7 @@ function TemplatePicker({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted" />
               <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} className="glass-input w-full pl-8 text-xs" placeholder="Search templates..." />
             </div>
-            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="glass-input text-xs w-auto">
+            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="glass-input text-xs w-auto [color-scheme:dark]">
               <option value="">All</option>
               {categories.map((cat) => <option key={cat} value={cat}>{categoryLabels[cat as ExerciseCategory] || cat}</option>)}
             </select>
@@ -615,6 +615,7 @@ export function WorkoutLogger() {
       setSearchParams(next, { replace: true })
     }
   }, [searchParams, setSearchParams])
+
   const [showForm, setShowForm] = useState(false)
   const [workoutName, setWorkoutName] = useState('')
   const [workoutType, setWorkoutType] = useState<Workout['category']>('strength')
@@ -639,7 +640,7 @@ export function WorkoutLogger() {
 
   const [filters, setFilters] = useState<WorkoutFilter>({})
   const [showFilters, setShowFilters] = useState(false)
-  const [showHistory, setShowHistory] = useState(true)
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false)
 
   const sortedWorkouts = useMemo(() => {
     let list = [...workouts]
@@ -679,14 +680,18 @@ export function WorkoutLogger() {
   }, [workouts])
 
   const heatScore = useMemo(() => {
-    if (workouts.length === 0) return { score: 0, label: 'Rest', flames: 0 }
+    const allWorkouts = showForm && exercises.length > 0 && !editingWorkoutId
+      ? [...workouts, { date, exercises } as unknown as Workout]
+      : workouts
+
+    if (allWorkouts.length === 0) return { score: 0, label: 'Rest', flames: 0 }
 
     const now = new Date()
     const weekStart = new Date(now)
     weekStart.setDate(weekStart.getDate() - weekStart.getDay())
     weekStart.setHours(0, 0, 0, 0)
 
-    const currentWeekWorkouts = workouts.filter(w => new Date(w.date) >= weekStart)
+    const currentWeekWorkouts = allWorkouts.filter(w => new Date(w.date) >= weekStart)
     const currentWeekCount = currentWeekWorkouts.length
     const currentWeekVol = currentWeekWorkouts.reduce((s, w) => s + calcVolume(w.exercises), 0)
 
@@ -694,7 +699,7 @@ export function WorkoutLogger() {
       return { score: 0, label: 'Rest', flames: 0 }
     }
 
-    const historicalWorkouts = workouts.filter(w => new Date(w.date) < weekStart)
+    const historicalWorkouts = allWorkouts.filter(w => new Date(w.date) < weekStart)
 
     if (historicalWorkouts.length === 0) {
       const base = Math.min(60, currentWeekCount * 15 + Math.round(currentWeekVol / 2000) * 5)
@@ -721,7 +726,7 @@ export function WorkoutLogger() {
     const flames = score >= 80 ? 3 : score >= 60 ? 2 : score >= 40 ? 1 : 0
 
     return { score, label, flames }
-  }, [workouts])
+  }, [workouts, exercises, date, showForm, editingWorkoutId])
 
   const weeklyVolumeData = useMemo(() => {
     const map = new Map<string, number>()
@@ -752,6 +757,42 @@ export function WorkoutLogger() {
       months.push({ month: key, count: map.get(key) || 0, label: d.toLocaleDateString('en-US', { month: 'short' }) })
     }
     return months
+  }, [workouts])
+
+  const analytics = useMemo(() => {
+    const totalWorkouts = workouts.length
+    const totalVolume = workouts.reduce((s, w) => s + calcVolume(w.exercises), 0)
+    const avgDuration = totalWorkouts > 0
+      ? Math.round(workouts.reduce((s, w) => s + (w.duration || 0), 0) / totalWorkouts)
+      : 0
+    const typeBreakdown: Record<string, number> = {}
+    workouts.forEach(w => {
+      typeBreakdown[w.category] = (typeBreakdown[w.category] || 0) + 1
+    })
+    const sortedTypes = Object.entries(typeBreakdown).sort(([, a], [, b]) => b - a)
+    const totalSets = workouts.reduce((s, w) => s + w.exercises.reduce((ss, ex) => ss + ex.sets.length, 0), 0)
+    const totalReps = workouts.reduce((s, w) => s + w.exercises.reduce((ss, ex) => ss + ex.sets.reduce((sss, set) => sss + (set.reps || 0), 0), 0), 0)
+
+    const typeColors = ['#f43f5e', '#06b6d4', '#8b5cf6', '#f59e0b', '#10b981', '#ec4899', '#6366f1', '#14b8a6', '#e11d48', '#0ea5e9']
+    const typeChartData = sortedTypes.map(([name, value], i) => ({
+      name: categoryLabels[name as ExerciseCategory] || name.charAt(0).toUpperCase() + name.slice(1),
+      value,
+      color: typeColors[i % typeColors.length],
+      fill: typeColors[i % typeColors.length],
+    }))
+
+    const sortedByDate = [...workouts].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    let cumVol = 0
+    const volumeTimeline = sortedByDate.map(w => {
+      cumVol += calcVolume(w.exercises)
+      return {
+        date: new Date(w.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        volume: cumVol,
+        rawDate: w.date,
+      }
+    })
+
+    return { totalWorkouts, totalVolume, avgDuration, sortedTypes, totalSets, totalReps, typeChartData, volumeTimeline }
   }, [workouts])
 
   const resetForm = useCallback(() => {
@@ -1106,20 +1147,27 @@ export function WorkoutLogger() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowHistory(!showHistory)} className={`text-sm font-semibold uppercase tracking-[0.15em] flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all ${showHistory ? 'bg-indigo-500/15 border-indigo-500/30 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:border-white/20'}`}>
-            <Activity className="w-3.5 h-3.5 text-indigo-400" />
-            History
-          </button>
-          <button onClick={() => setShowTemplatePicker(true)} className="text-sm font-semibold text-white uppercase tracking-[0.15em] flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-all">
-            <Layers className="w-3.5 h-3.5 text-indigo-400" />
-            Templates
-          </button>
+      <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-2">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16 blur-xl" />
+        <div className="relative flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => setShowTemplatePicker(true)} className="text-[11px] font-bold uppercase tracking-[0.15em] flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/[0.06] bg-white/[0.03] text-gray-500 hover:text-white hover:bg-white/[0.06] hover:border-white/[0.12] transition-all duration-200">
+              <Layers className="w-4 h-4 text-cyan-400" />
+              Templates
+            </button>
+            <button onClick={() => setShowFilters(!showFilters)} className={`text-[11px] font-bold uppercase tracking-[0.15em] flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all duration-200 ${
+              Object.values(filters).some(Boolean)
+                ? 'bg-rose-500/15 border-rose-500/30 text-rose-300 shadow-lg shadow-rose-500/10'
+                : 'bg-white/[0.03] border-white/[0.06] text-gray-500 hover:text-white hover:bg-white/[0.06] hover:border-white/[0.12]'
+            }`}>
+              <Filter className={`w-4 h-4 ${Object.values(filters).some(Boolean) ? 'text-rose-400' : 'text-gray-500'}`} />
+              {Object.values(filters).some(Boolean) && (
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
+              )}
+            </button>
+          </div>
+
         </div>
-        <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-lg transition-all ${Object.values(filters).some(Boolean) ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-white/5 text-gray-400 border border-white/10 hover:border-white/20'}`}>
-          <Filter className="w-4 h-4" />
-        </button>
       </div>
 
       <AnimatePresence>
@@ -1136,16 +1184,13 @@ export function WorkoutLogger() {
               <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-medium">Type</label>
-                  <select
-                    value={filters.category || ''}
-                    onChange={(e) => setFilters((f) => ({ ...f, category: (e.target.value || undefined) as ExerciseCategory | undefined }))}
-                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:border-indigo-500/40 focus:outline-none focus:shadow-lg focus:shadow-indigo-500/5 transition-all"
+                  <button
+                    onClick={() => setShowTypeDropdown(true)}
+                    className="glass-input w-full text-sm flex items-center justify-between gap-2 cursor-pointer"
                   >
-                    <option value="">All types</option>
-                    {Object.entries(typeConfig).map(([key]) => (
-                      <option key={key} value={key}>{key.charAt(0).toUpperCase() + key.slice(1)}</option>
-                    ))}
-                  </select>
+                    <span>{filters.category ? (categoryLabels[filters.category as ExerciseCategory] || filters.category.charAt(0).toUpperCase() + filters.category.slice(1)) : 'All types'}</span>
+                    <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                  </button>
                 </div>
                 <div>
                   <label className="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-medium">From</label>
@@ -1193,8 +1238,179 @@ export function WorkoutLogger() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {showHistory && (
-          sortedWorkouts.length === 0 ? (
+        {showTypeDropdown && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            onClick={() => setShowTypeDropdown(false)}
+          >
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="absolute right-0 top-0 bottom-0 w-72 max-w-[85vw] bg-gray-950/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Workout Type</h3>
+                  <button onClick={() => setShowTypeDropdown(false)} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 transition-all">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="space-y-1">
+                  {[null, ...Object.keys(typeConfig)].map((key) => {
+                    const label = key ? (categoryLabels[key as ExerciseCategory] || key.charAt(0).toUpperCase() + key.slice(1)) : 'All types'
+                    const isActive = key === filters.category || (!key && !filters.category)
+                    const cfg = key ? typeConfig[key] : null
+                    const CfgIcon = cfg?.icon || Filter
+                    return (
+                      <button
+                        key={key || 'all'}
+                        onClick={() => { setFilters((f) => ({ ...f, category: (key as ExerciseCategory) || undefined })); setShowTypeDropdown(false) }}
+                        className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 text-left transition-all ${
+                          isActive
+                            ? 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/20'
+                            : 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent'
+                        }`}
+                      >
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${cfg?.bg || 'bg-white/5'}`}>
+                          <CfgIcon className={`w-4 h-4 ${isActive && cfg ? cfg.color : 'opacity-70'}`} />
+                        </div>
+                        <span className="text-sm font-medium">{label}</span>
+                        {isActive && <Check className="w-4 h-4 ml-auto text-indigo-400 shrink-0" />}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {workouts.length > 0 && (
+        <AnimatePresence mode="wait">
+          <motion.div key="analytics" {...FADE_SLIDE} className="space-y-4 max-h-[600px] overflow-y-auto pr-1 scrollbar-none">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="relative overflow-hidden rounded-xl border border-indigo-500/20 bg-gradient-to-br from-indigo-500/[0.08] to-transparent p-4">
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-500/10 rounded-full -mr-8 -mt-8 blur-md" />
+                  <div className="relative">
+                    <Dumbbell className="w-4 h-4 text-indigo-400 mb-2" />
+                    <p className="text-2xl font-bold text-white">{analytics.totalWorkouts}</p>
+                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mt-0.5">Total Workouts</p>
+                  </div>
+                </div>
+                <div className="relative overflow-hidden rounded-xl border border-rose-500/20 bg-gradient-to-br from-rose-500/[0.08] to-transparent p-4">
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-rose-500/10 rounded-full -mr-8 -mt-8 blur-md" />
+                  <div className="relative">
+                    <Activity className="w-4 h-4 text-rose-400 mb-2" />
+                    <p className="text-2xl font-bold text-white">{analytics.totalVolume.toLocaleString()}<span className="text-sm text-gray-500 font-normal">kg</span></p>
+                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mt-0.5">Total Volume</p>
+                  </div>
+                </div>
+                <div className="relative overflow-hidden rounded-xl border border-sky-500/20 bg-gradient-to-br from-sky-500/[0.08] to-transparent p-4">
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-sky-500/10 rounded-full -mr-8 -mt-8 blur-md" />
+                  <div className="relative">
+                    <Zap className="w-4 h-4 text-sky-400 mb-2" />
+                    <p className="text-2xl font-bold text-white">{analytics.avgDuration}<span className="text-sm text-gray-500 font-normal">min</span></p>
+                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mt-0.5">Avg Duration</p>
+                  </div>
+                </div>
+                <div className="relative overflow-hidden rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.08] to-transparent p-4">
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/10 rounded-full -mr-8 -mt-8 blur-md" />
+                  <div className="relative">
+                    <Flame className="w-4 h-4 text-amber-400 mb-2" />
+                    <p className="text-2xl font-bold text-white">{bestStreak}<span className="text-sm text-gray-500 font-normal">d</span></p>
+                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mt-0.5">Best Streak</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-5">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full -mr-12 -mt-12 blur-lg" />
+                  <div className="relative">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-7 h-7 rounded-lg bg-rose-500/20 flex items-center justify-center"><Activity className="w-3.5 h-3.5 text-rose-400" /></div>
+                      <h4 className="text-[10px] font-bold text-white uppercase tracking-[0.15em]">Volume Progression</h4>
+                    </div>
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={analytics.volumeTimeline} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="volGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                              <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                          <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(analytics.volumeTimeline.length / 6))} />
+                          <YAxis tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`} />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px', backdropFilter: 'blur(12px)' }}
+                            formatter={(value: number) => [`${value.toLocaleString()} kg`, 'Cumulative Volume']}
+                            labelStyle={{ color: '#9ca3af' }}
+                          />
+                          <Area type="monotone" dataKey="volume" stroke="#f43f5e" strokeWidth={2} fill="url(#volGradient)" dot={{ r: 3, fill: '#f43f5e', stroke: '#1f2937', strokeWidth: 2 }} activeDot={{ r: 5, fill: '#f43f5e', stroke: '#fff', strokeWidth: 2 }} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+                <div className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-5">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full -mr-12 -mt-12 blur-lg" />
+                  <div className="relative">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-7 h-7 rounded-lg bg-purple-500/20 flex items-center justify-center"><Layers className="w-3.5 h-3.5 text-purple-400" /></div>
+                      <h4 className="text-[10px] font-bold text-white uppercase tracking-[0.15em]">Workout Types</h4>
+                    </div>
+                    <div className="h-48 flex items-center">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={analytics.typeChartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={80}
+                            paddingAngle={3}
+                            dataKey="value"
+                            stroke="none"
+                            animationBegin={100}
+                            animationDuration={800}
+                          >
+                            {analytics.typeChartData.map((entry, i) => (
+                              <Cell key={i} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px', backdropFilter: 'blur(12px)' }}
+                            formatter={(value: number, name: string) => [`${value} workouts`, name]}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="flex flex-col gap-1.5 ml-1">
+                        {analytics.typeChartData.map((entry) => (
+                          <div key={entry.name} className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                            <span className="text-[10px] text-gray-400 whitespace-nowrap">{entry.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+          </motion.div>
+        </AnimatePresence>
+      )}
+
+      <AnimatePresence>
+        {sortedWorkouts.length === 0 ? (
             <motion.div key="empty" {...FADE_SLIDE}>
               <Card className="py-12 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4">
@@ -1305,7 +1521,7 @@ export function WorkoutLogger() {
               </div>
             </motion.div>
           )
-        )}
+        }
       </AnimatePresence>
 
       <ConfirmDialog
