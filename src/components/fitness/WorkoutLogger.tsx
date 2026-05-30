@@ -1194,23 +1194,35 @@ export function WorkoutLogger() {
                 </div>
                 <div>
                   <label className="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-medium">From</label>
-                  <input
-                    type="date"
-                    placeholder="DD/MM/YYYY"
-                    value={filters.dateFrom || ''}
-                    onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value || undefined }))}
-                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:border-indigo-500/40 focus:outline-none focus:shadow-lg focus:shadow-indigo-500/5 transition-all [color-scheme:dark]"
-                  />
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={filters.dateFrom || ''}
+                      onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value || undefined }))}
+                      className={`w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm focus:border-indigo-500/40 focus:outline-none focus:shadow-lg focus:shadow-indigo-500/5 transition-all [color-scheme:dark] ${!filters.dateFrom ? 'text-transparent' : 'text-white'}`}
+                    />
+                    {!filters.dateFrom && (
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none select-none">
+                        DD/MM/YYYY
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-medium">To</label>
-                  <input
-                    type="date"
-                    placeholder="DD/MM/YYYY"
-                    value={filters.dateTo || ''}
-                    onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value || undefined }))}
-                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:border-indigo-500/40 focus:outline-none focus:shadow-lg focus:shadow-indigo-500/5 transition-all [color-scheme:dark]"
-                  />
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={filters.dateTo || ''}
+                      onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value || undefined }))}
+                      className={`w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm focus:border-indigo-500/40 focus:outline-none focus:shadow-lg focus:shadow-indigo-500/5 transition-all [color-scheme:dark] ${!filters.dateTo ? 'text-transparent' : 'text-white'}`}
+                    />
+                    {!filters.dateTo && (
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none select-none">
+                        DD/MM/YYYY
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-medium">Search</label>
