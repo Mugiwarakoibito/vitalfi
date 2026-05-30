@@ -641,6 +641,8 @@ export function WorkoutLogger() {
   const [filters, setFilters] = useState<WorkoutFilter>({})
   const [showFilters, setShowFilters] = useState(false)
   const [showTypeDropdown, setShowTypeDropdown] = useState(false)
+  const [dateFromText, setDateFromText] = useState('')
+  const [dateToText, setDateToText] = useState('')
 
   const sortedWorkouts = useMemo(() => {
     let list = [...workouts]
@@ -1194,35 +1196,39 @@ export function WorkoutLogger() {
                 </div>
                 <div>
                   <label className="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-medium">From</label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      value={filters.dateFrom || ''}
-                      onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value || undefined }))}
-                      className={`w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm focus:border-indigo-500/40 focus:outline-none focus:shadow-lg focus:shadow-indigo-500/5 transition-all [color-scheme:dark] ${!filters.dateFrom ? 'text-transparent' : 'text-white'}`}
-                    />
-                    {!filters.dateFrom && (
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none select-none">
-                        DD/MM/YYYY
-                      </span>
-                    )}
-                  </div>
+                  <input
+                    type="text"
+                    placeholder="DD/MM/YYYY"
+                    value={dateFromText}
+                    onChange={(e) => setDateFromText(e.target.value)}
+                    onBlur={() => {
+                      const parts = dateFromText.split('/')
+                      if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+                        setFilters((f) => ({ ...f, dateFrom: `${parts[2]}-${parts[1]}-${parts[0]}` }))
+                      } else {
+                        setFilters((f) => ({ ...f, dateFrom: undefined }))
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-gray-500 focus:border-indigo-500/40 focus:outline-none focus:shadow-lg focus:shadow-indigo-500/5 transition-all"
+                  />
                 </div>
                 <div>
                   <label className="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-medium">To</label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      value={filters.dateTo || ''}
-                      onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value || undefined }))}
-                      className={`w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm focus:border-indigo-500/40 focus:outline-none focus:shadow-lg focus:shadow-indigo-500/5 transition-all [color-scheme:dark] ${!filters.dateTo ? 'text-transparent' : 'text-white'}`}
-                    />
-                    {!filters.dateTo && (
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none select-none">
-                        DD/MM/YYYY
-                      </span>
-                    )}
-                  </div>
+                  <input
+                    type="text"
+                    placeholder="DD/MM/YYYY"
+                    value={dateToText}
+                    onChange={(e) => setDateToText(e.target.value)}
+                    onBlur={() => {
+                      const parts = dateToText.split('/')
+                      if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+                        setFilters((f) => ({ ...f, dateTo: `${parts[2]}-${parts[1]}-${parts[0]}` }))
+                      } else {
+                        setFilters((f) => ({ ...f, dateTo: undefined }))
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-gray-500 focus:border-indigo-500/40 focus:outline-none focus:shadow-lg focus:shadow-indigo-500/5 transition-all"
+                  />
                 </div>
                 <div>
                   <label className="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-medium">Search</label>
@@ -1238,7 +1244,7 @@ export function WorkoutLogger() {
               {Object.values(filters).some(Boolean) && (
                 <div className="relative flex justify-end">
                   <button
-                    onClick={() => setFilters({})}
+                    onClick={() => { setFilters({}); setDateFromText(''); setDateToText('') }}
                     className="px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 hover:bg-rose-500/20 hover:shadow-lg hover:shadow-rose-500/5 transition-all text-xs font-medium flex items-center gap-1.5"
                   >
                     <X className="w-3 h-3" />
