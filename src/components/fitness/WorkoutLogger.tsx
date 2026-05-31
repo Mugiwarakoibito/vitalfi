@@ -7,7 +7,7 @@ import {
   TrendingUp, TrendingDown, Minus, Layers,
   FileText, Activity, Zap, Wind, Settings2, Move, StretchHorizontal,
   PersonStanding, Gauge, Crosshair, Weight, Heart, Shield, Sword, Coffee,
-   Equal, Footprints, Waves,
+  Equal, Footprints, Waves, Timer, Play,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { generateId, formatDuration } from '@/lib/utils'
@@ -626,6 +626,8 @@ export function WorkoutLogger() {
   const [showExercisePicker, setShowExercisePicker] = useState(false)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [showTypePicker, setShowTypePicker] = useState(false)
+  const [restTimerEnd, setRestTimerEnd] = useState<number | null>(null)
+  const [restTimerExName, setRestTimerExName] = useState('')
   const [deletingWorkout, setDeletingWorkout] = useState<Workout | null>(null)
   const [editingWorkoutId, setEditingWorkoutId] = useState<string | null>(null)
 
@@ -667,6 +669,15 @@ export function WorkoutLogger() {
       dateTo: toOk ? `${toYear}-${toMonth}-${toDay}` : undefined,
     }))
   }, [fromDay, fromMonth, fromYear, toDay, toMonth, toYear])
+
+  useEffect(() => {
+    if (restTimerEnd == null) return
+    const id = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((restTimerEnd - Date.now()) / 1000))
+      if (remaining <= 0) { setRestTimerEnd(null); setRestTimerExName('') }
+    }, 200)
+    return () => clearInterval(id)
+  }, [restTimerEnd])
 
   const handleSegChange = useCallback((value: string, setter: (v: string) => void, maxLen: number, validate: (current: string, digit: string, index: number) => boolean, nextRef?: React.RefObject<HTMLInputElement | null>) => {
     const raw = value.replace(/\D/g, '').slice(0, maxLen)
@@ -1099,7 +1110,45 @@ export function WorkoutLogger() {
         </div>
       </div>
 
-
+      {/* Weekly Analytics */}
+      {workouts.length > 0 && (
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-16 -mt-16 blur-xl" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-indigo-400/80 text-sm mb-4">
+              <Activity className="w-4 h-4" />
+              <span className="font-medium">Weekly Analytics</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider">This Week</p>
+                <p className="text-xl font-bold text-white mt-1">{thisWeek} <span className="text-xs text-gray-500 font-normal">workouts</span></p>
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Weekly Volume</p>
+                <p className="text-xl font-bold text-white mt-1">{workouts.filter(w => new Date(w.date) >= (() => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); d.setHours(0,0,0,0); return d })()).reduce((s,w) => s + calcVolume(w.exercises), 0).toLocaleString()} <span className="text-xs text-gray-500 font-normal">kg</span></p>
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Avg Duration</p>
+                <p className="text-xl font-bold text-white mt-1">
+                  {(() => {
+                    const thisWeekWorkouts = workouts.filter(w => new Date(w.date) >= (() => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); d.setHours(0,0,0,0); return d })())
+                    const avg = thisWeekWorkouts.length > 0 ? Math.round(thisWeekWorkouts.reduce((s,w) => s + (w.duration || 0), 0) / thisWeekWorkouts.length) : 0
+                    return avg > 0 ? `${avg}min` : '--'
+                  })()}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Heat Score</p>
+                <p className="text-xl font-bold text-white mt-1">
+                  <span className="text-orange-400">{heatScore.score}</span>
+                  <span className="text-xs text-gray-500 font-normal ml-1">{heatScore.label}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-2">
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16 blur-xl" />
@@ -1781,6 +1830,37 @@ export function WorkoutLogger() {
                                           <Plus className="w-3.5 h-3.5" />
                                           Add Set
                                         </button>
+                                      </div>
+
+                                      {/* Rest Timer */}
+                                      <div className="flex items-center gap-2 mt-2">
+                                        {restTimerEnd != null && restTimerExName === ex.name ? (
+                                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                                            <Timer className="w-3.5 h-3.5 text-emerald-400" />
+                                            <span className="text-sm font-bold text-emerald-400">
+                                              {Math.max(0, Math.ceil((restTimerEnd - Date.now()) / 1000))}s
+                                            </span>
+                                            <button
+                                              onClick={() => { setRestTimerEnd(null); setRestTimerExName('') }}
+                                              className="text-[10px] text-gray-500 hover:text-white ml-1"
+                                            >
+                                              <X className="w-3 h-3" />
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <>
+                                            {[60, 90, 120].map(sec => (
+                                              <button
+                                                key={sec}
+                                                onClick={() => { setRestTimerEnd(Date.now() + sec * 1000); setRestTimerExName(ex.name) }}
+                                                className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 border border-white/10 text-gray-500 hover:text-white hover:bg-white/10 transition-all text-[10px]"
+                                              >
+                                                <Play className="w-2.5 h-2.5" />
+                                                {sec}s
+                                              </button>
+                                            ))}
+                                          </>
+                                        )}
                                       </div>
 
                                       <div className="mt-2">

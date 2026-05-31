@@ -2,13 +2,16 @@ import { useState, useMemo, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { exerciseLibrary, categoryLabels, categoryColors, muscleGroupColors } from '@/lib/exercises'
+import { useAppStore } from '@/store/useAppStore'
 import type { ExerciseDefinition, ExerciseCategory, MuscleGroup, EquipmentType } from '@/types/fitness'
+import type { Workout } from '@/types/domain'
 import {
   Search, Filter, Dumbbell, Flame, Wind, StretchHorizontal, Zap, PersonStanding,
   X, Wand2, Sparkles, Grid3X3, List, Star, ChevronDown,
   Eye, Bookmark, BookmarkCheck,
   Weight, Settings2, GitBranch, Minus, Circle,
   TrendingUp, Gauge, Crosshair, Activity, Heart, Shield, Sword, Coffee, Waves, Move, Footprints, Equal,
+  Clock, Hash,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AddExerciseModal } from './AddExerciseModal'
@@ -130,8 +133,39 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
   const [showEquipmentDropdown, setShowEquipmentDropdown] = useState(false)
 
   const { favorites, toggleFavorite } = useFavorites()
+  const { workouts } = useAppStore()
 
   const allExercises = useMemo(() => [...exerciseLibrary, ...customExercises], [customExercises])
+
+  const exerciseUsage = useMemo(() => {
+    const usage: Record<string, { count: number; bestWeight: number; bestReps: number; lastUsed: string }> = {}
+    workouts.forEach((w: Workout) => {
+      w.exercises.forEach((ex) => {
+        if (!usage[ex.exerciseId]) {
+          usage[ex.exerciseId] = { count: 0, bestWeight: 0, bestReps: 0, lastUsed: '' }
+        }
+        usage[ex.exerciseId].count++
+        if (w.date > usage[ex.exerciseId].lastUsed) usage[ex.exerciseId].lastUsed = w.date
+        ex.sets.forEach((s) => {
+          if (s.weight && s.weight > usage[ex.exerciseId].bestWeight) usage[ex.exerciseId].bestWeight = s.weight
+          if (s.reps && s.reps > usage[ex.exerciseId].bestReps) usage[ex.exerciseId].bestReps = s.reps
+        })
+      })
+    })
+    return usage
+  }, [workouts])
+
+  const usageStats = useMemo(() => {
+    const totalUses = Object.values(exerciseUsage).reduce((sum, u) => sum + u.count, 0)
+    let mostUsedId = ''
+    let mostUsedCount = 0
+    Object.entries(exerciseUsage).forEach(([id, u]) => {
+      if (u.count > mostUsedCount) { mostUsedId = id; mostUsedCount = u.count }
+    })
+    const mostUsedEx = mostUsedId ? allExercises.find(e => e.id === mostUsedId) : null
+    const exercisesWithBests = Object.values(exerciseUsage).filter(u => u.bestWeight > 0 || u.bestReps > 0).length
+    return { totalUses, mostUsedEx, mostUsedCount, exercisesWithBests }
+  }, [exerciseUsage, allExercises])
 
   const allMuscles = useMemo(() => {
     const set = new Set<MuscleGroup>()
@@ -259,6 +293,56 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
           <Sparkles size={14} />
           Add with AI
         </Button>
+      </div>
+
+      {/* Usage Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.12] via-violet-500/[0.04] to-transparent p-4 shadow-lg shadow-violet-500/5">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-violet-500/10 rounded-full -mr-8 -mt-8 blur-lg" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider mb-1">
+              <Hash className="w-3.5 h-3.5 text-violet-400" />
+              Times Used
+            </div>
+            <p className="text-2xl font-bold text-white drop-shadow-lg">{usageStats.totalUses}</p>
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.12] via-emerald-500/[0.04] to-transparent p-4 shadow-lg shadow-emerald-500/5">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full -mr-8 -mt-8 blur-lg" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider mb-1">
+              <Activity className="w-3.5 h-3.5 text-emerald-400" />
+              Most Used
+            </div>
+            <p className="text-sm font-bold text-white drop-shadow-lg line-clamp-1">{usageStats.mostUsedEx?.name || '—'}</p>
+            <p className="text-[10px] text-gray-500">{usageStats.mostUsedCount}x logged</p>
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.12] via-amber-500/[0.04] to-transparent p-4 shadow-lg shadow-amber-500/5">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/10 rounded-full -mr-8 -mt-8 blur-lg" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider mb-1">
+              <Star className="w-3.5 h-3.5 text-amber-400" />
+              With PRs
+            </div>
+            <p className="text-2xl font-bold text-white drop-shadow-lg">{usageStats.exercisesWithBests}</p>
+            <p className="text-[10px] text-gray-500">exercises</p>
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/[0.12] via-blue-500/[0.04] to-transparent p-4 shadow-lg shadow-blue-500/5">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/10 rounded-full -mr-8 -mt-8 blur-lg" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider mb-1">
+              <Clock className="w-3.5 h-3.5 text-blue-400" />
+              Last Used
+            </div>
+            <p className="text-sm font-bold text-white drop-shadow-lg">
+              {usageStats.totalUses > 0
+                ? new Date(Math.max(...Object.values(exerciseUsage).map(u => new Date(u.lastUsed).getTime()))).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                : '—'}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Category Stats Bar */}
@@ -623,6 +707,19 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
                       ))}
                     </div>
 
+                    {/* Usage stats */}
+                    {exerciseUsage[ex.id] && exerciseUsage[ex.id].count > 0 && (
+                      <div className="flex items-center gap-3 text-[10px] text-gray-500">
+                        <span className="flex items-center gap-1"><Hash className="w-3 h-3" />{exerciseUsage[ex.id].count}x</span>
+                        {exerciseUsage[ex.id].bestWeight > 0 && (
+                          <span className="flex items-center gap-1"><Weight className="w-3 h-3" />{exerciseUsage[ex.id].bestWeight}lbs</span>
+                        )}
+                        {exerciseUsage[ex.id].bestReps > 0 && (
+                          <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3" />{exerciseUsage[ex.id].bestReps} reps</span>
+                        )}
+                      </div>
+                    )}
+
                     {/* First instruction preview */}
                     <p className="text-xs text-muted line-clamp-2">{ex.instructions[0]}</p>
 
@@ -691,7 +788,11 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2 shrink-0">
+                    {/* Usage info */}
+                    <div className="flex items-center gap-2 shrink-0 text-[10px] text-gray-500">
+                      {exerciseUsage[ex.id] && exerciseUsage[ex.id].count > 0 && (
+                        <span className="hidden sm:inline">{exerciseUsage[ex.id].count}x</span>
+                      )}
                       <button
                         onClick={(e) => { e.stopPropagation(); toggleFavorite(ex.id) }}
                         className={`p-1.5 rounded-lg transition-all ${

@@ -18,6 +18,7 @@ interface Supplement {
   frequency: 'daily' | 'weekly' | 'custom'
   times: string[]
   notes?: string
+  refillDays?: number
 }
 
 interface SupplementLog {
@@ -78,6 +79,7 @@ export function SupplementTracker() {
     frequency: 'daily' as Supplement['frequency'],
     times: [] as TimeOfDay[],
     notes: '',
+    refillDays: '',
   })
 
   const today = new Date().toISOString().split('T')[0]
@@ -243,7 +245,7 @@ export function SupplementTracker() {
   }
 
   const resetForm = () => {
-    setFormData({ name: '', dosage: '', frequency: 'daily', times: [], notes: '' })
+    setFormData({ name: '', dosage: '', frequency: 'daily', times: [], notes: '', refillDays: '' })
   }
 
   const addSupplement = () => {
@@ -255,6 +257,7 @@ export function SupplementTracker() {
       frequency: formData.frequency,
       times: formData.times.length ? [...formData.times] : ['Morning'],
       notes: formData.notes.trim() || undefined,
+      refillDays: formData.refillDays ? parseInt(formData.refillDays) : undefined,
     }
     persistSupplements([...supplements, newSupp])
     setShowModal(false)
@@ -625,6 +628,18 @@ export function SupplementTracker() {
                               {supp.notes}
                             </p>
                           )}
+                          {supp.refillDays != null && (
+                            <div className={`ml-4.5 mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] ${
+                              supp.refillDays <= 7
+                                ? 'bg-red-500/10 border border-red-500/20 text-red-300'
+                                : supp.refillDays <= 14
+                                  ? 'bg-amber-500/10 border border-amber-500/20 text-amber-300'
+                                  : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
+                            }`}>
+                              <Clock className="w-2.5 h-2.5" />
+                              Refill in {supp.refillDays}d
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
                           {taken ? (
@@ -760,6 +775,15 @@ export function SupplementTracker() {
             placeholder="Any notes..."
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          />
+
+          {/* Refill Days */}
+          <Input
+            label="Refill in (days, optional)"
+            placeholder="e.g. 30"
+            type="number"
+            value={formData.refillDays}
+            onChange={(e) => setFormData({ ...formData, refillDays: e.target.value })}
           />
 
           <Button

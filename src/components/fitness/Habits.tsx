@@ -2,11 +2,19 @@ import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Flame, Zap, Target, Award, Trophy, Star, TrendingUp, Medal,
-  BarChart3, Crown, Activity,
+  BarChart3, Crown, Activity, Shuffle, CalendarCheck, CheckCircle2,
+  Dumbbell, Utensils, Moon, Droplets,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import type { Workout } from '@/types/domain'
+import type { Workout, Meal, SleepEntry, HydrationEntry } from '@/types/domain'
+
+const HABIT_TYPES = [
+  { key: 'workout', label: 'Workout', icon: Dumbbell, color: '#f43f5e', bgGradient: 'from-rose-500/20 border-rose-500/30' },
+  { key: 'nutrition', label: 'Nutrition', icon: Utensils, color: '#f97316', bgGradient: 'from-orange-500/20 border-orange-500/30' },
+  { key: 'sleep', label: 'Sleep', icon: Moon, color: '#8b5cf6', bgGradient: 'from-violet-500/20 border-violet-500/30' },
+  { key: 'hydration', label: 'Hydration', icon: Droplets, color: '#06b6d4', bgGradient: 'from-sky-500/20 border-sky-500/30' },
+] as const
 
 const LEVEL_THRESHOLDS = [
   { level: 1, min: 0, title: 'Beginner', icon: '🌱' },
@@ -18,15 +26,7 @@ const LEVEL_THRESHOLDS = [
   { level: 7, min: 365, title: 'Immortal', icon: '🏆' },
 ]
 
-interface Achievement {
-  id: string
-  name: string
-  description: string
-  icon: 'flame' | 'zap' | 'trophy' | 'star' | 'medal' | 'award' | 'trending'
-  check: (stats: StreakStats) => boolean
-}
-
-interface StreakStats {
+interface OverallStats {
   currentStreak: number
   longestStreak: number
   totalWorkouts: number
@@ -38,7 +38,7 @@ interface StreakStats {
   daysSinceFirst: number
 }
 
-const ACHIEVEMENTS: Achievement[] = [
+const ACHIEVEMENTS: { id: string; name: string; description: string; icon: 'flame' | 'zap' | 'trophy' | 'star' | 'medal' | 'award' | 'trending'; check: (s: OverallStats) => boolean }[] = [
   { id: 'first_step', name: 'First Step', description: 'Complete your first workout', icon: 'star', check: s => s.totalWorkouts >= 1 },
   { id: 'week_warrior', name: 'Week Warrior', description: 'Complete 7 workouts total', icon: 'award', check: s => s.totalWorkouts >= 7 },
   { id: 'dedicated', name: 'Dedicated', description: 'Complete 30 workouts total', icon: 'medal', check: s => s.totalWorkouts >= 30 },
@@ -53,122 +53,69 @@ const ACHIEVEMENT_ICONS: Record<string, typeof Flame> = {
   flame: Flame, zap: Zap, trophy: Trophy, star: Star, medal: Medal, award: Award, trending: TrendingUp,
 }
 
-function getMotivationalMessage(weekCount: number): { message: string; emoji: string } {
-  if (weekCount === 0) return { message: 'Time to get moving!', emoji: '💪' }
-  if (weekCount === 1) return { message: 'Great start, keep it up!', emoji: '🔥' }
-  if (weekCount <= 3) return { message: "You're on a roll!", emoji: '⚡' }
-  if (weekCount <= 5) return { message: 'Crushing it this week!', emoji: '🚀' }
-  return { message: 'Beast mode activated!', emoji: '👑' }
+function computeHabitStreak(dates: string[]): { current: number; longest: number } {
+  if (dates.length === 0) return { current: 0, longest: 0 }
+  const unique = [...new Set(dates)].sort()
+  let longest = 0
+  let currentRun = 1
+  for (let i = 1; i < unique.length; i++) {
+    const d1 = new Date(unique[i - 1])
+    const d2 = new Date(unique[i])
+    const diff = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24))
+    if (diff === 1) currentRun++
+    else { longest = Math.max(longest, currentRun); currentRun = 1 }
+  }
+  longest = Math.max(longest, currentRun)
+  const today = new Date().toISOString().split('T')[0]
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+  let current = 0
+  if (unique.includes(today) || unique.includes(yesterday)) {
+    let temp = 1
+    for (let i = unique.length - 1; i >= 1; i--) {
+      const d1 = new Date(unique[i - 1])
+      const d2 = new Date(unique[i])
+      const diff = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24))
+      if (diff === 1) temp++
+      else break
+    }
+    current = temp
+  }
+  return { current, longest }
 }
 
-function formatMonthName(dateStr: string): string {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+function computeStats(workouts: Workout[]): OverallStats {
+  if (workouts.length === 0) {
+    return { currentStreak: 0, longestStreak: 0, totalWorkouts: 0, thisMonthWorkouts: 0, uniqueDays: 0, weeklyAverage: 0, consistency: 0, bestMonthName: '', daysSinceFirst: 0 }
+  }
+  const today = new Date()
+  const uniqueDates = [...new Set(workouts.map(w => w.date))].sort()
+  const totalWorkouts = workouts.length
+  const uniqueDays = uniqueDates.length
+  const thisMonthWorkouts = workouts.filter(w => { const d = new Date(w.date); return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear() }).length
+  const { current: currentStreak, longest: longestStreak } = computeHabitStreak(workouts.map(w => w.date))
+  const firstDate = new Date(uniqueDates[0])
+  const daysSinceFirst = Math.max(1, Math.round((today.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)))
+  const weeksSinceFirst = Math.max(1, daysSinceFirst / 7)
+  const weeklyAverage = Math.round((totalWorkouts / weeksSinceFirst) * 10) / 10
+  const consistency = Math.round((uniqueDays / daysSinceFirst) * 100)
+  const monthMap = new Map<string, number>()
+  workouts.forEach(w => { const key = w.date.slice(0, 7); monthMap.set(key, (monthMap.get(key) || 0) + 1) })
+  let bestMonthKey = ''
+  let bestMonthCount = 0
+  monthMap.forEach((count, key) => { if (count > bestMonthCount) { bestMonthCount = count; bestMonthKey = key } })
+  const bestMonthName = bestMonthKey ? new Date(bestMonthKey + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : ''
+  return { currentStreak, longestStreak, totalWorkouts, thisMonthWorkouts, uniqueDays, weeklyAverage, consistency, bestMonthName, daysSinceFirst }
 }
 
 function loadAchievements(): Set<string> {
   try {
     const raw = localStorage.getItem('vitalfi_achievements')
     return new Set(raw ? JSON.parse(raw) : [])
-  } catch {
-    return new Set()
-  }
+  } catch { return new Set() }
 }
 
 function saveAchievements(ids: Set<string>) {
   localStorage.setItem('vitalfi_achievements', JSON.stringify([...ids]))
-}
-
-function computeStats(workouts: Workout[]): StreakStats {
-  if (workouts.length === 0) {
-    return {
-      currentStreak: 0, longestStreak: 0, totalWorkouts: 0, thisMonthWorkouts: 0,
-      uniqueDays: 0, weeklyAverage: 0, consistency: 0, bestMonthName: '', daysSinceFirst: 0,
-    }
-  }
-
-  const today = new Date()
-  const todayStr = today.toISOString().split('T')[0]
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-  const yesterdayStr = yesterday.toISOString().split('T')[0]
-
-  const uniqueDates = [...new Set(workouts.map(w => w.date))].sort()
-  const totalWorkouts = workouts.length
-  const uniqueDays = uniqueDates.length
-
-  const thisMonthWorkouts = workouts.filter(w => {
-    const d = new Date(w.date)
-    return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()
-  }).length
-
-  let longestStreak = 0
-  let current = 0
-  for (let i = 0; i < uniqueDates.length; i++) {
-    if (i === 0) { current = 1; continue }
-    const d1 = new Date(uniqueDates[i - 1])
-    const d2 = new Date(uniqueDates[i])
-    const diff = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24))
-    if (diff === 1) { current++ }
-    else { longestStreak = Math.max(longestStreak, current); current = 1 }
-  }
-  longestStreak = Math.max(longestStreak, current)
-
-  let currentStreak = 0
-  if (uniqueDates.includes(todayStr) || uniqueDates.includes(yesterdayStr)) {
-    let temp = 0
-    for (let i = uniqueDates.length - 1; i >= 0; i--) {
-      if (i === uniqueDates.length - 1) { temp = 1; continue }
-      const d1 = new Date(uniqueDates[i])
-      const d2 = new Date(uniqueDates[i + 1])
-      const diff = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24))
-      if (diff === 1) { temp++ }
-      else break
-    }
-    currentStreak = temp
-  }
-
-  const firstDate = new Date(uniqueDates[0])
-  const daysSinceFirst = Math.max(1, Math.round((today.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)))
-  const weeksSinceFirst = Math.max(1, daysSinceFirst / 7)
-  const weeklyAverage = Math.round((totalWorkouts / weeksSinceFirst) * 10) / 10
-  const consistency = Math.round((uniqueDays / daysSinceFirst) * 100)
-
-  const monthMap = new Map<string, number>()
-  workouts.forEach(w => {
-    const key = w.date.slice(0, 7)
-    monthMap.set(key, (monthMap.get(key) || 0) + 1)
-  })
-  let bestMonthKey = ''
-  let bestMonthCount = 0
-  monthMap.forEach((count, key) => {
-    if (count > bestMonthCount) { bestMonthCount = count; bestMonthKey = key }
-  })
-  const bestMonthName = bestMonthKey ? formatMonthName(bestMonthKey + '-01') : ''
-
-  return {
-    currentStreak, longestStreak, totalWorkouts, thisMonthWorkouts,
-    uniqueDays, weeklyAverage, consistency, bestMonthName, daysSinceFirst,
-  }
-}
-
-function generateCalendarDays(workouts: Workout[]) {
-  const today = new Date()
-  const workoutDates = new Set(workouts.map(w => w.date))
-  const days: { date: string; day: number; hasWorkout: boolean; isToday: boolean }[] = []
-
-  for (let i = 27; i >= 0; i--) {
-    const d = new Date(today)
-    d.setDate(d.getDate() - i)
-    const dateStr = d.toISOString().split('T')[0]
-    days.push({
-      date: dateStr,
-      day: d.getDate(),
-      hasWorkout: workoutDates.has(dateStr),
-      isToday: dateStr === today.toISOString().split('T')[0],
-    })
-  }
-  return days
 }
 
 function Container({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -184,58 +131,51 @@ function Container({ children, className = '' }: { children: React.ReactNode; cl
   )
 }
 
-export function WorkoutStreak() {
-  const { workouts } = useAppStore()
+export function Habits() {
+  const { workouts, meals, sleep, hydration } = useAppStore()
   const [unlocked, setUnlocked] = useState<Set<string>>(loadAchievements)
   const [showNewBadge, setShowNewBadge] = useState<string | null>(null)
 
+  const today = new Date().toISOString().split('T')[0]
+
+  const habitStats = useMemo(() => ({
+    workout: computeHabitStreak(workouts.map((w: Workout) => w.date)),
+    nutrition: computeHabitStreak(meals.filter((m: Meal) => m.calories > 0).map((m: Meal) => m.date)),
+    sleep: computeHabitStreak(sleep.map((s: SleepEntry) => s.date)),
+    hydration: computeHabitStreak(hydration.map((h: HydrationEntry) => h.date)),
+  }), [workouts, meals, sleep, hydration])
+
+  const habitsDoneToday = {
+    workout: workouts.some((w: Workout) => w.date === today),
+    nutrition: meals.some((m: Meal) => m.date === today),
+    sleep: sleep.some((s: SleepEntry) => s.date === today),
+    hydration: hydration.some((h: HydrationEntry) => h.date === today),
+  }
+
   const stats = useMemo(() => computeStats(workouts), [workouts])
-  const calendarDays = useMemo(() => generateCalendarDays(workouts), [workouts])
 
   useEffect(() => {
     const prev = loadAchievements()
     const newSet = new Set(prev)
     let newlyUnlocked: string | null = null
-
     ACHIEVEMENTS.forEach(a => {
       if (!newSet.has(a.id) && a.check(stats)) {
         newSet.add(a.id)
         newlyUnlocked = a.id
       }
     })
-
     if (newlyUnlocked) {
       setShowNewBadge(newlyUnlocked)
       setTimeout(() => setShowNewBadge(null), 4000)
     }
-
     if (newSet.size !== prev.size) {
       saveAchievements(newSet)
     }
     setUnlocked(newSet)
   }, [stats])
 
-  const weekCount = workouts.filter(w => {
-    const d = new Date(w.date)
-    const now = new Date()
-    const startOfWeek = new Date(now)
-    startOfWeek.setDate(now.getDate() - now.getDay())
-    startOfWeek.setHours(0, 0, 0, 0)
-    return d >= startOfWeek
-  }).length
-
-  const { message: motivation } = getMotivationalMessage(weekCount)
-
-  const prediction = (() => {
-    if (stats.currentStreak === 0) return 'Complete a workout today to start your streak!'
-    const nextMilestone = [7, 14, 21, 30, 60, 90, 100].find(m => m > stats.currentStreak)
-    if (nextMilestone) return `Work out tomorrow to reach a ${nextMilestone}-day streak!`
-    return ''
-  })()
-
   const levelData = useMemo(() => {
-    const currentLevel = LEVEL_THRESHOLDS.slice().reverse().find(t => stats.totalWorkouts >= t.min)
-    const current = currentLevel || LEVEL_THRESHOLDS[0]
+    const current = LEVEL_THRESHOLDS.slice().reverse().find(t => stats.totalWorkouts >= t.min) || LEVEL_THRESHOLDS[0]
     const next = LEVEL_THRESHOLDS.find(t => t.min > stats.totalWorkouts)
     const progress = next ? ((stats.totalWorkouts - current.min) / (next.min - current.min)) * 100 : 100
     return { current, next, progress: Math.min(100, Math.max(0, progress)) }
@@ -243,40 +183,116 @@ export function WorkoutStreak() {
 
   const monthlyData = useMemo(() => {
     const map = new Map<string, number>()
-    workouts.forEach(w => {
-      const key = w.date.slice(0, 7)
-      map.set(key, (map.get(key) || 0) + 1)
-    })
+    workouts.forEach((w: Workout) => { const key = w.date.slice(0, 7); map.set(key, (map.get(key) || 0) + 1) })
     const now = new Date()
     const months: { month: string; count: number; label: string }[] = []
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const key = d.toISOString().slice(0, 7)
-      months.push({
-        month: key,
-        count: map.get(key) || 0,
-        label: d.toLocaleDateString('en-US', { month: 'short' }),
-      })
+      months.push({ month: key, count: map.get(key) || 0, label: d.toLocaleDateString('en-US', { month: 'short' }) })
     }
     return months
   }, [workouts])
 
+  const diversityData = useMemo(() => {
+    const categories = new Set<string>()
+    const exerciseIds = new Set<string>()
+    const categoryCounts: Record<string, number> = {}
+    workouts.forEach((w: Workout) => {
+      const cat = w.category || 'other'
+      categories.add(cat)
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1
+      w.exercises?.forEach(e => exerciseIds.add(e.exerciseId))
+    })
+    const sortedCats = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])
+    return {
+      categoryCount: categories.size,
+      uniqueExercises: exerciseIds.size,
+      topCategory: sortedCats[0]?.[0] || '',
+      topCategoryCount: sortedCats[0]?.[1] || 0,
+    }
+  }, [workouts])
+
+  const diversityBadges = useMemo(() => [
+    { id: 'explorer', name: 'Explorer', icon: '🧭', unlocked: diversityData.uniqueExercises >= 10, description: `Try 10+ different exercises (${diversityData.uniqueExercises})` },
+    { id: 'collector', name: 'Collector', icon: '📚', unlocked: diversityData.uniqueExercises >= 25, description: `Try 25+ different exercises (${diversityData.uniqueExercises})` },
+    { id: 'all_rounder', name: 'All-Rounder', icon: '🎯', unlocked: diversityData.categoryCount >= 5, description: `Use 5+ workout categories (${diversityData.categoryCount})` },
+    { id: 'versatile', name: 'Versatile', icon: '💎', unlocked: diversityData.categoryCount >= 8, description: `Use 8+ workout categories (${diversityData.categoryCount})` },
+    { id: 'specialist', name: 'Specialist', icon: '🎪', unlocked: diversityData.topCategoryCount >= 20, description: `Do 20+ workouts in one category (${diversityData.topCategoryCount})` },
+  ], [diversityData])
+
+  const activeChallenges = useMemo(() => {
+    const thisMonth = today.slice(0, 7)
+    const thisMonthCount = workouts.filter((w: Workout) => w.date.startsWith(thisMonth)).length
+    const cs = stats.currentStreak
+    return [
+      { id: 'month_10', name: '10 in a Month', description: 'Complete 10 workouts this month', target: 10, current: thisMonthCount, icon: '📅' },
+      { id: 'month_15', name: '15 in a Month', description: 'Complete 15 workouts this month', target: 15, current: thisMonthCount, icon: '🔥' },
+      { id: 'month_20', name: '20 in a Month', description: 'Complete 20 workouts this month', target: 20, current: thisMonthCount, icon: '⚡' },
+      { id: 'streak_7', name: '7-Day Streak', description: 'Maintain a 7-day streak', target: 7, current: cs, icon: '🔗' },
+      { id: 'streak_14', name: '14-Day Streak', description: 'Maintain a 14-day streak', target: 14, current: cs, icon: '⛓️' },
+      { id: 'diverse_5', name: 'Mix It Up', description: 'Use 5 different categories this month', target: 5, current: diversityData.categoryCount, icon: '🎨' },
+    ]
+  }, [workouts, stats.currentStreak, diversityData.categoryCount, today])
+
+  const calendarDays = useMemo(() => {
+    const workoutDates = new Set(workouts.map((w: Workout) => w.date))
+    const days: { date: string; day: number; hasWorkout: boolean; isToday: boolean }[] = []
+    const now = new Date()
+    for (let i = 27; i >= 0; i--) {
+      const d = new Date(now); d.setDate(d.getDate() - i)
+      const dateStr = d.toISOString().split('T')[0]
+      days.push({ date: dateStr, day: d.getDate(), hasWorkout: workoutDates.has(dateStr), isToday: dateStr === today })
+    }
+    return days
+  }, [workouts, today])
+
   const weeklyDistData = useMemo(() => {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     const counts = [0, 0, 0, 0, 0, 0, 0]
-    workouts.forEach(w => {
-      const day = new Date(w.date).getDay()
-      counts[day]++
-    })
+    workouts.forEach((w: Workout) => { counts[new Date(w.date).getDay()]++ })
     return days.map((day, i) => ({ day, count: counts[i] }))
   }, [workouts])
 
   return (
     <div className="space-y-5">
+      {/* Habit Streaks Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {HABIT_TYPES.map((habit) => {
+          const hs = habitStats[habit.key]
+          const done = habitsDoneToday[habit.key]
+          return (
+            <div key={habit.key}
+              className={`relative overflow-hidden rounded-2xl border bg-gradient-to-br ${habit.bgGradient} to-transparent p-5 shadow-lg`}
+              style={{ boxShadow: `0 0 20px ${habit.color}10` }}
+            >
+              <div className="absolute top-0 right-0 w-20 h-20 rounded-full -mr-10 -mt-10" style={{ background: `${habit.color}15` }} />
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-1">
+                  <habit.icon size={16} style={{ color: habit.color }} />
+                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: habit.color }}>{habit.label}</span>
+                  {done && <CheckCircle2 size={12} className="text-emerald-400 ml-auto" />}
+                </div>
+                <div className="flex items-baseline gap-1 mt-2">
+                  <span className="text-2xl font-black text-white">{hs.current}</span>
+                  <span className="text-[10px] text-gray-500">day{hs.current !== 1 ? 's' : ''}</span>
+                </div>
+                <p className="text-[10px] text-gray-500 mt-0.5">Best: {hs.longest} days</p>
+                {done && (
+                  <div className="absolute bottom-3 right-3">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]" />
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Main Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="relative overflow-hidden rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/20 via-orange-500/5 to-transparent p-6 shadow-lg shadow-orange-500/5">
           <div className="absolute top-0 right-0 w-28 h-28 bg-orange-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-20 h-20 bg-amber-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
           <div className="relative">
             <div className="text-orange-400/80 text-xs font-medium uppercase tracking-wider mb-2">Current Streak</div>
             <p className="text-3xl font-bold text-orange-400 drop-shadow-lg">{stats.currentStreak} <span className="text-sm font-normal text-gray-500">days</span></p>
@@ -284,7 +300,6 @@ export function WorkoutStreak() {
         </div>
         <div className="relative overflow-hidden rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-400/20 via-amber-400/5 to-transparent p-6 shadow-lg shadow-amber-400/5">
           <div className="absolute top-0 right-0 w-28 h-28 bg-amber-400/15 rounded-full -mr-14 -mt-14 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-20 h-20 bg-yellow-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
           <div className="relative">
             <div className="text-amber-400/80 text-xs font-medium uppercase tracking-wider mb-2">Best Streak</div>
             <p className="text-3xl font-bold text-amber-400 drop-shadow-lg">{stats.longestStreak} <span className="text-sm font-normal text-gray-500">days</span></p>
@@ -292,7 +307,6 @@ export function WorkoutStreak() {
         </div>
         <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/20 via-purple-500/5 to-transparent p-6 shadow-lg shadow-purple-500/5">
           <div className="absolute top-0 right-0 w-28 h-28 bg-purple-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-20 h-20 bg-violet-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
           <div className="relative">
             <div className="text-purple-400/80 text-xs font-medium uppercase tracking-wider mb-2">Total Workouts</div>
             <p className="text-3xl font-bold text-purple-400 drop-shadow-lg">{stats.totalWorkouts}</p>
@@ -300,85 +314,12 @@ export function WorkoutStreak() {
         </div>
         <div className="relative overflow-hidden rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-500/20 via-blue-500/5 to-transparent p-6 shadow-lg shadow-blue-500/5">
           <div className="absolute top-0 right-0 w-28 h-28 bg-blue-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-20 h-20 bg-sky-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
           <div className="relative">
             <div className="text-blue-400/80 text-xs font-medium uppercase tracking-wider mb-2">This Month</div>
             <p className="text-3xl font-bold text-blue-400 drop-shadow-lg">{stats.thisMonthWorkouts}</p>
           </div>
         </div>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Container>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500/20 to-orange-600/10">
-              <TrendingUp className="w-4 h-4 text-orange-400" />
-            </div>
-            <span className="text-sm font-semibold text-white">Weekly Average</span>
-          </div>
-          <div className="text-3xl font-black text-white">{stats.weeklyAverage}</div>
-          <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">workouts per week</div>
-        </Container>
-
-        <Container>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/10">
-              <Target className="w-4 h-4 text-emerald-400" />
-            </div>
-            <span className="text-sm font-semibold text-white">Consistency</span>
-          </div>
-          <div className="text-3xl font-black text-white">{stats.consistency}%</div>
-          <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{stats.uniqueDays} of {stats.daysSinceFirst} days</div>
-          <div className="mt-2 h-1.5 rounded-full bg-gray-800 overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min(stats.consistency, 100)}%` }}
-              transition={{ duration: 1, ease: 'easeOut' }}
-              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
-            />
-          </div>
-        </Container>
-
-        <Container>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500/20 to-violet-600/10">
-              <Medal className="w-4 h-4 text-violet-400" />
-            </div>
-            <span className="text-sm font-semibold text-white">Best Month</span>
-          </div>
-          <div className="text-lg font-bold text-white leading-tight">{stats.bestMonthName || 'N/A'}</div>
-          <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-            {stats.bestMonthName ? 'most workouts ever' : 'start logging to find out'}
-          </div>
-        </Container>
-      </div>
-
-      {stats.currentStreak > 0 && (
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="relative overflow-hidden rounded-2xl border border-orange-500/20 bg-gradient-to-r from-orange-500/10 via-orange-500/5 to-transparent p-4"
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_left,rgba(251,146,60,0.08),transparent_70%)]" />
-          <div className="relative flex items-center gap-3">
-            <Flame className="w-5 h-5 text-orange-400 shrink-0 drop-shadow-[0_0_6px_rgba(251,146,60,0.5)]" />
-            <p className="text-sm text-orange-200/90 font-medium">{prediction}</p>
-          </div>
-        </motion.div>
-      )}
-
-      <Container>
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="font-semibold text-white text-sm">This Week</h4>
-          <span className="text-xs text-gray-500 bg-white/[0.04] px-2.5 py-1 rounded-full">{weekCount} workout{weekCount !== 1 ? 's' : ''}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <TrendingUp className={`w-4 h-4 ${weekCount >= 3 ? 'text-emerald-400' : weekCount > 0 ? 'text-orange-400' : 'text-gray-600'}`} />
-          <p className="text-sm text-gray-400">
-            This week you've done <span className="text-white font-semibold">{weekCount}</span> workout{weekCount !== 1 ? 's' : ''}. <span className="text-gray-300">{motivation}</span>
-          </p>
-        </div>
-      </Container>
 
       {/* Level & Monthly Activity */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -429,8 +370,8 @@ export function WorkoutStreak() {
                   formatter={(value: number) => [`${value} workouts`, '']}
                 />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={16}>
-                  {monthlyData.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.count > 0 ? '#8b5cf6' : '#374151'} />
+                  {monthlyData.map((_, idx) => (
+                    <Cell key={idx} fill={monthlyData[idx].count > 0 ? '#8b5cf6' : '#374151'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -438,6 +379,69 @@ export function WorkoutStreak() {
           </div>
         </Container>
       </div>
+
+      {/* Weekly Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Container>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500/20 to-orange-600/10">
+              <TrendingUp className="w-4 h-4 text-orange-400" />
+            </div>
+            <span className="text-sm font-semibold text-white">Weekly Average</span>
+          </div>
+          <div className="text-3xl font-black text-white">{stats.weeklyAverage}</div>
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">workouts per week</div>
+        </Container>
+        <Container>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/10">
+              <Target className="w-4 h-4 text-emerald-400" />
+            </div>
+            <span className="text-sm font-semibold text-white">Consistency</span>
+          </div>
+          <div className="text-3xl font-black text-white">{stats.consistency}%</div>
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{stats.uniqueDays} of {stats.daysSinceFirst} days</div>
+          <div className="mt-2 h-1.5 rounded-full bg-gray-800 overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(stats.consistency, 100)}%` }}
+              transition={{ duration: 1, ease: 'easeOut' }}
+              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
+            />
+          </div>
+        </Container>
+        <Container>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500/20 to-violet-600/10">
+              <Medal className="w-4 h-4 text-violet-400" />
+            </div>
+            <span className="text-sm font-semibold text-white">Best Month</span>
+          </div>
+          <div className="text-lg font-bold text-white leading-tight">{stats.bestMonthName || 'N/A'}</div>
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+            {stats.bestMonthName ? 'most workouts ever' : 'start logging to find out'}
+          </div>
+        </Container>
+      </div>
+
+      {/* Week Summary */}
+      {stats.currentStreak > 0 && (
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="relative overflow-hidden rounded-2xl border border-orange-500/20 bg-gradient-to-r from-orange-500/10 via-orange-500/5 to-transparent p-4"
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_left,rgba(251,146,60,0.08),transparent_70%)]" />
+          <div className="relative flex items-center gap-3">
+            <Flame className="w-5 h-5 text-orange-400 shrink-0 drop-shadow-[0_0_6px_rgba(251,146,60,0.5)]" />
+            <p className="text-sm text-orange-200/90 font-medium">
+              {stats.currentStreak > 0
+                ? `Keep it going! Work out tomorrow to extend your ${stats.currentStreak}-day streak.`
+                : 'Complete a workout today to start your streak!'}
+            </p>
+          </div>
+        </motion.div>
+      )}
 
       {/* Weekly Distribution */}
       {workouts.length >= 7 && (
@@ -457,8 +461,8 @@ export function WorkoutStreak() {
                   formatter={(value: number) => [`${value} workouts`, '']}
                 />
                 <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={28}>
-                  {weeklyDistData.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.count > 0 ? '#f97316' : '#374151'} />
+                  {weeklyDistData.map((_, idx) => (
+                    <Cell key={idx} fill={weeklyDistData[idx].count > 0 ? '#f97316' : '#374151'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -467,6 +471,7 @@ export function WorkoutStreak() {
         </Container>
       )}
 
+      {/* Calendar */}
       <Container>
         <div className="flex items-center justify-between mb-4">
           <h4 className="font-semibold text-white text-sm">Last 28 Days</h4>
@@ -499,6 +504,7 @@ export function WorkoutStreak() {
         </div>
       </Container>
 
+      {/* Achievements */}
       <Container>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -550,6 +556,88 @@ export function WorkoutStreak() {
         </div>
       </Container>
 
+      {/* Diversity Badges */}
+      {diversityBadges.some(b => b.unlocked) && (
+        <Container>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-500/20 to-purple-600/10 flex items-center justify-center">
+              <Shuffle className="w-3.5 h-3.5 text-amber-400" />
+            </div>
+            <h4 className="font-semibold text-white text-sm">Diversity Badges</h4>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {diversityBadges.map((badge) => (
+              <motion.div
+                key={badge.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className={`relative overflow-hidden rounded-xl p-4 text-center border transition-all ${
+                  badge.unlocked
+                    ? 'border-amber-500/30 bg-gradient-to-br from-amber-500/15 via-purple-900/10 to-transparent shadow-lg shadow-amber-500/5'
+                    : 'border-white/[0.04] bg-white/[0.02] opacity-50'
+                }`}
+              >
+                {badge.unlocked && <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(251,191,36,0.08),transparent_70%)] pointer-events-none" />}
+                <div className="relative">
+                  <span className="text-3xl block mb-2 drop-shadow-lg">{badge.icon}</span>
+                  <p className={`text-xs font-bold ${badge.unlocked ? 'text-white' : 'text-gray-500'}`}>{badge.name}</p>
+                  <p className="text-[9px] text-gray-600 mt-0.5">{badge.description}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </Container>
+      )}
+
+      {/* Monthly Challenges */}
+      <Container>
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center">
+            <CalendarCheck className="w-3.5 h-3.5 text-emerald-400" />
+          </div>
+          <h4 className="font-semibold text-white text-sm">Active Challenges</h4>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {activeChallenges.map((ch) => {
+            const progress = Math.min(ch.current / ch.target, 1)
+            const isCompleted = ch.current >= ch.target
+            return (
+              <div
+                key={ch.id}
+                className={`relative overflow-hidden rounded-xl border p-4 transition-all ${
+                  isCompleted
+                    ? 'border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-transparent'
+                    : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-xl">{ch.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className={`text-sm font-bold ${isCompleted ? 'text-emerald-400' : 'text-white'}`}>{ch.name}</p>
+                      {isCompleted && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-0.5">{ch.description}</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${
+                            isCompleted ? 'bg-emerald-500' : 'bg-gradient-to-r from-emerald-500 to-emerald-400'
+                          }`}
+                          style={{ width: `${Math.min(progress * 100, 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-gray-500 font-medium shrink-0">{ch.current}/{ch.target}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </Container>
+
+      {/* New Achievement Toast */}
       <AnimatePresence>
         {showNewBadge && (() => {
           const ach = ACHIEVEMENTS.find(a => a.id === showNewBadge)
@@ -578,7 +666,7 @@ export function WorkoutStreak() {
                     onClick={() => setShowNewBadge(null)}
                     className="absolute top-2 right-2 text-gray-500 hover:text-gray-300 transition-colors"
                   >
-                    ×
+                    x
                   </button>
                 </div>
               </div>

@@ -3,7 +3,7 @@ import {
   Plus, Trash2, Utensils, Flame, Beef, Wheat, Droplet,
   Pencil, AlertTriangle, ChevronLeft, ChevronRight,
   Calendar, BarChart3, TrendingUp, Target, Info, RotateCcw,
-  Activity, Gauge, Settings, X,
+  Activity, Gauge, Settings, X, Bookmark, BookmarkPlus, ChefHat,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts'
@@ -23,6 +23,29 @@ const MEAL_TYPE_CONFIG: Record<string, { color: string; bg: string; label: strin
 }
 
 const MEAL_TYPE_ORDER = { breakfast: 0, lunch: 1, dinner: 2, snack: 3 }
+
+interface SavedRecipe {
+  id: string
+  name: string
+  mealType: Meal['mealType']
+  calories: number
+  protein: number
+  carbs: number
+  fat: number
+  fiber?: number
+  createdAt: string
+}
+
+function loadRecipes(): SavedRecipe[] {
+  try {
+    const raw = localStorage.getItem('nutrition_recipes')
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+
+function saveRecipes(r: SavedRecipe[]) {
+  localStorage.setItem('nutrition_recipes', JSON.stringify(r))
+}
 
 function loadTargets(): typeof DEFAULT_TARGETS {
   try {
@@ -91,7 +114,10 @@ export function NutritionLogger() {
   const [confirmClear, setConfirmClear] = useState(false)
   const [dietaryPreset, setDietaryPreset] = useState<string>(() => localStorage.getItem('nutrition_preset') || 'balanced')
   const [mealReminder, setMealReminder] = useState(() => localStorage.getItem('nutrition_reminder') === 'true')
+  const [recipes, setRecipes] = useState<SavedRecipe[]>(loadRecipes)
+  const [showRecipes, setShowRecipes] = useState(false)
 
+  useEffect(() => { saveRecipes(recipes) }, [recipes])
   useEffect(() => { saveTargets(targets) }, [targets])
   useEffect(() => { localStorage.setItem('nutrition_preset', dietaryPreset) }, [dietaryPreset])
   useEffect(() => { localStorage.setItem('nutrition_reminder', String(mealReminder)) }, [mealReminder])
@@ -210,6 +236,44 @@ export function NutritionLogger() {
     setEditingTarget(null)
   }, [editingTarget, editValue])
 
+  const saveAsRecipe = useCallback((meal: Meal) => {
+    const existing = recipes.find(r => r.name.toLowerCase() === meal.name.toLowerCase() && r.mealType === meal.mealType)
+    if (existing) return
+    const recipe: SavedRecipe = {
+      id: crypto.randomUUID?.() ?? Math.random().toString(36).substring(2),
+      name: meal.name,
+      mealType: meal.mealType,
+      calories: meal.calories,
+      protein: meal.protein,
+      carbs: meal.carbs,
+      fat: meal.fat,
+      fiber: meal.fiber,
+      createdAt: new Date().toISOString(),
+    }
+    setRecipes(prev => [recipe, ...prev])
+  }, [recipes])
+
+  const addRecipeToDay = useCallback((recipe: SavedRecipe) => {
+    const meal: Meal = {
+      id: crypto.randomUUID?.() ?? Math.random().toString(36).substring(2),
+      date: selectedDate,
+      name: recipe.name,
+      mealType: recipe.mealType,
+      calories: recipe.calories,
+      protein: recipe.protein,
+      carbs: recipe.carbs,
+      fat: recipe.fat,
+      fiber: recipe.fiber,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    addMeal(meal)
+  }, [selectedDate, addMeal])
+
+  const deleteRecipe = useCallback((id: string) => {
+    setRecipes(prev => prev.filter(r => r.id !== id))
+  }, [])
+
   const conicGradient = `conic-gradient(
     #f43f5e ${macroPercentages.protein}deg,
     #f97316 ${macroPercentages.protein}deg ${macroPercentages.protein + macroPercentages.carbs}deg,
@@ -267,6 +331,17 @@ export function NutritionLogger() {
             title="Weekly summary"
           >
             <BarChart3 className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setShowRecipes((p) => !p)}
+            className={`p-2 rounded-xl border transition-all ${
+              showRecipes
+                ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'
+                : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
+            }`}
+            title="Saved recipes"
+          >
+            <ChefHat className="w-5 h-5" />
           </button>
           <button onClick={() => setShowSettings(true)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
             <Settings className="w-4 h-4" />
@@ -556,6 +631,66 @@ export function NutritionLogger() {
         )}
       </AnimatePresence>
 
+      {/* Recipes Panel */}
+      <AnimatePresence>
+        {showRecipes && (
+          <motion.div
+            variants={itemVariants}
+            initial="hidden"
+            animate="visible"
+            exit={{ opacity: 0, y: -16 }}
+            className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.12] via-emerald-500/[0.04] to-transparent p-6 shadow-lg shadow-emerald-500/5"
+          >
+            <div className="absolute top-0 right-0 w-60 h-60 bg-emerald-500/10 rounded-full -mr-30 -mt-30 blur-xl" />
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-teal-500/8 rounded-full -ml-20 -mb-20 blur-lg" />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <ChefHat className="w-5 h-5 text-emerald-400" />
+                  <h4 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Saved Recipes</h4>
+                </div>
+                <span className="text-xs text-gray-500">{recipes.length} recipes</span>
+              </div>
+              {recipes.length === 0 ? (
+                <div className="text-center py-6">
+                  <Bookmark className="w-10 h-10 text-gray-600 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">No saved recipes yet</p>
+                  <p className="text-xs text-gray-600 mt-1">Click the bookmark icon on any meal to save it</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto pr-1">
+                  {recipes.map((recipe) => (
+                    <div key={recipe.id} className="relative group rounded-xl border border-white/10 bg-white/[0.03] p-4 hover:bg-white/[0.06] transition-all">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="text-sm font-semibold text-white line-clamp-1">{recipe.name}</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider">{MEAL_TYPE_CONFIG[recipe.mealType]?.label || recipe.mealType}</p>
+                        </div>
+                        <button onClick={() => deleteRecipe(recipe.id)} className="p-1 rounded text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1 text-center">
+                        <div><p className="text-xs font-bold text-white">{recipe.calories}</p><p className="text-[9px] text-gray-600">kcal</p></div>
+                        <div><p className="text-xs font-bold text-emerald-400">{recipe.protein}g</p><p className="text-[9px] text-gray-600">pro</p></div>
+                        <div><p className="text-xs font-bold text-amber-400">{recipe.carbs}g</p><p className="text-[9px] text-gray-600">carbs</p></div>
+                        <div><p className="text-xs font-bold text-sky-400">{recipe.fat}g</p><p className="text-[9px] text-gray-600">fat</p></div>
+                      </div>
+                      <button
+                        onClick={() => addRecipeToDay(recipe)}
+                        className="mt-2 w-full py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all text-xs font-medium"
+                      >
+                        Add to today
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Macro Calculation Helper */}
       <button
         onClick={() => setShowCalcHelper((p) => !p)}
@@ -663,6 +798,13 @@ export function NutritionLogger() {
                                 </div>
                               </div>
                               <div className="flex gap-1">
+                                <button
+                                  onClick={() => saveAsRecipe(meal)}
+                                  className="p-2 rounded-lg text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
+                                  title="Save as recipe"
+                                >
+                                  <BookmarkPlus className="w-4 h-4" />
+                                </button>
                                 <button
                                   onClick={() => { setEditingMeal(meal); setShowForm(true) }}
                                   className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all"

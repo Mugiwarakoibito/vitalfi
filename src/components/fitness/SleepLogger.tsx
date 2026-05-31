@@ -268,6 +268,25 @@ export function SleepLogger() {
     [sleep.length, goalMetCount]
   )
 
+  const circadianScore = useMemo(() => {
+    const entries = sleep.filter(e => e.bedTime && e.wakeTime).slice(-14)
+    if (entries.length < 3) return null
+    const bedMinutes = entries.map(e => timeToMinutes(e.bedTime!))
+    const wakeMinutes = entries.map(e => timeToMinutes(e.wakeTime!))
+    const bedMean = bedMinutes.reduce((s, m) => s + m, 0) / bedMinutes.length
+    const wakeMean = wakeMinutes.reduce((s, m) => s + m, 0) / wakeMinutes.length
+    const bedDev = Math.sqrt(bedMinutes.reduce((s, m) => s + (m - bedMean) ** 2, 0) / bedMinutes.length) / 60
+    const wakeDev = Math.sqrt(wakeMinutes.reduce((s, m) => s + (m - wakeMean) ** 2, 0) / wakeMinutes.length) / 60
+    const avgDev = (bedDev + wakeDev) / 2
+    return Math.round(Math.max(0, Math.min(100, 100 - avgDev * 25)))
+  }, [sleep])
+
+  const readinessScore = useMemo(() => {
+    const s = sleepScore
+    const c = circadianScore ?? 50
+    return Math.round(Math.min(100, s * 0.6 + c * 0.4))
+  }, [sleepScore, circadianScore])
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload) return null
     return (
@@ -288,47 +307,81 @@ export function SleepLogger() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-4 gap-4"
+        className="grid grid-cols-2 md:grid-cols-5 gap-4"
       >
-        <div className="relative overflow-hidden rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-500/20 via-violet-500/5 to-transparent p-6 shadow-lg shadow-violet-500/5">
-          <div className="absolute top-0 right-0 w-28 h-28 bg-violet-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-20 h-20 bg-purple-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
-          <div className="relative">
-            <div className="text-violet-400/80 text-xs font-medium uppercase tracking-wider mb-2">Avg Duration</div>
-            <p className="text-3xl font-bold text-violet-400 drop-shadow-lg">
+        {/* Readiness */}
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-emerald-500/5 min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
+          <div className="relative h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-1">
+              <Activity className="w-4 h-4" />
+              <span>Readiness</span>
+            </div>
+            <p className="text-3xl font-bold text-emerald-400 drop-shadow-lg">{readinessScore}<span className="text-sm text-gray-500 ml-1 font-normal">/100</span></p>
+            <p className="text-xs text-gray-500 mt-1">{readinessScore >= 80 ? 'Well rested' : readinessScore >= 60 ? 'Ready' : readinessScore >= 40 ? 'Tired' : 'Exhausted'}</p>
+          </div>
+        </div>
+        {/* Sleep Score */}
+        <div className="relative overflow-hidden rounded-2xl border border-violet-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-violet-500/5 min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
+          <div className="relative h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 text-violet-400/80 text-sm mb-1">
+              <Brain className="w-4 h-4" />
+              <span>Sleep Score</span>
+            </div>
+            <p className="text-3xl font-bold text-violet-400 drop-shadow-lg">{sleep.length > 0 ? sleepScore : '--'}</p>
+            <p className="text-xs text-gray-500 mt-1">{sleep.length > 0 ? `${avgDuration.toFixed(1)}h avg` : 'No data'}</p>
+          </div>
+        </div>
+        {/* Avg Duration */}
+        <div className="relative overflow-hidden rounded-2xl border border-sky-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-sky-500/5 min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-sky-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
+          <div className="relative h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 text-sky-400/80 text-sm mb-1">
+              <Clock className="w-4 h-4" />
+              <span>Avg Duration</span>
+            </div>
+            <p className="text-3xl font-bold text-sky-400 drop-shadow-lg">
               {sleep.length > 0 ? formatSleepDuration(avgDuration) : '--'}
             </p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/20 via-amber-500/5 to-transparent p-6 shadow-lg shadow-amber-500/5">
-          <div className="absolute top-0 right-0 w-28 h-28 bg-amber-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-20 h-20 bg-orange-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
-          <div className="relative">
-            <div className="text-amber-400/80 text-xs font-medium uppercase tracking-wider mb-2">Avg Quality</div>
-            <div className="flex items-center gap-1 mt-0.5">
-              {qualityStars(Math.round(avgQuality), 16)}
-              <span className="text-white/50 text-xs ml-1">{avgQuality > 0 ? avgQuality.toFixed(1) : ''}</span>
+          {/* Circadian Score */}
+          <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-amber-500/5 min-h-[7.5rem]">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
+            <div className="relative h-full flex flex-col justify-center">
+              <div className="flex items-center gap-2 text-amber-400/80 text-sm mb-1">
+                <BarChart3 className="w-4 h-4" />
+                <span>Circadian</span>
+              </div>
+              <p className="text-3xl font-bold text-amber-400 drop-shadow-lg">{circadianScore ?? '--'}</p>
+              <p className="text-xs text-gray-500 mt-1">{circadianScore != null ? (circadianScore >= 80 ? 'Consistent' : circadianScore >= 50 ? 'Fair' : 'Irregular') : 'Need more data'}</p>
             </div>
           </div>
-        </div>
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/20 via-emerald-500/5 to-transparent p-6 shadow-lg shadow-emerald-500/5">
-          <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-20 h-20 bg-teal-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
-          <div className="relative">
-            <div className="text-emerald-400/80 text-xs font-medium uppercase tracking-wider mb-2">Sleep Score</div>
-            <p className={`text-3xl font-bold tracking-tight drop-shadow-lg ${scoreColor(sleepScore)}`}>
-              {sleep.length > 0 ? sleepScore : '--'}
-            </p>
+          {/* Sleep Debt */}
+          <div className="relative overflow-hidden rounded-2xl border border-rose-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-rose-500/5 min-h-[7.5rem]">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-rose-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
+            <div className="relative h-full flex flex-col justify-center">
+              <div className="flex items-center gap-2 text-rose-400/80 text-sm mb-1">
+                <AlertTriangle className="w-4 h-4" />
+                <span>Sleep Debt</span>
+              </div>
+              <p className="text-3xl font-bold text-rose-400 drop-shadow-lg">{sleepDebt.toFixed(1)}<span className="text-sm text-gray-500 ml-1 font-normal">hrs</span></p>
+              <p className="text-xs text-gray-500 mt-1">this week</p>
+            </div>
           </div>
-        </div>
-        <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-6 shadow-lg">
-          <div className="absolute top-0 right-0 w-28 h-28 bg-white/10 rounded-full -mr-14 -mt-14 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/5 rounded-full -ml-10 -mb-10 blur-lg" />
-          <div className="relative">
-            <div className="text-gray-400/80 text-xs font-medium uppercase tracking-wider mb-2">Total Nights</div>
-            <p className="text-3xl font-bold text-gray-400 drop-shadow-lg">{sleep.length}</p>
+          {/* Goal Met % */}
+          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-emerald-500/5 min-h-[7.5rem]">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
+            <div className="relative h-full flex flex-col justify-center">
+              <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-1">
+                <Target className="w-4 h-4" />
+                <span>Goal Met</span>
+              </div>
+              <p className="text-3xl font-bold text-emerald-400 drop-shadow-lg">{sleep.length > 0 ? goalMetPct : 0}<span className="text-sm text-gray-500 ml-1 font-normal">%</span></p>
+              <p className="text-xs text-gray-500 mt-1">{goalMetCount} of {sleep.length} nights</p>
+            </div>
           </div>
-        </div>
       </motion.div>
 
       {/* Goal Setting */}
