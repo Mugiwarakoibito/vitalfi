@@ -1050,9 +1050,9 @@ export function WorkoutLogger() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-3 gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/20 via-orange-500/5 to-transparent p-6 shadow-lg shadow-orange-500/5">
-          <div className="absolute top-0 right-0 w-28 h-28 bg-orange-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-20 h-20 bg-rose-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
+        <div className="relative overflow-hidden rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/20 via-orange-500/5 to-transparent p-5 shadow-lg shadow-orange-500/5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-rose-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
             <div className="text-orange-400/80 text-xs font-medium uppercase tracking-wider mb-2">Heat Score</div>
             <div className="flex items-center gap-2">
@@ -1066,9 +1066,9 @@ export function WorkoutLogger() {
             <p className="text-xs text-gray-500 mt-1">{heatScore.label}</p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-sky-500/30 bg-gradient-to-br from-sky-500/20 via-sky-500/5 to-transparent p-6 shadow-lg shadow-sky-500/5">
-          <div className="absolute top-0 right-0 w-28 h-28 bg-sky-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-20 h-20 bg-cyan-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
+        <div className="relative overflow-hidden rounded-2xl border border-sky-500/30 bg-gradient-to-br from-sky-500/20 via-sky-500/5 to-transparent p-5 shadow-lg shadow-sky-500/5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-sky-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-cyan-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
             <div className="text-sky-400/80 text-xs font-medium uppercase tracking-wider mb-2">This Week</div>
             <div className="flex items-center gap-2">
@@ -1082,9 +1082,9 @@ export function WorkoutLogger() {
             <p className="text-xs text-gray-500 mt-1">workouts this week</p>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/20 via-amber-500/5 to-transparent p-6 shadow-lg shadow-amber-500/5">
-          <div className="absolute top-0 right-0 w-28 h-28 bg-amber-500/15 rounded-full -mr-14 -mt-14 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-20 h-20 bg-orange-500/10 rounded-full -ml-10 -mb-10 blur-lg" />
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/20 via-amber-500/5 to-transparent p-5 shadow-lg shadow-amber-500/5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-orange-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
           <div className="relative">
             <div className="text-amber-400/80 text-xs font-medium uppercase tracking-wider mb-2">Best Streak</div>
             <p className="text-3xl font-bold text-amber-400 drop-shadow-lg">{bestStreak}<span className="text-sm text-amber-500/60 ml-1 font-normal">days</span></p>
