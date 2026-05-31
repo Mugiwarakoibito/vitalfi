@@ -4,7 +4,7 @@ import {
   Pencil, AlertTriangle, ChevronLeft, ChevronRight,
   Calendar, BarChart3, Award, RotateCcw,
   Activity, Clock, ChefHat, Bookmark, BookmarkPlus,
-  CalendarDays, Lightbulb, GlassWater, Zap,
+  CalendarDays, Lightbulb, Zap,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts'
@@ -49,8 +49,6 @@ const FOOD_SUGGESTIONS: Record<string, { name: string; protein: number; carbs: n
   ],
 }
 
-const WATER_GOAL_ML = 2500
-
 interface SavedRecipe {
   id: string
   name: string
@@ -84,14 +82,6 @@ function loadTargets(): typeof DEFAULT_TARGETS {
 
 function saveTargets(t: typeof DEFAULT_TARGETS) {
   localStorage.setItem('nutrition_targets', JSON.stringify(t))
-}
-
-function loadWater(): number {
-  try { return parseInt(localStorage.getItem('nutrition_water_' + formatDate(new Date())) || '0') } catch { return 0 }
-}
-
-function saveWater(ml: number) {
-  localStorage.setItem('nutrition_water_' + formatDate(new Date()), String(ml))
 }
 
 function formatDate(d: Date): string {
@@ -146,11 +136,9 @@ export function NutritionLogger() {
   const [showWeekly, setShowWeekly] = useState(false)
   const [recipes, setRecipes] = useState<SavedRecipe[]>(loadRecipes)
   const [showRecipes, setShowRecipes] = useState(false)
-  const [waterMl, setWaterMl] = useState(loadWater)
 
   useEffect(() => { saveRecipes(recipes) }, [recipes])
   useEffect(() => { saveTargets(targets) }, [targets])
-  useEffect(() => { saveWater(waterMl) }, [waterMl])
 
   const filteredMeals = useMemo(() => {
     return meals
@@ -615,27 +603,6 @@ export function NutritionLogger() {
             </div>
           )
         })}
-      </motion.div>
-
-      {/* Water Quick Tracker */}
-      <motion.div variants={itemVariants} className="relative overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/[0.08] via-cyan-500/[0.02] to-transparent p-4 shadow-lg shadow-cyan-500/5">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full -mr-16 -mt-16 blur-xl" />
-        <div className="relative flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <GlassWater className="w-5 h-5 text-cyan-400" />
-            <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wider font-medium">Water Intake</p>
-              <p className="text-lg font-bold text-cyan-300">{waterMl}ml <span className="text-xs text-gray-500 font-normal">/ {WATER_GOAL_ML}ml</span></p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-36 rounded-full bg-white/10 overflow-hidden">
-              <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500" style={{ width: `${Math.min((waterMl / WATER_GOAL_ML) * 100, 100)}%` }} />
-            </div>
-            <button onClick={() => setWaterMl(p => Math.max(0, p - 250))} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all text-xs">−250</button>
-            <button onClick={() => setWaterMl(p => p + 250)} className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-all text-xs font-medium">+250ml</button>
-          </div>
-        </div>
       </motion.div>
 
       {/* Weekly Summary Toggle */}
