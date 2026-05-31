@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Heart, Zap, Brain, Activity, Smile,
   Droplets, Plus, Trash2, X, AlertTriangle,
-  CalendarDays, TrendingUp,
+  CalendarDays, TrendingUp, Thermometer,
 } from 'lucide-react'
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAppStore } from '@/store/useAppStore'
 import { generateId } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
@@ -13,11 +13,11 @@ import { Button } from '@/components/ui/Button'
 interface RecoveryEntry {
   id: string
   date: string
-  energy: number // 1-10
-  soreness: number // 1-10
-  stress: number // 1-10
-  mood: number // 1-5
-  sleepQuality: number // 1-5
+  energy: number
+  soreness: number
+  stress: number
+  mood: number
+  sleepQuality: number
   domsAreas: string[]
   notes?: string
   createdAt: string
@@ -40,6 +40,7 @@ const MUSCLE_AREAS = [
 
 const STORAGE_KEY = 'vitalfi_recovery_entries'
 const QUICK_WATER = [100, 250, 500, 750, 1000]
+const HYDRATION_GOAL = 2500
 
 function loadEntries(): RecoveryEntry[] {
   try {
@@ -74,7 +75,7 @@ export function Recovery() {
   const todayEntry = useMemo(() => entries.find(e => e.date === today), [entries, today])
 
   const recentWeek = useMemo(() => {
-    const days: { date: string; label: string; readiness: number; energy: number; soreness: number }[] = []
+    const days: { date: string; label: string; readiness: number; energy: number; soreness: number; sleepQuality: number }[] = []
     for (let i = 6; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i)
       const ds = d.toISOString().split('T')[0]
@@ -85,6 +86,7 @@ export function Recovery() {
         readiness: entry ? getReadiness(entry.energy, entry.soreness, entry.stress, entry.mood).score : 0,
         energy: entry?.energy || 0,
         soreness: entry?.soreness || 0,
+        sleepQuality: entry?.sleepQuality || 0,
       })
     }
     return days
@@ -95,10 +97,27 @@ export function Recovery() {
     return Math.round(recentWeek.reduce((s, d) => s + d.readiness, 0) / recentWeek.filter(d => d.readiness > 0).length)
   }, [recentWeek])
 
+  const readinessPrediction = useMemo(() => {
+    const vals = recentWeek.filter(d => d.readiness > 0).map(d => d.readiness)
+    if (vals.length === 0) return null
+    const predicted = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
+    const todaySleep = todayEntry?.sleepQuality ?? 0
+    const avgSleep = recentWeek.filter(d => d.sleepQuality > 0).reduce((s, d) => s + d.sleepQuality, 0) / Math.max(recentWeek.filter(d => d.sleepQuality > 0).length, 1)
+    const adjustment = todaySleep > 0 && todaySleep < avgSleep ? -Math.round((avgSleep - todaySleep) * 5) : 0
+    return Math.max(0, Math.min(100, predicted + adjustment))
+  }, [recentWeek, todayEntry])
+
+  const domsHeatScore = useMemo(() => {
+    if (!todayEntry) return null
+    return Math.round((todayEntry.domsAreas.length / MUSCLE_AREAS.length) * 100)
+  }, [todayEntry])
+
   const todayHydration = useMemo(() =>
     hydration.filter((h: HydrationEntry) => h.date === today).reduce((s: number, h: HydrationEntry) => s + h.amount, 0),
     [hydration, today]
   )
+
+  const todayHydrationProgress = useMemo(() => Math.min(todayHydration / HYDRATION_GOAL, 1), [todayHydration])
 
   const todayReadiness = todayEntry ? getReadiness(todayEntry.energy, todayEntry.soreness, todayEntry.stress, todayEntry.mood) : null
 
@@ -158,6 +177,23 @@ export function Recovery() {
         <div>
           <h2 className="text-2xl font-bold text-white tracking-tight">Recovery</h2>
           <p className="text-sm text-gray-400 mt-0.5">Track readiness, soreness, stress & hydration</p>
+          {/* Sparkline under headline */}
+          {recentWeek.some(d => d.readiness > 0) && (
+            <div className="mt-1.5 h-7 w-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={recentWeek}>
+                  <defs>
+                    <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.4} />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <Area type="monotone" dataKey="readiness" stroke="#10b981" strokeWidth={1.5} fill="url(#sparkGrad)" dot={false} />
+                  <YAxis hide domain={[0, 100]} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
         <Button variant="primary" size="sm" onClick={() => setShowForm(true)}>
           <Plus className="w-4 h-4 mr-1" />
@@ -165,7 +201,7 @@ export function Recovery() {
         </Button>
       </div>
 
-      {/* Readiness Ring */}
+      {/* Readiness Ring + Hydration Ring */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
         className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.08] to-transparent p-6 shadow-lg shadow-emerald-500/5">
         <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full -mr-24 -mt-24 blur-2xl" />
@@ -207,7 +243,7 @@ export function Recovery() {
         </div>
       </motion.div>
 
-      {/* Week Trend */}
+      {/* Week Trend + DOMS + Prediction + Hydration Ring */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="relative overflow-hidden rounded-2xl border border-gray-500/20 bg-black/40 backdrop-blur-xl p-5">
           <div className="flex items-center gap-2 mb-4">
@@ -228,14 +264,41 @@ export function Recovery() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+          {/* Readiness Prediction */}
+          {readinessPrediction !== null && (
+            <div className="mt-3 flex items-center gap-2 text-xs">
+              <span className="text-gray-500">Expected tomorrow:</span>
+              <span className={`font-bold ${readinessPrediction >= 70 ? 'text-emerald-400' : readinessPrediction >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>
+                {readinessPrediction}
+              </span>
+              <span className="text-gray-600">/100</span>
+              {todayEntry && todayEntry.sleepQuality < 3 && (
+                <span className="text-amber-500/70 text-[10px]">(low sleep detected)</span>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* DOMS Areas */}
+        {/* DOMS Areas + Heat Score */}
         <div className="relative overflow-hidden rounded-2xl border border-gray-500/20 bg-black/40 backdrop-blur-xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <Heart className="w-4 h-4 text-rose-400" />
             <h4 className="text-xs font-semibold text-white/60 uppercase tracking-wider">DOMS Map</h4>
-            {todayEntry && <span className="text-xs text-gray-500 ml-auto">{todayEntry.domsAreas.length} areas</span>}
+            {todayEntry && (
+              <div className="flex items-center gap-2 ml-auto">
+                {domsHeatScore !== null && (
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold border ${
+                    domsHeatScore >= 50 ? 'bg-rose-500/20 border-rose-500/30 text-rose-300'
+                      : domsHeatScore >= 30 ? 'bg-amber-500/20 border-amber-500/30 text-amber-300'
+                        : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300'
+                  }`}>
+                    <Thermometer className="w-2.5 h-2.5" />
+                    {domsHeatScore}%
+                  </span>
+                )}
+                <span className="text-xs text-gray-500">{todayEntry.domsAreas.length} areas</span>
+              </div>
+            )}
           </div>
           {!todayEntry ? (
             <p className="text-sm text-gray-500 text-center py-4">Log today's recovery to track soreness</p>
@@ -257,31 +320,44 @@ export function Recovery() {
         </div>
       </div>
 
-      {/* Hydration Section */}
+      {/* Hydration Section with Progress Ring */}
       <div className="relative overflow-hidden rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/[0.08] to-transparent p-5 shadow-lg shadow-sky-500/5">
         <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/10 rounded-full -mr-16 -mt-16 blur-xl" />
-        <div className="relative">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
+        <div className="relative flex flex-col md:flex-row items-center gap-5">
+          {/* Hydration Goal Ring */}
+          <div className="relative flex-shrink-0">
+            <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+              <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
+              <circle cx="40" cy="40" r="32" fill="none" stroke="#06b6d4" strokeWidth="6"
+                strokeDasharray={`${todayHydrationProgress * 201} 201`} strokeLinecap="round" className="transition-all duration-1000" />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
               <Droplets className="w-5 h-5 text-sky-400" />
-              <h4 className="text-sm font-semibold text-white">Hydration</h4>
-              <span className="text-xs text-gray-500">{todayHydration}ml today</span>
             </div>
           </div>
-          <div className="grid grid-cols-5 sm:grid-cols-5 gap-2">
-            {QUICK_WATER.map(amount => (
-              <button key={amount} onClick={() => addWater(amount)}
-                className="py-2 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 hover:bg-sky-500/20 transition-all text-xs font-medium">
-                +{amount}ml
-              </button>
-            ))}
-          </div>
-          <div className="mt-3 flex gap-2">
-            <input type="number" value={waterAmount} onChange={e => setWaterAmount(e.target.value)}
-              placeholder="Custom ml" className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-sm focus:border-sky-500/50 focus:outline-none transition-all" />
-            <Button variant="primary" size="sm" onClick={() => { if (waterAmount) { addWater(Number(waterAmount)); setWaterAmount('') } }}>
-              <Plus className="w-4 h-4 mr-1" />Add
-            </Button>
+          <div className="flex-1 w-full">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-white">Hydration</h4>
+                <span className="text-xs text-gray-500">{todayHydration}ml / {HYDRATION_GOAL}ml</span>
+              </div>
+              <span className="text-xs font-bold text-sky-400">{Math.round(todayHydrationProgress * 100)}%</span>
+            </div>
+            <div className="grid grid-cols-5 sm:grid-cols-5 gap-2">
+              {QUICK_WATER.map(amount => (
+                <button key={amount} onClick={() => addWater(amount)}
+                  className="py-2 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 hover:bg-sky-500/20 transition-all text-xs font-medium">
+                  +{amount}ml
+                </button>
+              ))}
+            </div>
+            <div className="mt-3 flex gap-2">
+              <input type="number" value={waterAmount} onChange={e => setWaterAmount(e.target.value)}
+                placeholder="Custom ml" className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-sm focus:border-sky-500/50 focus:outline-none transition-all" />
+              <Button variant="primary" size="sm" onClick={() => { if (waterAmount) { addWater(Number(waterAmount)); setWaterAmount('') } }}>
+                <Plus className="w-4 h-4 mr-1" />Add
+              </Button>
+            </div>
           </div>
         </div>
       </div>

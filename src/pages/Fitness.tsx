@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Dashboard } from '@/components/fitness/Dashboard'
+import { Recovery } from '@/components/fitness/Recovery'
 import { WorkoutLogger } from '@/components/fitness/WorkoutLogger'
 import { BodyMetricsTracker } from '@/components/fitness/BodyMetricsTracker'
 import { NutritionLogger } from '@/components/fitness/NutritionLogger'
@@ -13,20 +13,20 @@ import { SupplementTracker } from '@/components/fitness/SupplementTracker'
 import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard, Dumbbell, Activity, Utensils, Moon,
-  TrendingUp, Flame, BookOpen, Coffee, Heart, Plus, Droplets,
+  Heart, Dumbbell, Activity, Utensils, Moon,
+  TrendingUp, Flame, BookOpen, Coffee, Plus, Droplets,
 } from 'lucide-react'
 
-type TabId = 'dashboard' | 'training' | 'body' | 'diet' | 'sleep' | 'progress' | 'habits' | 'exercises' | 'supplements'
+type TabId = 'training' | 'diet' | 'sleep' | 'recovery' | 'progress' | 'habits' | 'body' | 'exercises' | 'supplements'
 
 const tabConfig: { id: TabId; label: string; icon: React.ElementType; color: string }[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-purple-400' },
   { id: 'training', label: 'Training', icon: Dumbbell, color: 'text-rose-400' },
-  { id: 'body', label: 'Body', icon: Activity, color: 'text-emerald-400' },
   { id: 'diet', label: 'Diet', icon: Utensils, color: 'text-orange-400' },
   { id: 'sleep', label: 'Sleep', icon: Moon, color: 'text-violet-400' },
+  { id: 'recovery', label: 'Recovery', icon: Heart, color: 'text-emerald-400' },
   { id: 'progress', label: 'Progress', icon: TrendingUp, color: 'text-blue-400' },
   { id: 'habits', label: 'Habits', icon: Flame, color: 'text-amber-400' },
+  { id: 'body', label: 'Body', icon: Activity, color: 'text-emerald-400' },
   { id: 'exercises', label: 'Exercises', icon: BookOpen, color: 'text-cyan-400' },
   { id: 'supplements', label: 'Supps', icon: Coffee, color: 'text-emerald-400' },
 ]
@@ -69,7 +69,7 @@ export default function Fitness() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tabFromUrl = searchParams.get('tab') as TabId | null
   const actionFromUrl = searchParams.get('action')
-  const [activeTab, setActiveTab] = useState<TabId>(tabFromUrl || 'dashboard')
+  const [activeTab, setActiveTab] = useState<TabId>(tabFromUrl || 'recovery')
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null)
   const { workouts, meals, sleep, hydration, loadAllData } = useAppStore()
 
@@ -245,13 +245,13 @@ export default function Fitness() {
 
       {/* Tab Content */}
       <div>
-        {activeTab === 'dashboard' && <Dashboard onNavigate={(tab: string) => { setActiveTab(tab as TabId); setSearchParams((prev) => { const next = new URLSearchParams(prev); next.set('tab', tab); return next }) }} />}
         {activeTab === 'training' && <WorkoutLogger />}
-        {activeTab === 'body' && <BodyMetricsTracker />}
         {activeTab === 'diet' && <NutritionLogger />}
         {activeTab === 'sleep' && <SleepLogger />}
+        {activeTab === 'recovery' && <Recovery />}
         {activeTab === 'progress' && <Progress />}
         {activeTab === 'habits' && <Habits />}
+        {activeTab === 'body' && <BodyMetricsTracker />}
         {activeTab === 'exercises' && (
           <div className="space-y-4">
             {selectedExerciseId ? (

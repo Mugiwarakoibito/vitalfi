@@ -38,6 +38,12 @@ interface OverallStats {
   daysSinceFirst: number
 }
 
+interface StreakPrediction {
+  predictedStreak: number
+  avgStreak: number
+  confidence: number
+}
+
 const ACHIEVEMENTS: { id: string; name: string; description: string; icon: 'flame' | 'zap' | 'trophy' | 'star' | 'medal' | 'award' | 'trending'; check: (s: OverallStats) => boolean }[] = [
   { id: 'first_step', name: 'First Step', description: 'Complete your first workout', icon: 'star', check: s => s.totalWorkouts >= 1 },
   { id: 'week_warrior', name: 'Week Warrior', description: 'Complete 7 workouts total', icon: 'award', check: s => s.totalWorkouts >= 7 },
@@ -52,6 +58,8 @@ const ACHIEVEMENTS: { id: string; name: string; description: string; icon: 'flam
 const ACHIEVEMENT_ICONS: Record<string, typeof Flame> = {
   flame: Flame, zap: Zap, trophy: Trophy, star: Star, medal: Medal, award: Award, trending: TrendingUp,
 }
+
+const HEATMAP_COLORS = ['#1f2937', '#ef4444', '#f59e0b', '#3b82f6', '#10b981']
 
 function computeHabitStreak(dates: string[]): { current: number; longest: number } {
   if (dates.length === 0) return { current: 0, longest: 0 }
@@ -129,6 +137,153 @@ function Container({ children, className = '' }: { children: React.ReactNode; cl
       {children}
     </motion.div>
   )
+}
+
+function computeHabitScore(
+  workouts: Workout[],
+  meals: Meal[],
+  sleep: SleepEntry[],
+  hydration: HydrationEntry[]
+): number {
+  const days = 90
+  const today = new Date()
+  const dates: string[] = []
+  for (let i = 0; i < days; i++) {
+    const d = new Date(today)
+    d.setDate(d.getDate() - i)
+    dates.push(d.toISOString().split('T')[0])
+  }
+
+  const workoutDates = new Set(workouts.map((w: Workout) => w.date))
+  const mealDates = new Set(meals.filter((m: Meal) => m.calories > 0).map((m: Meal) => m.date))
+  const sleepDates = new Set(sleep.map((s: SleepEntry) => s.date))
+  const hydrationDates = new Set(hydration.map((h: HydrationEntry) => h.date))
+
+  let workoutDays = 0
+  let nutritionDays = 0
+  let sleepDays = 0
+  let hydrationDays = 0
+  dates.forEach(d => {
+    if (workoutDates.has(d)) workoutDays++
+    if (mealDates.has(d)) nutritionDays++
+    if (sleepDates.has(d)) sleepDays++
+    if (hydrationDates.has(d)) hydrationDays++
+  })
+
+  const workoutScore = (workoutDays / days) * 30
+  const nutritionScore = (nutritionDays / days) * 25
+  const sleepScore = (sleepDays / days) * 25
+  const hydrationScore = (hydrationDays / days) * 20
+
+  return Math.round(workoutScore + nutritionScore + sleepScore + hydrationScore)
+}
+
+function computeCorrelations(
+  workouts: Workout[],
+  meals: Meal[],
+  sleep: SleepEntry[],
+  hydration: HydrationEntry[]
+): string[] {
+  const allDates = [...new Set([
+    ...workouts.map((w: Workout) => w.date),
+    ...meals.filter((m: Meal) => m.calories > 0).map((m: Meal) => m.date),
+    ...sleep.map((s: SleepEntry) => s.date),
+    ...hydration.map((h: HydrationEntry) => h.date),
+  ])].sort()
+
+  const workoutDates = new Set(workouts.map((w: Workout) => w.date))
+  const hydrationDates = new Set(hydration.map((h: HydrationEntry) => h.date))
+
+  const insights: string[] = []
+
+  // Workout -> Sleep correlation
+  const workoutDayDurations = allDates.filter(d => workoutDates.has(d)).map(d => {
+    const s = sleep.find((se: SleepEntry) => se.date === d)
+    return s?.duration ?? 0
+  }).filter(h => h > 0)
+  const nonWorkoutDayDurations = allDates.filter(d => !workoutDates.has(d)).map(d => {
+    const s = sleep.find((se: SleepEntry) => se.date === d)
+    return s?.duration ?? 0
+  }).filter(h => h > 0)
+
+  if (workoutDayDurations.length >= 2 && nonWorkoutDayDurations.length >= 2) {
+    const avgWith = Math.round((workoutDayDurations.reduce((a, b) => a + b, 0) / workoutDayDurations.length) * 10) / 10
+    const avgWithout = Math.round((nonWorkoutDayDurations.reduce((a, b) => a + b, 0) / nonWorkoutDayDurations.length) * 10) / 10
+    const diff = Math.round((avgWith - avgWithout) * 10) / 10
+    if (Math.abs(diff) >= 0.2) {
+      insights.push(`When you work out, you ${diff > 0 ? 'sleep' : 'lose'} ${Math.abs(diff)}h ${diff > 0 ? 'more' : 'less'} on average`)
+    }
+  }
+
+  // Hydration -> Nutrition correlation
+  const hydDayCals = allDates.filter(d => hydrationDates.has(d)).map(d => {
+    return meals.filter((m: Meal) => m.date === d).reduce((s, m) => s + m.calories, 0)
+  }).filter(c => c > 0)
+  const noHydDayCals = allDates.filter(d => !hydrationDates.has(d)).map(d => {
+    return meals.filter((m: Meal) => m.date === d).reduce((s, m) => s + m.calories, 0)
+  }).filter(c => c > 0)
+
+  if (hydDayCals.length >= 2 && noHydDayCals.length >= 2) {
+    const avgHyd = Math.round(hydDayCals.reduce((a, b) => a + b, 0) / hydDayCals.length)
+    const avgNoHyd = Math.round(noHydDayCals.reduce((a, b) => a + b, 0) / noHydDayCals.length)
+    const diff = avgHyd - avgNoHyd
+    if (Math.abs(diff) >= 50) {
+      insights.push(`When you hydrate well, you eat ${diff > 0 ? Math.abs(diff) : 'only ' + Math.abs(diff)}${diff > 0 ? ' more' : ' fewer'} calories on average`)
+    }
+  }
+
+  // Sleep quality -> next day workout
+  const nextDayWorkouts = new Set(workouts.map((w: Workout) => w.date))
+  const qualityData: { goodSleep: boolean; workedOut: boolean }[] = []
+  for (let i = 0; i < allDates.length - 1; i++) {
+    const today = allDates[i]
+    const tomorrow = allDates[i + 1]
+    const sleepEntry = sleep.find((se: SleepEntry) => se.date === today)
+    if (sleepEntry && sleepEntry.duration > 0) {
+      qualityData.push({
+        goodSleep: sleepEntry.duration >= 7,
+        workedOut: nextDayWorkouts.has(tomorrow),
+      })
+    }
+  }
+
+  if (qualityData.length >= 5) {
+    const goodSleepDays = qualityData.filter(q => q.goodSleep)
+    const badSleepDays = qualityData.filter(q => !q.goodSleep)
+    if (goodSleepDays.length >= 2 && badSleepDays.length >= 2) {
+      const workoutAfterGood = goodSleepDays.filter(q => q.workedOut).length / goodSleepDays.length
+      const workoutAfterBad = badSleepDays.filter(q => q.workedOut).length / badSleepDays.length
+      const diff = Math.round((workoutAfterGood - workoutAfterBad) * 100)
+      if (Math.abs(diff) >= 5) {
+        insights.push(`After 7+h of sleep, you're ${diff > 0 ? diff : Math.abs(diff) + '% less'}% more likely to work out the next day`)
+      }
+    }
+  }
+
+  return insights
+}
+
+function computeStreakPrediction(workouts: Workout[], currentStreak: number): StreakPrediction | null {
+  const dates = [...new Set(workouts.map((w: Workout) => w.date))].sort()
+  if (dates.length < 2) return null
+
+  const streaks: number[] = []
+  let currentRun = 1
+  for (let i = 1; i < dates.length; i++) {
+    const diff = Math.round((new Date(dates[i]).getTime() - new Date(dates[i - 1]).getTime()) / (1000 * 60 * 60 * 24))
+    if (diff === 1) currentRun++
+    else {
+      streaks.push(currentRun)
+      currentRun = 1
+    }
+  }
+  streaks.push(currentRun)
+
+  const avgStreak = Math.round(streaks.reduce((a, b) => a + b, 0) / streaks.length)
+  const predictedStreak = Math.max(currentStreak, Math.round((currentStreak + avgStreak) / 2))
+  const confidence = currentStreak > 0 ? Math.min(100, Math.round((currentStreak / Math.max(predictedStreak, 1)) * 100)) : 0
+
+  return { predictedStreak, avgStreak, confidence }
 }
 
 export function Habits() {
@@ -254,8 +409,103 @@ export function Habits() {
     return days.map((day, i) => ({ day, count: counts[i] }))
   }, [workouts])
 
+  // NEW: Habit Score
+  const habitScore = useMemo(() =>
+    computeHabitScore(workouts, meals, sleep, hydration),
+    [workouts, meals, sleep, hydration]
+  )
+
+  // NEW: Correlation Analysis
+  const correlations = useMemo(() =>
+    computeCorrelations(workouts, meals, sleep, hydration),
+    [workouts, meals, sleep, hydration]
+  )
+
+  // NEW: Streak Prediction
+  const streakPrediction = useMemo(() =>
+    computeStreakPrediction(workouts, stats.currentStreak),
+    [workouts, stats.currentStreak]
+  )
+
+  // NEW: Weekly Heatmap
+  const heatmapData = useMemo(() => {
+    const workoutDates = new Set(workouts.map((w: Workout) => w.date))
+    const mealDates = new Set(meals.filter((m: Meal) => m.calories > 0).map((m: Meal) => m.date))
+    const sleepDates = new Set(sleep.map((s: SleepEntry) => s.date))
+    const hydrationDates = new Set(hydration.map((h: HydrationEntry) => h.date))
+
+    const now = new Date()
+    const days: { date: string; count: number; dayOfWeek: number; weekIndex: number }[] = []
+    for (let i = 27; i >= 0; i--) {
+      const d = new Date(now); d.setDate(d.getDate() - i)
+      const dateStr = d.toISOString().split('T')[0]
+      let count = 0
+      if (workoutDates.has(dateStr)) count++
+      if (mealDates.has(dateStr)) count++
+      if (sleepDates.has(dateStr)) count++
+      if (hydrationDates.has(dateStr)) count++
+      days.push({ date: dateStr, count, dayOfWeek: d.getDay(), weekIndex: Math.floor(i / 7) })
+    }
+    return days
+  }, [workouts, meals, sleep, hydration])
+
+  const habitScoreRingCx = 60
+  const habitScoreRingCy = 60
+  const habitScoreRingR = 52
+  const habitScoreCircumference = 2 * Math.PI * habitScoreRingR
+  const habitScoreOffset = habitScoreCircumference * (1 - habitScore / 100)
+
   return (
     <div className="space-y-5">
+      {/* Habit Score Ring */}
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+        className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-black/60 backdrop-blur-[12px] p-6">
+        <div className="flex items-center gap-6">
+          <div className="relative shrink-0">
+            <svg width={120} height={120} className="transform -rotate-90">
+              <circle cx={habitScoreRingCx} cy={habitScoreRingCy} r={habitScoreRingR}
+                fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={8} />
+              <motion.circle cx={habitScoreRingCx} cy={habitScoreRingCy} r={habitScoreRingR}
+                fill="none" stroke={habitScore >= 80 ? '#10b981' : habitScore >= 60 ? '#f59e0b' : '#ef4444'}
+                strokeWidth={8} strokeLinecap="round"
+                strokeDasharray={habitScoreCircumference}
+                initial={{ strokeDashoffset: habitScoreCircumference }}
+                animate={{ strokeDashoffset: habitScoreOffset }}
+                transition={{ duration: 1.5, ease: 'easeOut' }}
+                style={{ filter: `drop-shadow(0 0 8px ${habitScore >= 80 ? 'rgba(16,185,129,0.4)' : habitScore >= 60 ? 'rgba(245,158,11,0.4)' : 'rgba(239,68,68,0.4)'})` }} />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-3xl font-black text-white drop-shadow-lg">{habitScore}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Score</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-bold text-white mb-1">Overall Habit Score</h3>
+            <p className="text-xs text-gray-400 mb-3">Based on your last 90 days of habit data</p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+              {([{ key: 'workout', label: 'Workout', weight: '30%', color: '#f43f5e' },
+                { key: 'nutrition', label: 'Nutrition', weight: '25%', color: '#f97316' },
+                { key: 'sleep', label: 'Sleep', weight: '25%', color: '#8b5cf6' },
+                { key: 'hydration', label: 'Hydration', weight: '20%', color: '#06b6d4' }] as const).map(h => {
+                const hs = habitStats[h.key]
+                return (
+                  <div key={h.key} className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: h.color }} />
+                    <div className="min-w-0">
+                      <span className="text-xs text-gray-400">{h.label}</span>
+                      <span className="text-[10px] text-gray-600 ml-1">{h.weight}</span>
+                    </div>
+                    <span className="text-xs font-semibold text-white ml-auto">{hs.current}d</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Habit Streaks Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {HABIT_TYPES.map((habit) => {
@@ -320,6 +570,30 @@ export function Habits() {
           </div>
         </div>
       </div>
+
+      {/* Streak Prediction */}
+      {streakPrediction && stats.currentStreak > 0 && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_left,rgba(245,158,11,0.08),transparent_70%)]" />
+          <div className="relative flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/25 to-amber-500/10">
+              <Zap className="w-5 h-5 text-amber-400 drop-shadow-[0_0_6px_rgba(245,158,11,0.5)]" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-white">
+                On track for a <span className="text-amber-400">{streakPrediction.predictedStreak}-day</span> streak
+              </p>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                Based on your average streak of {streakPrediction.avgStreak} days
+                <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-400/80">
+                  {streakPrediction.confidence}% confidence
+                </span>
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Level & Monthly Activity */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -442,6 +716,68 @@ export function Habits() {
           </div>
         </motion.div>
       )}
+
+      {/* Habit Correlation Analysis */}
+      {correlations.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-black/60 backdrop-blur-[12px] p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="w-4 h-4 text-violet-400" />
+            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Habit Correlation Analysis</h4>
+          </div>
+          <div className="space-y-2">
+            {correlations.map((insight, i) => (
+              <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
+                className="flex items-center gap-3 rounded-lg bg-white/[0.02] border border-white/5 p-3">
+                <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500/20 to-violet-600/10">
+                  <TrendingUp className="w-4 h-4 text-violet-400" />
+                </div>
+                <p className="text-sm text-gray-200">{insight}</p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Weekly Habit Heatmap */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-black/60 backdrop-blur-[12px] p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <BarChart3 className="w-4 h-4 text-emerald-400" />
+          <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Daily Habit Completion</h4>
+        </div>
+        <div className="flex gap-1.5">
+          {[0, 1, 2, 3].map(weekIdx => (
+            <div key={weekIdx} className="flex-1 space-y-1.5">
+              {[0, 1, 2, 3, 4, 5, 6].map(dayIdx => {
+                const day = heatmapData.find(d => d.weekIndex === weekIdx && d.dayOfWeek === dayIdx)
+                return (
+                  <div key={`${weekIdx}-${dayIdx}`}
+                    className="aspect-square rounded-md flex items-center justify-center text-[9px] font-medium transition-all duration-200"
+                    style={{
+                      backgroundColor: day ? HEATMAP_COLORS[day.count] : '#111827',
+                      opacity: day ? 1 : 0.3,
+                    }}
+                    title={day ? `${new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${day.count}/4 habits` : ''}
+                  >
+                    {day && <span className="text-white/70">{day.count}</span>}
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 mt-3 text-[10px] text-gray-500">
+          <span>0</span>
+          <div className="flex gap-0.5">
+            {HEATMAP_COLORS.map((color, i) => (
+              <div key={i} className="w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />
+            ))}
+          </div>
+          <span>4</span>
+          <span className="ml-auto">habits per day</span>
+        </div>
+      </motion.div>
 
       {/* Weekly Distribution */}
       {workouts.length >= 7 && (

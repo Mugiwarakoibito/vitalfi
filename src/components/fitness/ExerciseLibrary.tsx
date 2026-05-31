@@ -11,7 +11,7 @@ import {
   Eye, Bookmark, BookmarkCheck,
   Weight, Settings2, GitBranch, Minus, Circle,
   TrendingUp, Gauge, Crosshair, Activity, Heart, Shield, Sword, Coffee, Waves, Move, Footprints, Equal,
-  Clock, Hash,
+  Clock, Hash, Crown,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AddExerciseModal } from './AddExerciseModal'
@@ -89,6 +89,17 @@ const muscleBorderColors: Record<string, string> = {
   rear_delts: 'border-l-amber-500/60',
 }
 
+const QUICK_MUSCLE_TABS: { label: string; muscles: MuscleGroup[] }[] = [
+  { label: 'Chest', muscles: ['chest'] },
+  { label: 'Back', muscles: ['back', 'lats', 'traps'] },
+  { label: 'Shoulders', muscles: ['shoulders', 'rear_delts'] },
+  { label: 'Arms', muscles: ['biceps', 'triceps', 'forearms'] },
+  { label: 'Legs', muscles: ['quads', 'hamstrings', 'glutes', 'calves', 'adductors', 'abductors'] },
+  { label: 'Core', muscles: ['abs', 'core', 'obliques'] },
+  { label: 'Full Body', muscles: ['full_body'] },
+  { label: 'Cardio', muscles: [] },
+]
+
 type ViewMode = 'grid' | 'list'
 type SortOption = 'name' | 'difficulty' | 'muscles' | 'equipment'
 
@@ -118,6 +129,21 @@ function useFavorites() {
   return { favorites, toggleFavorite }
 }
 
+function getDaysAgo(dateStr: string): number {
+  if (!dateStr) return Infinity
+  const diff = Date.now() - new Date(dateStr).getTime()
+  return Math.floor(diff / (1000 * 60 * 60 * 24))
+}
+
+function getDaysAgoPill(days: number): { label: string; color: string } {
+  if (days === Infinity) return { label: 'Never', color: 'bg-gray-500/10 text-gray-500 border-gray-500/20' }
+  if (days === 0) return { label: 'Today', color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' }
+  if (days <= 3) return { label: `${days}d ago`, color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' }
+  if (days <= 7) return { label: `${days}d ago`, color: 'bg-amber-500/15 text-amber-400 border-amber-500/20' }
+  if (days <= 14) return { label: `${days}d ago`, color: 'bg-orange-500/15 text-orange-400 border-orange-500/20' }
+  return { label: `${days}d ago`, color: 'bg-rose-500/15 text-rose-400 border-rose-500/20' }
+}
+
 export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: ExerciseLibraryProps) {
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState<ExerciseCategory | null>(null)
@@ -131,6 +157,7 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const [showEquipmentDropdown, setShowEquipmentDropdown] = useState(false)
+  const [quickMuscleTab, setQuickMuscleTab] = useState<string | null>(null)
 
   const { favorites, toggleFavorite } = useFavorites()
   const { workouts } = useAppStore()
@@ -138,22 +165,42 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
   const allExercises = useMemo(() => [...exerciseLibrary, ...customExercises], [customExercises])
 
   const exerciseUsage = useMemo(() => {
-    const usage: Record<string, { count: number; bestWeight: number; bestReps: number; lastUsed: string }> = {}
+    const usage: Record<string, { count: number; bestWeight: number; bestReps: number; lastUsed: string; firstWeight: number; firstUsed: string }> = {}
     workouts.forEach((w: Workout) => {
       w.exercises.forEach((ex) => {
         if (!usage[ex.exerciseId]) {
-          usage[ex.exerciseId] = { count: 0, bestWeight: 0, bestReps: 0, lastUsed: '' }
+          usage[ex.exerciseId] = { count: 0, bestWeight: 0, bestReps: 0, lastUsed: '', firstWeight: Infinity, firstUsed: '' }
         }
         usage[ex.exerciseId].count++
+        if (!usage[ex.exerciseId].firstUsed || w.date < usage[ex.exerciseId].firstUsed) usage[ex.exerciseId].firstUsed = w.date
         if (w.date > usage[ex.exerciseId].lastUsed) usage[ex.exerciseId].lastUsed = w.date
         ex.sets.forEach((s) => {
           if (s.weight && s.weight > usage[ex.exerciseId].bestWeight) usage[ex.exerciseId].bestWeight = s.weight
           if (s.reps && s.reps > usage[ex.exerciseId].bestReps) usage[ex.exerciseId].bestReps = s.reps
+          if (s.weight && s.weight < usage[ex.exerciseId].firstWeight) usage[ex.exerciseId].firstWeight = s.weight
         })
       })
     })
+    Object.keys(usage).forEach(id => {
+      if (usage[id].firstWeight === Infinity) usage[id].firstWeight = 0
+    })
     return usage
   }, [workouts])
+
+  const mostImproved = useMemo(() => {
+    let bestId = ''
+    let bestDelta = 0
+    Object.entries(exerciseUsage).forEach(([id, u]) => {
+      if (u.firstWeight > 0 && u.bestWeight > 0 && u.bestWeight > u.firstWeight) {
+        const delta = u.bestWeight - u.firstWeight
+        if (delta > bestDelta) { bestDelta = delta; bestId = id }
+      }
+    })
+    if (!bestId) return null
+    const ex = allExercises.find(e => e.id === bestId)
+    if (!ex) return null
+    return { exercise: ex, delta: bestDelta, firstWeight: exerciseUsage[bestId].firstWeight, bestWeight: exerciseUsage[bestId].bestWeight }
+  }, [exerciseUsage, allExercises])
 
   const usageStats = useMemo(() => {
     const totalUses = Object.values(exerciseUsage).reduce((sum, u) => sum + u.count, 0)
@@ -213,7 +260,20 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
       const matchesMuscle = activeMuscles.length === 0 || activeMuscles.some(m => ex.primaryMuscles.includes(m))
       const matchesEquipment = !activeEquipment || ex.equipment.includes(activeEquipment)
       const matchesFavorites = !showFavoritesOnly || favorites.has(ex.id)
-      return matchesQuery && matchesCategory && matchesMuscle && matchesEquipment && matchesFavorites
+
+      let matchesQuickTab = true
+      if (quickMuscleTab) {
+        const tab = QUICK_MUSCLE_TABS.find(t => t.label === quickMuscleTab)
+        if (tab) {
+          if (tab.label === 'Cardio') {
+            matchesQuickTab = ex.category === 'cardio'
+          } else {
+            matchesQuickTab = tab.muscles.some(m => ex.primaryMuscles.includes(m))
+          }
+        }
+      }
+
+      return matchesQuery && matchesCategory && matchesMuscle && matchesEquipment && matchesFavorites && matchesQuickTab
     })
 
     switch (sortBy) {
@@ -231,7 +291,7 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
     }
 
     return result
-  }, [query, activeCategory, activeMuscles, activeEquipment, sortBy, showFavoritesOnly, favorites, allExercises])
+  }, [query, activeCategory, activeMuscles, activeEquipment, sortBy, showFavoritesOnly, favorites, allExercises, quickMuscleTab])
 
   const isSelected = (id: string) => selectedIds.includes(id)
   const isCustom = (id: string) => id.startsWith('custom_')
@@ -247,9 +307,10 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
     setActiveEquipment(null)
     setShowFavoritesOnly(false)
     setQuery('')
+    setQuickMuscleTab(null)
   }
 
-  const activeFilterCount = [activeCategory, activeEquipment, showFavoritesOnly ? 1 : null, ...activeMuscles].filter(Boolean).length
+  const activeFilterCount = [activeCategory, activeEquipment, showFavoritesOnly ? 1 : null, ...activeMuscles, quickMuscleTab].filter(Boolean).length
 
   const formatMuscle = (m: string) => m.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
   const formatEquipment = (e: string) => e.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
@@ -264,6 +325,29 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
 
   return (
     <div className="space-y-6">
+      {/* Most Improved Badge */}
+      {mostImproved && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/[0.12] via-amber-500/[0.04] to-transparent p-4 shadow-lg shadow-amber-500/5"
+        >
+          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="relative flex items-center gap-4">
+            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/30">
+              <Crown className="w-6 h-6 text-amber-400" />
+            </div>
+            <div>
+              <p className="text-xs text-amber-400/80 font-semibold uppercase tracking-wider">Most Improved</p>
+              <p className="text-lg font-bold text-white">{mostImproved.exercise.name}</p>
+              <p className="text-sm text-amber-300">
+                +{mostImproved.delta}lbs ({mostImproved.firstWeight} → {mostImproved.bestWeight})
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -342,6 +426,35 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
                 : '—'}
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Muscle Group Quick Filter Tabs */}
+      <div className="relative">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-white/10">
+          <button
+            onClick={() => setQuickMuscleTab(null)}
+            className={`shrink-0 rounded-lg border px-3 py-1.5 transition-all text-xs font-semibold whitespace-nowrap ${
+              !quickMuscleTab
+                ? 'border-violet-500/50 bg-gradient-to-b from-violet-500/25 to-violet-500/10 text-violet-200 shadow-[0_0_30px_rgba(139,92,246,0.2)]'
+                : 'border-white/[0.08] bg-white/[0.03] text-gray-400 hover:text-gray-200 hover:bg-white/[0.08] hover:border-white/20'
+            }`}
+          >
+            All
+          </button>
+          {QUICK_MUSCLE_TABS.map(tab => (
+            <button
+              key={tab.label}
+              onClick={() => setQuickMuscleTab(quickMuscleTab === tab.label ? null : tab.label)}
+              className={`shrink-0 rounded-lg border px-3 py-1.5 transition-all text-xs font-semibold whitespace-nowrap ${
+                quickMuscleTab === tab.label
+                  ? 'border-violet-500/50 bg-gradient-to-b from-violet-500/25 to-violet-500/10 text-violet-200 shadow-[0_0_30px_rgba(139,92,246,0.2)]'
+                  : 'border-white/[0.08] bg-white/[0.03] text-gray-400 hover:text-gray-200 hover:bg-white/[0.08] hover:border-white/20'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -580,6 +693,12 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
       {activeFilterCount > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-muted">Active:</span>
+          {quickMuscleTab && (
+            <span className="inline-flex items-center gap-1 rounded-lg border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-xs text-violet-300">
+              {quickMuscleTab}
+              <button onClick={() => setQuickMuscleTab(null)} className="hover:text-white"><X size={10} /></button>
+            </span>
+          )}
           {activeCategory && (
             <span className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs text-primary-light">
               {categoryLabels[activeCategory]}
@@ -627,7 +746,11 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
       {viewMode === 'grid' ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence mode="popLayout">
-            {filtered.map((ex, index) => (
+            {filtered.map((ex, index) => {
+              const usage = exerciseUsage[ex.id]
+              const daysAgo = usage?.lastUsed ? getDaysAgo(usage.lastUsed) : null
+              const daysAgoPill = daysAgo !== null ? getDaysAgoPill(daysAgo) : null
+              return (
               <motion.div
                 key={ex.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -675,6 +798,13 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
                           AI
                         </span>
                       )}
+                      {/* Last Used Pill */}
+                      {daysAgoPill && usage && usage.count > 0 && (
+                        <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold ${daysAgoPill.color}`}>
+                          <Clock size={8} className="mr-0.5" />
+                          {daysAgoPill.label}
+                        </span>
+                      )}
                     </div>
 
                     {/* Muscles */}
@@ -708,14 +838,14 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
                     </div>
 
                     {/* Usage stats */}
-                    {exerciseUsage[ex.id] && exerciseUsage[ex.id].count > 0 && (
+                    {usage && usage.count > 0 && (
                       <div className="flex items-center gap-3 text-[10px] text-gray-500">
-                        <span className="flex items-center gap-1"><Hash className="w-3 h-3" />{exerciseUsage[ex.id].count}x</span>
-                        {exerciseUsage[ex.id].bestWeight > 0 && (
-                          <span className="flex items-center gap-1"><Weight className="w-3 h-3" />{exerciseUsage[ex.id].bestWeight}lbs</span>
+                        <span className="flex items-center gap-1"><Hash className="w-3 h-3" />{usage.count}x</span>
+                        {usage.bestWeight > 0 && (
+                          <span className="flex items-center gap-1"><Weight className="w-3 h-3" />{usage.bestWeight}lbs</span>
                         )}
-                        {exerciseUsage[ex.id].bestReps > 0 && (
-                          <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3" />{exerciseUsage[ex.id].bestReps} reps</span>
+                        {usage.bestReps > 0 && (
+                          <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3" />{usage.bestReps} reps</span>
                         )}
                       </div>
                     )}
@@ -732,13 +862,18 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
                   </CardContent>
                 </Card>
               </motion.div>
-            ))}
+              )
+            })}
           </AnimatePresence>
         </div>
       ) : (
         <div className="space-y-2">
           <AnimatePresence mode="popLayout">
-            {filtered.map((ex, index) => (
+            {filtered.map((ex, index) => {
+              const usage = exerciseUsage[ex.id]
+              const daysAgo = usage?.lastUsed ? getDaysAgo(usage.lastUsed) : null
+              const daysAgoPill = daysAgo !== null ? getDaysAgoPill(daysAgo) : null
+              return (
               <motion.div
                 key={ex.id}
                 initial={{ opacity: 0, x: -20 }}
@@ -784,14 +919,20 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
                             {formatMuscle(m)}
                           </span>
                         ))}
+                        {daysAgoPill && usage && usage.count > 0 && (
+                          <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[9px] font-semibold ${daysAgoPill.color}`}>
+                            <Clock size={7} className="mr-0.5" />
+                            {daysAgoPill.label}
+                          </span>
+                        )}
                       </div>
                     </div>
 
                     {/* Actions */}
                     {/* Usage info */}
                     <div className="flex items-center gap-2 shrink-0 text-[10px] text-gray-500">
-                      {exerciseUsage[ex.id] && exerciseUsage[ex.id].count > 0 && (
-                        <span className="hidden sm:inline">{exerciseUsage[ex.id].count}x</span>
+                      {usage && usage.count > 0 && (
+                        <span className="hidden sm:inline">{usage.count}x</span>
                       )}
                       <button
                         onClick={(e) => { e.stopPropagation(); toggleFavorite(ex.id) }}
@@ -806,7 +947,8 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
                   </CardContent>
                 </Card>
               </motion.div>
-            ))}
+              )
+            })}
           </AnimatePresence>
         </div>
       )}

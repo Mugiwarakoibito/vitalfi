@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Moon, Star, Clock, Plus, Trash2, AlertTriangle, Brain, Target, TrendingUp, Sparkles, Activity, BarChart3 } from 'lucide-react'
+import { Moon, Star, Clock, Plus, Trash2, AlertTriangle, Brain, Target, TrendingUp, Sparkles, Activity, BarChart3, Coffee, Dumbbell, Sun } from 'lucide-react'
 import { generateId, formatSleepDuration } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import type { SleepEntry } from '@/types/fitness'
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, BarChart, Bar } from 'recharts'
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, BarChart, Bar, Cell } from 'recharts'
 
 const qualityLabel = (q: number) =>
   q === 1 ? 'Poor' : q === 2 ? 'Fair' : q === 3 ? 'Okay' : q === 4 ? 'Good' : 'Great'
@@ -31,6 +31,38 @@ function timeToMinutes(t: string): number {
   return h * 60 + m
 }
 
+function minutesToTime(mins: number): string {
+  const totalMins = ((mins % 1440) + 1440) % 1440
+  const h = Math.floor(totalMins / 60)
+  const m = Math.round(totalMins % 60)
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+interface EnvData {
+  caffeine: boolean
+  exercise: boolean
+}
+
+function parseEnvFromNotes(notes?: string): EnvData | null {
+  if (!notes) return null
+  const parts = notes.split('|__ENV__|')
+  if (parts.length < 2) return null
+  try {
+    const parsed = JSON.parse(parts[1])
+    if (typeof parsed.caffeine === 'boolean' && typeof parsed.exercise === 'boolean') {
+      return { caffeine: parsed.caffeine, exercise: parsed.exercise }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+function stripEnvFromNotes(notes?: string): string {
+  if (!notes) return ''
+  return notes.split('|__ENV__|')[0].trim()
+}
+
 export function SleepLogger() {
   const { sleep, addSleep, deleteSleep } = useAppStore()
   const [showForm, setShowForm] = useState(false)
@@ -40,6 +72,8 @@ export function SleepLogger() {
   const [formBedTime, setFormBedTime] = useState('')
   const [formWakeTime, setFormWakeTime] = useState('')
   const [formNotes, setFormNotes] = useState('')
+  const [formCaffeine, setFormCaffeine] = useState(false)
+  const [formExercise, setFormExercise] = useState(false)
   const [deletingEntry, setDeletingEntry] = useState<SleepEntry | null>(null)
   const [targetHours, setTargetHours] = useState(() => {
     const saved = localStorage.getItem('vitalfi_sleep_target')
@@ -222,10 +256,15 @@ export function SleepLogger() {
     setFormBedTime('')
     setFormWakeTime('')
     setFormNotes('')
+    setFormCaffeine(false)
+    setFormExercise(false)
   }
 
   const handleSave = () => {
     if (!formDuration || isNaN(parseFloat(formDuration))) return
+    const hasEnv = formCaffeine || formExercise
+    const envSuffix = hasEnv ? `|__ENV__|${JSON.stringify({ caffeine: formCaffeine, exercise: formExercise })}` : ''
+    const fullNotes = formNotes ? `${formNotes} ${envSuffix}`.trim() : envSuffix
     addSleep({
       id: generateId(),
       date: formDate,
@@ -233,7 +272,7 @@ export function SleepLogger() {
       quality: formQuality,
       bedTime: formBedTime || undefined,
       wakeTime: formWakeTime || undefined,
-      notes: formNotes || undefined,
+      notes: fullNotes || undefined,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })
@@ -287,12 +326,98 @@ export function SleepLogger() {
     return Math.round(Math.min(100, s * 0.6 + c * 0.4))
   }, [sleepScore, circadianScore])
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (!active || !payload) return null
+  /* ---- FEATURE 4: Recovery Score Breakdown ---- */
+  const sleepPortion = useMemo(() => sleepScore * 0.6, [sleepScore])
+  const circadianPortion = useMemo(() => (circadianScore ?? 50) * 0.4, [circadianScore])
+
+  /* ---- FEATURE 1: Sleep Quality Heatmap ---- */
+  const heatmapData = useMemo(() => {
+    const today = new Date()
+    const weeks: { quality: number | null }[][] = []
+    const dayLabels: string[] = []
+
+    for (let w = 3; w >= 0; w--) {
+      const week: { quality: number | null }[] = []
+      for (let d = 6; d >= 0; d--) {
+        const date = new Date(today)
+        date.setDate(date.getDate() - (w * 7 + d))
+        const dateStr = date.toISOString().split('T')[0]
+        const entry = sleep.find(e => e.date === dateStr)
+        week.push({ quality: entry ? entry.quality : null })
+        if (w === 3) {
+          dayLabels.push(date.toLocaleDateString('en-US', { weekday: 'short' }))
+        }
+      }
+      weeks.push(week)
+    }
+    return { weeks, dayLabels }
+  }, [sleep])
+
+  const heatCellColor = (quality: number | null): string => {
+    if (quality === null) return 'bg-white/[0.03]'
+    if (quality >= 5) return 'bg-emerald-400/70'
+    if (quality >= 4) return 'bg-emerald-500/50'
+    if (quality >= 3) return 'bg-amber-500/45'
+    if (quality >= 2) return 'bg-orange-500/40'
+    return 'bg-red-500/40'
+  }
+
+  /* ---- FEATURE 2: Environment Stats ---- */
+  const environmentStats = useMemo(() => {
+    const withCaffeine = sleep.filter(e => parseEnvFromNotes(e.notes)?.caffeine)
+    const withoutCaffeine = sleep.filter(e => {
+      const env = parseEnvFromNotes(e.notes)
+      return env !== null && !env.caffeine
+    })
+    const withExercise = sleep.filter(e => parseEnvFromNotes(e.notes)?.exercise)
+    const withoutExercise = sleep.filter(e => {
+      const env = parseEnvFromNotes(e.notes)
+      return env !== null && !env.exercise
+    })
+
+    const calcAvg = (entries: SleepEntry[]) =>
+      entries.length > 0 ? entries.reduce((s, e) => s + e.duration, 0) / entries.length : null
+
+    const caffeineAvg = calcAvg(withCaffeine)
+    const noCaffeineAvg = calcAvg(withoutCaffeine)
+    const exerciseAvg = calcAvg(withExercise)
+    const noExerciseAvg = calcAvg(withoutExercise)
+
+    return {
+      caffeine: {
+        withAvg: caffeineAvg,
+        withoutAvg: noCaffeineAvg,
+        diff: caffeineAvg !== null && noCaffeineAvg !== null ? caffeineAvg - noCaffeineAvg : null,
+        count: withCaffeine.length,
+      },
+      exercise: {
+        withAvg: exerciseAvg,
+        withoutAvg: noExerciseAvg,
+        diff: exerciseAvg !== null && noExerciseAvg !== null ? exerciseAvg - noExerciseAvg : null,
+        count: withExercise.length,
+      },
+    }
+  }, [sleep])
+
+  /* ---- FEATURE 3: Optimal Bedtime Calculator ---- */
+  const optimalBedtime = useMemo(() => {
+    const goodEntries = sleep.filter(e => e.bedTime && e.quality >= 4)
+    if (goodEntries.length < 2) return null
+    const avgMinutes = goodEntries.reduce((s, e) => s + timeToMinutes(e.bedTime!), 0) / goodEntries.length
+    return {
+      time: minutesToTime(avgMinutes),
+      count: goodEntries.length,
+      total: sleep.filter(e => e.bedTime).length,
+    }
+  }, [sleep])
+
+  /* ---- Custom Tooltip (typed, no `any`) ---- */
+  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color?: string; dataKey?: string }>; label?: string }) => {
+    if (!active || !payload || payload.length === 0) return null
     return (
       <div className="bg-gray-900/95 border border-white/10 rounded-xl px-3 py-2 shadow-xl backdrop-blur-md">
         <p className="text-white/80 text-xs font-medium mb-1">{label}</p>
-        {payload.map((p: any, i: number) => (
+        {payload.map((p, i) => (
           <p key={i} className="text-xs" style={{ color: p.color }}>
             {p.name}: {p.dataKey === 'quality' ? `${p.value}/5` : `${p.value}h`}
           </p>
@@ -309,7 +434,7 @@ export function SleepLogger() {
         animate={{ opacity: 1, y: 0 }}
         className="grid grid-cols-2 md:grid-cols-5 gap-4"
       >
-        {/* Readiness */}
+        {/* Readiness + Recovery Score Breakdown */}
         <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-emerald-500/5 min-h-[7.5rem]">
           <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
           <div className="relative h-full flex flex-col justify-center">
@@ -318,7 +443,32 @@ export function SleepLogger() {
               <span>Readiness</span>
             </div>
             <p className="text-3xl font-bold text-emerald-400 drop-shadow-lg">{readinessScore}<span className="text-sm text-gray-500 ml-1 font-normal">/100</span></p>
-            <p className="text-xs text-gray-500 mt-1">{readinessScore >= 80 ? 'Well rested' : readinessScore >= 60 ? 'Ready' : readinessScore >= 40 ? 'Tired' : 'Exhausted'}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{readinessScore >= 80 ? 'Well rested' : readinessScore >= 60 ? 'Ready' : readinessScore >= 40 ? 'Tired' : 'Exhausted'}</p>
+            {/* Recovery Score Breakdown */}
+            {sleep.length >= 2 && (
+              <div className="mt-3 pt-2 border-t border-white/5">
+                <div className="flex items-center justify-between text-[10px] text-gray-500 mb-1">
+                  <span className="flex items-center gap-1"><Brain className="w-2.5 h-2.5 text-violet-400" /> Sleep</span>
+                  <span className="flex items-center gap-1"><BarChart3 className="w-2.5 h-2.5 text-amber-400" /> Circadian</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/5 overflow-hidden flex">
+                  <div
+                    className="h-full rounded-l-full bg-gradient-to-r from-violet-500 to-violet-400 transition-all duration-500"
+                    style={{ width: `${(sleepPortion / (sleepPortion + circadianPortion)) * 100}%` }}
+                    title={`Sleep contribution: ${Math.round(sleepPortion)}`}
+                  />
+                  <div
+                    className="h-full rounded-r-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all duration-500"
+                    style={{ width: `${(circadianPortion / (sleepPortion + circadianPortion)) * 100}%` }}
+                    title={`Circadian contribution: ${Math.round(circadianPortion)}`}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
+                  <span>{Math.round(sleepPortion)}</span>
+                  <span>{Math.round(circadianPortion)}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         {/* Sleep Score */}
@@ -552,11 +702,8 @@ export function SleepLogger() {
                   dataKey="count"
                   radius={[6, 6, 0, 0]}
                   maxBarSize={40}
-                >
-                  {durationDist.map((_, i) => (
-                    <rect key={i} />
-                  ))}
-                </Bar>
+                  fill="#8B5CF6"
+                />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -706,30 +853,179 @@ export function SleepLogger() {
         </motion.div>
       </div>
 
-      {/* Insights Panel */}
-      {insights.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="rounded-2xl border border-violet-500/15 bg-gradient-to-br from-violet-500/5 to-transparent p-4 sm:p-5"
-        >
-          <h4 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
-            <Brain className="w-4 h-4 text-violet-400" />
-            Sleep Insights
+      {/* FEATURE 1: Sleep Quality Heatmap */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.28 }}
+        className="relative overflow-hidden rounded-2xl border border-violet-500/15 bg-gradient-to-br from-violet-500/5 to-transparent p-5 shadow-lg shadow-violet-500/5"
+      >
+        <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full -mr-12 -mt-12 blur-xl" />
+        <div className="relative">
+          <h4 className="text-sm font-medium text-gray-400 mb-4 flex items-center gap-2">
+            <Activity className="w-4 h-4 text-emerald-400" />
+            Sleep Quality Heatmap
+            <span className="text-[10px] text-gray-600 font-normal ml-1">4-week overview</span>
           </h4>
-          <div className="space-y-2">
-            {insights.map((insight, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2.5 text-sm px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04]"
-              >
-                <insight.icon className={`w-4 h-4 shrink-0 ${insight.color}`} />
-                <span className="text-gray-300">{insight.text}</span>
+          {sleep.length > 0 ? (
+            <div className="overflow-x-auto">
+              <div className="grid grid-cols-[auto_repeat(4,1fr)] gap-1 min-w-[280px]">
+                {/* Header row */}
+                <div className="text-[10px] text-gray-600 h-5" />
+                {heatmapData.weeks.map((_, wi) => (
+                  <div key={wi} className="text-[10px] text-gray-600 text-center h-5">
+                    W{wi + 1}
+                  </div>
+                ))}
+                {/* Day rows */}
+                {heatmapData.dayLabels.map((dayLabel, di) => (
+                  <div key={dayLabel} className="contents">
+                    <div className="text-[10px] text-gray-500 pr-2 flex items-center h-6">
+                      {dayLabel}
+                    </div>
+                    {heatmapData.weeks.map((week, wi) => {
+                      const cell = week[di]
+                      return (
+                        <div
+                          key={`${wi}-${di}`}
+                          className={`h-6 rounded-md ${heatCellColor(cell ? cell.quality : null)} border border-white/[0.04] transition-all hover:scale-110 hover:ring-1 hover:ring-white/20 cursor-default`}
+                          title={
+                            cell && cell.quality != null
+                              ? `${dayLabel} W${wi + 1}: ${qualityLabel(cell.quality)} (${cell.quality}/5)`
+                              : `${dayLabel} W${wi + 1}: No data`
+                          }
+                        />
+                      )
+                    })}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </motion.div>
+              {/* Legend */}
+              <div className="flex items-center gap-3 mt-3 text-[10px] text-gray-500">
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-white/[0.03]" /> No data</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-red-500/40" /> Poor</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-orange-500/40" /> Fair</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-amber-500/45" /> Okay</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-emerald-500/50" /> Good</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-emerald-400/70" /> Great</span>
+              </div>
+            </div>
+          ) : (
+            <div className="h-16 flex items-center justify-center text-gray-500 text-sm">
+              Log sleep to see heatmap
+            </div>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Insights Panel + Environment Stats */}
+      {(insights.length > 0 || environmentStats.caffeine.count > 0 || environmentStats.exercise.count > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Insights */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="rounded-2xl border border-violet-500/15 bg-gradient-to-br from-violet-500/5 to-transparent p-4 sm:p-5"
+          >
+            <h4 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+              <Brain className="w-4 h-4 text-violet-400" />
+              Sleep Insights
+            </h4>
+            <div className="space-y-2">
+              {insights.length > 0 ? (
+                insights.map((insight, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2.5 text-sm px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04]"
+                  >
+                    <insight.icon className={`w-4 h-4 shrink-0 ${insight.color}`} />
+                    <span className="text-gray-300">{insight.text}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="flex items-center gap-2.5 text-sm px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                  <Moon className="w-4 h-4 text-gray-500" />
+                  <span className="text-gray-500">Log 3+ nights to see personalized insights</span>
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {/* FEATURE 2: Environment Stats */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.32 }}
+            className="rounded-2xl border border-amber-500/15 bg-gradient-to-br from-amber-500/5 to-transparent p-4 sm:p-5"
+          >
+            <h4 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+              <Sun className="w-4 h-4 text-amber-400" />
+              Sleep Environment Impact
+            </h4>
+            {environmentStats.caffeine.count === 0 && environmentStats.exercise.count === 0 ? (
+              <div className="flex items-center gap-2.5 text-sm px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                <Coffee className="w-4 h-4 text-gray-500" />
+                <span className="text-gray-500">Log caffeine & exercise data to see their impact</span>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {environmentStats.caffeine.count > 0 && (
+                  <div className="px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                    <div className="flex items-center gap-2 text-sm mb-1">
+                      <Coffee className="w-4 h-4 text-orange-400 shrink-0" />
+                      <span className="text-gray-300 font-medium">Caffeine Before Bed</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      {environmentStats.caffeine.diff !== null ? (
+                        <>
+                          <span className="text-gray-500">
+                            With: {environmentStats.caffeine.withAvg!.toFixed(1)}h
+                            <span className="mx-1 text-gray-600">|</span>
+                            Without: {environmentStats.caffeine.withoutAvg!.toFixed(1)}h
+                          </span>
+                          <span className={environmentStats.caffeine.diff < 0 ? 'text-red-400' : 'text-green-400'}>
+                            {environmentStats.caffeine.diff > 0 ? '+' : ''}{environmentStats.caffeine.diff.toFixed(2)}h
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-gray-500">
+                          Tracked {environmentStats.caffeine.count}x &mdash; need more data for comparison
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {environmentStats.exercise.count > 0 && (
+                  <div className="px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                    <div className="flex items-center gap-2 text-sm mb-1">
+                      <Dumbbell className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span className="text-gray-300 font-medium">Exercise That Day</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      {environmentStats.exercise.diff !== null ? (
+                        <>
+                          <span className="text-gray-500">
+                            With: {environmentStats.exercise.withAvg!.toFixed(1)}h
+                            <span className="mx-1 text-gray-600">|</span>
+                            Without: {environmentStats.exercise.withoutAvg!.toFixed(1)}h
+                          </span>
+                          <span className={environmentStats.exercise.diff < 0 ? 'text-red-400' : 'text-green-400'}>
+                            {environmentStats.exercise.diff > 0 ? '+' : ''}{environmentStats.exercise.diff.toFixed(2)}h
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-gray-500">
+                          Tracked {environmentStats.exercise.count}x &mdash; need more data for comparison
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </motion.div>
+        </div>
       )}
 
       {/* 30-Day Trend */}
@@ -756,7 +1052,7 @@ export function SleepLogger() {
               />
               <Bar dataKey="duration" radius={[3, 3, 0, 0]} maxBarSize={8}>
                 {last30Days.map((entry, idx) => (
-                  <rect key={idx} fill={entry.duration != null && entry.duration >= targetHours ? '#8B5CF6' : '#4B5563'} />
+                  <Cell key={idx} fill={entry.duration != null && entry.duration >= targetHours ? '#8B5CF6' : '#4B5563'} />
                 ))}
               </Bar>
             </BarChart>
@@ -797,6 +1093,45 @@ export function SleepLogger() {
         </motion.div>
       )}
 
+      {/* FEATURE 3: Optimal Bedtime Calculator */}
+      {optimalBedtime && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.42 }}
+          className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/8 to-transparent p-5 shadow-lg shadow-emerald-500/5"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-16 -mt-16 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-violet-500/5 rounded-full -ml-8 -mb-8 blur-lg" />
+          <div className="relative flex items-center gap-5 flex-wrap">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/30 to-emerald-500/5 flex items-center justify-center shadow-lg shadow-emerald-500/10">
+              <Sun className="w-7 h-7 text-emerald-300" />
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <p className="text-xs font-semibold text-emerald-400/80 uppercase tracking-wider mb-0.5">Optimal Bedtime</p>
+              <p className="text-3xl font-bold text-white drop-shadow-lg tracking-tight">
+                ~{optimalBedtime.time}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Based on {optimalBedtime.count} nights of quality sleep (score &ge; 4/5)
+                {optimalBedtime.total > optimalBedtime.count && (
+                  <span className="text-gray-600"> &mdash; {optimalBedtime.total} bedtimes tracked total</span>
+                )}
+              </p>
+            </div>
+            <div className="hidden sm:flex flex-col items-center px-4 py-2 rounded-xl bg-white/[0.03] border border-white/5">
+              <span className="text-[10px] text-gray-500 uppercase tracking-wider">Quality</span>
+              <div className="flex gap-0.5 mt-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} size={10} className="fill-amber-400 text-amber-400" />
+                ))}
+              </div>
+              <span className="text-[10px] text-gray-600 mt-1">Consistent</span>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* History Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-white">Sleep History</h3>
@@ -828,6 +1163,8 @@ export function SleepLogger() {
           <AnimatePresence mode="popLayout">
             {sorted.map((entry, i) => {
               const goalMet = entry.duration >= targetHours
+              const envData = parseEnvFromNotes(entry.notes)
+              const cleanNotes = stripEnvFromNotes(entry.notes)
               return (
                 <motion.div
                   key={entry.id}
@@ -895,10 +1232,16 @@ export function SleepLogger() {
                       <span className={`text-xs font-medium ${scoreColor(calcSleepScore(entry.duration, entry.quality))}`}>
                         Score: {calcSleepScore(entry.duration, entry.quality)}
                       </span>
+                      {envData && (
+                        <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                          {envData.caffeine && <Coffee className="w-3 h-3 text-orange-400" />}
+                          {envData.exercise && <Dumbbell className="w-3 h-3 text-emerald-400" />}
+                        </span>
+                      )}
                     </div>
-                    {entry.notes && (
+                    {cleanNotes && (
                       <p className="text-xs text-gray-500 mt-2 italic line-clamp-1">
-                        &ldquo;{entry.notes}&rdquo;
+                        &ldquo;{cleanNotes}&rdquo;
                       </p>
                     )}
                   </div>
@@ -1020,6 +1363,43 @@ export function SleepLogger() {
                         </span>
                       </motion.button>
                     ))}
+                  </div>
+                </div>
+
+                {/* FEATURE 2: Environment Toggles */}
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Sleep Environment</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setFormCaffeine(!formCaffeine)}
+                      className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all ${
+                        formCaffeine
+                          ? 'bg-orange-500/15 border-orange-500/40 text-orange-300 shadow-lg shadow-orange-500/5'
+                          : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'
+                      }`}
+                    >
+                      <Coffee className="w-4 h-4" />
+                      <span className="text-xs font-medium">Caffeine</span>
+                      <span className={`ml-auto text-[10px] ${formCaffeine ? 'text-orange-400' : 'text-gray-600'}`}>
+                        {formCaffeine ? 'Yes' : 'No'}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormExercise(!formExercise)}
+                      className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all ${
+                        formExercise
+                          ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-lg shadow-emerald-500/5'
+                          : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'
+                      }`}
+                    >
+                      <Dumbbell className="w-4 h-4" />
+                      <span className="text-xs font-medium">Exercise</span>
+                      <span className={`ml-auto text-[10px] ${formExercise ? 'text-emerald-400' : 'text-gray-600'}`}>
+                        {formExercise ? 'Yes' : 'No'}
+                      </span>
+                    </button>
                   </div>
                 </div>
 

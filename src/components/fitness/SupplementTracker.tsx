@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Pill, Plus, Check, Clock, X, AlertTriangle, Calendar, TrendingUp, List,
   Trash2, Sunrise, Sunset, Moon, Sun, Sparkles, Target, Flame, Activity,
+  DollarSign, Layers, CalendarCheck,
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -19,6 +20,9 @@ interface Supplement {
   times: string[]
   notes?: string
   refillDays?: number
+  stack?: string
+  cost?: number
+  totalServings?: number
 }
 
 interface SupplementLog {
@@ -68,6 +72,7 @@ const itemVariants = {
   visible: { opacity: 1, y: 0 },
 }
 
+
 export function SupplementTracker() {
   const [supplements, setSupplements] = useState<Supplement[]>([])
   const [logs, setLogs] = useState<SupplementLog[]>([])
@@ -80,6 +85,9 @@ export function SupplementTracker() {
     times: [] as TimeOfDay[],
     notes: '',
     refillDays: '',
+    stack: '',
+    cost: '',
+    totalServings: '',
   })
 
   const today = new Date().toISOString().split('T')[0]
@@ -203,6 +211,38 @@ export function SupplementTracker() {
     return grouped
   }, [supplements])
 
+  const supplementsByStack = useMemo(() => {
+    const grouped: Record<string, Supplement[]> = {}
+    const noStack: Supplement[] = []
+    for (const supp of supplements) {
+      if (supp.stack) {
+        if (!grouped[supp.stack]) grouped[supp.stack] = []
+        grouped[supp.stack].push(supp)
+      } else {
+        noStack.push(supp)
+      }
+    }
+    return { grouped, noStack }
+  }, [supplements])
+
+  const scheduleToday = useMemo(() => {
+    const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+    return supplements.filter(s => {
+      if (s.frequency === 'daily') return true
+      if (s.frequency === 'weekly') return s.times.some(t => t.toLowerCase() === todayName)
+      return true
+    })
+  }, [supplements])
+
+  const totalAdherenceCost = useMemo(() => {
+    return supplements.reduce((sum, s) => {
+      if (s.cost && s.totalServings && s.totalServings > 0) {
+        return sum + (s.cost / s.totalServings)
+      }
+      return sum
+    }, 0)
+  }, [supplements])
+
   const logHistory = useMemo(() => {
     const days: { date: string; label: string; ids: string[] }[] = []
     const now = new Date()
@@ -245,7 +285,7 @@ export function SupplementTracker() {
   }
 
   const resetForm = () => {
-    setFormData({ name: '', dosage: '', frequency: 'daily', times: [], notes: '', refillDays: '' })
+    setFormData({ name: '', dosage: '', frequency: 'daily', times: [], notes: '', refillDays: '', stack: '', cost: '', totalServings: '' })
   }
 
   const addSupplement = () => {
@@ -258,6 +298,9 @@ export function SupplementTracker() {
       times: formData.times.length ? [...formData.times] : ['Morning'],
       notes: formData.notes.trim() || undefined,
       refillDays: formData.refillDays ? parseInt(formData.refillDays) : undefined,
+      stack: formData.stack.trim() || undefined,
+      cost: formData.cost ? parseFloat(formData.cost) : undefined,
+      totalServings: formData.totalServings ? parseInt(formData.totalServings) : undefined,
     }
     persistSupplements([...supplements, newSupp])
     setShowModal(false)
@@ -281,6 +324,13 @@ export function SupplementTracker() {
     (dateStr: string) => dateStr === today,
     [today],
   )
+
+  const getCostPerServing = (supp: Supplement): number | null => {
+    if (supp.cost && supp.totalServings && supp.totalServings > 0) {
+      return supp.cost / supp.totalServings
+    }
+    return null
+  }
 
   return (
     <div className="space-y-5">
@@ -320,6 +370,49 @@ export function SupplementTracker() {
             </div>
           </div>
         </motion.div>
+
+        {/* Today's Schedule */}
+        {totalCount > 0 && (
+          <motion.div variants={itemVariants}>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <CalendarCheck className="w-4 h-4 text-emerald-400" />
+                  <span className="text-sm font-semibold text-white">Today's Schedule</span>
+                  <span className="text-xs text-gray-500 ml-auto">{scheduleToday.length} supplements</span>
+                </div>
+                <div className="space-y-1.5">
+                  {scheduleToday.map(s => {
+                    const taken = takenTodayIds.has(s.id)
+                    return (
+                      <div key={s.id} className={`flex items-center gap-3 rounded-xl border p-3 transition-all ${
+                        taken ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-white/[0.02] border-white/5'
+                      }`}>
+                        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${taken ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'bg-gray-500'}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate">{s.name}</p>
+                          <p className="text-[11px] text-gray-500">{s.dosage} — {s.times.join(', ')}</p>
+                        </div>
+                        {s.frequency !== 'daily' && (
+                          <span className="text-[10px] text-gray-500 capitalize">{s.frequency}</span>
+                        )}
+                        {!taken && (
+                          <button onClick={() => markAsTaken(s)}
+                            className="shrink-0 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all text-xs font-medium">
+                            Take
+                          </button>
+                        )}
+                        {taken && (
+                          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Today's Status Banner */}
         {totalCount > 0 && (
@@ -391,7 +484,7 @@ export function SupplementTracker() {
               </Card>
             </motion.div>
 
-            {/* Streak + Trend */}
+            {/* Streak + Trend + Cost Per Serving */}
             <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4">
               <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/20 via-amber-500/5 to-transparent p-6 shadow-lg shadow-amber-500/5">
                 <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/15 rounded-full -mr-10 -mt-10 blur-lg" />
@@ -426,6 +519,36 @@ export function SupplementTracker() {
               </div>
             </div>
             </motion.div>
+
+            {/* Cost Per Serving Stat */}
+            {supplements.some(s => s.cost && s.totalServings) && (
+              <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4">
+                <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/20 via-emerald-500/5 to-transparent p-6 shadow-lg shadow-emerald-500/5">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/15 rounded-full -mr-10 -mt-10 blur-lg" />
+                  <div className="relative">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium uppercase tracking-wider mb-2">
+                      <DollarSign className="w-4 h-4 text-emerald-400" />
+                      Avg Cost / Serving
+                    </div>
+                    <p className="text-3xl font-bold text-emerald-400 drop-shadow-lg">
+                      ${totalAdherenceCost.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+                <div className="relative overflow-hidden rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-500/20 via-blue-500/5 to-transparent p-6 shadow-lg shadow-blue-500/5">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/15 rounded-full -mr-10 -mt-10 blur-lg" />
+                  <div className="relative">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium uppercase tracking-wider mb-2">
+                      <Layers className="w-4 h-4 text-blue-400" />
+                      Total Stacks
+                    </div>
+                    <p className="text-3xl font-bold text-blue-400 drop-shadow-lg">
+                      {Object.keys(supplementsByStack.grouped).length}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
           </>
         )}
 
@@ -577,100 +700,34 @@ export function SupplementTracker() {
             </Card>
           </motion.div>
         ) : (
-          <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {supplements.map((supp) => {
-              const taken = takenTodayIds.has(supp.id)
-              return (
-                <motion.div
-                  key={supp.id}
-                  variants={itemVariants}
-                  layout
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                >
-                  <Card
-                    className={cn(
-                      'border transition-all',
-                      taken
-                        ? 'bg-green-900/10 border-green-700/30'
-                        : 'bg-gray-900/40 border-gray-700/40',
-                    )}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={cn(
-                                'w-2.5 h-2.5 rounded-full flex-shrink-0',
-                                taken ? 'bg-green-400 shadow-sm shadow-green-400/50' : 'bg-gray-500',
-                              )}
-                            />
-                            <h4 className="font-semibold text-white truncate">{supp.name}</h4>
-                          </div>
-                          <p className="text-sm text-gray-400 ml-4.5">{supp.dosage}</p>
-                          <div className="flex flex-wrap gap-1.5 mt-2 ml-4.5">
-                            {supp.times.map((t) => {
-                              const Icon = TIME_ICONS[t as TimeOfDay] || Clock
-                              return (
-                                <span
-                                  key={t}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] bg-white/[0.04] border border-white/[0.08] text-gray-400"
-                                >
-                                  <Icon className="w-2.5 h-2.5" />
-                                  {t}
-                                </span>
-                              )
-                            })}
-                          </div>
-                          {supp.notes && (
-                            <p className="text-[11px] text-gray-500 mt-1.5 ml-4.5 italic truncate">
-                              {supp.notes}
-                            </p>
-                          )}
-                          {supp.refillDays != null && (
-                            <div className={`ml-4.5 mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] ${
-                              supp.refillDays <= 7
-                                ? 'bg-red-500/10 border border-red-500/20 text-red-300'
-                                : supp.refillDays <= 14
-                                  ? 'bg-amber-500/10 border border-amber-500/20 text-amber-300'
-                                  : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
-                            }`}>
-                              <Clock className="w-2.5 h-2.5" />
-                              Refill in {supp.refillDays}d
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          {taken ? (
-                            <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
-                              <Check className="w-4 h-4 text-green-400" />
-                              <span className="text-xs font-medium text-green-400">Taken</span>
-                            </div>
-                          ) : (
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              onClick={() => markAsTaken(supp)}
-                              className="whitespace-nowrap"
-                            >
-                              <Check className="w-3.5 h-3.5 mr-1" />
-                              Take
-                            </Button>
-                          )}
-                          <button
-                            onClick={() => setDeleteTarget(supp)}
-                            className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )
-            })}
+          /* Supplements by Stack */
+          <motion.div variants={containerVariants} className="space-y-4">
+            {/* Unstacked */}
+            {supplementsByStack.noStack.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Other</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {supplementsByStack.noStack.map((supp) => (
+                    <SupplementCard key={supp.id} supp={supp} takenTodayIds={takenTodayIds} markAsTaken={markAsTaken} setDeleteTarget={setDeleteTarget} getCostPerServing={getCostPerServing} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Grouped by Stack */}
+            {Object.entries(supplementsByStack.grouped).map(([stackName, supps]) => (
+              <div key={stackName}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Layers className="w-3.5 h-3.5 text-purple-400" />
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{stackName}</h4>
+                  <span className="text-[10px] text-gray-600">{supps.length} supps</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {supps.map((supp) => (
+                    <SupplementCard key={supp.id} supp={supp} takenTodayIds={takenTodayIds} markAsTaken={markAsTaken} setDeleteTarget={setDeleteTarget} getCostPerServing={getCostPerServing} />
+                  ))}
+                </div>
+              </div>
+            ))}
           </motion.div>
         )}
       </motion.div>
@@ -769,6 +826,15 @@ export function SupplementTracker() {
             </div>
           </div>
 
+          {/* Stack */}
+          <Input
+            label="Stack (optional)"
+            placeholder="e.g., Morning, Pre-Workout, Night"
+            value={formData.stack}
+            onChange={(e) => setFormData({ ...formData, stack: e.target.value })}
+            icon={<Layers className="w-4 h-4" />}
+          />
+
           {/* Notes */}
           <Input
             label="Notes (optional)"
@@ -776,6 +842,30 @@ export function SupplementTracker() {
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           />
+
+          {/* Cost */}
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Total Cost ($, optional)"
+              placeholder="e.g., 29.99"
+              type="number"
+              value={formData.cost}
+              onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
+              icon={<DollarSign className="w-4 h-4" />}
+            />
+            <Input
+              label="Total Servings (optional)"
+              placeholder="e.g., 60"
+              type="number"
+              value={formData.totalServings}
+              onChange={(e) => setFormData({ ...formData, totalServings: e.target.value })}
+            />
+          </div>
+          {formData.cost && formData.totalServings && parseFloat(formData.cost) > 0 && parseInt(formData.totalServings) > 0 && (
+            <p className="text-xs text-emerald-400">
+              Cost per serving: <span className="font-bold">${(parseFloat(formData.cost) / parseInt(formData.totalServings)).toFixed(2)}</span>
+            </p>
+          )}
 
           {/* Refill Days */}
           <Input
@@ -857,5 +947,119 @@ export function SupplementTracker() {
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+function SupplementCard({ supp, takenTodayIds, markAsTaken, setDeleteTarget, getCostPerServing }: {
+  supp: Supplement
+  takenTodayIds: Set<string>
+  markAsTaken: (s: Supplement) => void
+  setDeleteTarget: (s: Supplement) => void
+  getCostPerServing: (s: Supplement) => number | null
+}) {
+  const taken = takenTodayIds.has(supp.id)
+  const costPerServing = getCostPerServing(supp)
+
+  return (
+    <motion.div
+      key={supp.id}
+      variants={itemVariants}
+      layout
+      whileHover={{ scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
+    >
+      <Card
+        className={cn(
+          'border transition-all',
+          taken
+            ? 'bg-green-900/10 border-green-700/30'
+            : 'bg-gray-900/40 border-gray-700/40',
+        )}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    'w-2.5 h-2.5 rounded-full flex-shrink-0',
+                    taken ? 'bg-green-400 shadow-sm shadow-green-400/50' : 'bg-gray-500',
+                  )}
+                />
+                <h4 className="font-semibold text-white truncate">{supp.name}</h4>
+                {supp.stack && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] bg-purple-500/10 border border-purple-500/20 text-purple-300">
+                    <Layers className="w-2 h-2" />
+                    {supp.stack}
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-400 ml-4.5">{supp.dosage}</p>
+              {/* Cost Per Serving */}
+              {costPerServing !== null && (
+                <p className="text-[10px] text-emerald-400/70 ml-4.5 mt-0.5">
+                  <DollarSign className="w-2.5 h-2.5 inline" />${costPerServing.toFixed(2)}/serving
+                </p>
+              )}
+              <div className="flex flex-wrap gap-1.5 mt-2 ml-4.5">
+                {supp.times.map((t) => {
+                  const Icon = TIME_ICONS[t as TimeOfDay] || Clock
+                  return (
+                    <span
+                      key={t}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] bg-white/[0.04] border border-white/[0.08] text-gray-400"
+                    >
+                      <Icon className="w-2.5 h-2.5" />
+                      {t}
+                    </span>
+                  )
+                })}
+              </div>
+              {supp.notes && (
+                <p className="text-[11px] text-gray-500 mt-1.5 ml-4.5 italic truncate">
+                  {supp.notes}
+                </p>
+              )}
+              {supp.refillDays != null && (
+                <div className={`ml-4.5 mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] ${
+                  supp.refillDays <= 7
+                    ? 'bg-red-500/10 border border-red-500/20 text-red-300'
+                    : supp.refillDays <= 14
+                      ? 'bg-amber-500/10 border border-amber-500/20 text-amber-300'
+                      : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
+                }`}>
+                  <Clock className="w-2.5 h-2.5" />
+                  Refill in {supp.refillDays}d
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {taken ? (
+                <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <Check className="w-4 h-4 text-green-400" />
+                  <span className="text-xs font-medium text-green-400">Taken</span>
+                </div>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => markAsTaken(supp)}
+                  className="whitespace-nowrap"
+                >
+                  <Check className="w-3.5 h-3.5 mr-1" />
+                  Take
+                </Button>
+              )}
+              <button
+                onClick={() => setDeleteTarget(supp)}
+                className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   )
 }
