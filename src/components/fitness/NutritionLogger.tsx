@@ -215,8 +215,13 @@ export function NutritionLogger() {
   const handleWizardComplete = useCallback(() => {
     const w = useImperial ? Math.round(parseFloat(weight) / 2.205) : parseFloat(weight)
     const h = useImperial ? Math.round(parseFloat(height) * 2.54) : parseFloat(height)
+    const a = parseInt(age)
+    if (isNaN(w) || w <= 0 || isNaN(h) || h <= 0 || isNaN(a) || a <= 0) {
+      setWizardStep(1)
+      return
+    }
     const p: NutritionProfile = {
-      goal, age: parseInt(age), gender,
+      goal, age: a, gender,
       weightKg: w, heightCm: h, activity,
       bmr: 0, tdee: 0, createdAt: new Date().toISOString(),
     }
@@ -232,7 +237,12 @@ export function NutritionLogger() {
   // Derived wizard validation
   const wizardValid = useMemo(() => {
     if (wizardStep === 0) return true
-    if (wizardStep === 1) return weight && height && age
+    if (wizardStep === 1) {
+      const w = parseFloat(weight)
+      const h = parseFloat(height)
+      const a = parseInt(age)
+      return !isNaN(w) && w > 0 && !isNaN(h) && h > 0 && !isNaN(a) && a > 0 && a < 150
+    }
     if (wizardStep === 2) return true
     return true
   }, [wizardStep, weight, height, age])
@@ -599,9 +609,9 @@ export function NutritionLogger() {
 
                 <div className="rounded-xl bg-amber-500/5 border border-amber-500/20 p-3">
                   <p className="text-[10px] text-amber-300/80 font-medium">
-                    {goal === 'lose' ? `🔥 Eating at a ${preview.tdee - preview.calories} kcal deficit to lose ~${Math.round((preview.tdee - preview.calories) * 7 / 7700 * 10) / 10}kg per week`
-                    : goal === 'build' ? `💪 Eating at a ${preview.calories - preview.tdee} kcal surplus for muscle growth`
-                    : `⚖️ Eating at maintenance to keep your current weight`}
+                    {goal === 'lose' ? `🔥 Target set to a 500 kcal deficit (TDEE − 500) — ∼${Math.round(500 * 7 / 7700 * 10) / 10}kg/week expected`
+                    : goal === 'build' ? `💪 Target set to a 300 kcal surplus (TDEE + 300)`
+                    : `⚖️ Target set to maintenance calories (TDEE)`}
                   </p>
                 </div>
               </div>
