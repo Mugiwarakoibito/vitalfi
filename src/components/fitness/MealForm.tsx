@@ -3,7 +3,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { generateId } from '@/lib/utils'
-import { Search, Plus, Trash2, ChefHat } from 'lucide-react'
+import { Search, Plus, Trash2 } from 'lucide-react'
 import type { Meal } from '@/types/fitness'
 
 interface MealFormProps {
@@ -149,7 +149,6 @@ export function MealForm({ isOpen, onClose, onSave, meal }: MealFormProps) {
   const [fiber, setFiber] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [mode, setMode] = useState<'quick' | 'build'>('quick')
   const [ingredients, setIngredients] = useState<IngredientRow[]>([])
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -165,7 +164,6 @@ export function MealForm({ isOpen, onClose, onSave, meal }: MealFormProps) {
       setFat(meal.fat.toString())
       setFiber(meal.fiber?.toString() ?? '')
       setDate(meal.date)
-      setMode('quick')
       setIngredients([])
     } else {
       resetForm()
@@ -182,7 +180,6 @@ export function MealForm({ isOpen, onClose, onSave, meal }: MealFormProps) {
     setFiber('')
     setDate(new Date().toISOString().split('T')[0])
     setErrors({})
-    setMode('quick')
     setIngredients([])
     setSearch('')
     setSelectedCategory('')
@@ -247,28 +244,27 @@ export function MealForm({ isOpen, onClose, onSave, meal }: MealFormProps) {
   const validate = () => {
     const newErrors: Record<string, string> = {}
     if (!name.trim()) newErrors.name = 'Name is required'
-    if (mode === 'quick') {
-      if (!calories || isNaN(parseFloat(calories))) newErrors.calories = 'Required'
-      if (!protein || isNaN(parseFloat(protein))) newErrors.protein = 'Required'
-      if (!carbs || isNaN(parseFloat(carbs))) newErrors.carbs = 'Required'
-      if (!fat || isNaN(parseFloat(fat))) newErrors.fat = 'Required'
-    }
+    const cal = ingredients.length > 0 ? ingredientTotals.calories : (calories ? parseFloat(calories) : NaN)
+    const pro = ingredients.length > 0 ? ingredientTotals.protein : (protein ? parseFloat(protein) : NaN)
+    const carb = ingredients.length > 0 ? ingredientTotals.carbs : (carbs ? parseFloat(carbs) : NaN)
+    const f = ingredients.length > 0 ? ingredientTotals.fat : (fat ? parseFloat(fat) : NaN)
+    if (isNaN(cal) || cal <= 0) newErrors.calories = 'Add ingredients or enter manually'
+    if (isNaN(pro) || pro <= 0) newErrors.protein = 'Required'
+    if (isNaN(carb) || carb <= 0) newErrors.carbs = 'Required'
+    if (isNaN(f) || f <= 0) newErrors.fat = 'Required'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (mode === 'build' && ingredients.length > 0) {
-      applyIngredients()
-    }
     if (!validate()) return
 
-    const finalCal = parseFloat(mode === 'build' && ingredients.length > 0 ? String(ingredientTotals.calories) : calories)
-    const finalPro = parseFloat(mode === 'build' && ingredients.length > 0 ? String(ingredientTotals.protein) : protein)
-    const finalCarb = parseFloat(mode === 'build' && ingredients.length > 0 ? String(ingredientTotals.carbs) : carbs)
-    const finalFat = parseFloat(mode === 'build' && ingredients.length > 0 ? String(ingredientTotals.fat) : fat)
-    const finalFib = mode === 'build' && ingredients.length > 0 ? ingredientTotals.fiber : (fiber ? parseFloat(fiber) : undefined)
+    const finalCal = parseFloat(ingredients.length > 0 ? String(ingredientTotals.calories) : calories)
+    const finalPro = parseFloat(ingredients.length > 0 ? String(ingredientTotals.protein) : protein)
+    const finalCarb = parseFloat(ingredients.length > 0 ? String(ingredientTotals.carbs) : carbs)
+    const finalFat = parseFloat(ingredients.length > 0 ? String(ingredientTotals.fat) : fat)
+    const finalFib = ingredients.length > 0 ? ingredientTotals.fiber : (fiber ? parseFloat(fiber) : undefined)
 
     const m: Meal = {
       id: meal?.id || generateId(),
@@ -294,22 +290,6 @@ export function MealForm({ isOpen, onClose, onSave, meal }: MealFormProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={meal ? 'Edit Meal' : 'Log Meal'}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Mode Toggle */}
-        {!meal && (
-          <div className="flex gap-1.5 rounded-xl bg-white/5 border border-white/10 p-1">
-            <button type="button" onClick={() => setMode('quick')}
-              className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
-                mode === 'quick' ? 'bg-white/10 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'
-              }`}>Quick Log</button>
-            <button type="button" onClick={() => setMode('build')}
-              className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
-                mode === 'build' ? 'bg-white/10 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'
-              }`}>
-              <ChefHat className="w-3 h-3 inline mr-1" />Build Meal
-            </button>
-          </div>
-        )}
-
         <Input label="Meal Name" placeholder="e.g. Grilled chicken salad" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
 
         <div className="grid grid-cols-2 gap-3">
@@ -329,122 +309,114 @@ export function MealForm({ isOpen, onClose, onSave, meal }: MealFormProps) {
         </div>
 
         {/* Ingredient Builder */}
-        {mode === 'build' && (
-          <div className="rounded-xl bg-white/5 border border-white/10 p-3 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] font-bold text-white/60 uppercase tracking-wider">Ingredients</p>
-              {hasIngredients && (
-                <span className="text-[9px] text-gray-500">{ingredients.length} items</span>
-              )}
-            </div>
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-bold text-white/60 uppercase tracking-wider">Ingredients</p>
+          {hasIngredients && (
+            <span className="text-[9px] text-gray-500">{ingredients.length} items</span>
+          )}
+        </div>
 
-            {/* Search & Add */}
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
-              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search foods..." autoComplete="off"
-                className="w-full pl-8 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-purple-500/40"
-              />
-            </div>
+        {/* Search & Add */}
+        <div className="relative">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search foods..." autoComplete="off"
+            className="w-full pl-8 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-purple-500/40"
+          />
+        </div>
 
-            {/* Category pills */}
-            <div className="flex gap-1 flex-wrap">
-              <button type="button" onClick={() => setSelectedCategory('')}
-                className={`px-2 py-1 rounded-md text-[9px] font-medium transition-all ${!selectedCategory ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30' : 'bg-white/5 text-gray-500 border border-white/10 hover:text-gray-300'}`}>
-                All
+        {/* Category pills */}
+        <div className="flex gap-1 flex-wrap">
+          <button type="button" onClick={() => setSelectedCategory('')}
+            className={`px-2 py-1 rounded-md text-[9px] font-medium transition-all ${!selectedCategory ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30' : 'bg-white/5 text-gray-500 border border-white/10 hover:text-gray-300'}`}>
+            All
+          </button>
+          {categories.map(cat => (
+            <button key={cat} type="button" onClick={() => { setSelectedCategory(cat); setSearch('') }}
+              className={`px-2 py-1 rounded-md text-[9px] font-medium transition-all ${selectedCategory === cat ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30' : 'bg-white/5 text-gray-500 border border-white/10 hover:text-gray-300'}`}>
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Food list */}
+        {search || selectedCategory ? (
+          <div className="max-h-40 overflow-y-auto space-y-1">
+            {filteredFoods.map(food => (
+              <button key={food.name} type="button" onClick={() => addIngredient(food)}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-white/[0.08] border border-white/5 transition-all group">
+                <div className="text-left">
+                  <p className="text-xs font-medium text-white">{food.name}</p>
+                  <p className="text-[9px] text-gray-600">{food.calories} kcal · P{food.protein} C{food.carbs} F{food.fat} /100g</p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <input type="number" value={addingGrams} onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setAddingGrams(e.target.value)}
+                    className="w-14 text-[10px] py-1 px-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <span className="text-[9px] text-gray-500">g</span>
+                  <Plus className="w-3.5 h-3.5 text-emerald-400 opacity-0 group-hover:opacity-100 transition-all shrink-0" />
+                </div>
               </button>
-              {categories.map(cat => (
-                <button key={cat} type="button" onClick={() => { setSelectedCategory(cat); setSearch('') }}
-                  className={`px-2 py-1 rounded-md text-[9px] font-medium transition-all ${selectedCategory === cat ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30' : 'bg-white/5 text-gray-500 border border-white/10 hover:text-gray-300'}`}>
-                  {cat}
+            ))}
+            {filteredFoods.length === 0 && (
+              <p className="text-[10px] text-gray-500 text-center py-2">No foods found</p>
+            )}
+          </div>
+        ) : hasIngredients ? null : (
+          <p className="text-[10px] text-gray-500 text-center py-2">Search or select a category to add ingredients</p>
+        )}
+
+        {/* Added ingredients */}
+        {hasIngredients && (
+          <div className="space-y-1.5 max-h-48 overflow-y-auto">
+            {ingredients.map(ing => (
+              <div key={ing.id} className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white/5 border border-white/5">
+                <span className="text-xs font-medium text-white flex-1 truncate">{ing.food.name}</span>
+                <div className="flex items-center gap-1">
+                  <input type="number" value={ing.grams} onChange={(e) => updateGrams(ing.id, e.target.value)}
+                    className="w-14 text-[10px] py-0.5 px-1.5 rounded bg-white/10 border border-white/20 text-white text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <span className="text-[9px] text-gray-500">g</span>
+                </div>
+                <button type="button" onClick={() => removeIngredient(ing.id)}
+                  className="p-0.5 rounded text-gray-600 hover:text-red-400 transition-all">
+                  <Trash2 className="w-3 h-3" />
                 </button>
-              ))}
-            </div>
-
-            {/* Food list */}
-            {search || selectedCategory ? (
-              <div className="max-h-40 overflow-y-auto space-y-1">
-                {filteredFoods.map(food => (
-                  <button key={food.name} type="button" onClick={() => addIngredient(food)}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-white/[0.08] border border-white/5 transition-all group">
-                    <div className="text-left">
-                      <p className="text-xs font-medium text-white">{food.name}</p>
-                      <p className="text-[9px] text-gray-600">{food.calories} kcal · P{food.protein} C{food.carbs} F{food.fat} /100g</p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <input type="number" value={addingGrams} onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => setAddingGrams(e.target.value)}
-                        className="w-14 text-[10px] py-1 px-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <span className="text-[9px] text-gray-500">g</span>
-                      <Plus className="w-3.5 h-3.5 text-emerald-400 opacity-0 group-hover:opacity-100 transition-all shrink-0" />
-                    </div>
-                  </button>
-                ))}
-                {filteredFoods.length === 0 && (
-                  <p className="text-[10px] text-gray-500 text-center py-2">No foods found</p>
-                )}
               </div>
-            ) : hasIngredients ? null : (
-              <p className="text-[10px] text-gray-500 text-center py-2">Search or select a category to add ingredients</p>
-            )}
-
-            {/* Added ingredients */}
-            {hasIngredients && (
-              <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                {ingredients.map(ing => (
-                  <div key={ing.id} className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white/5 border border-white/5">
-                    <span className="text-xs font-medium text-white flex-1 truncate">{ing.food.name}</span>
-                    <div className="flex items-center gap-1">
-                      <input type="number" value={ing.grams} onChange={(e) => updateGrams(ing.id, e.target.value)}
-                        className="w-14 text-[10px] py-0.5 px-1.5 rounded bg-white/10 border border-white/20 text-white text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <span className="text-[9px] text-gray-500">g</span>
-                    </div>
-                    <button type="button" onClick={() => removeIngredient(ing.id)}
-                      className="p-0.5 rounded text-gray-600 hover:text-red-400 transition-all">
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Running total */}
-            {hasIngredients && (
-              <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-2.5">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[9px] text-gray-500 uppercase tracking-wider">Running Total</span>
-                  <button type="button" onClick={applyIngredients}
-                    className="text-[9px] text-purple-400 hover:text-purple-300 font-medium transition-all">
-                    Apply to meal
-                  </button>
-                </div>
-                <div className="grid grid-cols-4 gap-2 text-center">
-                  <div><p className="text-sm font-bold text-rose-400">{ingredientTotals.calories}</p><p className="text-[8px] text-gray-600">kcal</p></div>
-                  <div><p className="text-sm font-bold text-emerald-400">{ingredientTotals.protein}g</p><p className="text-[8px] text-gray-600">protein</p></div>
-                  <div><p className="text-sm font-bold text-amber-400">{ingredientTotals.carbs}g</p><p className="text-[8px] text-gray-600">carbs</p></div>
-                  <div><p className="text-sm font-bold text-sky-400">{ingredientTotals.fat}g</p><p className="text-[8px] text-gray-600">fat</p></div>
-                </div>
-              </div>
-            )}
+            ))}
           </div>
         )}
 
-        {/* Macro Fields (shown in Quick mode, or always visible for manual override) */}
-        {mode === 'quick' && (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <Input label="Calories" type="number" placeholder="kcal" value={calories} onChange={(e) => setCalories(e.target.value)} error={errors.calories} />
-              <Input label="Protein (g)" type="number" step="0.1" placeholder="g" value={protein} onChange={(e) => setProtein(e.target.value)} error={errors.protein} />
+        {/* Running total */}
+        {hasIngredients && (
+          <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-2.5">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[9px] text-gray-500 uppercase tracking-wider">Running Total</span>
+              <button type="button" onClick={applyIngredients}
+                className="text-[9px] text-purple-400 hover:text-purple-300 font-medium transition-all">
+                Apply to meal
+              </button>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <Input label="Carbs (g)" type="number" step="0.1" placeholder="g" value={carbs} onChange={(e) => setCarbs(e.target.value)} error={errors.carbs} />
-              <Input label="Fat (g)" type="number" step="0.1" placeholder="g" value={fat} onChange={(e) => setFat(e.target.value)} error={errors.fat} />
-              <Input label="Fiber (g)" type="number" step="0.1" placeholder="Optional" value={fiber} onChange={(e) => setFiber(e.target.value)} />
+            <div className="grid grid-cols-4 gap-2 text-center">
+              <div><p className="text-sm font-bold text-rose-400">{ingredientTotals.calories}</p><p className="text-[8px] text-gray-600">kcal</p></div>
+              <div><p className="text-sm font-bold text-emerald-400">{ingredientTotals.protein}g</p><p className="text-[8px] text-gray-600">protein</p></div>
+              <div><p className="text-sm font-bold text-amber-400">{ingredientTotals.carbs}g</p><p className="text-[8px] text-gray-600">carbs</p></div>
+              <div><p className="text-sm font-bold text-sky-400">{ingredientTotals.fat}g</p><p className="text-[8px] text-gray-600">fat</p></div>
             </div>
-          </>
+          </div>
         )}
+
+        {/* Macro Fields */}
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="Calories" type="number" placeholder="kcal" value={calories} onChange={(e) => setCalories(e.target.value)} error={errors.calories} />
+          <Input label="Protein (g)" type="number" step="0.1" placeholder="g" value={protein} onChange={(e) => setProtein(e.target.value)} error={errors.protein} />
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <Input label="Carbs (g)" type="number" step="0.1" placeholder="g" value={carbs} onChange={(e) => setCarbs(e.target.value)} error={errors.carbs} />
+          <Input label="Fat (g)" type="number" step="0.1" placeholder="g" value={fat} onChange={(e) => setFat(e.target.value)} error={errors.fat} />
+          <Input label="Fiber (g)" type="number" step="0.1" placeholder="Optional" value={fiber} onChange={(e) => setFiber(e.target.value)} />
+        </div>
 
         <div className="flex gap-3 pt-2">
           <Button type="button" variant="ghost" onClick={onClose} className="flex-1">Cancel</Button>
