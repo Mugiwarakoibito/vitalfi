@@ -5,6 +5,7 @@ import {
   Calendar, BarChart3, RotateCcw,
   ChefHat, Bookmark, BookmarkPlus,
   Target, Ruler, Brain, ArrowRight, Check, Sparkles, RefreshCw, Settings,
+  TrendingUp, TrendingDown,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell } from 'recharts'
@@ -258,6 +259,9 @@ export function NutritionLogger() {
   const [nutriWeekStart, setNutriWeekStart] = useState(formatDate(new Date()))
   const [recipes, setRecipes] = useState<SavedRecipe[]>(loadRecipes)
   const [showRecipes, setShowRecipes] = useState(false)
+  const [insightTab, setInsightTab] = useState<'metrics' | 'analyzer' | 'projections'>('metrics')
+  const [adherenceThreshold, setAdherenceThreshold] = useState<number>(0.10)
+  const [showAdherenceMenu, setShowAdherenceMenu] = useState(false)
 
   useEffect(() => { saveRecipes(recipes) }, [recipes])
   useEffect(() => { saveTargets(targets) }, [targets])
@@ -1106,7 +1110,7 @@ export function NutritionLogger() {
                             <div key={s.label} className="text-center">
                               <p className={`text-lg font-bold ${s.color}`}>{s.value}{s.unit}</p>
                               <p className="text-[9px] text-gray-500">{s.label}</p>
-                              <div className="mt-1 h-1 rounded-full bg-white/10 overflow-hidden">
+                                <div className="mt-1 h-1 rounded-full bg-white/10 overflow-hidden">
                                 <div className={`h-full rounded-full ${s.bar}`} style={{ width: `${Math.min(pct, 100)}%` }} />
                               </div>
                             </div>
@@ -1119,92 +1123,393 @@ export function NutritionLogger() {
               </div>
 
               {/* Card 2: Insights */}
-              <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-                <h4 className="text-[9px] text-gray-500 uppercase tracking-wider mb-2">Insights</h4>
-                 {(() => {
-                   const logged = nutriWeekData.filter(d => d.calories > 0)
-                   if (!logged.length) return <div className="text-center"><p className="text-[10px] text-gray-500 py-3">Log meals to see insights</p></div>
-                   const onTarget = logged.filter(d => d.calories >= targets.calories * 0.9 && d.calories <= targets.calories * 1.1)
-                   const pct = Math.round((onTarget.length / logged.length) * 100)
-                   let streak = 0
-                   for (let i = nutriWeekData.length - 1; i >= 0; i--) {
-                     if (nutriWeekData[i].calories > 0) streak++
-                     else break
-                   }
-                   
-                   const insightData = [
-                     { name: 'On Target', value: pct },
-                     { name: 'Streak', value: Math.min(streak, 7) }, // Cap at 7 for visual consistency
-                     { name: 'Logged', value: logged.length }
-                   ]
-                   
-                   return (
-                     <div className="space-y-4">
-                       <p className="text-[9px] text-gray-500 mb-2">Insights</p>
-                       <div className="h-24">
-                         <ResponsiveContainer width="100%" height="100%">
-                           <BarChart data={insightData} barGap={4} barCategoryGap="20%">
-                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                             <XAxis 
-                               tick={{ fill: '#6b7280', fontSize: 10 }} 
-                               axisLine={false} 
-                               tickLine={false} 
-                             />
-                             <YAxis 
-                               tick={{ fill: '#6b7280', fontSize: 10 }} 
-                               axisLine={false} 
-                               tickLine={false} 
-                               domain={[0, 'auto']}
-                             />
-                             <Tooltip 
-                               content={({ active, payload }) => {
-                                 if (!active || !payload?.length) return null;
-                                 
-                                 const value = payload[0].value;
-                                 const name = payload[0].name;
-                                 
-                                 // Calculate actual values for tooltip
-                                 const actualValues = {
-                                   'On Target': `${pct}%`,
-                                   'Streak': `${streak} days`,
-                                   'Logged': `${logged.length} days`
-                                 };
-                                 
-                                 return (
-                                   <div className="bg-gray-900 border border-white/10 rounded-xl px-3 py-2">
-                                     <p className="text-[10px] text-gray-500 mb-1">{name}</p>
-                                     <p className="text-[11px] font-medium">
-                                       {name === 'On Target' ? `${value}%` : 
-                                        name === 'Streak' ? `${actualValues.Streak}` :
-                                        `${actualValues.Logged}`}
-                                     </p>
-                                   </div>
-                                 );
-                               }}
-                               cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                             />
-                             <Bar 
-                               dataKey="value" 
-                               radius={[4, 4, 0, 0]}
-                               >
-                               {insightData.map((_, index) => (
-                                 <Cell 
-                                   key={`insight-${index}`} 
-                                   fill={index === 0 ? '#34d399' : // On Target - emerald
-                                         index === 1 ? '#a855f7' : // Streak - purple
-                                         '#60a5fa'} // Logged - blue
-                                 />
-                               ))}
-                             </Bar>
-                           </BarChart>
-                         </ResponsiveContainer>
-                       </div>
-                     </div>
-                   )
-                  })()}
+              <div className="rounded-xl bg-white/5 border border-white/10 p-4">
+                <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">💡</span>
+                    <h4 className="text-xs font-semibold text-white">Weekly Insights</h4>
+                  </div>
+                  {/* Tab Selector */}
+                  <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5 border border-white/10">
+                    {(['metrics', 'analyzer', 'projections'] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => setInsightTab(tab)}
+                        className={`px-2 py-1 rounded-md text-[9px] font-semibold uppercase tracking-wider transition-all ${
+                          insightTab === tab
+                            ? 'bg-purple-500/25 text-purple-300 border border-purple-500/30'
+                            : 'text-gray-500 hover:text-white'
+                        }`}
+                      >
+                        {tab === 'metrics' ? 'Consistency' : tab === 'analyzer' ? 'Analyzer' : 'Projections'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {(() => {
+                  const logged = nutriWeekData.filter(d => d.calories > 0)
+                  if (!logged.length) {
+                    return (
+                      <div className="text-center py-6">
+                        <p className="text-[11px] text-gray-500">Log meals in this week to see insights</p>
+                      </div>
+                    )
+                  }
+
+                  // Calculate metrics with dynamic adherence threshold
+                  const onTarget = logged.filter(
+                    d => d.calories >= targets.calories * (1 - adherenceThreshold) &&
+                         d.calories <= targets.calories * (1 + adherenceThreshold)
+                  )
+                  const adherencePct = Math.round((onTarget.length / logged.length) * 100) || 0
+
+                  let streak = 0
+                  for (let i = nutriWeekData.length - 1; i >= 0; i--) {
+                    if (nutriWeekData[i].calories > 0) streak++
+                    else if (streak > 0) break
+                  }
+
+                  const avgCalories = Math.round(logged.reduce((s, d) => s + d.calories, 0) / logged.length)
+                  const avgProtein = Math.round(logged.reduce((s, d) => s + d.protein, 0) / logged.length)
+                  const avgCarbs = Math.round(logged.reduce((s, d) => s + d.carbs, 0) / logged.length)
+                  const avgFat = Math.round(logged.reduce((s, d) => s + d.fat, 0) / logged.length)
+                  const avgFiber = Math.round(logged.reduce((s, d) => s + d.fiber, 0) / logged.length)
+
+                  return (
+                    <AnimatePresence mode="wait">
+                      {insightTab === 'metrics' && (
+                        <motion.div
+                          key="metrics"
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -5 }}
+                          className="space-y-4"
+                        >
+                          {/* 3 Metric Cards side-by-side */}
+                          <div className="grid grid-cols-3 gap-2">
+                            {/* Card A: Adherence */}
+                            <div className="relative group rounded-xl bg-white/5 border border-white/5 p-2.5 flex flex-col justify-between hover:bg-white/[0.08] hover:border-white/10 transition-all cursor-pointer">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-semibold text-gray-500 uppercase">Adherence</span>
+                                <div className="relative">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setShowAdherenceMenu(prev => !prev)
+                                    }}
+                                    className="p-1 rounded bg-white/5 border border-white/10 hover:text-white transition-all text-gray-400"
+                                    title="Adjust sensitivity"
+                                  >
+                                    <Settings className="w-2.5 h-2.5" />
+                                  </button>
+                                  
+                                  {showAdherenceMenu && (
+                                    <>
+                                      <div className="fixed inset-0 z-10" onClick={(e) => {
+                                        e.stopPropagation()
+                                        setShowAdherenceMenu(false)
+                                      }} />
+                                      <div className="absolute right-0 top-6 z-20 w-32 rounded-lg bg-gray-900 border border-white/10 shadow-2xl p-1.5 flex flex-col gap-1">
+                                        <p className="text-[8px] font-semibold text-gray-500 uppercase tracking-wider px-1 mb-1">Sensitivity</p>
+                                        {([
+                                          { val: 0.05, label: 'Strict (±5%)' },
+                                          { val: 0.10, label: 'Normal (±10%)' },
+                                          { val: 0.15, label: 'Relaxed (±15%)' }
+                                        ] as const).map(opt => (
+                                          <button
+                                            key={opt.val}
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              setAdherenceThreshold(opt.val)
+                                              setShowAdherenceMenu(false)
+                                            }}
+                                            className={`text-left px-2 py-1 rounded text-[9px] font-medium transition-all ${
+                                              adherenceThreshold === opt.val
+                                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                            }`}
+                                          >
+                                            {opt.label}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="my-1.5 text-center">
+                                <p className={`text-xl font-black ${
+                                  adherencePct >= 80 ? 'text-emerald-400' :
+                                  adherencePct >= 50 ? 'text-amber-400' : 'text-rose-400'
+                                }`}>
+                                  {adherencePct}%
+                                </p>
+                              </div>
+                              <span className="text-[8px] text-gray-600 block text-center leading-tight">
+                                ±{Math.round(adherenceThreshold * 100)}% of target
+                              </span>
+                            </div>
+
+                            {/* Card B: Streak */}
+                            <div className="rounded-xl bg-white/5 border border-white/5 p-2.5 flex flex-col justify-between hover:bg-white/[0.08] hover:border-white/10 transition-all">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-semibold text-gray-500 uppercase">Streak</span>
+                                <Flame className={`w-3.5 h-3.5 ${
+                                  streak >= 3 ? 'text-orange-400 animate-pulse' : 'text-gray-500'
+                                }`} />
+                              </div>
+                              <div className="my-1.5 text-center">
+                                <p className="text-xl font-black text-orange-400">
+                                  {streak} <span className="text-[10px] font-bold text-gray-500">days</span>
+                                </p>
+                              </div>
+                              <span className="text-[8px] text-gray-600 block text-center leading-tight">
+                                {streak >= 5 ? '🔥 In the zone!' : streak >= 3 ? '🔥 Getting warm' : '🎯 Log daily to grow'}
+                              </span>
+                            </div>
+
+                            {/* Card C: Logged */}
+                            <div className="rounded-xl bg-white/5 border border-white/5 p-2.5 flex flex-col justify-between hover:bg-white/[0.08] hover:border-white/10 transition-all">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-semibold text-gray-500 uppercase">Logged</span>
+                                <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                              </div>
+                              <div className="my-1.5 text-center">
+                                <p className="text-xl font-black text-blue-400">
+                                  {logged.length} <span className="text-[10px] font-bold text-gray-500">/ 7</span>
+                                </p>
+                              </div>
+                              <span className="text-[8px] text-gray-600 block text-center leading-tight font-medium">
+                                Days logged this week
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Weekly Macro Adherence Bars */}
+                          <div className="rounded-xl bg-white/5 border border-white/5 p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] font-semibold text-gray-500 uppercase">Weekly Macro Adherence</span>
+                              <span className="text-[8px] text-gray-500">Compared to targets</span>
+                            </div>
+                            <div className="space-y-2">
+                              {[
+                                { label: 'Protein', value: avgProtein, target: targets.protein, color: 'text-emerald-400', bar: 'bg-emerald-500' },
+                                { label: 'Carbs', value: avgCarbs, target: targets.carbs, color: 'text-amber-400', bar: 'bg-amber-500' },
+                                { label: 'Fat', value: avgFat, target: targets.fat, color: 'text-sky-400', bar: 'bg-sky-500' },
+                              ].map(m => {
+                                const pct = m.target > 0 ? Math.round((m.value / m.target) * 100) : 0
+                                return (
+                                  <div key={m.label} className="space-y-1">
+                                    <div className="flex justify-between text-[9px] font-medium">
+                                      <span className="text-gray-300">{m.label}</span>
+                                      <span className={m.color}>{m.value}g <span className="text-gray-500">/ {m.target}g ({pct}%)</span></span>
+                                    </div>
+                                    <div className="h-1 rounded-full bg-white/10 overflow-hidden">
+                                      <div className={`h-full rounded-full ${m.bar} transition-all duration-500`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {insightTab === 'analyzer' && (
+                        <motion.div
+                          key="analyzer"
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -5 }}
+                          className="space-y-2"
+                        >
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="text-xs text-purple-400">💡</span>
+                            <span className="text-[9px] font-semibold text-gray-500 uppercase">AI-Powered Habits Analyzer</span>
+                          </div>
+
+                          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                            {/* Calorie Recommendation */}
+                            {avgCalories > targets.calories * (1 + adherenceThreshold) ? (
+                              <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 flex gap-2.5 items-start">
+                                <div className="text-lg shrink-0 mt-0.5">⚠️</div>
+                                <div className="space-y-1">
+                                  <p className="text-[11px] font-bold text-rose-300">Calorie Surplus Detected</p>
+                                  <p className="text-[10px] text-gray-400 leading-normal">
+                                    Your average calories are <span className="text-white font-semibold">{avgCalories} kcal</span> (target: {targets.calories} kcal).
+                                    To stay on track, consider sizing down your snacks or choosing leaner proteins to keep calories controlled while staying full.
+                                  </p>
+                                </div>
+                              </div>
+                            ) : avgCalories < targets.calories * (1 - adherenceThreshold) ? (
+                              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 flex gap-2.5 items-start">
+                                <div className="text-lg shrink-0 mt-0.5">⚠️</div>
+                                <div className="space-y-1">
+                                  <p className="text-[11px] font-bold text-amber-300">Deficit Under Target</p>
+                                  <p className="text-[10px] text-gray-400 leading-normal">
+                                    You're averaging <span className="text-white font-semibold">{avgCalories} kcal</span>, below your target budget of {targets.calories} kcal.
+                                    Under-eating can slow recovery and lower your energy. Try adding simple calorie-dense options like raw almonds or pumpkin seeds.
+                                  </p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 flex gap-2.5 items-start">
+                                <div className="text-lg shrink-0 mt-0.5">🎯</div>
+                                <div className="space-y-1">
+                                  <p className="text-[11px] font-bold text-emerald-300">Calorie Target Mastery</p>
+                                  <p className="text-[10px] text-gray-400 leading-normal">
+                                    Your weekly average of <span className="text-white font-semibold">{avgCalories} kcal</span> is perfectly on target! Excellent work maintaining calorie consistency.
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Protein Recommendation */}
+                            {avgProtein < targets.protein * 0.9 ? (
+                              <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-3 flex gap-2.5 items-start">
+                                <div className="text-lg shrink-0 mt-0.5">🥩</div>
+                                <div className="space-y-1">
+                                  <p className="text-[11px] font-bold text-purple-300">Boost Protein Intake</p>
+                                  <p className="text-[10px] text-gray-400 leading-normal">
+                                    Your protein is averaging <span className="text-white font-semibold">{avgProtein}g</span> (Target: {targets.protein}g). Protein supports muscle building and burns more energy to digest. Swap morning carbs for eggs, greek yogurt, or a protein shake.
+                                  </p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 flex gap-2.5 items-start">
+                                <div className="text-lg shrink-0 mt-0.5">💪</div>
+                                <div className="space-y-1">
+                                  <p className="text-[11px] font-bold text-emerald-300">Protein Target Achieved</p>
+                                  <p className="text-[10px] text-gray-400 leading-normal">
+                                    You average <span className="text-white font-semibold">{avgProtein}g</span> protein weekly, fully satisfying your requirements. Keep up this protein-dense diet to aid recovery!
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Fiber Recommendation */}
+                            {avgFiber < 25 ? (
+                              <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 flex gap-2.5 items-start">
+                                <div className="text-lg shrink-0 mt-0.5">🌾</div>
+                                <div className="space-y-1">
+                                  <p className="text-[11px] font-bold text-blue-300">Increase Dietary Fiber</p>
+                                  <p className="text-[10px] text-gray-400 leading-normal">
+                                    You're averaging <span className="text-white font-semibold">{avgFiber}g</span> fiber (Rec: 25g+). Fiber supports gut microbiome, digestion, and keeps hunger signals controlled. Adding sweet potatoes, oatmeal, or raspberries to your diet will help.
+                                  </p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 flex gap-2.5 items-start">
+                                <div className="text-lg shrink-0 mt-0.5">🥬</div>
+                                <div className="space-y-1">
+                                  <p className="text-[11px] font-bold text-emerald-300">Digestion & Fiber Champ</p>
+                                  <p className="text-[10px] text-gray-400 leading-normal">
+                                    Superb! You average <span className="text-white font-semibold">{avgFiber}g</span> of fiber daily. You're giving your body all the prebiotic materials it needs for top performance.
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {insightTab === 'projections' && (
+                        <motion.div
+                          key="projections"
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -5 }}
+                          className="space-y-3"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-indigo-400">📈</span>
+                            <span className="text-[9px] font-semibold text-gray-500 uppercase">Weight & Goal Projections</span>
+                          </div>
+
+                          {profile ? (
+                            (() => {
+                              const dailyBalance = avgCalories - profile.tdee
+                              const isDeficit = dailyBalance < 0
+                              const absBalance = Math.abs(dailyBalance)
+                              const weeklyWeightChange = absBalance * 7 / 7700 // 7700 kcal per kg of fat
+                              
+                              return (
+                                <div className="space-y-3">
+                                  <div className="rounded-xl bg-white/5 border border-white/5 p-3 space-y-2">
+                                    <div className="flex items-center justify-between text-xs text-white">
+                                      <span>Weekly Avg Intake:</span>
+                                      <span className="font-bold">{avgCalories} kcal</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs text-white">
+                                      <span>Profile TDEE:</span>
+                                      <span className="font-bold text-gray-400">{profile.tdee} kcal</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs border-t border-white/5 pt-2">
+                                      <span>Calorie Balance:</span>
+                                      <span className={`font-bold ${isDeficit ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                        {isDeficit ? `-${absBalance}` : `+${absBalance}`} kcal / day
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-3 space-y-2.5">
+                                    <div className="flex items-center gap-2">
+                                      {isDeficit ? (
+                                        <TrendingDown className="w-4 h-4 text-emerald-400" />
+                                      ) : (
+                                        <TrendingUp className="w-4 h-4 text-amber-400" />
+                                      )}
+                                      <p className="text-[11px] font-bold text-indigo-300">
+                                        {isDeficit ? 'Projected Fat Loss' : 'Projected Mass Gain'}
+                                      </p>
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 leading-relaxed">
+                                      At this rate, you will {isDeficit ? 'lose' : 'gain'} approximately <span className="text-white font-semibold">{weeklyWeightChange.toFixed(2)} kg</span> per week.
+                                    </p>
+                                    
+                                    <div className="grid grid-cols-2 gap-2 pt-1">
+                                      <div className="rounded-lg bg-black/35 p-2 border border-white/5 text-center">
+                                        <p className={`text-base font-bold ${isDeficit ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                          {isDeficit ? '-' : '+'}{(weeklyWeightChange * 4).toFixed(1)} kg
+                                        </p>
+                                        <p className="text-[8px] text-gray-500 uppercase tracking-wider font-semibold">4 Weeks</p>
+                                      </div>
+                                      <div className="rounded-lg bg-black/35 p-2 border border-white/5 text-center">
+                                        <p className={`text-lg font-black ${isDeficit ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                          {isDeficit ? '-' : '+'}{(weeklyWeightChange * 12).toFixed(1)} kg
+                                        </p>
+                                        <p className="text-[8px] text-gray-500 uppercase tracking-wider font-semibold">12 Weeks</p>
+                                      </div>
+                                    </div>
+                                    <p className="text-[8px] text-gray-600 block text-center leading-none mt-1">
+                                      *Assumes physical activity and basal rate remain constant.
+                                    </p>
+                                  </div>
+                                </div>
+                              )
+                            })()
+                          ) : (
+                            <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+                              <p className="text-xs text-gray-400 mb-2">Goal Projections Locked</p>
+                              <p className="text-[10px] text-gray-500 mb-3 leading-normal">
+                                Calculate your TDEE in the setup wizard above to see interactive 4-week and 12-week weight projections.
+                              </p>
+                              <button
+                                onClick={() => { setShowWizard(true); setWizardStep(0) }}
+                                className="px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30 text-[9px] font-semibold uppercase tracking-wider transition-all"
+                              >
+                                Setup Profile
+                              </button>
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  )
+                })()}
               </div>
             </div>
-                </>
               )
             })()}
           </motion.div>

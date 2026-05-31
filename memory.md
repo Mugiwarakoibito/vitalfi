@@ -26,6 +26,12 @@
 - Fixed unused variables (weeklySummary, adherence) causing build errors
 - Made NutriScope independent with its own week navigator (◀ ▶ controls) separate from main date picker
 - Made Insights section interactive with hover tooltips and lift effects on metric cards
+- Converted Insights to horizontal bar charts showing On Target %, Streak, and Logged Days
+- Enhanced Insights with dynamic multi-tab navigation:
+  - **Consistency Hub**: Interactive cards for Adherence %, Streak size (with heat badge), and Logged days, plus average macronutrient adherence bars.
+  - **Adherence Threshold settings**: Clickable gear dropdown to configure calorie adherence sensitivity: Strict (±5%), Normal (±10%), and Relaxed (±15%), dynamically updating stats in real-time.
+  - **AI-Powered Analyzer**: Intelligent, habit-based suggestions for calorie surplus/deficit, protein density optimization, and dietary fiber targets based on weekly eating records.
+  - **Goal Projections**: Net daily calorie balance metrics and estimated 4-week & 12-week weight loss/gain forecasts driven by their profile's BMR/TDEE.
 - Deployed to https://vitalfi.vercel.app
 
 ### Upgrades Before Restructure
