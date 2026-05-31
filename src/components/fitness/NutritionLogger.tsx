@@ -255,6 +255,7 @@ export function NutritionLogger() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [showCoachSettings, setShowCoachSettings] = useState(false)
   const [chartMode, setChartMode] = useState<'macros' | 'calories' | 'protein' | 'carbs' | 'fat' | 'fiber' | 'meals'>('calories')
+  const [nutriWeekStart, setNutriWeekStart] = useState(formatDate(new Date()))
   const [recipes, setRecipes] = useState<SavedRecipe[]>(loadRecipes)
   const [showRecipes, setShowRecipes] = useState(false)
 
@@ -339,8 +340,8 @@ export function NutritionLogger() {
     fat: Math.min(summary.fat / targets.fat, 1),
   }), [summary, targets])
 
-  const weeklyData = useMemo(() => {
-    const weekDates = getWeekDates(parseLocalDate(selectedDate))
+  const nutriWeekData = useMemo(() => {
+    const weekDates = getWeekDates(parseLocalDate(nutriWeekStart))
     return weekDates.map((date) => {
       const dayMeals = meals.filter((m) => m.date === date)
       return {
@@ -355,7 +356,7 @@ export function NutritionLogger() {
         meals: dayMeals,
       }
     })
-  }, [meals, selectedDate])
+  }, [meals, nutriWeekStart])
 
   const navigateDate = useCallback((direction: number) => {
     setSelectedDate((prev) => {
@@ -363,6 +364,18 @@ export function NutritionLogger() {
       d.setDate(d.getDate() + direction)
       return formatDate(d)
     })
+  }, [])
+
+  const nutriNavigate = useCallback((direction: number) => {
+    setNutriWeekStart((prev) => {
+      const d = parseLocalDate(prev)
+      d.setDate(d.getDate() + direction * 7)
+      return formatDate(d)
+    })
+  }, [])
+
+  const nutriJumpToThisWeek = useCallback(() => {
+    setNutriWeekStart(formatDate(new Date()))
   }, [])
 
   const jumpToToday = useCallback(() => {
@@ -937,12 +950,30 @@ export function NutritionLogger() {
           <motion.div variants={itemVariants} initial="hidden" animate="visible" exit={{ opacity: 0, y: -12 }}
             className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl p-5">
             {(() => {
-              const pastDays = weeklyData.filter(d => d.date !== selectedDate)
+              const pastDays = nutriWeekData
+              const isNutriCurrentWeek = formatDate(new Date()) >= nutriWeekData[0]?.date && formatDate(new Date()) <= nutriWeekData[6]?.date
               return (
                 <>
-            {/* Header + Mode Tabs */}
+            {/* Header + Week Nav + Mode Tabs */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">NutriScope</h3>
+              <div className="flex items-center gap-1">
+                <button onClick={() => nutriNavigate(-1)} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">
+                  {nutriWeekData[0] && parseLocalDate(nutriWeekData[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {' — '}
+                  {nutriWeekData[6] && parseLocalDate(nutriWeekData[6].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+                <button onClick={() => nutriNavigate(1)} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                {!isNutriCurrentWeek && (
+                  <button onClick={nutriJumpToThisWeek} className="p-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-all" title="This week">
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-1 bg-white/5 rounded-xl p-0.5 border border-white/10">
                 {(['calories', 'macros', 'fiber', 'meals'] as const).map((mode) => (
                   <button key={mode} onClick={() => setChartMode(mode)}
@@ -958,7 +989,7 @@ export function NutritionLogger() {
               {pastDays.length === 0 || pastDays.every(d => d.calories === 0) ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <p className="text-sm text-gray-500 font-medium">No historical data yet</p>
-                  <p className="text-[10px] text-gray-600 mt-1">Log meals on different days to see weekly analytics</p>
+                  <p className="text-[10px] text-gray-600 mt-1">Log meals in this week to see analytics</p>
                 </div>
               ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -1096,8 +1127,8 @@ export function NutritionLogger() {
                   const onTarget = logged.filter(d => d.calories >= targets.calories * 0.9 && d.calories <= targets.calories * 1.1)
                   const pct = Math.round((onTarget.length / logged.length) * 100)
                   let streak = 0
-                  for (let i = weeklyData.length - 1; i >= 0; i--) {
-                    if (weeklyData[i].calories > 0 && weeklyData[i].date !== selectedDate) streak++
+                  for (let i = nutriWeekData.length - 1; i >= 0; i--) {
+                    if (nutriWeekData[i].calories > 0) streak++
                     else break
                   }
                   return (

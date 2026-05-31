@@ -18,6 +18,14 @@
 - Fixed wizard step 1 validation to check parsed number values (positive, realistic age range)
 - Fixed wizard step 2 surplus/deficit message to show transparent calculation instead of hardcoded values
 
+### MacroCoach + NutriScope (May 31, 2026)
+- Added MacroCoach: AI-powered food suggestion panel with preference modes (Balanced/High Protein/Low Carb/Keto), calorie remaining display, refresh cycling, "All macros met!" celebration
+- Added NutriScope: weekly analytics dashboard with 4 chart modes (Calories/Macros/Fiber/Meals), per-mode context strips, bottom stats (Weekly Averages + Insights), empty state when no historical data
+- Fixed NutriScope excluding today from stats (intentional — past days only)
+- Fixed MacroCoach showing independently of NutriScope toggle
+- Fixed unused variables (weeklySummary, adherence) causing build errors
+- Deployed to https://vitalfi.vercel.app
+
 ### Upgrades Before Restructure
 - `BodyMetricsTracker.tsx`: body score (0-100) ring, lean/fat mass bar, BMR/TDEE, dual-axis weight+bodyfat chart, BMI color bar, goal projection
 - `WorkoutLogger.tsx`: rest timer per exercise, weekly analytics (workouts, volume, avg duration, heat score)
