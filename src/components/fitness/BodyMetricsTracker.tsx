@@ -1,14 +1,14 @@
 import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Plus, Trash2, TrendingDown, TrendingUp, Minus, Activity, AlertTriangle,
-  Target, Flame, ChevronUp, ChevronDown, Minus as MinusIcon,
-  LineChart as LineChartIcon, Gauge, ArrowRight, Sparkles, X,
-  Settings,
+  Plus, Trash2, TrendingDown, TrendingUp, Activity, Target, Flame,
+  LineChart as LineChartIcon, ArrowRight, Sparkles, X,
+  Settings, Zap, ChevronUp, ChevronDown,
+  Minus, BarChart3, AlertTriangle,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { generateId } from '@/lib/utils'
-import { calculateBMI, bmiCategory } from '@/lib/calculations'
+import { calculateBMI, bmiCategory, calculateBMR, calculateTDEE } from '@/lib/calculations'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import type { BodyMetric } from '@/types/fitness'
@@ -19,8 +19,6 @@ import {
 
 const GOAL_STORAGE_KEY = 'vitalfi_body_goal_weight'
 const GOAL_BF_KEY = 'vitalfi_body_goal_bf'
-
-interface BodyMetricsTrackerProps { heightCm?: number }
 
 const measurementFields = [
   { key: 'chest', label: 'Chest' },
@@ -33,8 +31,36 @@ const measurementFields = [
   { key: 'shoulders', label: 'Shoulders' },
 ]
 
-export function BodyMetricsTracker({ heightCm = 175 }: BodyMetricsTrackerProps) {
-  const { bodyMetrics, addBodyMetric, deleteBodyMetric } = useAppStore()
+const bmiRanges = [
+  { max: 18.5, label: 'Underweight', color: '#06b6d4' },
+  { max: 25, label: 'Normal', color: '#10b981' },
+  { max: 30, label: 'Overweight', color: '#f59e0b' },
+  { max: 35, label: 'Obese I', color: '#f97316' },
+  { max: 40, label: 'Obese II', color: '#ef4444' },
+  { max: Infinity, label: 'Obese III', color: '#dc2626' },
+]
+
+function computeBodyScore(latest: BodyMetric | undefined, bmi: number | null, bodyMetricsCount: number): { score: number; label: string; color: string } {
+  let score = 50
+  if (bmi != null) {
+    if (bmi >= 18.5 && bmi <= 25) score += 25
+    else if (bmi >= 17 || bmi <= 27) score += 15
+    else score += 5
+  }
+  if (latest?.bodyFat != null) {
+    if (latest.bodyFat >= 10 && latest.bodyFat <= 20) score += 15
+    else if (latest.bodyFat >= 8 && latest.bodyFat <= 25) score += 8
+    else score += 2
+  }
+  score += Math.min(bodyMetricsCount, 10)
+  score = Math.max(0, Math.min(100, score))
+  const label = score >= 85 ? 'Excellent' : score >= 70 ? 'Great' : score >= 55 ? 'Good' : score >= 40 ? 'Fair' : 'Needs Work'
+  const color = score >= 85 ? '#10b981' : score >= 70 ? '#06b6d4' : score >= 55 ? '#f59e0b' : score >= 40 ? '#f97316' : '#ef4444'
+  return { score, label, color }
+}
+
+export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
+  const { bodyMetrics, addBodyMetric, deleteBodyMetric, settings } = useAppStore()
   const [showForm, setShowForm] = useState(false)
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [weight, setWeight] = useState('')
@@ -45,6 +71,7 @@ export function BodyMetricsTracker({ heightCm = 175 }: BodyMetricsTrackerProps) 
   const [showSettings, setShowSettings] = useState(false)
   const [goalBodyFat, setGoalBodyFat] = useState<string>(() => localStorage.getItem(GOAL_BF_KEY) ?? '')
   const [confirmClear, setConfirmClear] = useState(false)
+  const [chartTab, setChartTab] = useState<'weight' | 'measurements'>('weight')
 
   useEffect(() => { localStorage.setItem(GOAL_STORAGE_KEY, targetWeight) }, [targetWeight])
   useEffect(() => { localStorage.setItem(GOAL_BF_KEY, goalBodyFat) }, [goalBodyFat])
@@ -72,8 +99,34 @@ export function BodyMetricsTracker({ heightCm = 175 }: BodyMetricsTrackerProps) 
     ? ((1 - Math.abs(latest.weight - goal) / Math.max(goal, latest.weight)) * 100)
     : null
 
+  const bmi = latest?.weight && heightCm ? calculateBMI(latest.weight, heightCm) : null
+  const bmiCat = bmi ? bmiCategory(bmi) : null
+  const biologicalSex = settings.sex === 'other' ? 'male' : (settings.sex || 'male')
+  const bmr = latest?.weight && heightCm ? calculateBMR(latest.weight, heightCm, settings.age || 30, biologicalSex) : null
+  const tdee = bmr ? calculateTDEE(bmr, settings.activityLevel || 'moderate') : null
+
+  const leanMass = latest?.weight && latest?.bodyFat != null ? latest.weight * (1 - latest.bodyFat / 100) : null
+  const fatMass = latest?.weight && latest?.bodyFat != null ? latest.weight * (latest.bodyFat / 100) : null
+
+  const bodyScore = computeBodyScore(latest, bmi, bodyMetrics.length)
+  const scoreCircumference = 2 * Math.PI * 54
+  const scoreOffset = scoreCircumference - (bodyScore.score / 100) * scoreCircumference
+
+  const recentWeeklyChange = useMemo(() => {
+    const recent = chronological.filter(m => m.date >= sevenDaysAgo && m.weight != null)
+    if (recent.length < 2) return null
+    const first = recent[0].weight!
+    const last = recent[recent.length - 1].weight!
+    const days = Math.max(1, (new Date(recent[recent.length - 1].date).getTime() - new Date(recent[0].date).getTime()) / 86400000)
+    return (last - first) / (days / 7)
+  }, [chronological])
+
+  const projectedWeeks = recentWeeklyChange && goal && latest?.weight != null && Math.abs(recentWeeklyChange) > 0
+    ? Math.ceil(Math.abs(latest.weight - goal) / Math.abs(recentWeeklyChange))
+    : null
+
   const chartData = useMemo(() => {
-    return chronological.slice(-30).map(m => ({
+    return chronological.slice(-60).map(m => ({
       date: new Date(m.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       weight: m.weight,
       bodyFat: m.bodyFat,
@@ -81,12 +134,19 @@ export function BodyMetricsTracker({ heightCm = 175 }: BodyMetricsTrackerProps) 
     }))
   }, [chronological])
 
-  const bodyFatChartData = useMemo(() => {
-    return chronological.slice(-30).filter(m => m.bodyFat != null).map(m => ({
-      date: new Date(m.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      bodyFat: m.bodyFat,
-    }))
+  const measureChartData = useMemo(() => {
+    if (chronological.length < 2) return []
+    return chronological.slice(-30).map(m => {
+      const entry: any = { date: new Date(m.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }
+      measurementFields.forEach(f => { if (m.measurements?.[f.key] != null) entry[f.key] = m.measurements[f.key] })
+      return entry
+    })
   }, [chronological])
+
+  const activeMeasureFields = useMemo(() =>
+    measurementFields.filter(f => measureChartData.some(d => d[f.key] != null)),
+    [measureChartData]
+  )
 
   const reset = () => { setDate(new Date().toISOString().split('T')[0]); setWeight(''); setBodyFat(''); setMeasurements({}) }
 
@@ -116,109 +176,181 @@ export function BodyMetricsTracker({ heightCm = 175 }: BodyMetricsTrackerProps) 
     setDeletingEntry(null)
   }
 
-  const bmi = latest?.weight && heightCm ? calculateBMI(latest.weight, heightCm) : null
-  const bmiCat = bmi ? bmiCategory(bmi) : null
-
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-rose-500/30 bg-gradient-to-br from-rose-500/20 via-rose-500/5 to-transparent p-6 shadow-lg shadow-rose-500/5">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/15 rounded-full -mr-16 -mt-16 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500/10 rounded-full -ml-12 -mb-12 blur-lg" />
-          <div className="relative">
-            <div className="text-rose-400/80 text-xs font-medium uppercase tracking-wider mb-2">Current Weight</div>
-            <p className="text-4xl font-bold text-rose-400 drop-shadow-lg shadow-rose-500/20">{latest?.weight?.toFixed(1) ?? '--'}<span className="text-sm text-gray-500 ml-1 font-normal">kg</span></p>
-            {weightChange !== 0 && <div className={`mt-2 flex items-center gap-1.5 text-sm font-medium ${weightChange < 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{weightChange < 0 ? <TrendingDown size={16} /> : <TrendingUp size={16} />}{weightChange > 0 ? '+' : ''}{weightChange.toFixed(1)} kg</div>}
-            {weightChange === 0 && previous && <div className="mt-2 flex items-center gap-1.5 text-sm text-gray-500"><Minus size={16} /> No change</div>}
+      {/* Body Score + Key Metrics Row */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        {/* Body Score Ring */}
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg min-h-[7.5rem] flex flex-col items-center justify-center">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="relative flex flex-col items-center">
+            <svg width="90" height="90" className="-rotate-90">
+              <circle cx="45" cy="45" r="40" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+              <circle cx="45" cy="45" r="40" fill="none" stroke={bodyScore.color} strokeWidth="8" strokeDasharray={scoreCircumference} strokeDashoffset={scoreOffset} strokeLinecap="round" className="transition-all duration-1000" />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-2xl font-bold" style={{ color: bodyScore.color }}>{bodyScore.score}</span>
+              <span className="text-[9px] text-gray-500 uppercase tracking-widest mt-0.5">Score</span>
+            </div>
+          </div>
+          <p className="text-xs font-medium mt-2" style={{ color: bodyScore.color }}>{bodyScore.label}</p>
+        </div>
+        {/* Current Weight */}
+        <div className="relative overflow-hidden rounded-2xl border border-rose-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-rose-500/5 min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-purple-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
+          <div className="relative h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 text-rose-400/80 text-sm mb-1">
+              <span>Current Weight</span>
+            </div>
+            <p className="text-3xl font-bold text-rose-400 drop-shadow-lg">{latest?.weight?.toFixed(1) ?? '--'}<span className="text-sm text-gray-500 ml-1 font-normal">kg</span></p>
+            {weightChange !== 0 && <div className={`flex items-center gap-1 text-xs font-medium mt-1 ${weightChange < 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{weightChange < 0 ? <TrendingDown size={12} /> : <TrendingUp size={12} />}{weightChange > 0 ? '+' : ''}{weightChange.toFixed(1)} kg</div>}
+            {weightChange === 0 && previous && <div className="flex items-center gap-1 text-xs text-gray-500 mt-1"><Minus size={12} /> No change</div>}
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/20 via-purple-500/5 to-transparent p-6 shadow-lg shadow-purple-500/5">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/15 rounded-full -mr-16 -mt-16 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-violet-500/10 rounded-full -ml-12 -mb-12 blur-lg" />
-          <div className="relative">
-            <div className="text-purple-400/80 text-xs font-medium uppercase tracking-wider mb-2">BMI</div>
-            <p className="text-4xl font-bold text-purple-400 drop-shadow-lg">{bmi != null ? bmi.toFixed(1) : '--'}</p>
-            {bmiCat && <p className={`text-sm font-medium mt-2 ${bmiCat.color}`}>{bmiCat.label}</p>}
+        {/* BMI */}
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-emerald-500/5 min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-teal-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
+          <div className="relative h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-1">
+              <span>BMI</span>
+            </div>
+            <p className="text-3xl font-bold text-emerald-400 drop-shadow-lg">{bmi != null ? bmi.toFixed(1) : '--'}</p>
+            {bmiCat && <p className={`text-xs font-medium mt-1 ${bmiCat.color}`}>{bmiCat.label}</p>}
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/20 via-amber-500/5 to-transparent p-6 shadow-lg shadow-amber-500/5">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/15 rounded-full -mr-16 -mt-16 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-orange-500/10 rounded-full -ml-12 -mb-12 blur-lg" />
-          <div className="relative">
-            <div className="text-amber-400/80 text-xs font-medium uppercase tracking-wider mb-2">Body Fat</div>
-            <p className="text-4xl font-bold text-amber-400 drop-shadow-lg">{latest?.bodyFat?.toFixed(1) ?? '--'}<span className="text-sm text-gray-500 ml-1 font-normal">%</span></p>
+        {/* Body Fat */}
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-amber-500/5 min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-orange-500/10 rounded-full -ml-8 -mb-8 blur-lg" />
+          <div className="relative h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 text-amber-400/80 text-sm mb-1">
+              <span>Body Fat</span>
+            </div>
+            <p className="text-3xl font-bold text-amber-400 drop-shadow-lg">{latest?.bodyFat?.toFixed(1) ?? '--'}<span className="text-sm text-gray-500 ml-1 font-normal">%</span></p>
             {previous?.bodyFat != null && latest?.bodyFat != null && (
-              <div className="mt-2 flex items-center gap-1.5 text-sm font-medium text-gray-400">
-                {latest.bodyFat - previous.bodyFat > 0 ? <ChevronUp size={16} className="text-rose-400" /> : latest.bodyFat - previous.bodyFat < 0 ? <ChevronDown size={16} className="text-emerald-400" /> : null}
+              <div className="flex items-center gap-1 text-xs font-medium mt-1 text-gray-400">
+                {latest.bodyFat - previous.bodyFat > 0 ? <ChevronUp size={12} className="text-rose-400" /> : latest.bodyFat - previous.bodyFat < 0 ? <ChevronDown size={12} className="text-emerald-400" /> : null}
                 {Math.abs(latest.bodyFat - previous.bodyFat).toFixed(1)}% change
               </div>
             )}
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-6 shadow-lg">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-12 -mb-12 blur-lg" />
-          <div className="relative">
-            <div className="text-gray-400/80 text-xs font-medium uppercase tracking-wider mb-2">Entries</div>
-            <p className="text-4xl font-bold text-gray-400 drop-shadow-lg">{bodyMetrics.length}</p>
-            <p className="text-sm text-gray-500 mt-2">{sorted[sorted.length - 1]?.date ? new Date(sorted[sorted.length - 1].date).toLocaleDateString() : '--'}</p>
+        {/* Entries */}
+        <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-12 -mt-12 blur-xl" />
+          <div className="relative h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 text-gray-400/80 text-sm mb-1">
+              <span>Entries</span>
+            </div>
+            <p className="text-3xl font-bold text-gray-400 drop-shadow-lg">{bodyMetrics.length}</p>
+            <p className="text-xs text-gray-500 mt-1">{sorted[sorted.length - 1]?.date ? `Since ${new Date(sorted[sorted.length - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : '--'}</p>
           </div>
         </div>
       </div>
 
+      {/* Body Composition + BMR/TDEE Row */}
+      {(leanMass != null || fatMass != null || bmr != null) && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Body Composition */}
+          {leanMass != null && fatMass != null && (
+            <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg min-h-[7.5rem]">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/10 rounded-full -mr-10 -mt-10 blur-xl" />
+              <div className="relative">
+                <div className="flex items-center gap-2 text-violet-400/80 text-sm mb-3">
+                  <BarChart3 className="w-4 h-4" />
+                  <span>Body Composition</span>
+                </div>
+                <div className="flex gap-4 items-center">
+                  <div className="flex-1">
+                    <div className="flex justify-between text-xs mb-1.5">
+                      <span className="text-emerald-400 font-medium">Lean Mass <span className="text-white font-bold">{leanMass.toFixed(1)}</span> <span className="text-gray-500">kg</span></span>
+                      <span className="text-amber-400 font-medium">Fat Mass <span className="text-white font-bold">{fatMass.toFixed(1)}</span> <span className="text-gray-500">kg</span></span>
+                    </div>
+                    <div className="w-full h-3 rounded-full bg-white/5 overflow-hidden flex">
+                      <div className="h-full rounded-l-full bg-gradient-to-r from-emerald-500/70 to-emerald-400/50 transition-all" style={{ width: `${(leanMass / (leanMass + fatMass)) * 100}%` }} />
+                      <div className="h-full rounded-r-full bg-gradient-to-r from-amber-500/50 to-amber-400/70 transition-all" style={{ width: `${(fatMass / (leanMass + fatMass)) * 100}%` }} />
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-2">
+                      {((leanMass / (leanMass + fatMass)) * 100).toFixed(1)}% lean / {((fatMass / (leanMass + fatMass)) * 100).toFixed(1)}% fat
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* BMR */}
+          {bmr != null && (
+            <div className="relative overflow-hidden rounded-2xl border border-sky-500/20 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-sky-500/5 min-h-[7.5rem]">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-sky-500/10 rounded-full -mr-10 -mt-10 blur-xl" />
+              <div className="relative h-full flex flex-col justify-center">
+                <div className="flex items-center gap-2 text-sky-400/80 text-sm mb-1">
+                  <Zap className="w-4 h-4" />
+                  <span>BMR</span>
+                </div>
+                <p className="text-3xl font-bold text-sky-400 drop-shadow-lg">{bmr}<span className="text-sm text-gray-500 ml-1 font-normal">kcal</span></p>
+                <p className="text-xs text-gray-500 mt-1">Basal Metabolic Rate</p>
+              </div>
+            </div>
+          )}
+          {/* TDEE */}
+          {tdee != null && (
+            <div className="relative overflow-hidden rounded-2xl border border-orange-500/20 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-orange-500/5 min-h-[7.5rem]">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-orange-500/10 rounded-full -mr-10 -mt-10 blur-xl" />
+              <div className="relative h-full flex flex-col justify-center">
+                <div className="flex items-center gap-2 text-orange-400/80 text-sm mb-1">
+                  <Flame className="w-4 h-4" />
+                  <span>TDEE</span>
+                </div>
+                <p className="text-3xl font-bold text-orange-400 drop-shadow-lg">{tdee}<span className="text-sm text-gray-500 ml-1 font-normal">kcal</span></p>
+                <p className="text-xs text-gray-500 mt-1">Total Daily Energy Expenditure</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Trend Chips */}
       {bodyMetrics.length >= 2 && (
-      <div className="grid grid-cols-3 gap-4">
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/[0.06] to-transparent p-5 shadow-lg">
+        <div className="grid grid-cols-3 gap-4">
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg min-h-[7.5rem]">
             <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full -mr-8 -mt-8 blur-md" />
-            <div className="relative flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${change7d != null && change7d < 0 ? 'bg-emerald-500/20 shadow-emerald-500/10' : change7d != null && change7d > 0 ? 'bg-rose-500/20 shadow-rose-500/10' : 'bg-white/5'} shadow-lg`}>
-                {change7d != null && change7d !== 0 ? (change7d < 0 ? <TrendingDown size={20} className="text-emerald-400" /> : <TrendingUp size={20} className="text-rose-400" />) : <MinusIcon size={20} className="text-gray-500" />}
+            <div className="relative flex items-center gap-4 h-full">
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${change7d != null && change7d < 0 ? 'bg-emerald-500/20' : change7d != null && change7d > 0 ? 'bg-rose-500/20' : 'bg-white/5'} shadow-lg`}>
+                {change7d != null && change7d !== 0 ? (change7d < 0 ? <TrendingDown size={18} className="text-emerald-400" /> : <TrendingUp size={18} className="text-rose-400" />) : <Minus size={18} className="text-gray-500" />}
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider">7-Day</p>
-                <p className={`text-lg font-bold ${change7d != null && change7d < 0 ? 'text-emerald-400' : change7d != null && change7d > 0 ? 'text-rose-400' : 'text-gray-400'}`}>
+                <p className="text-[11px] text-gray-500 uppercase tracking-wider">7-Day</p>
+                <p className={`text-base font-bold ${change7d != null && change7d < 0 ? 'text-emerald-400' : change7d != null && change7d > 0 ? 'text-rose-400' : 'text-gray-400'}`}>
                   {change7d != null ? `${change7d > 0 ? '+' : ''}${change7d.toFixed(1)} kg` : '--'}
                 </p>
               </div>
             </div>
           </div>
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-purple-500/[0.06] to-transparent p-5 shadow-lg">
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg min-h-[7.5rem]">
             <div className="absolute top-0 right-0 w-16 h-16 bg-purple-500/10 rounded-full -mr-8 -mt-8 blur-md" />
-            <div className="relative flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${change30d != null && change30d < 0 ? 'bg-emerald-500/20 shadow-emerald-500/10' : change30d != null && change30d > 0 ? 'bg-rose-500/20 shadow-rose-500/10' : 'bg-white/5'} shadow-lg`}>
-                {change30d != null && change30d !== 0 ? (change30d < 0 ? <TrendingDown size={20} className="text-emerald-400" /> : <TrendingUp size={20} className="text-rose-400" />) : <MinusIcon size={20} className="text-gray-500" />}
+            <div className="relative flex items-center gap-4 h-full">
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${change30d != null && change30d < 0 ? 'bg-emerald-500/20' : change30d != null && change30d > 0 ? 'bg-rose-500/20' : 'bg-white/5'} shadow-lg`}>
+                {change30d != null && change30d !== 0 ? (change30d < 0 ? <TrendingDown size={18} className="text-emerald-400" /> : <TrendingUp size={18} className="text-rose-400" />) : <Minus size={18} className="text-gray-500" />}
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider">30-Day</p>
-                <p className={`text-lg font-bold ${change30d != null && change30d < 0 ? 'text-emerald-400' : change30d != null && change30d > 0 ? 'text-rose-400' : 'text-gray-400'}`}>
+                <p className="text-[11px] text-gray-500 uppercase tracking-wider">30-Day</p>
+                <p className={`text-base font-bold ${change30d != null && change30d < 0 ? 'text-emerald-400' : change30d != null && change30d > 0 ? 'text-rose-400' : 'text-gray-400'}`}>
                   {change30d != null ? `${change30d > 0 ? '+' : ''}${change30d.toFixed(1)} kg` : '--'}
                 </p>
               </div>
             </div>
           </div>
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-purple-500/[0.06] to-transparent p-5 shadow-lg">
-            <div className="absolute top-0 right-0 w-16 h-16 bg-purple-500/10 rounded-full -mr-8 -mt-8 blur-md" />
-            <div className="relative flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${change30d != null && change30d < 0 ? 'bg-emerald-500/20 shadow-emerald-500/10' : change30d != null && change30d > 0 ? 'bg-rose-500/20 shadow-rose-500/10' : 'bg-white/5'} shadow-lg`}>
-                {change30d != null && change30d !== 0 ? (change30d < 0 ? <TrendingDown size={20} className="text-emerald-400" /> : <TrendingUp size={20} className="text-rose-400" />) : <MinusIcon size={20} className="text-gray-500" />}
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider">30-Day</p>
-                <p className={`text-lg font-bold ${change30d != null && change30d < 0 ? 'text-emerald-400' : change30d != null && change30d > 0 ? 'text-rose-400' : 'text-gray-400'}`}>
-                  {change30d != null ? `${change30d > 0 ? '+' : ''}${change30d.toFixed(1)} kg` : '--'}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-amber-500/[0.06] to-transparent p-5 shadow-lg">
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg min-h-[7.5rem]">
             <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/10 rounded-full -mr-8 -mt-8 blur-md" />
-            <div className="relative flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${changeAll != null && changeAll < 0 ? 'bg-emerald-500/20 shadow-emerald-500/10' : changeAll != null && changeAll > 0 ? 'bg-rose-500/20 shadow-rose-500/10' : 'bg-white/5'} shadow-lg`}>
-                {changeAll != null && changeAll !== 0 ? (changeAll < 0 ? <TrendingDown size={20} className="text-emerald-400" /> : <TrendingUp size={20} className="text-rose-400" />) : <MinusIcon size={20} className="text-gray-500" />}
+            <div className="relative flex items-center gap-4 h-full">
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${changeAll != null && changeAll < 0 ? 'bg-emerald-500/20' : changeAll != null && changeAll > 0 ? 'bg-rose-500/20' : 'bg-white/5'} shadow-lg`}>
+                {changeAll != null && changeAll !== 0 ? (changeAll < 0 ? <TrendingDown size={18} className="text-emerald-400" /> : <TrendingUp size={18} className="text-rose-400" />) : <Minus size={18} className="text-gray-500" />}
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider">Total</p>
-                <p className={`text-lg font-bold ${changeAll != null && changeAll < 0 ? 'text-emerald-400' : changeAll != null && changeAll > 0 ? 'text-rose-400' : 'text-gray-400'}`}>
+                <p className="text-[11px] text-gray-500 uppercase tracking-wider">Total</p>
+                <p className={`text-base font-bold ${changeAll != null && changeAll < 0 ? 'text-emerald-400' : changeAll != null && changeAll > 0 ? 'text-rose-400' : 'text-gray-400'}`}>
                   {changeAll != null ? `${changeAll > 0 ? '+' : ''}${changeAll.toFixed(1)} kg` : '--'}
                 </p>
               </div>
@@ -227,186 +359,158 @@ export function BodyMetricsTracker({ heightCm = 175 }: BodyMetricsTrackerProps) 
         </div>
       )}
 
+      {/* Goal Card */}
       {goal && (
-        <Card>
+        <Card className="p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center"><Target className="w-5 h-5 text-emerald-400" /></div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-white">Target Weight: {goal.toFixed(1)} kg</p>
+              <p className="text-sm font-medium text-white">Target: {goal.toFixed(1)} kg</p>
               {latest?.weight != null && (
                 <p className="text-xs text-gray-500">
                   {Math.abs(latest.weight - goal).toFixed(1)} kg {latest.weight > goal ? 'above' : 'below'} goal
                 </p>
               )}
             </div>
-            {goalPercent != null && (
-              <span className="text-xs font-semibold text-emerald-400">{Math.max(0, Math.min(100, goalPercent)).toFixed(0)}%</span>
-            )}
+            <span className="text-xs font-semibold text-emerald-400">{Math.max(0, Math.min(100, goalPercent ?? 0)).toFixed(0)}%</span>
           </div>
           <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-emerald-500/60 to-emerald-400 transition-all duration-500"
-              style={{ width: `${Math.max(0, Math.min(100, goalPercent ?? 0))}%` }}
-            />
+            <div className="h-full rounded-full bg-gradient-to-r from-emerald-500/60 to-emerald-400 transition-all duration-500" style={{ width: `${Math.max(0, Math.min(100, goalPercent ?? 0))}%` }} />
           </div>
         </Card>
       )}
 
-      <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/[0.08] to-transparent p-6">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-rose-500/[0.06] rounded-full -mr-24 -mt-24 blur-xl" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/[0.04] rounded-full -ml-16 -mb-16 blur-xl" />
-        <div className="relative">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center shadow-lg shadow-rose-500/10"><LineChartIcon className="w-5 h-5 text-rose-400" /></div>
-              <div>
-                <h3 className="font-semibold text-white text-lg">Weight Trend</h3>
-                <p className="text-xs text-gray-500">Last 30 entries</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50" />
-              <span>Weight</span>
-            </div>
-          </div>
-          {chartData.length > 1 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                <XAxis dataKey="date" stroke="#ffffff40" fontSize={10} interval="preserveStartEnd" />
-                <YAxis stroke="#ffffff40" fontSize={10} domain={['dataMin - 2', 'dataMax + 2']} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #ffffff20', borderRadius: '12px', backdropFilter: 'blur(12px)' }}
-                  labelStyle={{ color: '#fff' }}
-                  itemStyle={{ color: '#f43f5e' }}
-                />
-                <Area type="monotone" dataKey="weight" stroke="#f43f5e" strokeWidth={3} fill="url(#weightGradient)" dot={false} activeDot={{ r: 6, fill: '#f43f5e', strokeWidth: 2, stroke: '#1a1a2e' }} />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-[300px] flex items-center justify-center text-gray-500 text-sm">Add more entries to see the weight trend</div>
-          )}
-        </div>
-      </div>
-
-      {bodyFatChartData.length > 1 && (
-        <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.08] to-transparent p-6">
-          <div className="absolute top-0 left-0 w-40 h-40 bg-amber-500/[0.06] rounded-full -ml-20 -mt-20 blur-xl" />
-          <div className="relative">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shadow-lg shadow-amber-500/10"><Flame className="w-5 h-5 text-amber-400" /></div>
-              <div>
-                <h3 className="font-semibold text-white text-lg">Body Fat Trend</h3>
-                <p className="text-xs text-gray-500">Last 30 entries</p>
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={bodyFatChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                <XAxis dataKey="date" stroke="#ffffff40" fontSize={10} interval="preserveStartEnd" />
-                <YAxis stroke="#ffffff40" fontSize={10} domain={['dataMin - 2', 'dataMax + 2']} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #ffffff20', borderRadius: '12px', backdropFilter: 'blur(12px)' }}
-                  labelStyle={{ color: '#fff' }}
-                  itemStyle={{ color: '#f59e0b' }}
-                />
-                <Line type="monotone" dataKey="bodyFat" stroke="#f59e0b" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#f59e0b', strokeWidth: 2, stroke: '#1a1a2e' }} name="Body Fat %" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
-
+      {/* Goal Projection */}
       {goal && latest?.weight != null && (
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.08] via-emerald-500/[0.02] to-transparent p-6 shadow-lg shadow-emerald-500/5">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/[0.06] rounded-full -mr-24 -mt-24 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/[0.04] rounded-full -ml-16 -mb-16 blur-xl" />
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-emerald-500/5">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full -mr-20 -mt-20 blur-xl" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500/5 rounded-full -ml-12 -mb-12 blur-xl" />
           <div className="relative">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shadow-lg shadow-emerald-500/10"><Sparkles className="w-5 h-5 text-emerald-400" /></div>
-              <div>
-                <h3 className="font-semibold text-white text-lg">Goal Projection</h3>
-                <p className="text-xs text-gray-500">{goal.toFixed(1)} kg target</p>
-              </div>
-              <div className="ml-auto text-right">
-                <div className="w-14 h-14 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center">
-                  <span className="text-lg font-bold text-emerald-400">{Math.max(0, Math.min(100, goalPercent ?? 0)).toFixed(0)}%</span>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shadow-lg"><Sparkles className="w-5 h-5 text-emerald-400" /></div>
+                <div>
+                  <h3 className="font-semibold text-white">Goal Projection</h3>
+                  <p className="text-xs text-gray-500">{goal.toFixed(1)} kg target</p>
                 </div>
+              </div>
+              <div className="w-14 h-14 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center">
+                <span className="text-lg font-bold text-emerald-400">{Math.max(0, Math.min(100, goalPercent ?? 0)).toFixed(0)}%</span>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-xl bg-white/[0.05] border border-white/10 p-5">
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Current</p>
-                <p className="text-3xl font-bold text-white">{latest.weight.toFixed(1)} <span className="text-sm text-gray-500 font-normal">kg</span></p>
-                <div className="flex items-center gap-2 mt-2 text-sm text-emerald-400">
-                  <ArrowRight className="w-4 h-4" />
+              <div className="rounded-xl bg-white/5 border border-white/10 p-4">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Current</p>
+                <p className="text-2xl font-bold text-white">{latest.weight.toFixed(1)} <span className="text-xs text-gray-500 font-normal">kg</span></p>
+                <div className="flex items-center gap-1.5 mt-2 text-xs text-emerald-400">
+                  <ArrowRight className="w-3 h-3" />
                   <span>{goal.toFixed(1)} kg target</span>
                 </div>
               </div>
-              <div className="rounded-xl bg-white/[0.05] border border-white/10 p-5">
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Remaining</p>
-                <p className="text-3xl font-bold text-amber-400">{Math.abs(latest.weight - goal).toFixed(1)} <span className="text-sm text-gray-500 font-normal">kg</span></p>
-                <p className="text-sm text-gray-400 mt-2">{latest.weight > goal ? 'to lose' : 'to gain'}</p>
+              <div className="rounded-xl bg-white/5 border border-white/10 p-4">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Remaining</p>
+                <p className="text-2xl font-bold text-amber-400">{Math.abs(latest.weight - goal).toFixed(1)} <span className="text-xs text-gray-500 font-normal">kg</span></p>
+                <p className="text-xs text-gray-400 mt-2">{latest.weight > goal ? 'to lose' : 'to gain'}</p>
               </div>
             </div>
-            {change7d != null && Math.abs(change7d) > 0 && (
-              <div className="mt-4 rounded-xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-purple-500/10 border border-emerald-500/20 p-4 shadow-inner">
-                <p className="text-sm text-gray-400">
-                  At current rate (~<span className="text-white font-semibold">{Math.abs(change7d).toFixed(2)} kg/week</span>), you'll reach your goal in{' '}
-                  <span className="text-emerald-400 font-bold text-lg">{Math.ceil(Math.abs(latest.weight - goal) / Math.abs(change7d))} weeks</span>
-                </p>
+            {recentWeeklyChange != null && Math.abs(recentWeeklyChange) > 0 && (
+              <div className="mt-4 rounded-xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-purple-500/10 border border-emerald-500/20 p-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Weekly Rate</p>
+                    <p className="text-lg font-bold text-white">{Math.abs(recentWeeklyChange).toFixed(2)} <span className="text-xs text-gray-500 font-normal">kg/week</span></p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Est. Completion</p>
+                    <p className="text-lg font-bold text-emerald-400">{projectedWeeks} <span className="text-xs text-gray-500 font-normal">weeks</span></p>
+                  </div>
+                </div>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {chronological.length >= 3 && (() => {
-        const measureChartData = chronological.slice(-20).map(m => {
-          const entry: any = { date: new Date(m.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }
-          measurementFields.forEach(f => { if (m.measurements?.[f.key] != null) entry[f.key] = m.measurements[f.key] })
-          return entry
-        })
-        const hasMeasureData = measureChartData.some(d => measurementFields.some(f => d[f.key as string] != null))
-        if (!hasMeasureData) return null
-        const COLORS = ['#f43f5e', '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#6366f1', '#ec4899', '#14b8a6']
-        const activeFields = measurementFields.filter(f => measureChartData.some(d => d[f.key] != null))
-        return (
-          <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.08] to-transparent p-6">
-            <div className="absolute top-0 left-0 w-40 h-40 bg-violet-500/[0.06] rounded-full -ml-20 -mt-20 blur-xl" />
-            <div className="relative">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center shadow-lg shadow-violet-500/10"><Gauge className="w-5 h-5 text-violet-400" /></div>
-                <div>
-                  <h3 className="font-semibold text-white text-lg">Measurements Trend</h3>
-                  <p className="text-xs text-gray-500">{activeFields.map(f => f.label).join(', ')}</p>
-                </div>
+      {/* Charts Section */}
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-rose-500/10 rounded-full -mr-24 -mt-24 blur-xl" />
+        <div className="relative">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center shadow-lg"><LineChartIcon className="w-5 h-5 text-rose-400" /></div>
+              <div>
+                <h3 className="font-semibold text-white">Trends</h3>
+                <p className="text-xs text-gray-500">Last {Math.min(60, chronological.length)} entries</p>
               </div>
-              <ResponsiveContainer width="100%" height={280}>
+            </div>
+            <div className="flex gap-1 bg-white/5 rounded-xl p-1">
+              <button onClick={() => setChartTab('weight')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${chartTab === 'weight' ? 'bg-rose-500/20 text-rose-300 shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>
+                Weight
+              </button>
+              <button onClick={() => setChartTab('measurements')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${chartTab === 'measurements' ? 'bg-violet-500/20 text-violet-300 shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>
+                Measurements
+              </button>
+            </div>
+          </div>
+
+          {chartTab === 'weight' && (
+            chartData.length > 1 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="wg" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="bfg" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                  <XAxis dataKey="date" stroke="#ffffff40" fontSize={10} interval="preserveStartEnd" />
+                  <YAxis yAxisId="left" stroke="#f43f5e" fontSize={10} domain={['dataMin - 2', 'dataMax + 2']} />
+                  <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={10} domain={['dataMin - 3', 'dataMax + 3']} />
+                  <Tooltip
+                    contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', backdropFilter: 'blur(12px)' }}
+                    labelStyle={{ color: '#fff' }}
+                  />
+                  <Area yAxisId="left" type="monotone" dataKey="weight" stroke="#f43f5e" strokeWidth={3} fill="url(#wg)" dot={false} activeDot={{ r: 6, fill: '#f43f5e', strokeWidth: 2, stroke: '#1a1a2e' }} name="Weight (kg)" />
+                  {chartData.some(d => d.bodyFat != null) && (
+                    <Line yAxisId="right" type="monotone" dataKey="bodyFat" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#f59e0b', strokeWidth: 2, stroke: '#1a1a2e' }} name="Body Fat %" />
+                  )}
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-gray-500 text-sm">Log more entries to see trends</div>
+            )
+          )}
+
+          {chartTab === 'measurements' && (
+            activeMeasureFields.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={measureChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
                   <XAxis dataKey="date" stroke="#ffffff40" fontSize={10} interval="preserveStartEnd" />
                   <YAxis stroke="#ffffff40" fontSize={10} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #ffffff20', borderRadius: '12px', backdropFilter: 'blur(12px)' }}
+                    contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', backdropFilter: 'blur(12px)' }}
                     labelStyle={{ color: '#fff' }}
                   />
-                  {activeFields.map((f, i) => (
-                    <Line key={f.key} type="monotone" dataKey={f.key} stroke={COLORS[i % COLORS.length]} strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 2, stroke: '#1a1a2e' }} name={f.label} />
-                  ))}
+                  {activeMeasureFields.map((f, i) => {
+                    const colors = ['#f43f5e', '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#6366f1', '#ec4899', '#14b8a6']
+                    return <Line key={f.key} type="monotone" dataKey={f.key} stroke={colors[i % colors.length]} strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 2, stroke: '#1a1a2e' }} name={f.label} />
+                  })}
                 </LineChart>
               </ResponsiveContainer>
-            </div>
-          </div>
-        )
-      })()}
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-gray-500 text-sm">No measurement data yet</div>
+            )
+          )}
+        </div>
+      </div>
 
+      {/* Action Bar */}
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-white">Measurement History</h3>
         <div className="flex items-center gap-2">
@@ -420,84 +524,63 @@ export function BodyMetricsTracker({ heightCm = 175 }: BodyMetricsTrackerProps) 
         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.08] to-transparent p-5 shadow-lg shadow-emerald-500/5">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full -mr-12 -mt-12 blur-lg" />
-        <div className="relative flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shadow-lg shadow-emerald-500/10"><Target className="w-5 h-5 text-emerald-400" /></div>
-            <div>
-              <p className="text-sm font-semibold text-white">Goal Weight</p>
-              <p className="text-xs text-gray-500">Set your target weight</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              step="0.1"
-              value={targetWeight}
-              onChange={(e) => setTargetWeight(e.target.value)}
-              className="w-24 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm text-right font-medium focus:border-emerald-500/50 focus:outline-none transition-all placeholder-gray-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              placeholder="kg"
-            />
-            {targetWeight && (
-              <button onClick={() => setTargetWeight('')} className="p-2 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all text-xs">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
+      {/* Empty State */}
       {bodyMetrics.length === 0 ? (
         <Card className="py-12 text-center">
           <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4"><Activity className="w-8 h-8 text-rose-400/50" /></div>
           <p className="text-gray-400 mb-1">No body metrics logged yet</p>
           <p className="text-gray-500 text-sm mb-4">Start tracking your progress</p>
-          <Button variant="primary" onClick={() => setShowForm(true)}>
-            Log Your First Entry
-          </Button>
+          <Button variant="primary" onClick={() => setShowForm(true)}>Log Your First Entry</Button>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {sorted.map((m, idx) => {
             const prevEntry = idx < sorted.length - 1 ? sorted[idx + 1] : null
             return (
-              <div key={m.id} className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all group relative overflow-hidden">
+              <motion.div
+                key={m.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.02 }}
+                className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/[0.07] transition-all group relative overflow-hidden"
+              >
                 <div className="absolute inset-0 bg-gradient-to-r from-rose-500/[0.02] to-transparent pointer-events-none" />
                 <div className="relative z-10">
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-xl bg-rose-500/20 flex items-center justify-center shadow-lg" style={{ boxShadow: '0 0 20px rgba(244,63,94,0.15)' }}><Activity className="w-5 h-5 text-rose-400" /></div>
+                      <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center shadow-lg" style={{ boxShadow: '0 0 20px rgba(244,63,94,0.15)' }}>
+                        <Activity className="w-5 h-5 text-rose-400" />
+                      </div>
                       <div>
-                        <h4 className="font-semibold text-white tracking-tight">{new Date(m.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</h4>
-                        <div className="flex gap-3 text-sm">
+                        <h4 className="font-semibold text-white text-sm">{new Date(m.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</h4>
+                        <div className="flex gap-3 text-xs">
                           {m.weight && <span className="text-gray-300">{m.weight.toFixed(1)} kg</span>}
                           {m.bodyFat && <span className="text-amber-400">{m.bodyFat.toFixed(1)}% fat</span>}
                           {Object.keys(m.measurements).length > 0 && <span className="text-gray-500">{Object.keys(m.measurements).length} measurements</span>}
                         </div>
                       </div>
                     </div>
-                    <button onClick={() => setDeletingEntry(m)} className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => setDeletingEntry(m)} className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                   {Object.keys(m.measurements).length > 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                       {measurementFields.map((field) => {
                         const val = m.measurements[field.key]
                         const prevVal = prevEntry?.measurements?.[field.key]
                         const change = val != null && prevVal != null ? val - prevVal : null
                         if (val == null) return null
                         return (
-                          <div key={field.key} className="flex items-center justify-between rounded-lg bg-white/[0.03] px-3 py-2">
-                            <span className="text-xs text-gray-500">{field.label}</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm text-white">{val.toFixed(1)}</span>
+                          <div key={field.key} className="flex items-center justify-between rounded-lg bg-white/5 px-2.5 py-1.5">
+                            <span className="text-[10px] text-gray-500">{field.label}</span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-white font-medium">{val.toFixed(1)}</span>
                               {change !== null && (
                                 change !== 0 ? (
                                   <span className={change > 0 ? 'text-rose-400' : 'text-emerald-400'}>
-                                    {change > 0 ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                    {change > 0 ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
                                   </span>
                                 ) : (
-                                  <span className="text-gray-600"><MinusIcon size={12} /></span>
+                                  <span className="text-gray-600"><Minus size={10} /></span>
                                 )
                               )}
                             </div>
@@ -507,20 +590,69 @@ export function BodyMetricsTracker({ heightCm = 175 }: BodyMetricsTrackerProps) 
                     </div>
                   )}
                   {bmi != null && m.weight && (
-                    <div className="mt-3 flex items-center gap-2">
-                      <span className="text-xs text-gray-500">BMI: {calculateBMI(m.weight, heightCm)}</span>
-                      <span className={`text-xs ${bmiCategory(calculateBMI(m.weight, heightCm)).color}`}>
-                        {bmiCategory(calculateBMI(m.weight, heightCm)).label}
-                      </span>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-[10px] text-gray-500">BMI: {calculateBMI(m.weight, heightCm).toFixed(1)}</span>
+                      <span className={`text-[10px] ${bmiCategory(calculateBMI(m.weight, heightCm)).color}`}>{bmiCategory(calculateBMI(m.weight, heightCm)).label}</span>
                     </div>
                   )}
                 </div>
-              </div>
+              </motion.div>
             )
           })}
         </div>
       )}
 
+      {/* BMI Scale Reference */}
+      {bmi != null && (
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart3 className="w-4 h-4 text-emerald-400" />
+            <span className="text-sm font-medium text-white">BMI Scale</span>
+          </div>
+          <div className="w-full h-3 rounded-full bg-white/5 overflow-hidden flex">
+            {bmiRanges.map((range, i) => {
+              const prevMax = i === 0 ? 10 : bmiRanges[i - 1].max
+              const width = ((range.max - prevMax) / 30) * 100
+              const isInRange = bmi >= prevMax && bmi < range.max
+              return (
+                <div
+                  key={range.label}
+                  className="h-full relative transition-all first:rounded-l-full last:rounded-r-full"
+                  style={{
+                    width: `${Math.min(width, 100)}%`,
+                    background: isInRange
+                      ? `linear-gradient(90deg, ${range.color}88, ${range.color})`
+                      : `${range.color}22`,
+                  }}
+                />
+              )
+            })}
+          </div>
+          <div className="flex justify-between mt-2">
+            {bmiRanges.map((range, i) => {
+              const prevMax = i === 0 ? 10 : bmiRanges[i - 1].max
+              const isInRange = bmi >= prevMax && bmi < range.max
+              return (
+                <span
+                  key={range.label}
+                  className={`text-[9px] font-medium transition-all ${isInRange ? 'text-white' : 'text-gray-600'}`}
+                  style={isInRange ? { color: range.color } : {}}
+                >
+                  {range.label}
+                </span>
+              )
+            })}
+          </div>
+          <div className="mt-0.5 flex justify-between text-[8px] text-gray-600">
+            {bmiRanges.map((range, i) => {
+              const prevMax = i === 0 ? 10 : bmiRanges[i - 1].max
+              return <span key={range.label}>{prevMax}</span>
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* Log Entry Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowForm(false)}>
           <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -560,6 +692,7 @@ export function BodyMetricsTracker({ heightCm = 175 }: BodyMetricsTrackerProps) 
         </div>
       )}
 
+      {/* Delete Confirmation */}
       {deletingEntry && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setDeletingEntry(null)}>
           <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -604,53 +737,40 @@ export function BodyMetricsTracker({ heightCm = 175 }: BodyMetricsTrackerProps) 
                   </div>
                   <button onClick={() => setShowSettings(false)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all"><X className="w-4 h-4" /></button>
                 </div>
-
-                <div className="space-y-5">
-                  {/* Goal Weight */}
+                <div className="space-y-4">
                   <div className="rounded-xl bg-white/5 border border-white/10 p-4">
-                    <label className="text-xs text-gray-400 uppercase tracking-wider font-medium">Goal Weight (kg)</label>
+                    <label className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Goal Weight (kg)</label>
                     <input type="number" step="0.1" value={targetWeight} onChange={(e) => setTargetWeight(e.target.value)} className="mt-2 w-full px-3 py-2.5 rounded-xl bg-white/5 border border-emerald-500/30 text-white font-semibold focus:border-emerald-400/60 focus:outline-none transition-all" placeholder="e.g. 75" />
                     {targetWeight && latest?.weight != null && (
-                      <p className="mt-2 text-xs text-gray-500">
-                        {Math.abs(latest.weight - parseFloat(targetWeight)).toFixed(1)} kg {latest.weight > parseFloat(targetWeight) ? 'above' : 'below'} goal
-                      </p>
+                      <p className="mt-2 text-xs text-gray-500">{Math.abs(latest.weight - parseFloat(targetWeight)).toFixed(1)} kg {latest.weight > parseFloat(targetWeight) ? 'above' : 'below'} goal</p>
                     )}
                   </div>
-
-                  {/* Goal Body Fat */}
                   <div className="rounded-xl bg-white/5 border border-white/10 p-4">
-                    <label className="text-xs text-gray-400 uppercase tracking-wider font-medium">Goal Body Fat (%)</label>
+                    <label className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Goal Body Fat (%)</label>
                     <input type="number" step="0.1" min={3} max={50} value={goalBodyFat} onChange={(e) => setGoalBodyFat(e.target.value)} className="mt-2 w-full px-3 py-2.5 rounded-xl bg-white/5 border border-amber-500/30 text-white font-semibold focus:border-amber-400/60 focus:outline-none transition-all" placeholder="e.g. 15" />
                     {goalBodyFat && latest?.bodyFat != null && (
-                      <p className="mt-2 text-xs text-gray-500">
-                        {Math.abs(latest.bodyFat - parseFloat(goalBodyFat)).toFixed(1)}% {latest.bodyFat > parseFloat(goalBodyFat) ? 'above' : 'below'} goal
-                      </p>
+                      <p className="mt-2 text-xs text-gray-500">{Math.abs(latest.bodyFat - parseFloat(goalBodyFat)).toFixed(1)}% {latest.bodyFat > parseFloat(goalBodyFat) ? 'above' : 'below'} goal</p>
                     )}
                   </div>
-
-                  {/* Quick Stats */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
-                      <p className="text-[10px] text-gray-500 uppercase tracking-wider">Total Entries</p>
-                      <p className="text-xl font-bold text-white mt-1">{bodyMetrics.length}</p>
+                      <p className="text-[9px] text-gray-500 uppercase tracking-wider">Total Entries</p>
+                      <p className="text-lg font-bold text-white mt-1">{bodyMetrics.length}</p>
                     </div>
                     <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
-                      <p className="text-[10px] text-gray-500 uppercase tracking-wider">Date Range</p>
-                      <p className="text-xs font-bold text-white mt-1">
+                      <p className="text-[9px] text-gray-500 uppercase tracking-wider">Date Range</p>
+                      <p className="text-[10px] font-bold text-white mt-1">
                         {bodyMetrics.length > 1
                           ? `${new Date(sorted[sorted.length - 1]?.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(sorted[0]?.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
                           : bodyMetrics.length === 1 ? '1 entry' : 'No data'}
                       </p>
                     </div>
                   </div>
-
-                  {/* Data Management */}
                   <div className="rounded-xl bg-red-500/5 border border-red-500/10 p-4">
                     <h4 className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-3">Data Management</h4>
                     {!confirmClear ? (
                       <button onClick={() => setConfirmClear(true)} className="w-full px-3 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 transition-all text-sm font-medium flex items-center justify-center gap-2">
-                        <Trash2 className="w-4 h-4" />
-                        Clear All Body Data
+                        <Trash2 className="w-4 h-4" /> Clear All Body Data
                       </button>
                     ) : (
                       <div className="space-y-2">
