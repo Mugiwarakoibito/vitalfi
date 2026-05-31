@@ -955,6 +955,12 @@ export function NutritionLogger() {
 
             {/* Chart Area */}
             <div className="h-56">
+              {pastDays.length === 0 || pastDays.every(d => d.calories === 0) ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <p className="text-sm text-gray-500 font-medium">No historical data yet</p>
+                  <p className="text-[10px] text-gray-600 mt-1">Log meals on different days to see weekly analytics</p>
+                </div>
+              ) : (
               <ResponsiveContainer width="100%" height="100%">
                 {chartMode === 'macros' ? (
                   <BarChart data={pastDays} barGap={2} barCategoryGap="20%">
@@ -1006,6 +1012,7 @@ export function NutritionLogger() {
                   </BarChart>
                 )}
               </ResponsiveContainer>
+              )}
             </div>
 
             {/* Per-mode context strip */}
