@@ -1,6 +1,6 @@
 import { storage } from './storage';
 import { generateId } from './utils';
-import type { Account, Transaction, Budget, Investment, Bill, Debt, Goal, Workout, Meal, BodyMetric, HydrationEntry, SleepEntry, AppSettings } from '../types/domain';
+import type { Account, Transaction, Budget, Investment, Bill, Debt, Goal, Workout, BodyMetric, HydrationEntry, SleepEntry, AppSettings } from '../types/domain';
 
 function daysAgo(n: number): string {
   const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().split('T')[0];
@@ -28,6 +28,14 @@ const incomeDescs = [
 ];
 
 export async function seedIfNeeded(): Promise<boolean> {
+  // Clean up any previously seeded meals (fake data from older version)
+  try {
+    const existingMeals = await storage.getAll('meals');
+    const seededMealNames = ['Chicken & Rice', 'Salad Bowl', 'Protein Shake', 'Oatmeal', 'Steak & Veggies', 'Pasta', 'Smoothie', 'Eggs & Toast'];
+    const seededMeals = existingMeals.filter(m => seededMealNames.includes(m.name));
+    for (const m of seededMeals) await storage.delete('meals', m.id);
+  } catch {}
+
   const seeded = localStorage.getItem('vitalfi_seeded');
   if (seeded) return false;
 
@@ -124,18 +132,6 @@ export async function seedIfNeeded(): Promise<boolean> {
     });
   }
   for (const w of workouts) await storage.put('workouts', w);
-
-  const meals: Meal[] = [];
-  for (let i = 0; i < 20; i++) {
-    const date = daysAgo(rand(0, 14));
-    meals.push({
-      id: generateId(), date, name: pick(['Chicken & Rice', 'Salad Bowl', 'Protein Shake', 'Oatmeal', 'Steak & Veggies', 'Pasta', 'Smoothie', 'Eggs & Toast']),
-      mealType: pick(['breakfast', 'lunch', 'dinner', 'snack']),
-      calories: rand(200, 800), protein: rand(15, 50), carbs: rand(20, 80), fat: rand(5, 35),
-      fiber: rand(2, 12), createdAt: date, updatedAt: date,
-    });
-  }
-  for (const m of meals) await storage.put('meals', m);
 
   for (let i = 0; i < 14; i++) {
     const date = daysAgo(i);

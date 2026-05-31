@@ -1,19 +1,20 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import { ToastProvider } from '@/hooks/useToast'
 import { LicenseGate } from '@/components/auth/LicenseGate'
 import { OnboardingFlow } from '@/components/auth/OnboardingFlow'
 import { useAppStore } from '@/store/useAppStore'
-import Dashboard from '@/pages/Dashboard'
-import Finance from '@/pages/Finance'
-import Fitness from '@/pages/Fitness'
-import Settings from '@/pages/Settings'
-import Movement from '@/pages/trackers/Movement'
-import Nutrition from '@/pages/trackers/Nutrition'
-import Recovery from '@/pages/trackers/Recovery'
-import Mindset from '@/pages/trackers/Mindset'
-import Social from '@/pages/trackers/Social'
+
+const Dashboard = lazy(() => import('@/pages/Dashboard'))
+const Finance = lazy(() => import('@/pages/Finance'))
+const Fitness = lazy(() => import('@/pages/Fitness'))
+const Settings = lazy(() => import('@/pages/Settings'))
+const Movement = lazy(() => import('@/pages/trackers/Movement'))
+const Nutrition = lazy(() => import('@/pages/trackers/Nutrition'))
+const Recovery = lazy(() => import('@/pages/trackers/Recovery'))
+const Mindset = lazy(() => import('@/pages/trackers/Mindset'))
+const Social = lazy(() => import('@/pages/trackers/Social'))
 
 function LoadingScreen() {
   return (
@@ -53,19 +54,21 @@ function AppContent() {
   return (
     <LicenseGate>
       <AppShell>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/finance" element={<Finance />} />
-          <Route path="/finance/:tab" element={<Finance />} />
-          <Route path="/fitness" element={<Fitness />} />
-          <Route path="/fitness/:tab" element={<Fitness />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/pillars/movement" element={<Movement />} />
-          <Route path="/pillars/nutrition" element={<Nutrition />} />
-          <Route path="/pillars/recovery" element={<Recovery />} />
-          <Route path="/pillars/mindset" element={<Mindset />} />
-          <Route path="/pillars/social" element={<Social />} />
-        </Routes>
+        <Suspense fallback={<LoadingScreen />}>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/finance" element={<Finance />} />
+            <Route path="/finance/:tab" element={<Finance />} />
+            <Route path="/fitness" element={<Fitness />} />
+            <Route path="/fitness/:tab" element={<Fitness />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/pillars/movement" element={<Movement />} />
+            <Route path="/pillars/nutrition" element={<Nutrition />} />
+            <Route path="/pillars/recovery" element={<Recovery />} />
+            <Route path="/pillars/mindset" element={<Mindset />} />
+            <Route path="/pillars/social" element={<Social />} />
+          </Routes>
+        </Suspense>
       </AppShell>
     </LicenseGate>
   )

@@ -1,18 +1,19 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from 'react'
 import {
   Plus, Trash2, Utensils, Flame, Beef, Wheat, Droplet,
   Pencil, AlertTriangle, ChevronLeft, ChevronRight,
-  Calendar, BarChart3, Award, RotateCcw,
+  Calendar, BarChart3, RotateCcw,
   ChefHat, Bookmark, BookmarkPlus,
-  Lightbulb, Target, Ruler, Brain, ArrowRight, Check,
+  Target, Ruler, Brain, ArrowRight, Check, Sparkles, RefreshCw, Settings,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell } from 'recharts'
 import { useAppStore } from '@/store/useAppStore'
-import { MealForm } from './MealForm'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import type { Meal } from '@/types/fitness'
+
+const MealForm = lazy(() => import('./MealForm').then(m => ({ default: m.MealForm })))
 
 const STORAGE_PROFILE_KEY = 'nutrition_profile'
 
@@ -82,6 +83,8 @@ const FOOD_SUGGESTIONS: Record<string, { name: string; protein: number; carbs: n
     { name: 'Eggs', protein: 13, carbs: 1, fat: 11, calories: 155, emoji: '🥚' },
     { name: 'Tuna', protein: 30, carbs: 0, fat: 1, calories: 132, emoji: '🐟' },
     { name: 'Cottage Cheese', protein: 11, carbs: 3, fat: 4, calories: 98, emoji: '🧀' },
+    { name: 'Steak', protein: 26, carbs: 0, fat: 11, calories: 206, emoji: '🥩' },
+    { name: 'Whey Shake', protein: 24, carbs: 3, fat: 1, calories: 120, emoji: '🥤' },
   ],
   high_carbs: [
     { name: 'Oats', protein: 17, carbs: 66, fat: 7, calories: 389, emoji: '🥣' },
@@ -89,13 +92,22 @@ const FOOD_SUGGESTIONS: Record<string, { name: string; protein: number; carbs: n
     { name: 'Sweet Potato', protein: 2, carbs: 26, fat: 0.1, calories: 112, emoji: '🍠' },
     { name: 'Banana', protein: 1, carbs: 27, fat: 0.3, calories: 105, emoji: '🍌' },
     { name: 'Quinoa', protein: 8, carbs: 39, fat: 3.6, calories: 222, emoji: '🌾' },
+    { name: 'Whole Wheat Pasta', protein: 7, carbs: 42, fat: 1.5, calories: 210, emoji: '🍝' },
   ],
   healthy_fat: [
     { name: 'Avocado', protein: 2, carbs: 9, fat: 15, calories: 160, emoji: '🥑' },
     { name: 'Almonds', protein: 21, carbs: 22, fat: 50, calories: 579, emoji: '🥜' },
     { name: 'Olive Oil', protein: 0, carbs: 0, fat: 14, calories: 119, emoji: '🫒' },
     { name: 'Salmon', protein: 25, carbs: 0, fat: 13, calories: 208, emoji: '🐠' },
+    { name: 'Peanut Butter', protein: 8, carbs: 7, fat: 16, calories: 190, emoji: '🥜' },
   ],
+}
+
+interface SuggestionItem {
+  type: 'protein' | 'carbs' | 'fat'
+  remaining: number
+  target: number
+  foods: { name: string; emoji: string; amount: number; unit: string; detail: string }[]
 }
 
 interface SavedRecipe {
@@ -145,7 +157,12 @@ function saveTargets(t: typeof DEFAULT_TARGETS) {
 }
 
 function formatDate(d: Date): string {
-  return d.toISOString().split('T')[0]
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function parseLocalDate(str: string): Date {
+  const [y, m, d] = str.split('-').map(Number)
+  return new Date(y, m - 1, d)
 }
 
 function getWeekDates(ref: Date): string[] {
@@ -158,23 +175,50 @@ function getWeekDates(ref: Date): string[] {
   return dates
 }
 
-function getDayLabel(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  const today = new Date()
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const s = formatDate(d)
-  if (s === formatDate(today)) return 'Today'
-  if (s === formatDate(yesterday)) return 'Yesterday'
-  if (s === formatDate(tomorrow)) return 'Tomorrow'
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-}
-
 const itemVariants = {
   hidden: { opacity: 0, y: 12 },
   visible: { opacity: 1, y: 0 },
+}
+
+function CustomTooltip({ active, payload, label, mode, calTarget }:
+  { active?: boolean; payload?: { name: string; value: number; payload?: { meals?: Meal[] } }[]; label?: string; mode: string; calTarget?: number }) {
+  if (!active || !payload?.length) return null
+  const val = payload[0]?.value ?? 0
+  return (
+    <div className="bg-gray-900 border border-white/10 rounded-xl px-3 py-2 shadow-xl">
+      <p className="text-[10px] text-gray-500 mb-1">{label}</p>
+      {mode === 'macros' && payload.map((p) => (
+        <p key={p.name} className="text-[11px]" style={{ color: p.name === 'protein' ? '#f43f5e' : p.name === 'carbs' ? '#f97316' : '#38bdf8' }}>
+          {p.name}: {p.value}g
+        </p>
+      ))}
+      {mode === 'calories' && (
+        <>
+          <p className="text-[11px] text-purple-400">{val} kcal</p>
+          {calTarget && calTarget > 0 && (
+            <p className={`text-[10px] ${val > calTarget * 1.1 ? 'text-rose-400' : val < calTarget * 0.9 ? 'text-amber-400' : 'text-emerald-400'}`}>
+              {Math.round((val / calTarget) * 100)}% of target
+            </p>
+          )}
+        </>
+      )}
+      {mode === 'fiber' && <p className="text-[11px] text-emerald-400">{val}g fiber {val > 0 ? `(${Math.round((val / 25) * 100)}% of 25g)` : ''}</p>}
+      {mode === 'meals' && (
+        <>
+          <p className="text-[11px] text-indigo-400">{val} meals</p>
+          {payload[0]?.payload?.meals && payload[0].payload.meals.length > 0 && (
+            <div className="flex gap-1 mt-1">
+              {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map(t => {
+                const count = payload[0]!.payload!.meals!.filter((m: Meal) => m.mealType === t).length
+                const icon = { breakfast: '🍳', lunch: '🥗', dinner: '🍽️', snack: '🍎' }[t]
+                return count > 0 ? <span key={t} className="text-[10px]">{icon} {count}</span> : null
+              })}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
 }
 
 const macroMeta: Record<string, { label: string; icon: React.ElementType; unit: string; color: string; bar: string }> = {
@@ -206,6 +250,11 @@ export function NutritionLogger() {
   const [editingTarget, setEditingTarget] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [showWeekly, setShowWeekly] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [coachPreference, setCoachPreference] = useState<'balanced' | 'high_protein' | 'low_carb' | 'keto'>('balanced')
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [showCoachSettings, setShowCoachSettings] = useState(false)
+  const [chartMode, setChartMode] = useState<'macros' | 'calories' | 'protein' | 'carbs' | 'fat' | 'fiber' | 'meals'>('calories')
   const [recipes, setRecipes] = useState<SavedRecipe[]>(loadRecipes)
   const [showRecipes, setShowRecipes] = useState(false)
 
@@ -291,23 +340,26 @@ export function NutritionLogger() {
   }), [summary, targets])
 
   const weeklyData = useMemo(() => {
-    const weekDates = getWeekDates(new Date(selectedDate + 'T00:00:00'))
+    const weekDates = getWeekDates(parseLocalDate(selectedDate))
     return weekDates.map((date) => {
       const dayMeals = meals.filter((m) => m.date === date)
       return {
         date,
-        label: new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' }),
+        label: parseLocalDate(date).toLocaleDateString('en-US', { weekday: 'short' }),
         calories: Math.round(dayMeals.reduce((a, m) => a + m.calories, 0)),
         protein: Math.round(dayMeals.reduce((a, m) => a + m.protein, 0)),
         carbs: Math.round(dayMeals.reduce((a, m) => a + m.carbs, 0)),
         fat: Math.round(dayMeals.reduce((a, m) => a + m.fat, 0)),
+        fiber: Math.round(dayMeals.reduce((a, m) => a + (m.fiber ?? 0), 0)),
+        mealCount: dayMeals.length,
+        meals: dayMeals,
       }
     })
   }, [meals, selectedDate])
 
   const navigateDate = useCallback((direction: number) => {
     setSelectedDate((prev) => {
-      const d = new Date(prev + 'T00:00:00')
+      const d = parseLocalDate(prev)
       d.setDate(d.getDate() + direction)
       return formatDate(d)
     })
@@ -381,74 +433,67 @@ export function NutritionLogger() {
     setRecipes(prev => prev.filter(r => r.id !== id))
   }, [])
 
+  const rotate = <T,>(arr: T[], n: number) => [...arr.slice(n % arr.length), ...arr.slice(0, n % arr.length)]
+
   const suggestions = useMemo(() => {
-    const result: { text: string }[] = []
+    const result: SuggestionItem[] = []
+    const limit = coachPreference === 'high_protein' ? 3 : 2
+    const offset = refreshKey * 2
+
     if (remaining.protein > 20) {
-      const best = FOOD_SUGGESTIONS.high_protein.slice(0, 2)
-      result.push({ text: `Need ${Math.round(remaining.protein)}g more protein — ${best.map(f => `${f.emoji} ${f.name} (~${f.protein}g)`).join(' or ')}` })
+      const pool = FOOD_SUGGESTIONS.high_protein
+      const best = rotate(pool, offset).slice(0, limit)
+      result.push({
+        type: 'protein',
+        remaining: Math.round(remaining.protein),
+        target: targets.protein,
+        foods: best.map(f => ({
+          name: f.name,
+          emoji: f.emoji,
+          amount: f.protein,
+          unit: 'protein',
+          detail: `${f.emoji} ${f.name} (~${f.protein}g P · ${f.calories} kcal)`,
+        })),
+      })
     }
-    if (remaining.carbs > 30) {
-      const best = FOOD_SUGGESTIONS.high_carbs.slice(0, 2)
-      result.push({ text: `Need ${Math.round(remaining.carbs)}g more carbs — ${best.map(f => `${f.emoji} ${f.name}`).join(', ')}` })
+
+    const showCarbs = coachPreference !== 'keto' && coachPreference !== 'low_carb'
+    if (showCarbs && remaining.carbs > 30) {
+      const best = rotate(FOOD_SUGGESTIONS.high_carbs, offset).slice(0, 2)
+      result.push({
+        type: 'carbs',
+        remaining: Math.round(remaining.carbs),
+        target: targets.carbs,
+        foods: best.map(f => ({
+          name: f.name,
+          emoji: f.emoji,
+          amount: f.carbs,
+          unit: 'carbs',
+          detail: `${f.emoji} ${f.name} (~${f.carbs}g C · ${f.calories} kcal)`,
+        })),
+      })
     }
+
     if (remaining.fat > 15) {
-      const best = FOOD_SUGGESTIONS.healthy_fat.slice(0, 2)
-      result.push({ text: `Need ${Math.round(remaining.fat)}g more fat — ${best.map(f => `${f.emoji} ${f.name}`).join(', ')}` })
+      const count = coachPreference === 'keto' ? 3 : 2
+      const best = rotate(FOOD_SUGGESTIONS.healthy_fat, offset).slice(0, count)
+      result.push({
+        type: 'fat',
+        remaining: Math.round(remaining.fat),
+        target: targets.fat,
+        foods: best.map(f => ({
+          name: f.name,
+          emoji: f.emoji,
+          amount: f.fat,
+          unit: 'fat',
+          detail: `${f.emoji} ${f.name} (~${f.fat}g F · ${f.calories} kcal)`,
+        })),
+      })
     }
     return result
-  }, [remaining])
+  }, [remaining, coachPreference, refreshKey])
 
-  const timingData = useMemo(() => {
-    const totals: Record<string, number> = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 }
-    for (const m of filteredMeals) totals[m.mealType] = (totals[m.mealType] || 0) + m.calories
-    const total = Object.values(totals).reduce((a, b) => a + b, 0) || 1
-    return {
-      breakfast: { calories: totals.breakfast, pct: Math.round((totals.breakfast / total) * 100) },
-      lunch: { calories: totals.lunch, pct: Math.round((totals.lunch / total) * 100) },
-      dinner: { calories: totals.dinner, pct: Math.round((totals.dinner / total) * 100) },
-      snack: { calories: totals.snack, pct: Math.round((totals.snack / total) * 100) },
-    }
-  }, [filteredMeals])
-
-  const recommendation = useMemo(() => {
-    const daysWithData = weeklyData.filter(d => d.calories > 0)
-    if (daysWithData.length < 3) return null
-    const overDays = daysWithData.filter(d => d.calories > targets.calories)
-    const underDays = daysWithData.filter(d => d.calories < targets.calories)
-    if (overDays.length >= 3) {
-      const avgOver = Math.round(overDays.reduce((s, d) => s + (d.calories - targets.calories), 0) / overDays.length)
-      return { type: 'warning' as const, title: 'Over Target', message: `Averaging ${avgOver} cal over this week.` }
-    }
-    if (underDays.length >= 3) {
-      const avgUnder = Math.round(underDays.reduce((s, d) => s + (targets.calories - d.calories), 0) / underDays.length)
-      return { type: 'info' as const, title: 'Under Target', message: `Averaging ${avgUnder} cal under this week.` }
-    }
-    if (daysWithData.length >= 5) {
-      const avgCal = Math.round(daysWithData.reduce((s, d) => s + d.calories, 0) / daysWithData.length)
-      if (Math.abs(avgCal - targets.calories) < 100)
-        return { type: 'success' as const, title: 'On Point!', message: `Averaging ${avgCal} cal — right on target.` }
-    }
-    return null
-  }, [weeklyData, targets.calories])
-
-  const frequencyStats = useMemo(() => {
-    const weekDates = getWeekDates(new Date(selectedDate + 'T00:00:00'))
-    const daysWithMeals = weekDates.map(d => meals.filter(m => m.date === d))
-    const daysWithSomeData = daysWithMeals.filter(d => d.length > 0)
-    const avgMealsPerDay = daysWithSomeData.length > 0
-      ? Math.round((daysWithMeals.reduce((s, d) => s + d.length, 0) / daysWithMeals.length) * 10) / 10
-      : 0
-    const mealTypeCounts: Record<string, number> = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 }
-    for (const dayMeals of daysWithMeals) {
-      const types = new Set(dayMeals.map(m => m.mealType))
-      for (const t of ['breakfast', 'lunch', 'dinner', 'snack'] as const) {
-        if (!types.has(t)) mealTypeCounts[t]++
-      }
-    }
-    const mostSkippedEntry = Object.entries(mealTypeCounts).sort((a, b) => b[1] - a[1])[0]
-    return { avgMealsPerDay, mostSkipped: mostSkippedEntry ? mostSkippedEntry[0] : 'n/a' }
-  }, [meals, selectedDate])
-
+  
   // --- Wizard ---
   if (showWizard) {
     const w = useImperial ? Math.round(parseFloat(weight || '0') / 2.205) : parseFloat(weight || '0')
@@ -654,8 +699,9 @@ export function NutritionLogger() {
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-            <Calendar className="w-4 h-4 text-purple-400" />
-            <span className="text-white font-medium text-sm whitespace-nowrap">{getDayLabel(selectedDate)}</span>
+            <Calendar className="w-4 h-4 text-purple-400 shrink-0" />
+            <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}
+              className="bg-transparent border-none text-white font-medium text-sm outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:transition-opacity cursor-pointer" />
           </div>
           <button onClick={() => navigateDate(1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
             <ChevronRight className="w-5 h-5" />
@@ -668,9 +714,16 @@ export function NutritionLogger() {
         </div>
         <div className="flex items-center gap-2">
           {filteredMeals.length > 0 && (
+            <button onClick={() => setShowSuggestions(p => !p)}
+              className={`p-2 rounded-xl border transition-all ${showSuggestions ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              title="MacroCoach">
+              <Sparkles className="w-5 h-5" />
+            </button>
+          )}
+          {filteredMeals.length > 0 && (
             <button onClick={() => setShowWeekly(p => !p)}
               className={`p-2 rounded-xl border transition-all ${showWeekly ? 'bg-white/10 border-white/20 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
-              title="Weekly view">
+              title="NutriScope">
               <BarChart3 className="w-5 h-5" />
             </button>
           )}
@@ -753,108 +806,306 @@ export function NutritionLogger() {
         </div>
       </motion.div>
 
-      {/* Suggestions */}
-      {suggestions.length > 0 && (
-        <motion.div variants={itemVariants} className="rounded-2xl border border-amber-500/20 bg-black/60 backdrop-blur-xl p-4">
-          <div className="flex items-start gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0 mt-0.5">
-              <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold text-amber-400/80 uppercase tracking-wider">Suggestions</p>
-              {suggestions.map((s, i) => (
-                <p key={i} className="text-xs text-gray-300">{s.text}</p>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      )}
+      {/* MacroCoach Panel */}
+      <AnimatePresence>
+        {showSuggestions && (
+          <motion.div variants={itemVariants} initial="hidden" animate="visible" exit={{ opacity: 0, y: -12 }}
+            className="rounded-2xl border border-emerald-500/15 bg-black/60 backdrop-blur-xl p-4 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-purple-500/5 pointer-events-none" />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400/20 to-emerald-500/20 border border-emerald-500/20 flex items-center justify-center">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <p className="text-[11px] font-bold text-white/70 uppercase tracking-wider">MacroCoach</p>
+                  {remaining.calories > 0 && (
+                    <span className="text-[10px] text-gray-500 ml-1">{Math.round(remaining.calories)} kcal left</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {suggestions.length > 0 && (
+                    <button onClick={() => setRefreshKey(k => k + 1)}
+                      className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all group"
+                      title="Refresh suggestions">
+                      <RefreshCw className="w-3 h-3 text-gray-500 group-hover:text-white transition-colors" />
+                    </button>
+                  )}
+                  <div className="relative">
+                    <button onClick={() => setShowCoachSettings(p => !p)}
+                      className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${showCoachSettings ? 'bg-purple-500/15 border-purple-500/30 text-purple-400' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:bg-white/10'}`}
+                      title="Coach settings">
+                      <Settings className="w-3 h-3" />
+                    </button>
+                    {showCoachSettings && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setShowCoachSettings(false)} />
+                        <div className="absolute right-0 top-8 z-20 w-52 rounded-xl bg-gray-900 border border-white/10 shadow-2xl p-3">
+                          <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Preference</p>
+                          <div className="flex flex-col gap-1">
+                            {([
+                              { key: 'balanced', label: '⚖️ Balanced' },
+                              { key: 'high_protein', label: '💪 High Protein' },
+                              { key: 'low_carb', label: '🥬 Low Carb' },
+                              { key: 'keto', label: '🥑 Keto' },
+                            ] as const).map(opt => (
+                              <button key={opt.key} onClick={() => { setCoachPreference(opt.key); setShowCoachSettings(false) }}
+                                className={`text-left px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${coachPreference === opt.key ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  {suggestions.length > 0 && (
+                    <div className="flex items-center gap-1.5 ml-1">
+                      {suggestions.map(s => {
+                        const dotMap: Record<string, string> = { protein: 'bg-rose-500', carbs: 'bg-amber-500', fat: 'bg-sky-500' }
+                        return <div key={s.type} className={`w-2 h-2 rounded-full ${dotMap[s.type]} opacity-60`} />
+                      })}
 
-      {/* Weekly View */}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {suggestions.length === 0 && remaining.calories === 0 ? (
+                <div className="flex flex-col items-center py-6 text-center">
+                  <Check className="w-10 h-10 text-emerald-400 mb-3" />
+                  <p className="text-sm text-emerald-300 font-medium">All macros met! 🎉</p>
+                  <p className="text-[10px] text-gray-600 mt-1">You've hit your targets for the day</p>
+                </div>
+              ) : suggestions.length === 0 ? (
+                <div className="flex flex-col items-center py-6 text-center">
+                  <Brain className="w-10 h-10 text-emerald-500/30 mb-3" />
+                  <p className="text-sm text-gray-400 font-medium">No suggestions yet</p>
+                  <p className="text-[10px] text-gray-600 mt-1">Log some meals and MacroCoach will suggest what to eat next</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {suggestions.map((s, i) => {
+                    const cfg = {
+                      protein: { label: 'Protein', bar: 'bg-gradient-to-r from-rose-500 to-rose-400', border: 'border-rose-500/20', bg: 'bg-rose-500/5', icon: '🥩' },
+                      carbs: { label: 'Carbs', bar: 'bg-gradient-to-r from-amber-500 to-amber-400', border: 'border-amber-500/20', bg: 'bg-amber-500/5', icon: '🌾' },
+                      fat: { label: 'Fat', bar: 'bg-gradient-to-r from-sky-500 to-sky-400', border: 'border-sky-500/20', bg: 'bg-sky-500/5', icon: '🥑' },
+                    }[s.type]
+                    const pct = Math.min((s.target - s.remaining) / s.target * 100, 100)
+                    return (
+                      <motion.div key={s.type} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }}
+                        className={`rounded-xl border ${cfg.border} ${cfg.bg} p-3`}>
+                        <div className="flex items-start gap-3">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <span className="text-lg">{cfg.icon}</span>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider">{cfg.label}</p>
+                                <span className={`text-lg font-bold ${s.type === 'protein' ? 'text-rose-400' : s.type === 'carbs' ? 'text-amber-400' : 'text-sky-400'}`}>
+                                  {s.remaining}<span className="text-[10px] font-normal text-gray-500 ml-0.5">g</span>
+                                </span>
+                              </div>
+                              <div className="w-24 h-1 rounded-full bg-white/10 mt-1.5">
+                                <div className={`h-full rounded-full ${cfg.bar} transition-all duration-700`} style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0 space-y-1">
+                            {s.foods.map((f, fi) => (
+                              <div key={fi} className="flex items-center gap-1.5 justify-end">
+                                <span className="text-xs text-gray-300 truncate max-w-[130px]">{f.emoji} {f.name}</span>
+                                <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${s.type === 'protein' ? 'bg-rose-500/10 text-rose-300' : s.type === 'carbs' ? 'bg-amber-500/10 text-amber-300' : 'bg-sky-500/10 text-sky-300'}`}>
+                                  +{f.amount}g
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* NutriScope */}
       <AnimatePresence>
         {showWeekly && (
           <motion.div variants={itemVariants} initial="hidden" animate="visible" exit={{ opacity: 0, y: -12 }}
             className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Weekly View</h3>
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] text-gray-500 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-rose-500" /> Protein</span>
-                <span className="text-[10px] text-gray-500 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-500" /> Carbs</span>
-                <span className="text-[10px] text-gray-500 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-sky-500" /> Fat</span>
+            {(() => {
+              const pastDays = weeklyData.filter(d => d.date !== selectedDate)
+              return (
+                <>
+            {/* Header + Mode Tabs */}
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">NutriScope</h3>
+              <div className="flex items-center gap-1 bg-white/5 rounded-xl p-0.5 border border-white/10">
+                {(['calories', 'macros', 'fiber', 'meals'] as const).map((mode) => (
+                  <button key={mode} onClick={() => setChartMode(mode)}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all ${chartMode === mode ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'text-gray-500 hover:text-white'}`}>
+                    {mode === 'calories' ? 'Calories' : mode === 'macros' ? 'Macros' : mode === 'fiber' ? 'Fiber' : 'Meals'}
+                  </button>
+                ))}
               </div>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={weeklyData} barGap={2} barCategoryGap="20%">
+
+            {/* Chart Area */}
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                {chartMode === 'macros' ? (
+                  <BarChart data={pastDays} barGap={2} barCategoryGap="20%">
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                     <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={{ background: '#1f2937', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} labelStyle={{ color: '#9ca3af' }} />
+                    <Tooltip content={<CustomTooltip mode="macros" />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
                     <Bar dataKey="protein" fill="#f43f5e" radius={[4, 4, 0, 0]} stackId="a" />
                     <Bar dataKey="carbs" fill="#f97316" radius={[4, 4, 0, 0]} stackId="a" />
                     <Bar dataKey="fat" fill="#38bdf8" radius={[4, 4, 0, 0]} stackId="a" />
                   </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={weeklyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                    <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
-                    <Tooltip contentStyle={{ background: '#1f2937', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} labelStyle={{ color: '#9ca3af' }} />
-                    <defs><linearGradient id="calTrendGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#a855f7" stopOpacity={0.3} /><stop offset="100%" stopColor="#a855f7" stopOpacity={0.8} /></linearGradient></defs>
-                    <Line type="monotone" dataKey="calories" stroke="url(#calTrendGrad)" strokeWidth={2.5} dot={{ fill: '#a855f7', r: 4, strokeWidth: 2, stroke: '#1f2937' }} activeDot={{ r: 6, fill: '#a855f7', strokeWidth: 2, stroke: '#1f2937' }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+                ) : chartMode === 'calories' ? (
+                  <BarChart data={pastDays} barGap={2} barCategoryGap="20%">
+                    <ReferenceLine y={targets.calories} stroke="#a855f7" strokeDasharray="6 3" strokeWidth={1.5} label={{ value: 'Target', fill: '#a855f7', fontSize: 9, position: 'insideTopRight' }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
+                    <Tooltip content={<CustomTooltip mode="calories" calTarget={targets.calories} />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                    <Bar dataKey="calories" radius={[4, 4, 0, 0]}>
+                      {pastDays.map((entry) => (
+                        <Cell key={entry.date} fill={entry.calories > targets.calories ? '#f43f5e' : entry.calories >= targets.calories * 0.9 ? '#34d399' : '#fbbf24'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                ) : chartMode === 'fiber' ? (
+                  <BarChart data={pastDays} barGap={2} barCategoryGap="30%">
+                    <ReferenceLine y={25} stroke="#34d399" strokeDasharray="6 3" strokeWidth={1.5} label={{ value: '25g goal', fill: '#34d399', fontSize: 9, position: 'insideTopRight' }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
+                    <Tooltip content={<CustomTooltip mode="fiber" />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                    <Bar dataKey="fiber" radius={[4, 4, 0, 0]}>
+                      {pastDays.map((entry) => (
+                        <Cell key={entry.date} fill={entry.fiber >= 25 ? '#34d399' : entry.fiber >= 15 ? '#fbbf24' : '#f87171'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                ) : (
+                  <BarChart data={pastDays} barGap={2} barCategoryGap="30%">
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, 'auto']} />
+                    <Tooltip content={<CustomTooltip mode="meals" calTarget={targets.calories} />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                    <Bar dataKey="mealCount" fill="#818cf8" radius={[4, 4, 0, 0]}>
+                      {pastDays.map((entry, idx) => (
+                        <Cell key={entry.date} fill={['#818cf8', '#a78bfa', '#c4b5fd', '#7c3aed', '#6d28d9', '#5b21b6', '#4c1d95'][idx % 7]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                )}
+              </ResponsiveContainer>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mt-4">
+
+            {/* Per-mode context strip */}
+            {chartMode === 'calories' && (() => {
+              const logged = pastDays.filter(d => d.calories > 0)
+              if (!logged.length) return null
+              const avg = Math.round(logged.reduce((s, d) => s + d.calories, 0) / logged.length)
+              const best = logged.reduce((a, b) => a.calories > b.calories ? a : b)
+              const worst = logged.reduce((a, b) => a.calories < b.calories ? a : b)
+              return (
+                <div className="flex items-center justify-center gap-4 mt-3 text-[10px] text-gray-500">
+                  <span>Avg <span className={`font-semibold ${avg > targets.calories ? 'text-rose-400' : 'text-emerald-400'}`}>{avg}</span> / {targets.calories} kcal</span>
+                  <span>Best <span className="text-emerald-400 font-semibold">{best.label}</span> <span className="text-gray-600">({best.calories})</span></span>
+                  <span>Low <span className="text-amber-400 font-semibold">{worst.label}</span> <span className="text-gray-600">({worst.calories})</span></span>
+                </div>
+              )
+            })()}
+
+            {chartMode === 'macros' && (
+              <div className="flex items-center justify-center gap-3 mt-3 text-[10px] text-gray-500">
+                <span><span className="text-rose-400 font-semibold">P</span> {targets.protein}g</span>
+                <span><span className="text-amber-400 font-semibold">C</span> {targets.carbs}g</span>
+                <span><span className="text-sky-400 font-semibold">F</span> {targets.fat}g</span>
+              </div>
+            )}
+
+            {chartMode === 'fiber' && (() => {
+              const logged = pastDays.filter(d => d.calories > 0)
+              if (!logged.length) return null
+              const avgFiber = Math.round(logged.reduce((s, d) => s + d.fiber, 0) / logged.length)
+              const met = logged.filter(d => d.fiber >= 25).length
+              return (
+                <div className="flex items-center justify-center gap-4 mt-3 text-[10px] text-gray-500">
+                  <span>Avg <span className={`font-semibold ${avgFiber >= 25 ? 'text-emerald-400' : avgFiber >= 15 ? 'text-amber-400' : 'text-rose-400'}`}>{avgFiber}g</span> / 25g goal</span>
+                  <span><span className="text-white font-semibold">{met}</span>/{logged.length} days met</span>
+                </div>
+              )
+            })()}
+
+            {/* Bottom Stats */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-4">
+              {/* Card 1: Weekly Averages */}
               <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-                <h4 className="text-[9px] text-gray-500 uppercase tracking-wider mb-2">Meal Timing</h4>
-                <div className="grid grid-cols-4 gap-1">
-                  {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((type) => {
-                    const data = timingData[type]
-                    const iconMap: Record<string, string> = { breakfast: '🍳', lunch: '🥗', dinner: '🍽️', snack: '🍎' }
-                    const colorMap: Record<string, string> = { breakfast: 'text-amber-400', lunch: 'text-emerald-400', dinner: 'text-rose-400', snack: 'text-sky-400' }
+                <h4 className="text-[9px] text-gray-500 uppercase tracking-wider mb-2">Weekly Averages</h4>
+                <div className="grid grid-cols-4 gap-2">
+                  {(() => {
+                    const logged = pastDays.filter(d => d.calories > 0)
+                    if (!logged.length) return <div className="col-span-4 py-3 text-center"><p className="text-[10px] text-gray-500">Log meals to see weekly averages</p></div>
+                    const avg = (key: 'calories' | 'protein' | 'carbs' | 'fat') => Math.round(logged.reduce((s, d) => s + d[key], 0) / logged.length)
                     return (
-                      <div key={type} className="text-center">
-                        <span className="text-sm">{iconMap[type]}</span>
-                        <p className={`text-sm font-bold ${colorMap[type]}`}>{data.pct}%</p>
-                        <p className="text-[9px] text-gray-500 capitalize">{type}</p>
-                      </div>
+                      <>
+                        {[
+                          { label: 'Cal', value: avg('calories'), target: targets.calories, color: 'text-rose-400', bar: 'bg-rose-500', unit: '' },
+                          { label: 'Pro', value: avg('protein'), target: targets.protein, color: 'text-emerald-400', bar: 'bg-emerald-500', unit: 'g' },
+                          { label: 'Carbs', value: avg('carbs'), target: targets.carbs, color: 'text-amber-400', bar: 'bg-amber-500', unit: 'g' },
+                          { label: 'Fat', value: avg('fat'), target: targets.fat, color: 'text-sky-400', bar: 'bg-sky-500', unit: 'g' },
+                        ].map(s => {
+                          const pct = s.target > 0 ? Math.round((s.value / s.target) * 100) : 0
+                          return (
+                            <div key={s.label} className="text-center">
+                              <p className={`text-lg font-bold ${s.color}`}>{s.value}{s.unit}</p>
+                              <p className="text-[9px] text-gray-500">{s.label}</p>
+                              <div className="mt-1 h-1 rounded-full bg-white/10 overflow-hidden">
+                                <div className={`h-full rounded-full ${s.bar}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </>
                     )
-                  })}
+                  })()}
                 </div>
               </div>
+
+              {/* Card 2: Insights */}
               <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-                <h4 className="text-[9px] text-gray-500 uppercase tracking-wider mb-2">Frequency</h4>
-                <div className="grid grid-cols-2 gap-2 text-center">
-                  <div>
-                    <p className="text-lg font-bold text-white">{frequencyStats.avgMealsPerDay}</p>
-                    <p className="text-[9px] text-gray-500">avg / day</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white capitalize">{frequencyStats.mostSkipped === 'n/a' ? 'N/A' : frequencyStats.mostSkipped}</p>
-                    <p className="text-[9px] text-gray-500">most skipped</p>
-                  </div>
-                </div>
+                <h4 className="text-[9px] text-gray-500 uppercase tracking-wider mb-2">Insights</h4>
+                {(() => {
+                  const logged = pastDays.filter(d => d.calories > 0)
+                  if (!logged.length) return <div className="text-center"><p className="text-[10px] text-gray-500 py-3">Log meals to see insights</p></div>
+                  const onTarget = logged.filter(d => d.calories >= targets.calories * 0.9 && d.calories <= targets.calories * 1.1)
+                  const pct = Math.round((onTarget.length / logged.length) * 100)
+                  let streak = 0
+                  for (let i = weeklyData.length - 1; i >= 0; i--) {
+                    if (weeklyData[i].calories > 0 && weeklyData[i].date !== selectedDate) streak++
+                    else break
+                  }
+                  return (
+                    <div className="flex items-center justify-between text-[10px] text-gray-500">
+                      <span><span className="text-white font-medium">{pct}%</span> on target</span>
+                      <span><span className="text-white font-medium">{streak}</span> day streak</span>
+                      <span><span className="text-purple-400 font-medium">{logged.length}</span> logged</span>
+                    </div>
+                  )
+                })()}
               </div>
-              {recommendation ? (
-                <div className={`rounded-xl border p-3 ${recommendation.type === 'warning' ? 'border-amber-500/20 bg-amber-500/5' : recommendation.type === 'info' ? 'border-blue-500/20 bg-blue-500/5' : 'border-emerald-500/20 bg-emerald-500/5'}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    {recommendation.type === 'success' ? <Award className="w-3.5 h-3.5 text-emerald-400" /> : <AlertTriangle className={`w-3.5 h-3.5 ${recommendation.type === 'warning' ? 'text-amber-400' : 'text-blue-400'}`} />}
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${recommendation.type === 'warning' ? 'text-amber-300' : recommendation.type === 'info' ? 'text-blue-300' : 'text-emerald-300'}`}>{recommendation.title}</span>
-                  </div>
-                  <p className="text-[10px] text-gray-400">{recommendation.message}</p>
-                </div>
-              ) : (
-                <div className="rounded-xl bg-white/5 border border-white/10 p-3 flex items-center gap-2">
-                  <span className="text-[10px] text-gray-500">Log 3+ days for personalized insights</span>
-                </div>
-              )}
             </div>
+                </>
+              )
+            })()}
           </motion.div>
         )}
       </AnimatePresence>
@@ -941,7 +1192,7 @@ export function NutritionLogger() {
                         <div className="flex justify-between items-start mb-2">
                           <h4 className="text-sm font-semibold text-white">{meal.name}</h4>
                           <div className="flex gap-0.5">
-                            <button onClick={() => saveAsRecipe(meal)} className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all" title="Save as recipe">
+                            <button onClick={() => saveAsRecipe(meal)} className="p-1.5 rounded-lg text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all" title="Save as recipe">
                               <BookmarkPlus className="w-3.5 h-3.5" />
                             </button>
                             <button onClick={() => { setEditingMeal(meal); setShowForm(true) }} className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all">
@@ -980,7 +1231,9 @@ export function NutritionLogger() {
         )}
       </motion.div>
 
-      <MealForm isOpen={showForm} onClose={() => { setShowForm(false); setEditingMeal(null) }} onSave={handleSave} meal={editingMeal} />
+      <Suspense fallback={null}>
+        <MealForm isOpen={showForm} onClose={() => { setShowForm(false); setEditingMeal(null) }} onSave={handleSave} meal={editingMeal} defaultDate={selectedDate} />
+      </Suspense>
 
       <AnimatePresence>
         {deletingMeal && (

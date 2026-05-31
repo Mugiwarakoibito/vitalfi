@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
@@ -9,8 +9,9 @@ import { useCommandPalette } from '@/hooks/useCommandPalette'
 import type { CommandAction } from '@/hooks/useCommandPalette'
 import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/lib/utils'
-import Finance from '@/pages/Finance'
-import Fitness from '@/pages/Fitness'
+
+const Finance = lazy(() => import('@/pages/Finance'))
+const Fitness = lazy(() => import('@/pages/Fitness'))
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -129,7 +130,9 @@ export function AppShell({ children }: AppShellProps) {
                   <h2 className="text-sm font-black uppercase tracking-widest text-cyan-400">Finance</h2>
                 </div>
                 <div className="p-4">
-                  <Finance />
+                  <Suspense fallback={<div className="text-slate-500 text-sm">Loading...</div>}>
+                    <Finance />
+                  </Suspense>
                 </div>
               </div>
               <div className="overflow-auto rounded-3xl bg-white/[0.02] border border-white/5">
@@ -137,7 +140,9 @@ export function AppShell({ children }: AppShellProps) {
                   <h2 className="text-sm font-black uppercase tracking-widest text-purple-400">Health</h2>
                 </div>
                 <div className="p-4">
-                  <Fitness />
+                  <Suspense fallback={<div className="text-slate-500 text-sm">Loading...</div>}>
+                    <Fitness />
+                  </Suspense>
                 </div>
               </div>
             </div>

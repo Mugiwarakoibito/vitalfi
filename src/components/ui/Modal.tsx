@@ -51,7 +51,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
             </button>
           </div>
         )}
-        <div className="p-5">{children}</div>
+        <div className="p-5 max-h-[65vh] overflow-y-auto">{children}</div>
       </div>
     </div>
   )
