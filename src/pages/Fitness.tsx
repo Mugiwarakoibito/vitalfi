@@ -19,16 +19,16 @@ import {
 
 type TabId = 'training' | 'diet' | 'sleep' | 'recovery' | 'progress' | 'habits' | 'body' | 'exercises' | 'supplements'
 
-const tabConfig: { id: TabId; label: string; icon: React.ElementType; color: string }[] = [
-  { id: 'training', label: 'Training', icon: Dumbbell, color: 'text-rose-400' },
-  { id: 'diet', label: 'Diet', icon: Utensils, color: 'text-orange-400' },
-  { id: 'sleep', label: 'Sleep', icon: Moon, color: 'text-violet-400' },
-  { id: 'recovery', label: 'Recovery', icon: Heart, color: 'text-emerald-400' },
-  { id: 'progress', label: 'Progress', icon: TrendingUp, color: 'text-blue-400' },
-  { id: 'habits', label: 'Habits', icon: Flame, color: 'text-amber-400' },
-  { id: 'body', label: 'Body', icon: Activity, color: 'text-emerald-400' },
-  { id: 'exercises', label: 'Exercises', icon: BookOpen, color: 'text-cyan-400' },
-  { id: 'supplements', label: 'Supps', icon: Coffee, color: 'text-emerald-400' },
+const tabConfig: { id: TabId; label: string; icon: React.ElementType }[] = [
+  { id: 'training', label: 'Training', icon: Dumbbell },
+  { id: 'diet', label: 'Diet', icon: Utensils },
+  { id: 'sleep', label: 'Sleep', icon: Moon },
+  { id: 'recovery', label: 'Recovery', icon: Heart },
+  { id: 'progress', label: 'Progress', icon: TrendingUp },
+  { id: 'habits', label: 'Habits', icon: Flame },
+  { id: 'body', label: 'Body', icon: Activity },
+  { id: 'exercises', label: 'Exercises', icon: BookOpen },
+  { id: 'supplements', label: 'Supps', icon: Coffee },
 ]
 
 const habitRingConfig = [
@@ -224,19 +224,19 @@ export default function Fitness() {
 
       {/* Navigation Tabs */}
       <div className="relative">
-        <div className="relative flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none rounded-2xl bg-white/[0.02] border border-white/5 p-1.5">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none rounded-2xl bg-white/[0.02] border border-white/5 p-1.5">
           {tabConfig.map((tab) => (
             <button
               key={tab.id}
               onClick={() => { setActiveTab(tab.id); setSearchParams((prev) => { const next = new URLSearchParams(prev); next.set('tab', tab.id); return next }) }}
               className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-[9px] font-bold uppercase tracking-[0.15em] transition-all duration-300 shrink-0 whitespace-nowrap",
+                "flex-1 flex items-center justify-center gap-2 rounded-xl px-3.5 py-3 text-[10px] font-bold uppercase tracking-[0.15em] transition-all duration-300 shrink-0 whitespace-nowrap",
                 activeTab === tab.id
                   ? "bg-gradient-to-br from-white/15 to-white/5 text-white shadow-[0_0_30px_rgba(255,255,255,0.08)] border border-white/15 backdrop-blur-sm"
                   : "text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent"
               )}
             >
-              <tab.icon size={13} className={cn(activeTab === tab.id ? tab.color : 'opacity-50')} />
+              <tab.icon size={14} className="opacity-70" />
               {tab.label}
             </button>
           ))}
