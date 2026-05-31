@@ -24,26 +24,44 @@ interface FoodItem {
 }
 
 const FOOD_DB: FoodItem[] = [
-  // Meat & Poultry
+  // Meat
   { name: 'Chicken Breast', category: 'Meat', calories: 165, protein: 31, carbs: 0, fat: 3.6 },
   { name: 'Chicken Thigh', category: 'Meat', calories: 209, protein: 26, carbs: 0, fat: 11 },
+  { name: 'Chicken Wing', category: 'Meat', calories: 203, protein: 30, carbs: 0, fat: 8 },
   { name: 'Ground Beef 90/10', category: 'Meat', calories: 217, protein: 26, carbs: 0, fat: 12 },
   { name: 'Ground Beef 80/20', category: 'Meat', calories: 254, protein: 24, carbs: 0, fat: 17 },
+  { name: 'Steak (ribeye)', category: 'Meat', calories: 271, protein: 25, carbs: 0, fat: 19 },
   { name: 'Steak (sirloin)', category: 'Meat', calories: 206, protein: 26, carbs: 0, fat: 11 },
   { name: 'Pork Chop', category: 'Meat', calories: 231, protein: 26, carbs: 0, fat: 14 },
+  { name: 'Pork Belly', category: 'Meat', calories: 518, protein: 9, carbs: 0, fat: 53 },
+  { name: 'Ham (deli)', category: 'Meat', calories: 145, protein: 20, carbs: 1, fat: 7 },
   { name: 'Turkey Breast', category: 'Meat', calories: 135, protein: 30, carbs: 0, fat: 1 },
   { name: 'Bacon', category: 'Meat', calories: 541, protein: 37, carbs: 1, fat: 42 },
   { name: 'Lamb Chop', category: 'Meat', calories: 209, protein: 25, carbs: 0, fat: 12 },
+  { name: 'Lamb Mince', category: 'Meat', calories: 282, protein: 24, carbs: 0, fat: 20 },
+  { name: 'Duck Breast', category: 'Meat', calories: 200, protein: 25, carbs: 0, fat: 11 },
+  { name: 'Venison', category: 'Meat', calories: 158, protein: 30, carbs: 0, fat: 3 },
+  { name: 'Salami', category: 'Meat', calories: 407, protein: 22, carbs: 2, fat: 33 },
+  { name: 'Chorizo', category: 'Meat', calories: 455, protein: 24, carbs: 2, fat: 38 },
 
-  // Fish & Seafood
+  // Fish
   { name: 'Salmon', category: 'Fish', calories: 208, protein: 25, carbs: 0, fat: 13 },
   { name: 'Tuna (canned)', category: 'Fish', calories: 132, protein: 28, carbs: 0, fat: 1 },
   { name: 'Shrimp', category: 'Fish', calories: 99, protein: 24, carbs: 0, fat: 0.3 },
   { name: 'Cod', category: 'Fish', calories: 82, protein: 18, carbs: 0, fat: 0.7 },
   { name: 'Tilapia', category: 'Fish', calories: 96, protein: 20, carbs: 0, fat: 1.7 },
   { name: 'Mackerel', category: 'Fish', calories: 205, protein: 19, carbs: 0, fat: 14 },
+  { name: 'Sardines (canned)', category: 'Fish', calories: 208, protein: 25, carbs: 0, fat: 11 },
+  { name: 'Haddock', category: 'Fish', calories: 82, protein: 19, carbs: 0, fat: 0.6 },
+  { name: 'Trout', category: 'Fish', calories: 148, protein: 21, carbs: 0, fat: 7 },
+  { name: 'Crab', category: 'Fish', calories: 87, protein: 19, carbs: 0, fat: 1 },
+  { name: 'Lobster', category: 'Fish', calories: 89, protein: 19, carbs: 0, fat: 1 },
+  { name: 'Mussels', category: 'Fish', calories: 86, protein: 12, carbs: 4, fat: 2 },
+  { name: 'Clams', category: 'Fish', calories: 74, protein: 13, carbs: 3, fat: 1 },
+  { name: 'Octopus', category: 'Fish', calories: 82, protein: 15, carbs: 3, fat: 1 },
+  { name: 'Anchovies', category: 'Fish', calories: 131, protein: 20, carbs: 0, fat: 5 },
 
-  // Eggs & Dairy
+  // Dairy
   { name: 'Egg (whole)', category: 'Dairy', calories: 155, protein: 13, carbs: 1, fat: 11 },
   { name: 'Egg White', category: 'Dairy', calories: 52, protein: 11, carbs: 1, fat: 0 },
   { name: 'Greek Yogurt (plain)', category: 'Dairy', calories: 59, protein: 10, carbs: 4, fat: 0.7 },
@@ -52,10 +70,16 @@ const FOOD_DB: FoodItem[] = [
   { name: 'Milk (skim)', category: 'Dairy', calories: 34, protein: 3.4, carbs: 5, fat: 0.1 },
   { name: 'Cheese (cheddar)', category: 'Dairy', calories: 404, protein: 25, carbs: 1, fat: 33 },
   { name: 'Cheese (mozzarella)', category: 'Dairy', calories: 280, protein: 28, carbs: 3, fat: 17 },
+  { name: 'Feta Cheese', category: 'Dairy', calories: 264, protein: 14, carbs: 4, fat: 21 },
+  { name: 'Parmesan Cheese', category: 'Dairy', calories: 431, protein: 38, carbs: 4, fat: 29 },
+  { name: 'Cream Cheese', category: 'Dairy', calories: 342, protein: 6, carbs: 4, fat: 34 },
+  { name: 'Ricotta Cheese', category: 'Dairy', calories: 174, protein: 11, carbs: 3, fat: 13 },
+  { name: 'Sour Cream', category: 'Dairy', calories: 198, protein: 3, carbs: 5, fat: 19 },
+  { name: 'Heavy Cream', category: 'Dairy', calories: 340, protein: 3, carbs: 3, fat: 36 },
   { name: 'Whey Protein (powder)', category: 'Dairy', calories: 400, protein: 80, carbs: 10, fat: 5 },
   { name: 'Casein Protein (powder)', category: 'Dairy', calories: 370, protein: 74, carbs: 7, fat: 4 },
 
-  // Grains & Carbs
+  // Grains
   { name: 'Oats', category: 'Grains', calories: 389, protein: 17, carbs: 66, fat: 7, fiber: 10 },
   { name: 'Brown Rice (cooked)', category: 'Grains', calories: 123, protein: 2.7, carbs: 26, fat: 1 },
   { name: 'White Rice (cooked)', category: 'Grains', calories: 130, protein: 2.7, carbs: 28, fat: 0.3 },
@@ -63,10 +87,18 @@ const FOOD_DB: FoodItem[] = [
   { name: 'Pasta (cooked)', category: 'Grains', calories: 131, protein: 5, carbs: 25, fat: 1.1 },
   { name: 'Whole Wheat Bread', category: 'Grains', calories: 247, protein: 13, carbs: 41, fat: 3.4, fiber: 7 },
   { name: 'White Bread', category: 'Grains', calories: 265, protein: 9, carbs: 49, fat: 3.2 },
+  { name: 'Sourdough Bread', category: 'Grains', calories: 266, protein: 10, carbs: 50, fat: 3 },
   { name: 'Tortilla (flour)', category: 'Grains', calories: 300, protein: 8, carbs: 50, fat: 7 },
+  { name: 'Tortilla (corn)', category: 'Grains', calories: 218, protein: 6, carbs: 44, fat: 3 },
+  { name: 'Pita Bread', category: 'Grains', calories: 275, protein: 9, carbs: 55, fat: 2 },
+  { name: 'Naan Bread', category: 'Grains', calories: 262, protein: 9, carbs: 45, fat: 6 },
   { name: 'Couscous (cooked)', category: 'Grains', calories: 112, protein: 3.8, carbs: 23, fat: 0.2 },
+  { name: 'Bulgur (cooked)', category: 'Grains', calories: 83, protein: 3.1, carbs: 18, fat: 0.2, fiber: 4 },
+  { name: 'Barley (cooked)', category: 'Grains', calories: 123, protein: 3.6, carbs: 28, fat: 0.4, fiber: 6 },
+  { name: 'Buckwheat (cooked)', category: 'Grains', calories: 110, protein: 4, carbs: 23, fat: 0.7, fiber: 3 },
+  { name: 'Rice Noodles (cooked)', category: 'Grains', calories: 108, protein: 2, carbs: 24, fat: 0.2 },
 
-  // Vegetables
+  // Veggies
   { name: 'Broccoli', category: 'Veggies', calories: 34, protein: 2.8, carbs: 7, fat: 0.4, fiber: 2.6 },
   { name: 'Spinach', category: 'Veggies', calories: 23, protein: 2.9, carbs: 3.6, fat: 0.4, fiber: 2.2 },
   { name: 'Kale', category: 'Veggies', calories: 49, protein: 4.3, carbs: 9, fat: 0.9, fiber: 3.6 },
@@ -81,8 +113,18 @@ const FOOD_DB: FoodItem[] = [
   { name: 'Green Beans', category: 'Veggies', calories: 31, protein: 1.8, carbs: 7, fat: 0.2, fiber: 2.7 },
   { name: 'Cauliflower', category: 'Veggies', calories: 25, protein: 1.9, carbs: 5, fat: 0.3, fiber: 2 },
   { name: 'Mixed Salad Greens', category: 'Veggies', calories: 17, protein: 1.5, carbs: 3, fat: 0.3, fiber: 2 },
+  { name: 'Zucchini', category: 'Veggies', calories: 17, protein: 1.2, carbs: 3.1, fat: 0.3, fiber: 1 },
+  { name: 'Eggplant', category: 'Veggies', calories: 25, protein: 1, carbs: 6, fat: 0.2, fiber: 3 },
+  { name: 'Mushrooms', category: 'Veggies', calories: 22, protein: 3.1, carbs: 3.3, fat: 0.3, fiber: 1 },
+  { name: 'Cabbage', category: 'Veggies', calories: 25, protein: 1.3, carbs: 6, fat: 0.1, fiber: 2.5 },
+  { name: 'Brussels Sprouts', category: 'Veggies', calories: 43, protein: 3.4, carbs: 9, fat: 0.3, fiber: 3.8 },
+  { name: 'Corn (sweet)', category: 'Veggies', calories: 86, protein: 3.2, carbs: 19, fat: 1.4, fiber: 2.7 },
+  { name: 'Peas', category: 'Veggies', calories: 81, protein: 5.4, carbs: 14, fat: 0.4, fiber: 5.7 },
+  { name: 'Celery', category: 'Veggies', calories: 16, protein: 0.7, carbs: 3, fat: 0.2, fiber: 1.6 },
+  { name: 'Beets', category: 'Veggies', calories: 43, protein: 1.6, carbs: 10, fat: 0.2, fiber: 2.8 },
+  { name: 'Radish', category: 'Veggies', calories: 16, protein: 0.7, carbs: 3.4, fat: 0.1, fiber: 1.6 },
 
-  // Fruits
+  // Fruit
   { name: 'Banana', category: 'Fruit', calories: 89, protein: 1.1, carbs: 23, fat: 0.3, fiber: 2.6 },
   { name: 'Apple', category: 'Fruit', calories: 52, protein: 0.3, carbs: 14, fat: 0.2, fiber: 2.4 },
   { name: 'Blueberries', category: 'Fruit', calories: 57, protein: 0.7, carbs: 14, fat: 0.3, fiber: 2.4 },
@@ -91,6 +133,16 @@ const FOOD_DB: FoodItem[] = [
   { name: 'Grapes', category: 'Fruit', calories: 69, protein: 0.7, carbs: 18, fat: 0.2, fiber: 0.9 },
   { name: 'Avocado', category: 'Fruit', calories: 160, protein: 2, carbs: 9, fat: 15, fiber: 6.7 },
   { name: 'Pineapple', category: 'Fruit', calories: 50, protein: 0.5, carbs: 13, fat: 0.1, fiber: 1.4 },
+  { name: 'Mango', category: 'Fruit', calories: 60, protein: 0.8, carbs: 15, fat: 0.4, fiber: 1.6 },
+  { name: 'Watermelon', category: 'Fruit', calories: 30, protein: 0.6, carbs: 8, fat: 0.2, fiber: 0.4 },
+  { name: 'Papaya', category: 'Fruit', calories: 43, protein: 0.5, carbs: 11, fat: 0.3, fiber: 1.7 },
+  { name: 'Kiwi', category: 'Fruit', calories: 61, protein: 1.1, carbs: 15, fat: 0.5, fiber: 3 },
+  { name: 'Pear', category: 'Fruit', calories: 57, protein: 0.4, carbs: 15, fat: 0.1, fiber: 3.1 },
+  { name: 'Peach', category: 'Fruit', calories: 39, protein: 0.9, carbs: 10, fat: 0.3, fiber: 1.5 },
+  { name: 'Cherries', category: 'Fruit', calories: 50, protein: 1, carbs: 12, fat: 0.3, fiber: 1.6 },
+  { name: 'Raspberries', category: 'Fruit', calories: 52, protein: 1.2, carbs: 12, fat: 0.7, fiber: 6.5 },
+  { name: 'Blackberries', category: 'Fruit', calories: 43, protein: 1.4, carbs: 10, fat: 0.5, fiber: 5.3 },
+  { name: 'Coconut (flesh)', category: 'Fruit', calories: 354, protein: 3.3, carbs: 15, fat: 33, fiber: 9 },
 
   // Legumes
   { name: 'Black Beans (cooked)', category: 'Legumes', calories: 132, protein: 8.9, carbs: 24, fat: 0.5, fiber: 8.7 },
@@ -99,23 +151,39 @@ const FOOD_DB: FoodItem[] = [
   { name: 'Edamame', category: 'Legumes', calories: 122, protein: 12, carbs: 9, fat: 5, fiber: 5.2 },
   { name: 'Tofu (firm)', category: 'Legumes', calories: 76, protein: 8, carbs: 2, fat: 4.8, fiber: 0.3 },
   { name: 'Tempeh', category: 'Legumes', calories: 193, protein: 19, carbs: 9, fat: 11, fiber: 0 },
+  { name: 'Kidney Beans (cooked)', category: 'Legumes', calories: 127, protein: 8.7, carbs: 23, fat: 0.5, fiber: 6.4 },
+  { name: 'Pinto Beans (cooked)', category: 'Legumes', calories: 143, protein: 9, carbs: 26, fat: 0.7, fiber: 9 },
+  { name: 'Mung Beans (cooked)', category: 'Legumes', calories: 105, protein: 7, carbs: 19, fat: 0.4, fiber: 7.6 },
+  { name: 'Soybeans (cooked)', category: 'Legumes', calories: 173, protein: 17, carbs: 10, fat: 9, fiber: 6 },
 
-  // Nuts & Seeds
+  // Nuts
   { name: 'Almonds', category: 'Nuts', calories: 579, protein: 21, carbs: 22, fat: 50, fiber: 12.5 },
   { name: 'Peanuts', category: 'Nuts', calories: 567, protein: 26, carbs: 16, fat: 49, fiber: 8.5 },
   { name: 'Walnuts', category: 'Nuts', calories: 654, protein: 15, carbs: 14, fat: 65, fiber: 6.7 },
   { name: 'Cashews', category: 'Nuts', calories: 553, protein: 18, carbs: 30, fat: 44, fiber: 3.3 },
+  { name: 'Pecans', category: 'Nuts', calories: 691, protein: 9, carbs: 14, fat: 72, fiber: 10 },
+  { name: 'Macadamia', category: 'Nuts', calories: 718, protein: 8, carbs: 14, fat: 76, fiber: 9 },
+  { name: 'Pistachios', category: 'Nuts', calories: 560, protein: 20, carbs: 27, fat: 45, fiber: 10 },
+  { name: 'Brazil Nuts', category: 'Nuts', calories: 659, protein: 14, carbs: 12, fat: 67, fiber: 8 },
   { name: 'Chia Seeds', category: 'Nuts', calories: 486, protein: 17, carbs: 42, fat: 31, fiber: 34 },
   { name: 'Flax Seeds', category: 'Nuts', calories: 534, protein: 18, carbs: 29, fat: 42, fiber: 27 },
+  { name: 'Hemp Seeds', category: 'Nuts', calories: 553, protein: 32, carbs: 9, fat: 49, fiber: 4 },
+  { name: 'Sunflower Seeds', category: 'Nuts', calories: 584, protein: 21, carbs: 20, fat: 51, fiber: 9 },
+  { name: 'Pumpkin Seeds', category: 'Nuts', calories: 559, protein: 30, carbs: 11, fat: 49, fiber: 6 },
   { name: 'Peanut Butter', category: 'Nuts', calories: 588, protein: 25, carbs: 20, fat: 50, fiber: 6 },
+  { name: 'Tahini', category: 'Nuts', calories: 595, protein: 17, carbs: 21, fat: 53, fiber: 9 },
 
-  // Oils & Fats
+  // Fats
   { name: 'Olive Oil', category: 'Fats', calories: 884, protein: 0, carbs: 0, fat: 100 },
   { name: 'Coconut Oil', category: 'Fats', calories: 862, protein: 0, carbs: 0, fat: 100 },
+  { name: 'Avocado Oil', category: 'Fats', calories: 884, protein: 0, carbs: 0, fat: 100 },
+  { name: 'Sesame Oil', category: 'Fats', calories: 884, protein: 0, carbs: 0, fat: 100 },
   { name: 'Butter', category: 'Fats', calories: 717, protein: 0.9, carbs: 0, fat: 81 },
   { name: 'Ghee', category: 'Fats', calories: 900, protein: 0, carbs: 0, fat: 100 },
+  { name: 'Lard', category: 'Fats', calories: 902, protein: 0, carbs: 0, fat: 100 },
+  { name: 'Duck Fat', category: 'Fats', calories: 902, protein: 0, carbs: 0, fat: 100 },
 
-  // Condiments & Sauces
+  // Condiments
   { name: 'Honey', category: 'Condiments', calories: 304, protein: 0.3, carbs: 82, fat: 0 },
   { name: 'Maple Syrup', category: 'Condiments', calories: 260, protein: 0, carbs: 67, fat: 0 },
   { name: 'Soy Sauce', category: 'Condiments', calories: 53, protein: 8, carbs: 5, fat: 0 },
@@ -124,13 +192,31 @@ const FOOD_DB: FoodItem[] = [
   { name: 'Ketchup', category: 'Condiments', calories: 101, protein: 1, carbs: 23, fat: 0.1 },
   { name: 'Mustard', category: 'Condiments', calories: 66, protein: 4, carbs: 6, fat: 3 },
   { name: 'Mayonnaise', category: 'Condiments', calories: 700, protein: 1, carbs: 0.6, fat: 78 },
+  { name: 'Salsa', category: 'Condiments', calories: 36, protein: 1.5, carbs: 7, fat: 0.2, fiber: 2 },
+  { name: 'Pesto', category: 'Condiments', calories: 490, protein: 5, carbs: 8, fat: 48 },
+  { name: 'Tomato Sauce', category: 'Condiments', calories: 42, protein: 1.5, carbs: 7, fat: 0.5, fiber: 2 },
+  { name: 'Fish Sauce', category: 'Condiments', calories: 10, protein: 2, carbs: 0, fat: 0 },
+  { name: 'Miso Paste', category: 'Condiments', calories: 200, protein: 12, carbs: 26, fat: 6, fiber: 5 },
+  { name: 'Vinegar (balsamic)', category: 'Condiments', calories: 88, protein: 0.5, carbs: 17, fat: 0 },
+  { name: 'Vinegar (apple cider)', category: 'Condiments', calories: 22, protein: 0, carbs: 1, fat: 0 },
+  { name: 'Worcestershire Sauce', category: 'Condiments', calories: 78, protein: 0, carbs: 19, fat: 0 },
 
-  // Snacks & Misc
+  // Snacks
   { name: 'Dark Chocolate (70%)', category: 'Snacks', calories: 598, protein: 7.8, carbs: 46, fat: 43, fiber: 11 },
   { name: 'Granola', category: 'Snacks', calories: 471, protein: 10, carbs: 64, fat: 20, fiber: 6 },
   { name: 'Rice Cakes', category: 'Snacks', calories: 392, protein: 8, carbs: 82, fat: 3, fiber: 3 },
   { name: 'Hummus', category: 'Snacks', calories: 166, protein: 8, carbs: 14, fat: 10, fiber: 6 },
   { name: 'Trail Mix', category: 'Snacks', calories: 462, protein: 12, carbs: 44, fat: 29, fiber: 6 },
+  { name: 'Protein Bar', category: 'Snacks', calories: 350, protein: 30, carbs: 35, fat: 12, fiber: 5 },
+  { name: 'Beef Jerky', category: 'Snacks', calories: 350, protein: 44, carbs: 11, fat: 15 },
+  { name: 'Popcorn (air-popped)', category: 'Snacks', calories: 387, protein: 13, carbs: 78, fat: 4, fiber: 15 },
+  { name: 'Tortilla Chips', category: 'Snacks', calories: 497, protein: 7, carbs: 66, fat: 24, fiber: 5 },
+  { name: 'Pretzels', category: 'Snacks', calories: 380, protein: 9, carbs: 80, fat: 3, fiber: 3 },
+  { name: 'Crackers (whole wheat)', category: 'Snacks', calories: 450, protein: 8, carbs: 68, fat: 16, fiber: 5 },
+  { name: 'Dried Apricots', category: 'Snacks', calories: 241, protein: 3.4, carbs: 63, fat: 0.5, fiber: 7 },
+  { name: 'Dried Dates', category: 'Snacks', calories: 282, protein: 2.5, carbs: 75, fat: 0.4, fiber: 8 },
+  { name: 'Dried Figs', category: 'Snacks', calories: 249, protein: 3.3, carbs: 64, fat: 1, fiber: 10 },
+  { name: 'Protein Balls', category: 'Snacks', calories: 420, protein: 20, carbs: 40, fat: 18, fiber: 6 },
 ]
 
 interface IngredientRow {
@@ -330,14 +416,6 @@ export function MealForm({ isOpen, onClose, onSave, meal }: MealFormProps) {
 
         {/* Category pills */}
         <div className="flex gap-1.5 flex-wrap">
-          <button type="button" onClick={() => setSelectedCategory('')}
-            className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold tracking-wide transition-all backdrop-blur-sm ${
-              !selectedCategory
-                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-sm shadow-purple-500/10'
-                : 'bg-white/[0.04] text-gray-500 border border-white/[0.06] hover:bg-white/[0.08] hover:text-gray-300'
-            }`}>
-            All
-          </button>
           {categories.map(cat => (
             <button key={cat} type="button" onClick={() => { setSelectedCategory(cat); setSearch('') }}
               className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold tracking-wide transition-all backdrop-blur-sm ${
@@ -350,20 +428,18 @@ export function MealForm({ isOpen, onClose, onSave, meal }: MealFormProps) {
           ))}
         </div>
 
-        {/* Quick gram presets */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-[9px] text-gray-600 uppercase tracking-wider mr-1">Grams:</span>
-          {[25, 50, 100, 150, 200].map(g => (
-            <button key={g} type="button" onClick={() => setAddingGrams(String(g))}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${
-                parseFloat(addingGrams) === g
-                  ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
-                  : 'bg-white/5 text-gray-500 border border-white/10 hover:bg-white/10 hover:text-gray-300'
-              }`}>
-              {g}g
-            </button>
-          ))}
-        </div>
+        {/* Portion input (single source of truth, not per-item) */}
+        {(search || selectedCategory) && (
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-gray-500 uppercase tracking-wider">Portion:</span>
+            <div className="flex items-center gap-1 bg-white/10 rounded-lg border border-white/10 px-2.5 py-1.5">
+              <input type="number" value={addingGrams} onChange={(e) => setAddingGrams(e.target.value)}
+                className="w-14 text-sm py-0.5 bg-transparent text-white text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span className="text-[10px] text-gray-500">grams</span>
+            </div>
+          </div>
+        )}
 
         {/* Food list */}
         {search || selectedCategory ? (
@@ -375,17 +451,8 @@ export function MealForm({ isOpen, onClose, onSave, meal }: MealFormProps) {
                   <p className="text-sm font-medium text-white">{food.name}</p>
                   <p className="text-[10px] text-gray-500 mt-0.5">{food.calories} kcal · P{food.protein} C{food.carbs} F{food.fat} /100g</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 bg-white/10 rounded-lg border border-white/10 px-2 py-1">
-                    <input type="number" value={addingGrams} onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => setAddingGrams(e.target.value)}
-                      className="w-12 text-[11px] py-0.5 bg-transparent text-white text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                    <span className="text-[9px] text-gray-500">g</span>
-                  </div>
-                  <div className="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/20 transition-all">
-                    <Plus className="w-3.5 h-3.5 text-emerald-400" />
-                  </div>
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/20 transition-all">
+                  <Plus className="w-4 h-4 text-emerald-400" />
                 </div>
               </button>
             ))}
