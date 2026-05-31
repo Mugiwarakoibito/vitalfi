@@ -4,7 +4,7 @@ import {
   Pencil, AlertTriangle, ChevronLeft, ChevronRight,
   Calendar, BarChart3, Award, RotateCcw,
   ChefHat, Bookmark, BookmarkPlus,
-  Lightbulb,
+  Lightbulb, Target, Ruler, Brain, ArrowRight, Check,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts'
@@ -14,14 +14,64 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import type { Meal } from '@/types/fitness'
 
-const DEFAULT_TARGETS = { calories: 2000, protein: 150, carbs: 250, fat: 65 }
+const STORAGE_PROFILE_KEY = 'nutrition_profile'
 
-const MEAL_TYPE_CONFIG: Record<string, { label: string; icon: string }> = {
-  breakfast: { label: 'Breakfast', icon: '🍳' },
-  lunch: { label: 'Lunch', icon: '🥗' },
-  dinner: { label: 'Dinner', icon: '🍽️' },
-  snack: { label: 'Snack', icon: '🍎' },
+interface NutritionProfile {
+  goal: 'lose' | 'maintain' | 'build'
+  age: number
+  gender: 'male' | 'female'
+  weightKg: number
+  heightCm: number
+  activity: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
+  bmr: number
+  tdee: number
+  createdAt: string
 }
+
+const ACTIVITY_MULTIPLIERS: Record<string, number> = {
+  sedentary: 1.2,
+  light: 1.375,
+  moderate: 1.55,
+  active: 1.725,
+  very_active: 1.9,
+}
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  sedentary: 'Sedentary (desk job, no exercise)',
+  light: 'Light (1-3 days/week)',
+  moderate: 'Moderate (3-5 days/week)',
+  active: 'Active (6-7 days/week)',
+  very_active: 'Very Active (2x/day, physical job)',
+}
+
+function calcBMR(gender: string, weightKg: number, heightCm: number, age: number): number {
+  if (gender === 'male') return Math.round(10 * weightKg + 6.25 * heightCm - 5 * age + 5)
+  return Math.round(10 * weightKg + 6.25 * heightCm - 5 * age - 161)
+}
+
+function calcTargets(profile: NutritionProfile) {
+  const bmr = calcBMR(profile.gender, profile.weightKg, profile.heightCm, profile.age)
+  const tdee = Math.round(bmr * ACTIVITY_MULTIPLIERS[profile.activity])
+  let calorieTarget = tdee
+  if (profile.goal === 'lose') calorieTarget = tdee - 500
+  else if (profile.goal === 'build') calorieTarget = tdee + 300
+
+  const proteinPerKg = profile.goal === 'build' ? 2.2 : profile.goal === 'lose' ? 2.0 : 1.6
+  const protein = Math.round(proteinPerKg * profile.weightKg)
+  const fatCalPct = profile.goal === 'lose' ? 0.25 : 0.30
+  const fat = Math.round((calorieTarget * fatCalPct) / 9)
+  const carbs = Math.round((calorieTarget - protein * 4 - fat * 9) / 4)
+
+  return { bmr, tdee, calories: Math.max(calorieTarget, 1200), protein: Math.max(protein, 50), carbs: Math.max(carbs, 50), fat: Math.max(fat, 30) }
+}
+
+const GOAL_CONFIG = [
+  { id: 'lose' as const, label: 'Lose Weight', desc: 'Calorie deficit to drop fat', emoji: '🔥', color: 'text-amber-400', border: 'border-amber-500/30' },
+  { id: 'maintain' as const, label: 'Maintain', desc: 'Keep your current weight', emoji: '⚖️', color: 'text-blue-400', border: 'border-blue-500/30' },
+  { id: 'build' as const, label: 'Build Muscle', desc: 'Calorie surplus for growth', emoji: '💪', color: 'text-emerald-400', border: 'border-emerald-500/30' },
+]
+
+const DEFAULT_TARGETS = { calories: 2000, protein: 150, carbs: 250, fat: 65 }
 
 const MEAL_TYPE_ORDER = { breakfast: 0, lunch: 1, dinner: 2, snack: 3 }
 
@@ -45,7 +95,6 @@ const FOOD_SUGGESTIONS: Record<string, { name: string; protein: number; carbs: n
     { name: 'Almonds', protein: 21, carbs: 22, fat: 50, calories: 579, emoji: '🥜' },
     { name: 'Olive Oil', protein: 0, carbs: 0, fat: 14, calories: 119, emoji: '🫒' },
     { name: 'Salmon', protein: 25, carbs: 0, fat: 13, calories: 208, emoji: '🐠' },
-    { name: 'Chia Seeds', protein: 17, carbs: 42, fat: 31, calories: 486, emoji: '🌰' },
   ],
 }
 
@@ -59,6 +108,17 @@ interface SavedRecipe {
   fat: number
   fiber?: number
   createdAt: string
+}
+
+function loadProfile(): NutritionProfile | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_PROFILE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
+function saveProfile(p: NutritionProfile) {
+  localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(p))
 }
 
 function loadRecipes(): SavedRecipe[] {
@@ -105,7 +165,6 @@ function getDayLabel(dateStr: string): string {
   yesterday.setDate(yesterday.getDate() - 1)
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
-
   const s = formatDate(d)
   if (s === formatDate(today)) return 'Today'
   if (s === formatDate(yesterday)) return 'Yesterday'
@@ -128,6 +187,17 @@ const macroMeta: Record<string, { label: string; icon: React.ElementType; unit: 
 export function NutritionLogger() {
   const { meals, addMeal, updateMeal, deleteMeal } = useAppStore()
 
+  const [profile, setProfile] = useState<NutritionProfile | null>(loadProfile)
+  const [showWizard, setShowWizard] = useState(!loadProfile())
+  const [wizardStep, setWizardStep] = useState(0)
+  const [goal, setGoal] = useState<'lose' | 'maintain' | 'build'>('maintain')
+  const [age, setAge] = useState('30')
+  const [gender, setGender] = useState<'male' | 'female'>('male')
+  const [weight, setWeight] = useState('')
+  const [height, setHeight] = useState('')
+  const [activity, setActivity] = useState<NutritionProfile['activity']>('moderate')
+  const [useImperial, setUseImperial] = useState(false)
+
   const [selectedDate, setSelectedDate] = useState(formatDate(new Date()))
   const [showForm, setShowForm] = useState(false)
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null)
@@ -141,6 +211,31 @@ export function NutritionLogger() {
 
   useEffect(() => { saveRecipes(recipes) }, [recipes])
   useEffect(() => { saveTargets(targets) }, [targets])
+
+  const handleWizardComplete = useCallback(() => {
+    const w = useImperial ? Math.round(parseFloat(weight) / 2.205) : parseFloat(weight)
+    const h = useImperial ? Math.round(parseFloat(height) * 2.54) : parseFloat(height)
+    const p: NutritionProfile = {
+      goal, age: parseInt(age), gender,
+      weightKg: w, heightCm: h, activity,
+      bmr: 0, tdee: 0, createdAt: new Date().toISOString(),
+    }
+    const computed = calcTargets(p)
+    p.bmr = computed.bmr
+    p.tdee = computed.tdee
+    saveProfile(p)
+    setProfile(p)
+    setTargets({ calories: computed.calories, protein: computed.protein, carbs: computed.carbs, fat: computed.fat })
+    setShowWizard(false)
+  }, [goal, age, gender, weight, height, activity, useImperial])
+
+  // Derived wizard validation
+  const wizardValid = useMemo(() => {
+    if (wizardStep === 0) return true
+    if (wizardStep === 1) return weight && height && age
+    if (wizardStep === 2) return true
+    return true
+  }, [wizardStep, weight, height, age])
 
   const filteredMeals = useMemo(() => {
     return meals
@@ -189,17 +284,13 @@ export function NutritionLogger() {
     const weekDates = getWeekDates(new Date(selectedDate + 'T00:00:00'))
     return weekDates.map((date) => {
       const dayMeals = meals.filter((m) => m.date === date)
-      const cal = dayMeals.reduce((a, m) => a + m.calories, 0)
-      const pro = dayMeals.reduce((a, m) => a + m.protein, 0)
-      const carb = dayMeals.reduce((a, m) => a + m.carbs, 0)
-      const ft = dayMeals.reduce((a, m) => a + m.fat, 0)
       return {
         date,
         label: new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' }),
-        calories: Math.round(cal),
-        protein: Math.round(pro),
-        carbs: Math.round(carb),
-        fat: Math.round(ft),
+        calories: Math.round(dayMeals.reduce((a, m) => a + m.calories, 0)),
+        protein: Math.round(dayMeals.reduce((a, m) => a + m.protein, 0)),
+        carbs: Math.round(dayMeals.reduce((a, m) => a + m.carbs, 0)),
+        fat: Math.round(dayMeals.reduce((a, m) => a + m.fat, 0)),
       }
     })
   }, [meals, selectedDate])
@@ -216,18 +307,12 @@ export function NutritionLogger() {
     setSelectedDate(formatDate(new Date()))
   }, [])
 
-  const handleSave = useCallback(
-    (meal: Meal) => {
-      if (editingMeal) {
-        updateMeal(meal)
-      } else {
-        addMeal(meal)
-      }
-      setShowForm(false)
-      setEditingMeal(null)
-    },
-    [editingMeal, addMeal, updateMeal]
-  )
+  const handleSave = useCallback((meal: Meal) => {
+    if (editingMeal) updateMeal(meal)
+    else addMeal(meal)
+    setShowForm(false)
+    setEditingMeal(null)
+  }, [editingMeal, addMeal, updateMeal])
 
   const handleDelete = useCallback(async () => {
     if (!deletingMeal) return
@@ -267,7 +352,7 @@ export function NutritionLogger() {
   }, [recipes])
 
   const addRecipeToDay = useCallback((recipe: SavedRecipe) => {
-    const meal: Meal = {
+    addMeal({
       id: crypto.randomUUID?.() ?? Math.random().toString(36).substring(2),
       date: selectedDate,
       name: recipe.name,
@@ -279,8 +364,7 @@ export function NutritionLogger() {
       fiber: recipe.fiber,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    }
-    addMeal(meal)
+    })
   }, [selectedDate, addMeal])
 
   const deleteRecipe = useCallback((id: string) => {
@@ -288,36 +372,25 @@ export function NutritionLogger() {
   }, [])
 
   const suggestions = useMemo(() => {
-    const result: { text: string; macro: string }[] = []
+    const result: { text: string }[] = []
     if (remaining.protein > 20) {
       const best = FOOD_SUGGESTIONS.high_protein.slice(0, 2)
-      result.push({
-        text: `Need ${Math.round(remaining.protein)}g more protein — try ${best.map(f => `${f.emoji} ${f.name} (~${f.protein}g)`).join(' or ')}`,
-        macro: 'protein',
-      })
+      result.push({ text: `Need ${Math.round(remaining.protein)}g more protein — ${best.map(f => `${f.emoji} ${f.name} (~${f.protein}g)`).join(' or ')}` })
     }
     if (remaining.carbs > 30) {
       const best = FOOD_SUGGESTIONS.high_carbs.slice(0, 2)
-      result.push({
-        text: `Need ${Math.round(remaining.carbs)}g more carbs — ${best.map(f => `${f.emoji} ${f.name}`).join(', ')}`,
-        macro: 'carbs',
-      })
+      result.push({ text: `Need ${Math.round(remaining.carbs)}g more carbs — ${best.map(f => `${f.emoji} ${f.name}`).join(', ')}` })
     }
     if (remaining.fat > 15) {
       const best = FOOD_SUGGESTIONS.healthy_fat.slice(0, 2)
-      result.push({
-        text: `Need ${Math.round(remaining.fat)}g more fat — ${best.map(f => `${f.emoji} ${f.name}`).join(', ')}`,
-        macro: 'fat',
-      })
+      result.push({ text: `Need ${Math.round(remaining.fat)}g more fat — ${best.map(f => `${f.emoji} ${f.name}`).join(', ')}` })
     }
     return result
   }, [remaining])
 
   const timingData = useMemo(() => {
     const totals: Record<string, number> = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 }
-    for (const m of filteredMeals) {
-      totals[m.mealType] = (totals[m.mealType] || 0) + m.calories
-    }
+    for (const m of filteredMeals) totals[m.mealType] = (totals[m.mealType] || 0) + m.calories
     const total = Object.values(totals).reduce((a, b) => a + b, 0) || 1
     return {
       breakfast: { calories: totals.breakfast, pct: Math.round((totals.breakfast / total) * 100) },
@@ -330,23 +403,20 @@ export function NutritionLogger() {
   const recommendation = useMemo(() => {
     const daysWithData = weeklyData.filter(d => d.calories > 0)
     if (daysWithData.length < 3) return null
-
     const overDays = daysWithData.filter(d => d.calories > targets.calories)
     const underDays = daysWithData.filter(d => d.calories < targets.calories)
-
     if (overDays.length >= 3) {
       const avgOver = Math.round(overDays.reduce((s, d) => s + (d.calories - targets.calories), 0) / overDays.length)
-      return { type: 'warning' as const, title: 'Over Target Trend', message: `Averaging ${avgOver} cal over this week.` }
+      return { type: 'warning' as const, title: 'Over Target', message: `Averaging ${avgOver} cal over this week.` }
     }
     if (underDays.length >= 3) {
       const avgUnder = Math.round(underDays.reduce((s, d) => s + (targets.calories - d.calories), 0) / underDays.length)
-      return { type: 'info' as const, title: 'Under Target Trend', message: `Averaging ${avgUnder} cal under this week.` }
+      return { type: 'info' as const, title: 'Under Target', message: `Averaging ${avgUnder} cal under this week.` }
     }
     if (daysWithData.length >= 5) {
       const avgCal = Math.round(daysWithData.reduce((s, d) => s + d.calories, 0) / daysWithData.length)
-      if (Math.abs(avgCal - targets.calories) < 100) {
-        return { type: 'success' as const, title: 'Great Consistency!', message: `Averaging ${avgCal} cal — right on target.` }
-      }
+      if (Math.abs(avgCal - targets.calories) < 100)
+        return { type: 'success' as const, title: 'On Point!', message: `Averaging ${avgCal} cal — right on target.` }
     }
     return null
   }, [weeklyData, targets.calories])
@@ -358,7 +428,6 @@ export function NutritionLogger() {
     const avgMealsPerDay = daysWithSomeData.length > 0
       ? Math.round((daysWithMeals.reduce((s, d) => s + d.length, 0) / daysWithMeals.length) * 10) / 10
       : 0
-
     const mealTypeCounts: Record<string, number> = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 }
     for (const dayMeals of daysWithMeals) {
       const types = new Set(dayMeals.map(m => m.mealType))
@@ -367,14 +436,208 @@ export function NutritionLogger() {
       }
     }
     const mostSkippedEntry = Object.entries(mealTypeCounts).sort((a, b) => b[1] - a[1])[0]
-    const mostSkipped = mostSkippedEntry ? mostSkippedEntry[0] : 'n/a'
-
-    return { avgMealsPerDay, mostSkipped }
+    return { avgMealsPerDay, mostSkipped: mostSkippedEntry ? mostSkippedEntry[0] : 'n/a' }
   }, [meals, selectedDate])
 
+  // --- Wizard ---
+  if (showWizard) {
+    const w = useImperial ? Math.round(parseFloat(weight || '0') / 2.205) : parseFloat(weight || '0')
+    const h = useImperial ? Math.round(parseFloat(height || '0') * 2.54) : parseFloat(height || '0')
+    const preview = (w > 0 && h > 0 && age) ? calcTargets({ goal, age: parseInt(age), gender, weightKg: w, heightCm: h, activity, bmr: 0, tdee: 0, createdAt: '' }) : null
+
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-lg mx-auto py-8">
+        {/* Steps indicator */}
+        <div className="flex items-center justify-center gap-2 mb-8">
+          {[0, 1, 2].map((s) => (
+            <div key={s} className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+              s === wizardStep ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30' 
+              : s < wizardStep ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+              : 'bg-white/5 text-gray-600 border border-white/10'
+            }`}>
+              {s < wizardStep ? <Check className="w-4 h-4" /> : s + 1}
+            </div>
+          ))}
+          <div className="w-16 h-px bg-white/10 mx-1" />
+          <div className="text-[9px] text-gray-600 uppercase tracking-wider">Setup</div>
+        </div>
+
+        <motion.div key={wizardStep} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
+
+          {/* Step 0: Goal */}
+          {wizardStep === 0 && (
+            <>
+              <div className="text-center mb-2">
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/15 flex items-center justify-center mx-auto mb-3">
+                  <Target className="w-6 h-6 text-purple-400" />
+                </div>
+                <h2 className="text-xl font-bold text-white">What's your goal?</h2>
+                <p className="text-sm text-gray-400 mt-1">Your targets will be calculated automatically</p>
+              </div>
+              <div className="space-y-2.5">
+                {GOAL_CONFIG.map((g) => (
+                  <button key={g.id} onClick={() => setGoal(g.id)}
+                    className={`w-full text-left p-4 rounded-xl border transition-all ${
+                      goal === g.id
+                        ? `${g.border} bg-white/10 shadow-lg`
+                        : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
+                    }`}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{g.emoji}</span>
+                      <div>
+                        <p className={`text-sm font-bold ${goal === g.id ? g.color : 'text-white'}`}>{g.label}</p>
+                        <p className="text-[11px] text-gray-500">{g.desc}</p>
+                      </div>
+                      {goal === g.id && <Check className={`w-5 h-5 ml-auto ${g.color}`} />}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Step 1: Stats */}
+          {wizardStep === 1 && (
+            <>
+              <div className="text-center mb-2">
+                <div className="w-12 h-12 rounded-2xl bg-cyan-500/15 flex items-center justify-center mx-auto mb-3">
+                  <Ruler className="w-6 h-6 text-cyan-400" />
+                </div>
+                <h2 className="text-xl font-bold text-white">Your stats</h2>
+                <p className="text-sm text-gray-400 mt-1">So I can calculate your needs</p>
+              </div>
+
+              <div className="flex gap-2 mb-4">
+                <button onClick={() => setGender('male')}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${
+                    gender === 'male' ? 'bg-blue-500/15 border-blue-500/30 text-blue-300' : 'bg-white/5 border-white/10 text-gray-400'
+                  }`}>Male</button>
+                <button onClick={() => setGender('female')}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${
+                    gender === 'female' ? 'bg-pink-500/15 border-pink-500/30 text-pink-300' : 'bg-white/5 border-white/10 text-gray-400'
+                  }`}>Female</button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5 block">Age</label>
+                  <input type="number" value={age} onChange={(e) => setAge(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5 block">Weight ({useImperial ? 'lbs' : 'kg'})</label>
+                  <input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="70"
+                    className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5 block">Height ({useImperial ? 'inches' : 'cm'})</label>
+                  <input type="number" value={height} onChange={(e) => setHeight(e.target.value)} placeholder="175"
+                    className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                </div>
+              </div>
+
+              <button onClick={() => setUseImperial(!useImperial)}
+                className="text-[10px] text-gray-500 hover:text-gray-300 transition-all mt-1">
+                Switch to {useImperial ? 'metric' : 'imperial'}
+              </button>
+
+              <div>
+                <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5 block mt-3">Activity Level</label>
+                <div className="space-y-1.5">
+                  {(Object.keys(ACTIVITY_LABELS) as NutritionProfile['activity'][]).map((key) => (
+                    <button key={key} onClick={() => setActivity(key)}
+                      className={`w-full text-left px-3 py-2.5 rounded-xl border text-xs transition-all ${
+                        activity === key ? 'bg-purple-500/15 border-purple-500/30 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/[0.08]'
+                      }`}>
+                      {ACTIVITY_LABELS[key]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Step 2: Results */}
+          {wizardStep === 2 && preview && (
+            <>
+              <div className="text-center mb-2">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 flex items-center justify-center mx-auto mb-3">
+                  <Brain className="w-6 h-6 text-emerald-400" />
+                </div>
+                <h2 className="text-xl font-bold text-white">Your custom plan</h2>
+                <p className="text-sm text-gray-400 mt-1">Calculated from your stats and goal</p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl p-5 space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                  <div>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Basal Metabolic Rate</p>
+                    <p className="text-lg font-bold text-white">{preview.bmr} <span className="text-xs font-normal text-gray-500">kcal</span></p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Total Daily Energy</p>
+                    <p className="text-lg font-bold text-purple-400">{preview.tdee} <span className="text-xs font-normal text-gray-500">kcal</span></p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[9px] text-gray-600 uppercase tracking-wider mb-2">Your Daily Targets</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[{ label: 'Calories', value: preview.calories, unit: 'kcal', color: 'text-rose-400' },
+                      { label: 'Protein', value: preview.protein, unit: 'g', color: 'text-emerald-400' },
+                      { label: 'Carbs', value: preview.carbs, unit: 'g', color: 'text-amber-400' },
+                      { label: 'Fat', value: preview.fat, unit: 'g', color: 'text-sky-400' },
+                    ].map((m) => (
+                      <div key={m.label} className="rounded-lg bg-white/5 border border-white/10 p-2.5 text-center">
+                        <p className={`text-xl font-bold ${m.color}`}>{m.value}</p>
+                        <p className="text-[9px] text-gray-500">{m.unit}</p>
+                        <p className="text-[8px] text-gray-600 uppercase tracking-wider">{m.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-xl bg-amber-500/5 border border-amber-500/20 p-3">
+                  <p className="text-[10px] text-amber-300/80 font-medium">
+                    {goal === 'lose' ? `🔥 Eating at a ${preview.tdee - preview.calories} kcal deficit to lose ~${Math.round((preview.tdee - preview.calories) * 7 / 7700 * 10) / 10}kg per week`
+                    : goal === 'build' ? `💪 Eating at a ${preview.calories - preview.tdee} kcal surplus for muscle growth`
+                    : `⚖️ Eating at maintenance to keep your current weight`}
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+        </motion.div>
+
+        {/* Wizard navigation */}
+        <div className="flex gap-3 mt-6">
+          {wizardStep > 0 && (
+            <button onClick={() => setWizardStep(s => s - 1)}
+              className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all text-sm">
+              Back
+            </button>
+          )}
+          <button
+            onClick={() => {
+              if (wizardStep < 2) { setWizardStep(s => s + 1) }
+              else handleWizardComplete()
+            }}
+            disabled={!wizardValid}
+            className={`flex-1 px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+              wizardValid
+                ? 'bg-purple-500 text-white hover:bg-purple-600 shadow-lg shadow-purple-500/25'
+                : 'bg-white/5 text-gray-500 cursor-not-allowed'
+            }`}>
+            {wizardStep < 2 ? <>Next <ArrowRight className="w-4 h-4" /></> : <>Start Tracking <Check className="w-4 h-4" /></>}
+          </button>
+        </div>
+      </motion.div>
+    )
+  }
+
+  // --- Main Nutrition Tracker ---
   return (
     <motion.div className="space-y-4" initial="hidden" animate="visible">
-      {/* Header */}
       <motion.div variants={itemVariants} className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <button onClick={() => navigateDate(-1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
@@ -412,7 +675,22 @@ export function NutritionLogger() {
         </div>
       </motion.div>
 
-      {/* Today's Progress — single unified card */}
+      {/* Profile summary bar */}
+      {profile && (
+        <motion.div variants={itemVariants} className="rounded-2xl border border-purple-500/15 bg-purple-500/5 p-3 flex items-center justify-between">
+          <div className="flex items-center gap-3 text-xs text-gray-400">
+            <span className="text-purple-300 font-medium">{profile.goal === 'lose' ? '🔥 Fat Loss' : profile.goal === 'build' ? '💪 Muscle Gain' : '⚖️ Maintenance'}</span>
+            <span className="text-gray-600">|</span>
+            <span>{profile.weightKg}kg · {profile.age}yrs · {profile.gender}</span>
+            <span className="text-gray-600">|</span>
+            <span>TDEE: <span className="text-white font-medium">{profile.tdee}</span> kcal</span>
+          </div>
+          <button onClick={() => { setShowWizard(true); setWizardStep(0) }}
+            className="text-[10px] text-gray-500 hover:text-white transition-all">Recalculate</button>
+        </motion.div>
+      )}
+
+      {/* Today's Progress */}
       <motion.div variants={itemVariants} className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Today's Progress</h3>
@@ -482,7 +760,7 @@ export function NutritionLogger() {
         </motion.div>
       )}
 
-      {/* Weekly View (toggleable) */}
+      {/* Weekly View */}
       <AnimatePresence>
         {showWeekly && (
           <motion.div variants={itemVariants} initial="hidden" animate="visible" exit={{ opacity: 0, y: -12 }}
@@ -522,7 +800,6 @@ export function NutritionLogger() {
                 </ResponsiveContainer>
               </div>
             </div>
-            {/* Insights row below charts */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mt-4">
               <div className="rounded-xl bg-white/5 border border-white/10 p-3">
                 <h4 className="text-[9px] text-gray-500 uppercase tracking-wider mb-2">Meal Timing</h4>
@@ -555,23 +832,16 @@ export function NutritionLogger() {
                 </div>
               </div>
               {recommendation ? (
-                <div className={`rounded-xl border p-3 ${
-                  recommendation.type === 'warning' ? 'border-amber-500/20 bg-amber-500/5'
-                  : recommendation.type === 'info' ? 'border-blue-500/20 bg-blue-500/5'
-                  : 'border-emerald-500/20 bg-emerald-500/5'
-                }`}>
+                <div className={`rounded-xl border p-3 ${recommendation.type === 'warning' ? 'border-amber-500/20 bg-amber-500/5' : recommendation.type === 'info' ? 'border-blue-500/20 bg-blue-500/5' : 'border-emerald-500/20 bg-emerald-500/5'}`}>
                   <div className="flex items-center gap-2 mb-1">
                     {recommendation.type === 'success' ? <Award className="w-3.5 h-3.5 text-emerald-400" /> : <AlertTriangle className={`w-3.5 h-3.5 ${recommendation.type === 'warning' ? 'text-amber-400' : 'text-blue-400'}`} />}
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                      recommendation.type === 'warning' ? 'text-amber-300' : recommendation.type === 'info' ? 'text-blue-300' : 'text-emerald-300'
-                    }`}>{recommendation.title}</span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${recommendation.type === 'warning' ? 'text-amber-300' : recommendation.type === 'info' ? 'text-blue-300' : 'text-emerald-300'}`}>{recommendation.title}</span>
                   </div>
                   <p className="text-[10px] text-gray-400">{recommendation.message}</p>
                 </div>
               ) : (
                 <div className="rounded-xl bg-white/5 border border-white/10 p-3 flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-gray-500/10 flex items-center justify-center"><span className="text-gray-500 text-[10px]">i</span></div>
-                  <p className="text-[10px] text-gray-500">Log 3+ days for personalized insights</p>
+                  <span className="text-[10px] text-gray-500">Log 3+ days for personalized insights</span>
                 </div>
               )}
             </div>
@@ -601,7 +871,7 @@ export function NutritionLogger() {
                     <div className="flex items-start justify-between mb-1.5">
                       <div>
                         <p className="text-xs font-semibold text-white line-clamp-1">{recipe.name}</p>
-                        <p className="text-[9px] text-gray-500">{MEAL_TYPE_CONFIG[recipe.mealType]?.label || recipe.mealType}</p>
+                        <p className="text-[9px] text-gray-500">{recipe.mealType}</p>
                       </div>
                       <button onClick={() => deleteRecipe(recipe.id)} className="p-0.5 rounded text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">
                         <Trash2 className="w-3 h-3" />
@@ -650,8 +920,8 @@ export function NutritionLogger() {
               return (
                 <div key={type}>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-base">{MEAL_TYPE_CONFIG[type].icon}</span>
-                    <h4 className="text-xs font-semibold text-white/60 uppercase tracking-wider">{MEAL_TYPE_CONFIG[type].label}</h4>
+                    <span className="text-base">{type === 'breakfast' ? '🍳' : type === 'lunch' ? '🥗' : type === 'dinner' ? '🍽️' : '🍎'}</span>
+                    <h4 className="text-xs font-semibold text-white/60 uppercase tracking-wider">{type}</h4>
                     <span className="text-[10px] text-gray-600">({typeMeals.length})</span>
                   </div>
                   <div className="space-y-2">
@@ -659,9 +929,7 @@ export function NutritionLogger() {
                       <motion.div key={meal.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                         className="rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/[0.08] transition-all group">
                         <div className="flex justify-between items-start mb-2">
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-semibold text-white">{meal.name}</h4>
-                          </div>
+                          <h4 className="text-sm font-semibold text-white">{meal.name}</h4>
                           <div className="flex gap-0.5">
                             <button onClick={() => saveAsRecipe(meal)} className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all" title="Save as recipe">
                               <BookmarkPlus className="w-3.5 h-3.5" />
@@ -704,7 +972,6 @@ export function NutritionLogger() {
 
       <MealForm isOpen={showForm} onClose={() => { setShowForm(false); setEditingMeal(null) }} onSave={handleSave} meal={editingMeal} />
 
-      {/* Delete confirmation */}
       <AnimatePresence>
         {deletingMeal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
