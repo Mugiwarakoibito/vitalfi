@@ -1510,6 +1510,7 @@ export function NutritionLogger() {
                 })()}
               </div>
             </div>
+                </>
               )
             })()}
           </motion.div>
