@@ -233,13 +233,16 @@ export function MealForm({ isOpen, onClose, onSave, meal }: MealFormProps) {
     return totals
   }, [ingredients])
 
-  const applyIngredients = () => {
-    setCalories(String(ingredientTotals.calories))
-    setProtein(String(ingredientTotals.protein))
-    setCarbs(String(ingredientTotals.carbs))
-    setFat(String(ingredientTotals.fat))
-    setFiber(String(ingredientTotals.fiber))
-  }
+  // Sync ingredient totals directly into macro fields (no separate "Apply" step)
+  useEffect(() => {
+    if (ingredients.length > 0) {
+      setCalories(String(ingredientTotals.calories))
+      setProtein(String(ingredientTotals.protein))
+      setCarbs(String(ingredientTotals.carbs))
+      setFat(String(ingredientTotals.fat))
+      setFiber(String(Math.round(ingredientTotals.fiber * 10) / 10))
+    }
+  }, [ingredientTotals])
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
@@ -388,26 +391,18 @@ export function MealForm({ isOpen, onClose, onSave, meal }: MealFormProps) {
           </div>
         )}
 
-        {/* Running total */}
+        {/* Inline macro totals (no duplicate box) */}
         {hasIngredients && (
-          <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-2.5">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[9px] text-gray-500 uppercase tracking-wider">Running Total</span>
-              <button type="button" onClick={applyIngredients}
-                className="text-[9px] text-purple-400 hover:text-purple-300 font-medium transition-all">
-                Apply to meal
-              </button>
-            </div>
-            <div className="grid grid-cols-4 gap-2 text-center">
-              <div><p className="text-sm font-bold text-rose-400">{ingredientTotals.calories}</p><p className="text-[8px] text-gray-600">kcal</p></div>
-              <div><p className="text-sm font-bold text-emerald-400">{ingredientTotals.protein}g</p><p className="text-[8px] text-gray-600">protein</p></div>
-              <div><p className="text-sm font-bold text-amber-400">{ingredientTotals.carbs}g</p><p className="text-[8px] text-gray-600">carbs</p></div>
-              <div><p className="text-sm font-bold text-sky-400">{ingredientTotals.fat}g</p><p className="text-[8px] text-gray-600">fat</p></div>
-            </div>
-          </div>
+          <p className="text-[10px] text-gray-400 text-center">
+            <span className="text-rose-400 font-semibold">{ingredientTotals.calories}</span> kcal ·{' '}
+            <span className="text-emerald-400 font-semibold">{ingredientTotals.protein}g</span> P ·{' '}
+            <span className="text-amber-400 font-semibold">{ingredientTotals.carbs}g</span> C ·{' '}
+            <span className="text-sky-400 font-semibold">{ingredientTotals.fat}g</span> F
+            {ingredientTotals.fiber > 0 && <> · <span className="text-gray-400">{ingredientTotals.fiber}g</span> fiber</>}
+          </p>
         )}
 
-        {/* Macro Fields */}
+        {/* Macro Fields (auto-filled from ingredients, editable for tweaks) */}
         <div className="grid grid-cols-2 gap-3">
           <Input label="Calories" type="number" placeholder="kcal" value={calories} onChange={(e) => setCalories(e.target.value)} error={errors.calories} />
           <Input label="Protein (g)" type="number" step="0.1" placeholder="g" value={protein} onChange={(e) => setProtein(e.target.value)} error={errors.protein} />
