@@ -1121,42 +1121,87 @@ export function NutritionLogger() {
               {/* Card 2: Insights */}
               <div className="rounded-xl bg-white/5 border border-white/10 p-3">
                 <h4 className="text-[9px] text-gray-500 uppercase tracking-wider mb-2">Insights</h4>
-                {(() => {
-                  const logged = pastDays.filter(d => d.calories > 0)
-                  if (!logged.length) return <div className="text-center"><p className="text-[10px] text-gray-500 py-3">Log meals to see insights</p></div>
-                  const onTarget = logged.filter(d => d.calories >= targets.calories * 0.9 && d.calories <= targets.calories * 1.1)
-                  const pct = Math.round((onTarget.length / logged.length) * 100)
-                  let streak = 0
-                  for (let i = nutriWeekData.length - 1; i >= 0; i--) {
-                    if (nutriWeekData[i].calories > 0) streak++
-                    else break
-                  }
+                 {(() => {
+                   const logged = nutriWeekData.filter(d => d.calories > 0)
+                   if (!logged.length) return <div className="text-center"><p className="text-[10px] text-gray-500 py-3">Log meals to see insights</p></div>
+                   const onTarget = logged.filter(d => d.calories >= targets.calories * 0.9 && d.calories <= targets.calories * 1.1)
+                   const pct = Math.round((onTarget.length / logged.length) * 100)
+                   let streak = 0
+                   for (let i = nutriWeekData.length - 1; i >= 0; i--) {
+                     if (nutriWeekData[i].calories > 0) streak++
+                     else break
+                   }
+                   
+                   const insightData = [
+                     { name: 'On Target', value: pct },
+                     { name: 'Streak', value: Math.min(streak, 7) }, // Cap at 7 for visual consistency
+                     { name: 'Logged', value: logged.length }
+                   ]
+                   
                    return (
-                     <div className="flex items-center justify-between space-x-4">
-                       <div 
-                         className="flex flex-col items-center px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-200"
-                         title="Percentage of days where calories were within ±10% of target"
-                       >
-                         <span className="text-white font-medium">{pct}%</span>
-                         <span className="text-[9px] text-gray-500">on target</span>
-                       </div>
-                       <div 
-                         className="flex flex-col items-center px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-200"
-                         title="Current consecutive days with logged meals"
-                       >
-                         <span className="text-white font-medium">{streak}</span>
-                         <span className="text-[9px] text-gray-500">day streak</span>
-                       </div>
-                       <div 
-                         className="flex flex-col items-center px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-200"
-                         title="Number of days with meals logged in this week"
-                       >
-                         <span className="text-white font-medium">{logged.length}</span>
-                         <span className="text-[9px] text-gray-500">logged</span>
+                     <div className="space-y-4">
+                       <p className="text-[9px] text-gray-500 mb-2">Insights</p>
+                       <div className="h-24">
+                         <ResponsiveContainer width="100%" height="100%">
+                           <BarChart data={insightData} barGap={4} barCategoryGap="20%">
+                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                             <XAxis 
+                               tick={{ fill: '#6b7280', fontSize: 10 }} 
+                               axisLine={false} 
+                               tickLine={false} 
+                             />
+                             <YAxis 
+                               tick={{ fill: '#6b7280', fontSize: 10 }} 
+                               axisLine={false} 
+                               tickLine={false} 
+                               domain={[0, 'auto']}
+                             />
+                             <Tooltip 
+                               content={({ active, payload }) => {
+                                 if (!active || !payload?.length) return null;
+                                 
+                                 const value = payload[0].value;
+                                 const name = payload[0].name;
+                                 
+                                 // Calculate actual values for tooltip
+                                 const actualValues = {
+                                   'On Target': `${pct}%`,
+                                   'Streak': `${streak} days`,
+                                   'Logged': `${logged.length} days`
+                                 };
+                                 
+                                 return (
+                                   <div className="bg-gray-900 border border-white/10 rounded-xl px-3 py-2">
+                                     <p className="text-[10px] text-gray-500 mb-1">{name}</p>
+                                     <p className="text-[11px] font-medium">
+                                       {name === 'On Target' ? `${value}%` : 
+                                        name === 'Streak' ? `${actualValues.Streak}` :
+                                        `${actualValues.Logged}`}
+                                     </p>
+                                   </div>
+                                 );
+                               }}
+                               cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                             />
+                             <Bar 
+                               dataKey="value" 
+                               radius={[4, 4, 0, 0]}
+                               >
+                               {insightData.map((_, index) => (
+                                 <Cell 
+                                   key={`insight-${index}`} 
+                                   fill={index === 0 ? '#34d399' : // On Target - emerald
+                                         index === 1 ? '#a855f7' : // Streak - purple
+                                         '#60a5fa'} // Logged - blue
+                                 />
+                               ))}
+                             </Bar>
+                           </BarChart>
+                         </ResponsiveContainer>
                        </div>
                      </div>
                    )
-                })()}
+                  })()}
               </div>
             </div>
                 </>
