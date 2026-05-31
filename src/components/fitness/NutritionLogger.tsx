@@ -1131,13 +1131,31 @@ export function NutritionLogger() {
                     if (nutriWeekData[i].calories > 0) streak++
                     else break
                   }
-                  return (
-                    <div className="flex items-center justify-between text-[10px] text-gray-500">
-                      <span><span className="text-white font-medium">{pct}%</span> on target</span>
-                      <span><span className="text-white font-medium">{streak}</span> day streak</span>
-                      <span><span className="text-purple-400 font-medium">{logged.length}</span> logged</span>
-                    </div>
-                  )
+                   return (
+                     <div className="flex items-center justify-between space-x-4">
+                       <div 
+                         className="flex flex-col items-center px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-200"
+                         title="Percentage of days where calories were within ±10% of target"
+                       >
+                         <span className="text-white font-medium">{pct}%</span>
+                         <span className="text-[9px] text-gray-500">on target</span>
+                       </div>
+                       <div 
+                         className="flex flex-col items-center px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-200"
+                         title="Current consecutive days with logged meals"
+                       >
+                         <span className="text-white font-medium">{streak}</span>
+                         <span className="text-[9px] text-gray-500">day streak</span>
+                       </div>
+                       <div 
+                         className="flex flex-col items-center px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-200"
+                         title="Number of days with meals logged in this week"
+                       >
+                         <span className="text-white font-medium">{logged.length}</span>
+                         <span className="text-[9px] text-gray-500">logged</span>
+                       </div>
+                     </div>
+                   )
                 })()}
               </div>
             </div>

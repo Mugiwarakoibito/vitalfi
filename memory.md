@@ -24,6 +24,8 @@
 - Fixed NutriScope excluding today from stats (intentional — past days only)
 - Fixed MacroCoach showing independently of NutriScope toggle
 - Fixed unused variables (weeklySummary, adherence) causing build errors
+- Made NutriScope independent with its own week navigator (◀ ▶ controls) separate from main date picker
+- Made Insights section interactive with hover tooltips and lift effects on metric cards
 - Deployed to https://vitalfi.vercel.app
 
 ### Upgrades Before Restructure
