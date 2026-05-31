@@ -321,85 +321,103 @@ export function MealForm({ isOpen, onClose, onSave, meal }: MealFormProps) {
 
         {/* Search & Add */}
         <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Search foods..." autoComplete="off"
-            className="w-full pl-8 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-purple-500/40"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:border-purple-500/40 focus:bg-white/[0.06] transition-all"
           />
         </div>
 
         {/* Category pills */}
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex gap-1.5 flex-wrap">
           <button type="button" onClick={() => setSelectedCategory('')}
-            className={`px-2 py-1 rounded-md text-[9px] font-medium transition-all ${!selectedCategory ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30' : 'bg-white/5 text-gray-500 border border-white/10 hover:text-gray-300'}`}>
+            className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold tracking-wide transition-all backdrop-blur-sm ${
+              !selectedCategory
+                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-sm shadow-purple-500/10'
+                : 'bg-white/[0.04] text-gray-500 border border-white/[0.06] hover:bg-white/[0.08] hover:text-gray-300'
+            }`}>
             All
           </button>
           {categories.map(cat => (
             <button key={cat} type="button" onClick={() => { setSelectedCategory(cat); setSearch('') }}
-              className={`px-2 py-1 rounded-md text-[9px] font-medium transition-all ${selectedCategory === cat ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30' : 'bg-white/5 text-gray-500 border border-white/10 hover:text-gray-300'}`}>
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold tracking-wide transition-all backdrop-blur-sm ${
+                selectedCategory === cat
+                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-sm shadow-purple-500/10'
+                  : 'bg-white/[0.04] text-gray-500 border border-white/[0.06] hover:bg-white/[0.08] hover:text-gray-300'
+              }`}>
               {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Quick gram presets */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] text-gray-600 uppercase tracking-wider mr-1">Grams:</span>
+          {[25, 50, 100, 150, 200].map(g => (
+            <button key={g} type="button" onClick={() => setAddingGrams(String(g))}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${
+                parseFloat(addingGrams) === g
+                  ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                  : 'bg-white/5 text-gray-500 border border-white/10 hover:bg-white/10 hover:text-gray-300'
+              }`}>
+              {g}g
             </button>
           ))}
         </div>
 
         {/* Food list */}
         {search || selectedCategory ? (
-          <div className="max-h-40 overflow-y-auto space-y-1">
+          <div className="max-h-44 overflow-y-auto space-y-1">
             {filteredFoods.map(food => (
               <button key={food.name} type="button" onClick={() => addIngredient(food)}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-white/[0.08] border border-white/5 transition-all group">
+                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-purple-500/[0.06] border border-white/5 hover:border-purple-500/20 transition-all group">
                 <div className="text-left">
-                  <p className="text-xs font-medium text-white">{food.name}</p>
-                  <p className="text-[9px] text-gray-600">{food.calories} kcal · P{food.protein} C{food.carbs} F{food.fat} /100g</p>
+                  <p className="text-sm font-medium text-white">{food.name}</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">{food.calories} kcal · P{food.protein} C{food.carbs} F{food.fat} /100g</p>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <input type="number" value={addingGrams} onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => setAddingGrams(e.target.value)}
-                    className="w-14 text-[10px] py-1 px-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <span className="text-[9px] text-gray-500">g</span>
-                  <Plus className="w-3.5 h-3.5 text-emerald-400 opacity-0 group-hover:opacity-100 transition-all shrink-0" />
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 bg-white/10 rounded-lg border border-white/10 px-2 py-1">
+                    <input type="number" value={addingGrams} onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => setAddingGrams(e.target.value)}
+                      className="w-12 text-[11px] py-0.5 bg-transparent text-white text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <span className="text-[9px] text-gray-500">g</span>
+                  </div>
+                  <div className="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/20 transition-all">
+                    <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
                 </div>
               </button>
             ))}
             {filteredFoods.length === 0 && (
-              <p className="text-[10px] text-gray-500 text-center py-2">No foods found</p>
+              <p className="text-[11px] text-gray-500 text-center py-4">No foods found</p>
             )}
           </div>
         ) : hasIngredients ? null : (
-          <p className="text-[10px] text-gray-500 text-center py-2">Search or select a category to add ingredients</p>
+          <p className="text-[11px] text-gray-500 text-center py-3">Search or select a category to add ingredients</p>
         )}
 
         {/* Added ingredients */}
         {hasIngredients && (
           <div className="space-y-1.5 max-h-48 overflow-y-auto">
             {ingredients.map(ing => (
-              <div key={ing.id} className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white/5 border border-white/5">
-                <span className="text-xs font-medium text-white flex-1 truncate">{ing.food.name}</span>
-                <div className="flex items-center gap-1">
-                  <input type="number" value={ing.grams} onChange={(e) => updateGrams(ing.id, e.target.value)}
-                    className="w-14 text-[10px] py-0.5 px-1.5 rounded bg-white/10 border border-white/20 text-white text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <span className="text-[9px] text-gray-500">g</span>
+              <div key={ing.id} className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/5 border border-white/5 hover:bg-white/[0.06] transition-all">
+                <span className="text-sm font-medium text-white flex-1 truncate">{ing.food.name}</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1 bg-white/10 rounded-lg border border-white/10 px-2 py-1">
+                    <input type="number" value={ing.grams} onChange={(e) => updateGrams(ing.id, e.target.value)}
+                      className="w-12 text-[11px] py-0.5 bg-transparent text-white text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <span className="text-[9px] text-gray-500">g</span>
+                  </div>
+                  <button type="button" onClick={() => removeIngredient(ing.id)}
+                    className="p-1.5 rounded-lg text-gray-500 hover:bg-red-500/10 hover:text-red-400 transition-all">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <button type="button" onClick={() => removeIngredient(ing.id)}
-                  className="p-0.5 rounded text-gray-600 hover:text-red-400 transition-all">
-                  <Trash2 className="w-3 h-3" />
-                </button>
               </div>
             ))}
           </div>
-        )}
-
-        {/* Inline macro totals (no duplicate box) */}
-        {hasIngredients && (
-          <p className="text-[10px] text-gray-400 text-center">
-            <span className="text-rose-400 font-semibold">{ingredientTotals.calories}</span> kcal ·{' '}
-            <span className="text-emerald-400 font-semibold">{ingredientTotals.protein}g</span> P ·{' '}
-            <span className="text-amber-400 font-semibold">{ingredientTotals.carbs}g</span> C ·{' '}
-            <span className="text-sky-400 font-semibold">{ingredientTotals.fat}g</span> F
-            {ingredientTotals.fiber > 0 && <> · <span className="text-gray-400">{ingredientTotals.fiber}g</span> fiber</>}
-          </p>
         )}
 
         {/* Macro Fields (auto-filled from ingredients, editable for tweaks) */}
