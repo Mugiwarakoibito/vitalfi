@@ -20,12 +20,12 @@ import {
 type TabId = 'training' | 'diet' | 'sleep' | 'recovery' | 'progress' | 'habits' | 'body' | 'exercises' | 'supplements'
 
 const tabConfig: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: 'training', label: 'Training', icon: Dumbbell },
-  { id: 'diet', label: 'Diet', icon: Utensils },
+  { id: 'training', label: 'Workout', icon: Dumbbell },
+  { id: 'diet', label: 'Nutrition', icon: Utensils },
   { id: 'sleep', label: 'Sleep', icon: Moon },
-  { id: 'recovery', label: 'Recovery', icon: Heart },
-  { id: 'progress', label: 'Progress', icon: TrendingUp },
-  { id: 'habits', label: 'Habits', icon: Flame },
+  { id: 'recovery', label: 'Hydration', icon: Heart },
+  { id: 'progress', label: 'Performance', icon: TrendingUp },
+  { id: 'habits', label: 'Streak', icon: Flame },
   { id: 'body', label: 'Body', icon: Activity },
   { id: 'exercises', label: 'Exercises', icon: BookOpen },
   { id: 'supplements', label: 'Supps', icon: Coffee },

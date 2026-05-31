@@ -3,8 +3,8 @@ import {
   Plus, Trash2, Utensils, Flame, Beef, Wheat, Droplet,
   Pencil, AlertTriangle, ChevronLeft, ChevronRight,
   Calendar, BarChart3, Award, RotateCcw,
-  Activity, Clock, ChefHat, Bookmark, BookmarkPlus,
-  CalendarDays, Lightbulb, Zap,
+  ChefHat, Bookmark, BookmarkPlus,
+  Lightbulb,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts'
@@ -16,11 +16,11 @@ import type { Meal } from '@/types/fitness'
 
 const DEFAULT_TARGETS = { calories: 2000, protein: 150, carbs: 250, fat: 65 }
 
-const MEAL_TYPE_CONFIG: Record<string, { color: string; bg: string; label: string; icon: string }> = {
-  breakfast: { color: 'text-amber-400', bg: 'bg-amber-500/20 border-amber-500/30', label: 'Breakfast', icon: '🍳' },
-  lunch: { color: 'text-emerald-400', bg: 'bg-emerald-500/20 border-emerald-500/30', label: 'Lunch', icon: '🥗' },
-  dinner: { color: 'text-rose-400', bg: 'bg-rose-500/20 border-rose-500/30', label: 'Dinner', icon: '🍽️' },
-  snack: { color: 'text-sky-400', bg: 'bg-sky-500/20 border-sky-500/30', label: 'Snack', icon: '🍎' },
+const MEAL_TYPE_CONFIG: Record<string, { label: string; icon: string }> = {
+  breakfast: { label: 'Breakfast', icon: '🍳' },
+  lunch: { label: 'Lunch', icon: '🥗' },
+  dinner: { label: 'Dinner', icon: '🍽️' },
+  snack: { label: 'Snack', icon: '🍎' },
 }
 
 const MEAL_TYPE_ORDER = { breakfast: 0, lunch: 1, dinner: 2, snack: 3 }
@@ -113,14 +113,16 @@ function getDayLabel(dateStr: string): string {
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0 },
 }
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0 },
+const macroMeta: Record<string, { label: string; icon: React.ElementType; unit: string; color: string; bar: string }> = {
+  calories: { label: 'Calories', icon: Flame, unit: 'kcal', color: 'text-rose-400', bar: 'bg-rose-500' },
+  protein: { label: 'Protein', icon: Beef, unit: 'g', color: 'text-emerald-400', bar: 'bg-emerald-500' },
+  carbs: { label: 'Carbs', icon: Wheat, unit: 'g', color: 'text-amber-400', bar: 'bg-amber-500' },
+  fat: { label: 'Fat', icon: Droplet, unit: 'g', color: 'text-sky-400', bar: 'bg-sky-500' },
 }
 
 export function NutritionLogger() {
@@ -176,14 +178,12 @@ export function NutritionLogger() {
     fat: Math.max(0, targets.fat - summary.fat),
   }), [summary, targets])
 
-  const progress = useMemo(() => {
-    return {
-      calories: Math.min(summary.calories / targets.calories, 1),
-      protein: Math.min(summary.protein / targets.protein, 1),
-      carbs: Math.min(summary.carbs / targets.carbs, 1),
-      fat: Math.min(summary.fat / targets.fat, 1),
-    }
-  }, [summary, targets])
+  const progress = useMemo(() => ({
+    calories: Math.min(summary.calories / targets.calories, 1),
+    protein: Math.min(summary.protein / targets.protein, 1),
+    carbs: Math.min(summary.carbs / targets.carbs, 1),
+    fat: Math.min(summary.fat / targets.fat, 1),
+  }), [summary, targets])
 
   const weeklyData = useMemo(() => {
     const weekDates = getWeekDates(new Date(selectedDate + 'T00:00:00'))
@@ -287,30 +287,25 @@ export function NutritionLogger() {
     setRecipes(prev => prev.filter(r => r.id !== id))
   }, [])
 
-  // Smart meal suggestions based on remaining macros
   const suggestions = useMemo(() => {
-    const result: { emoji: string; text: string; macro: string }[] = []
+    const result: { text: string; macro: string }[] = []
     if (remaining.protein > 20) {
-      const deficit = remaining.protein
-      const best = FOOD_SUGGESTIONS.high_protein.slice(0, 3)
+      const best = FOOD_SUGGESTIONS.high_protein.slice(0, 2)
       result.push({
-        emoji: '💪',
-        text: `Need ${Math.round(deficit)}g more protein — ${best.map(f => `${f.emoji} ${f.name} (~${f.protein}g/100g)`).join(', ')}`,
+        text: `Need ${Math.round(remaining.protein)}g more protein — try ${best.map(f => `${f.emoji} ${f.name} (~${f.protein}g)`).join(' or ')}`,
         macro: 'protein',
       })
     }
     if (remaining.carbs > 30) {
       const best = FOOD_SUGGESTIONS.high_carbs.slice(0, 2)
       result.push({
-        emoji: '🌾',
-        text: `Still need ${Math.round(remaining.carbs)}g carbs — ${best.map(f => `${f.emoji} ${f.name}`).join(', ')}`,
+        text: `Need ${Math.round(remaining.carbs)}g more carbs — ${best.map(f => `${f.emoji} ${f.name}`).join(', ')}`,
         macro: 'carbs',
       })
     }
     if (remaining.fat > 15) {
       const best = FOOD_SUGGESTIONS.healthy_fat.slice(0, 2)
       result.push({
-        emoji: '🥑',
         text: `Need ${Math.round(remaining.fat)}g more fat — ${best.map(f => `${f.emoji} ${f.name}`).join(', ')}`,
         macro: 'fat',
       })
@@ -318,51 +313,6 @@ export function NutritionLogger() {
     return result
   }, [remaining])
 
-  // Meal Calendar Heatmap data
-  const [heatmapYear, heatmapMonth] = useMemo(() => {
-    const d = new Date(selectedDate + 'T00:00:00')
-    return [d.getFullYear(), d.getMonth()] as const
-  }, [selectedDate])
-
-  const heatmapDays = useMemo(() => {
-    const [year, month] = [heatmapYear, heatmapMonth]
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
-    const daysInMonth = lastDay.getDate()
-    const startDow = firstDay.getDay()
-
-    interface HeatCell {
-      date: string
-      day: number
-      calories: number
-      level: 0 | 1 | 2 | 3
-    }
-
-    const cells: (HeatCell | null)[] = []
-    for (let i = 0; i < startDow; i++) cells.push(null)
-
-    const calTarget = targets.calories || 2000
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = formatDate(new Date(year, month, d))
-      const dayMeals = meals.filter(m => m.date === dateStr)
-      const totalCal = dayMeals.reduce((a, m) => a + m.calories, 0)
-
-      let level: 0 | 1 | 2 | 3 = 0
-      if (totalCal > 0) {
-        const ratio = totalCal / calTarget
-        if (ratio <= 1.1) level = 1
-        else if (ratio <= 1.3) level = 2
-        else level = 3
-      }
-
-      cells.push({ date: dateStr, day: d, calories: totalCal, level })
-    }
-
-    return cells
-  }, [meals, heatmapYear, heatmapMonth, targets.calories])
-
-  // Meal Timing Analysis data
   const timingData = useMemo(() => {
     const totals: Record<string, number> = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 }
     for (const m of filteredMeals) {
@@ -377,7 +327,6 @@ export function NutritionLogger() {
     }
   }, [filteredMeals])
 
-  // Goal Recommendation Engine
   const recommendation = useMemo(() => {
     const daysWithData = weeklyData.filter(d => d.calories > 0)
     if (daysWithData.length < 3) return null
@@ -387,43 +336,25 @@ export function NutritionLogger() {
 
     if (overDays.length >= 3) {
       const avgOver = Math.round(overDays.reduce((s, d) => s + (d.calories - targets.calories), 0) / overDays.length)
-      return {
-        type: 'warning' as const,
-        title: 'Over Target Trend',
-        message: `You're averaging ${avgOver} cal over target this week. Try reducing portion sizes or adding more vegetables.`,
-      }
+      return { type: 'warning' as const, title: 'Over Target Trend', message: `Averaging ${avgOver} cal over this week.` }
     }
-
     if (underDays.length >= 3) {
       const avgUnder = Math.round(underDays.reduce((s, d) => s + (targets.calories - d.calories), 0) / underDays.length)
-      return {
-        type: 'info' as const,
-        title: 'Under Target Trend',
-        message: `You're averaging ${avgUnder} cal under target this week. Consider adding a nutrient-dense snack.`,
-      }
+      return { type: 'info' as const, title: 'Under Target Trend', message: `Averaging ${avgUnder} cal under this week.` }
     }
-
     if (daysWithData.length >= 5) {
       const avgCal = Math.round(daysWithData.reduce((s, d) => s + d.calories, 0) / daysWithData.length)
-      const diff = Math.abs(avgCal - targets.calories)
-      if (diff < 100) {
-        return {
-          type: 'success' as const,
-          title: 'Great Consistency!',
-          message: `You're averaging ${avgCal} cal this week — right on target! Keep up the great work.`,
-        }
+      if (Math.abs(avgCal - targets.calories) < 100) {
+        return { type: 'success' as const, title: 'Great Consistency!', message: `Averaging ${avgCal} cal — right on target.` }
       }
     }
-
     return null
   }, [weeklyData, targets.calories])
 
-  // Meal Frequency Stats
   const frequencyStats = useMemo(() => {
     const weekDates = getWeekDates(new Date(selectedDate + 'T00:00:00'))
     const daysWithMeals = weekDates.map(d => meals.filter(m => m.date === d))
     const daysWithSomeData = daysWithMeals.filter(d => d.length > 0)
-
     const avgMealsPerDay = daysWithSomeData.length > 0
       ? Math.round((daysWithMeals.reduce((s, d) => s + d.length, 0) / daysWithMeals.length) * 10) / 10
       : 0
@@ -438,480 +369,258 @@ export function NutritionLogger() {
     const mostSkippedEntry = Object.entries(mealTypeCounts).sort((a, b) => b[1] - a[1])[0]
     const mostSkipped = mostSkippedEntry ? mostSkippedEntry[0] : 'n/a'
 
-    const calTarget = targets.calories || 2000
-    const targetProteinPct = (targets.protein * 4) / calTarget * 100
-    const targetCarbsPct = (targets.carbs * 4) / calTarget * 100
-    const targetFatPct = (targets.fat * 9) / calTarget * 100
-
-    let bestDayStr: string | null = null
-    let bestScore = Infinity
-
-    for (const day of weeklyData) {
-      if (day.calories === 0) continue
-      const dayCal = day.calories || 1
-      const dayProteinPct = (day.protein * 4) / dayCal * 100
-      const dayCarbsPct = (day.carbs * 4) / dayCal * 100
-      const dayFatPct = (day.fat * 9) / dayCal * 100
-
-      const score = Math.abs(dayProteinPct - targetProteinPct) + Math.abs(dayCarbsPct - targetCarbsPct) + Math.abs(dayFatPct - targetFatPct)
-      if (score < bestScore) {
-        bestScore = score
-        bestDayStr = day.label
-      }
-    }
-
-    return { avgMealsPerDay, mostSkipped, bestDay: bestDayStr }
-  }, [meals, selectedDate, weeklyData, targets])
-
-  const macroCardConfigs = [
-    { key: 'calories', label: 'Calories', icon: Flame, unit: 'kcal', border: 'border-rose-500/20', bg: 'from-rose-500/10', glow: 'bg-rose-500/10', text: 'text-rose-400', textMuted: 'text-rose-400/80', bar: 'bg-rose-500', value: summary.calories, target: targets.calories },
-    { key: 'protein', label: 'Protein', icon: Beef, unit: 'g', border: 'border-emerald-500/20', bg: 'from-emerald-500/10', glow: 'bg-emerald-500/10', text: 'text-emerald-400', textMuted: 'text-emerald-400/80', bar: 'bg-emerald-500', value: summary.protein, target: targets.protein },
-    { key: 'carbs', label: 'Carbs', icon: Wheat, unit: 'g', border: 'border-amber-500/20', bg: 'from-amber-500/10', glow: 'bg-amber-500/10', text: 'text-amber-400', textMuted: 'text-amber-400/80', bar: 'bg-amber-500', value: summary.carbs, target: targets.carbs },
-    { key: 'fat', label: 'Fat', icon: Droplet, unit: 'g', border: 'border-sky-500/20', bg: 'from-sky-500/10', glow: 'bg-sky-500/10', text: 'text-sky-400', textMuted: 'text-sky-400/80', bar: 'bg-sky-500', value: summary.fat, target: targets.fat },
-  ]
+    return { avgMealsPerDay, mostSkipped }
+  }, [meals, selectedDate])
 
   return (
-    <motion.div className="space-y-5" variants={containerVariants} initial="hidden" animate="visible">
-      {/* Header: Date Nav + Quick Actions */}
+    <motion.div className="space-y-4" initial="hidden" animate="visible">
+      {/* Header */}
       <motion.div variants={itemVariants} className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigateDate(-1)}
-            className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all"
-          >
+          <button onClick={() => navigateDate(-1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
             <Calendar className="w-4 h-4 text-purple-400" />
-            <span className="text-white font-medium text-sm whitespace-nowrap">
-              {getDayLabel(selectedDate)}
-            </span>
+            <span className="text-white font-medium text-sm whitespace-nowrap">{getDayLabel(selectedDate)}</span>
           </div>
-          <button
-            onClick={() => navigateDate(1)}
-            className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all"
-          >
+          <button onClick={() => navigateDate(1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
             <ChevronRight className="w-5 h-5" />
           </button>
           {selectedDate !== formatDate(new Date()) && (
-            <button
-              onClick={jumpToToday}
-              className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-all"
-              title="Jump to today"
-            >
+            <button onClick={jumpToToday} className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-all" title="Jump to today">
               <RotateCcw className="w-4 h-4" />
             </button>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowWeekly((p) => !p)}
-            className={`p-2 rounded-xl border transition-all ${
-              showWeekly
-                ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400'
-                : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
-            }`}
-            title="Weekly summary"
-          >
-            <BarChart3 className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setShowRecipes((p) => !p)}
-            className={`p-2 rounded-xl border transition-all ${
-              showRecipes
-                ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'
-                : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
-            }`}
-            title="Saved recipes"
-          >
+          {filteredMeals.length > 0 && (
+            <button onClick={() => setShowWeekly(p => !p)}
+              className={`p-2 rounded-xl border transition-all ${showWeekly ? 'bg-white/10 border-white/20 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              title="Weekly view">
+              <BarChart3 className="w-5 h-5" />
+            </button>
+          )}
+          <button onClick={() => setShowRecipes(p => !p)}
+            className={`p-2 rounded-xl border transition-all ${showRecipes ? 'bg-white/10 border-white/20 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+            title="Recipes">
             <ChefHat className="w-5 h-5" />
           </button>
           <Button variant="primary" onClick={() => { setEditingMeal(null); setShowForm(true) }}>
-            <Plus className="w-4 h-4 mr-2" />
-            Log Meal
+            <Plus className="w-4 h-4 mr-2" /> Log Meal
           </Button>
         </div>
       </motion.div>
 
-      {/* Smart Suggestions Banner */}
+      {/* Today's Progress — single unified card */}
+      <motion.div variants={itemVariants} className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Today's Progress</h3>
+          {summary.calories > 0 && (
+            <span className="text-xs text-gray-500">
+              {summary.calories <= targets.calories
+                ? `${Math.round(remaining.calories)} kcal remaining`
+                : `${Math.round(summary.calories - targets.calories)} kcal over`
+              }
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {(['calories', 'protein', 'carbs', 'fat'] as const).map((key) => {
+            const m = macroMeta[key]
+            const val = summary[key]
+            const tgt = targets[key]
+            const pct = Math.round(progress[key] * 100)
+            const rem = remaining[key]
+            const over = key === 'calories' ? summary.calories > targets.calories : rem === 0
+            return (
+              <div key={key} className="rounded-xl bg-white/5 border border-white/10 p-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <m.icon className={`w-4 h-4 ${m.color}`} />
+                    {editingTarget === key ? (
+                      <input autoFocus
+                        className="w-16 text-[10px] py-0.5 px-1.5 rounded-lg bg-white/10 border border-white/20 text-white font-semibold focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        type="number" value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={saveTarget}
+                        onKeyDown={(e) => { if (e.key === 'Enter') saveTarget(); if (e.key === 'Escape') setEditingTarget(null) }}
+                      />
+                    ) : (
+                      <button onClick={() => startEditTarget(key, tgt)} className="text-[10px] text-gray-500 uppercase tracking-wider hover:text-white transition-all">{m.label}</button>
+                    )}
+                  </div>
+                  <span className="text-[9px] text-gray-600">{tgt}{m.unit}</span>
+                </div>
+                <p className={`text-2xl font-bold ${m.color}`}>{Math.round(val)}</p>
+                <div className="mt-1.5 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                  <div className={`h-full rounded-full ${m.bar} transition-all duration-500`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                </div>
+                <p className={`text-[10px] mt-1 ${over ? 'text-rose-400' : 'text-gray-500'}`}>
+                  {over ? (key === 'calories' ? `${Math.round(summary.calories - targets.calories)} over` : 'Hit') : `${Math.round(rem)} ${m.unit} left`}
+                </p>
+              </div>
+            )
+          })}
+        </div>
+      </motion.div>
+
+      {/* Suggestions */}
       {suggestions.length > 0 && (
-        <motion.div variants={itemVariants} className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.08] via-amber-500/[0.02] to-transparent p-4 shadow-lg shadow-amber-500/5">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 rounded-full -mr-20 -mt-20 blur-xl" />
-          <div className="relative flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
-              <Lightbulb className="w-4 h-4 text-amber-400" />
+        <motion.div variants={itemVariants} className="rounded-2xl border border-amber-500/20 bg-black/60 backdrop-blur-xl p-4">
+          <div className="flex items-start gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0 mt-0.5">
+              <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
             </div>
-            <div className="space-y-1.5">
-              <p className="text-xs font-bold text-amber-300 uppercase tracking-wider">Suggested for today</p>
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-amber-400/80 uppercase tracking-wider">Suggestions</p>
               {suggestions.map((s, i) => (
-                <p key={i} className="text-sm text-gray-300">{s.emoji} {s.text}</p>
+                <p key={i} className="text-xs text-gray-300">{s.text}</p>
               ))}
             </div>
           </div>
         </motion.div>
       )}
 
-      {/* Macro Progress Cards + Remaining */}
-      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {macroCardConfigs.map((macro) => {
-          const progressPct = Math.round(progress[macro.key as keyof typeof progress] * 100)
-          const remainingVal = remaining[macro.key as keyof typeof remaining]
-          const isOver = macro.key === 'calories' ? summary.calories > targets.calories : remainingVal === 0
-          return (
-            <div
-              key={macro.key}
-              className={`relative overflow-hidden rounded-2xl border ${macro.border} bg-gradient-to-br ${macro.bg} via-transparent to-transparent p-5 shadow-lg ${macro.border.replace('border-', 'shadow-').replace('/20', '/5')}`}
-            >
-              <div className={`absolute top-0 right-0 w-32 h-32 ${macro.glow} rounded-full -mr-16 -mt-16 blur-xl`} />
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-12 -mb-12 blur-lg" />
-              <div className="relative">
-                <div className="flex items-center gap-2 mb-2">
-                  <macro.icon className={`w-5 h-5 ${macro.text}`} />
-                  {editingTarget === macro.key ? (
-                    <input
-                      autoFocus
-                      className={`w-20 text-xs py-0.5 px-2 rounded-lg bg-white/10 border ${macro.border.replace('/20', '/40')} text-white font-semibold focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
-                      type="number"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={saveTarget}
-                      onKeyDown={(e) => { if (e.key === 'Enter') saveTarget(); if (e.key === 'Escape') setEditingTarget(null) }}
-                    />
-                  ) : (
-                    <button onClick={() => startEditTarget(macro.key, macro.target)} className={`${macro.textMuted} text-xs font-medium uppercase tracking-wider hover:text-white transition-all`}>
-                      {macro.label}
-                    </button>
-                  )}
-                </div>
-                <p className={`text-3xl font-bold ${macro.text} drop-shadow-lg`}>
-                  {Math.round(macro.value)}
-                  <span className="text-sm text-gray-500 ml-1 font-normal">/ {macro.target}{macro.unit}</span>
-                </p>
-                <div className="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden shadow-inner">
-                  <div
-                    className={`h-full rounded-full ${macro.bar} transition-all duration-700 ease-out`}
-                    style={{ width: `${Math.min(progressPct, 100)}%` }}
-                  />
-                </div>
-                <p className={`text-xs mt-1.5 font-medium ${isOver ? 'text-rose-400' : 'text-gray-400'}`}>
-                  {isOver
-                    ? macro.key === 'calories' ? `Over by ${Math.round(summary.calories - targets.calories)}` : 'Hit target'
-                    : `${Math.round(remainingVal)} ${macro.unit} remaining`
-                  }
-                </p>
-              </div>
-            </div>
-          )
-        })}
-      </motion.div>
-
-      {/* Weekly Summary Toggle */}
+      {/* Weekly View (toggleable) */}
       <AnimatePresence>
         {showWeekly && (
-          <motion.div
-            variants={itemVariants}
-            initial="hidden"
-            animate="visible"
-            exit={{ opacity: 0, y: -16 }}
-            className="relative overflow-hidden rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-500/[0.12] via-indigo-500/[0.04] to-transparent p-6 shadow-lg shadow-indigo-500/5"
-          >
-            <div className="absolute top-0 right-0 w-60 h-60 bg-indigo-500/10 rounded-full -mr-30 -mt-30 blur-xl" />
-            <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-500/8 rounded-full -ml-20 -mb-20 blur-lg" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-5">
-                <h4 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Weekly Summary</h4>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-gray-500 flex items-center gap-1">
-                    <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50" /> Protein
-                  </span>
-                  <span className="text-xs text-gray-500 flex items-center gap-1">
-                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50" /> Carbs
-                  </span>
-                  <span className="text-xs text-gray-500 flex items-center gap-1">
-                    <div className="w-2.5 h-2.5 rounded-full bg-sky-500 shadow-sm shadow-sky-500/50" /> Fat
-                  </span>
+          <motion.div variants={itemVariants} initial="hidden" animate="visible" exit={{ opacity: 0, y: -12 }}
+            className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Weekly View</h3>
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] text-gray-500 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-rose-500" /> Protein</span>
+                <span className="text-[10px] text-gray-500 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-500" /> Carbs</span>
+                <span className="text-[10px] text-gray-500 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-sky-500" /> Fat</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weeklyData} barGap={2} barCategoryGap="20%">
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ background: '#1f2937', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} labelStyle={{ color: '#9ca3af' }} />
+                    <Bar dataKey="protein" fill="#f43f5e" radius={[4, 4, 0, 0]} stackId="a" />
+                    <Bar dataKey="carbs" fill="#f97316" radius={[4, 4, 0, 0]} stackId="a" />
+                    <Bar dataKey="fat" fill="#38bdf8" radius={[4, 4, 0, 0]} stackId="a" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={weeklyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                    <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
+                    <Tooltip contentStyle={{ background: '#1f2937', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} labelStyle={{ color: '#9ca3af' }} />
+                    <defs><linearGradient id="calTrendGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#a855f7" stopOpacity={0.3} /><stop offset="100%" stopColor="#a855f7" stopOpacity={0.8} /></linearGradient></defs>
+                    <Line type="monotone" dataKey="calories" stroke="url(#calTrendGrad)" strokeWidth={2.5} dot={{ fill: '#a855f7', r: 4, strokeWidth: 2, stroke: '#1f2937' }} activeDot={{ r: 6, fill: '#a855f7', strokeWidth: 2, stroke: '#1f2937' }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            {/* Insights row below charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mt-4">
+              <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+                <h4 className="text-[9px] text-gray-500 uppercase tracking-wider mb-2">Meal Timing</h4>
+                <div className="grid grid-cols-4 gap-1">
+                  {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((type) => {
+                    const data = timingData[type]
+                    const iconMap: Record<string, string> = { breakfast: '🍳', lunch: '🥗', dinner: '🍽️', snack: '🍎' }
+                    const colorMap: Record<string, string> = { breakfast: 'text-amber-400', lunch: 'text-emerald-400', dinner: 'text-rose-400', snack: 'text-sky-400' }
+                    return (
+                      <div key={type} className="text-center">
+                        <span className="text-sm">{iconMap[type]}</span>
+                        <p className={`text-sm font-bold ${colorMap[type]}`}>{data.pct}%</p>
+                        <p className="text-[9px] text-gray-500 capitalize">{type}</p>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={weeklyData} barGap={2} barCategoryGap="20%">
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                      <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <Tooltip
-                        contentStyle={{
-                          background: '#1f2937',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          backdropFilter: 'blur(12px)',
-                        }}
-                        labelStyle={{ color: '#9ca3af' }}
-                      />
-                      <Bar dataKey="protein" fill="#f43f5e" radius={[6, 6, 0, 0]} stackId="a" />
-                      <Bar dataKey="carbs" fill="#f97316" radius={[6, 6, 0, 0]} stackId="a" />
-                      <Bar dataKey="fat" fill="#38bdf8" radius={[6, 6, 0, 0]} stackId="a" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={weeklyData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                      <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
-                      <Tooltip
-                        contentStyle={{
-                          background: '#1f2937',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          backdropFilter: 'blur(12px)',
-                        }}
-                        labelStyle={{ color: '#9ca3af' }}
-                      />
-                      <defs>
-                        <linearGradient id="calTrendGrad" x1="0" y1="0" x2="1" y2="0">
-                          <stop offset="0%" stopColor="#a855f7" stopOpacity={0.3} />
-                          <stop offset="100%" stopColor="#a855f7" stopOpacity={0.8} />
-                        </linearGradient>
-                      </defs>
-                      <Line
-                        type="monotone"
-                        dataKey="calories"
-                        stroke="url(#calTrendGrad)"
-                        strokeWidth={2.5}
-                        dot={{ fill: '#a855f7', r: 4, strokeWidth: 2, stroke: '#1f2937' }}
-                        activeDot={{ r: 6, fill: '#a855f7', strokeWidth: 2, stroke: '#1f2937' }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+              <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+                <h4 className="text-[9px] text-gray-500 uppercase tracking-wider mb-2">Frequency</h4>
+                <div className="grid grid-cols-2 gap-2 text-center">
+                  <div>
+                    <p className="text-lg font-bold text-white">{frequencyStats.avgMealsPerDay}</p>
+                    <p className="text-[9px] text-gray-500">avg / day</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white capitalize">{frequencyStats.mostSkipped === 'n/a' ? 'N/A' : frequencyStats.mostSkipped}</p>
+                    <p className="text-[9px] text-gray-500">most skipped</p>
+                  </div>
                 </div>
               </div>
+              {recommendation ? (
+                <div className={`rounded-xl border p-3 ${
+                  recommendation.type === 'warning' ? 'border-amber-500/20 bg-amber-500/5'
+                  : recommendation.type === 'info' ? 'border-blue-500/20 bg-blue-500/5'
+                  : 'border-emerald-500/20 bg-emerald-500/5'
+                }`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    {recommendation.type === 'success' ? <Award className="w-3.5 h-3.5 text-emerald-400" /> : <AlertTriangle className={`w-3.5 h-3.5 ${recommendation.type === 'warning' ? 'text-amber-400' : 'text-blue-400'}`} />}
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                      recommendation.type === 'warning' ? 'text-amber-300' : recommendation.type === 'info' ? 'text-blue-300' : 'text-emerald-300'
+                    }`}>{recommendation.title}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-400">{recommendation.message}</p>
+                </div>
+              ) : (
+                <div className="rounded-xl bg-white/5 border border-white/10 p-3 flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-gray-500/10 flex items-center justify-center"><span className="text-gray-500 text-[10px]">i</span></div>
+                  <p className="text-[10px] text-gray-500">Log 3+ days for personalized insights</p>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Insights Grid: Timing + Frequency + Recommendation */}
-      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Meal Timing Analysis */}
-        <div className="relative overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/[0.12] via-cyan-500/[0.04] to-transparent p-5 shadow-lg shadow-cyan-500/5">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-cyan-500/10 rounded-full -mr-20 -mt-20 blur-xl" />
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-3">
-              <Clock className="w-4 h-4 text-cyan-400" />
-              <h4 className="text-[10px] font-semibold text-white/60 uppercase tracking-wider">Meal Timing</h4>
-            </div>
-            <div className="grid grid-cols-4 gap-2">
-              {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((type) => {
-                const data = timingData[type]
-                const iconMap: Record<string, string> = { breakfast: '🍳', lunch: '🥗', dinner: '🍽️', snack: '🍎' }
-                const colorMap: Record<string, { text: string; bar: string }> = {
-                  breakfast: { text: 'text-amber-400', bar: 'bg-amber-500' },
-                  lunch: { text: 'text-emerald-400', bar: 'bg-emerald-500' },
-                  dinner: { text: 'text-rose-400', bar: 'bg-rose-500' },
-                  snack: { text: 'text-sky-400', bar: 'bg-sky-500' },
-                }
-                const c = colorMap[type]
-                return (
-                  <div key={type} className="rounded-lg bg-white/5 border border-white/5 p-2 text-center">
-                    <span className="text-base">{iconMap[type]}</span>
-                    <p className={`text-lg font-bold ${c.text}`}>{data.pct}%</p>
-                    <p className="text-[9px] text-gray-500 capitalize">{type}</p>
-                    <div className="mt-1 h-1 rounded-full bg-white/10 overflow-hidden">
-                      <div className={`h-full rounded-full ${c.bar}`} style={{ width: `${data.pct}%` }} />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Meal Frequency Stats */}
-        <div className="relative overflow-hidden rounded-2xl border border-fuchsia-500/20 bg-gradient-to-br from-fuchsia-500/[0.12] via-fuchsia-500/[0.04] to-transparent p-5 shadow-lg shadow-fuchsia-500/5">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-fuchsia-500/10 rounded-full -mr-16 -mt-16 blur-xl" />
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-3">
-              <Activity className="w-4 h-4 text-fuchsia-400" />
-              <h4 className="text-[10px] font-semibold text-white/60 uppercase tracking-wider">Frequency</h4>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-lg bg-white/5 border border-white/5 p-2.5 text-center">
-                <p className="text-lg font-bold text-fuchsia-300">{frequencyStats.avgMealsPerDay}</p>
-                <p className="text-[9px] text-gray-500">avg / day</p>
-              </div>
-              <div className="rounded-lg bg-white/5 border border-white/5 p-2.5 text-center">
-                <p className="text-sm font-bold text-fuchsia-300 capitalize">{frequencyStats.mostSkipped === 'n/a' ? 'N/A' : frequencyStats.mostSkipped}</p>
-                <p className="text-[9px] text-gray-500">most skipped</p>
-              </div>
-              <div className="rounded-lg bg-white/5 border border-white/5 p-2.5 text-center">
-                <p className="text-sm font-bold text-fuchsia-300">{frequencyStats.bestDay ?? 'N/A'}</p>
-                <p className="text-[9px] text-gray-500">best macro day</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recommendation */}
-        {recommendation ? (
-          <div className={`relative overflow-hidden rounded-2xl border p-5 shadow-lg ${
-            recommendation.type === 'warning'
-              ? 'border-amber-500/20 bg-gradient-to-br from-amber-500/[0.12] via-amber-500/[0.04] to-transparent shadow-amber-500/5'
-              : recommendation.type === 'info'
-              ? 'border-blue-500/20 bg-gradient-to-br from-blue-500/[0.12] via-blue-500/[0.04] to-transparent shadow-blue-500/5'
-              : 'border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.12] via-emerald-500/[0.04] to-transparent shadow-emerald-500/5'
-          }`}>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
-            <div className="relative">
-              <div className="flex items-center gap-2 mb-3">
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                  recommendation.type === 'warning' ? 'bg-amber-500/20' : recommendation.type === 'info' ? 'bg-blue-500/20' : 'bg-emerald-500/20'
-                }`}>
-                  {recommendation.type === 'success' ? (
-                    <Award className="w-4 h-4 text-emerald-400" />
-                  ) : (
-                    <AlertTriangle className={`w-4 h-4 ${recommendation.type === 'warning' ? 'text-amber-400' : 'text-blue-400'}`} />
-                  )}
-                </div>
-                <h4 className="text-[10px] font-semibold text-white/60 uppercase tracking-wider">Insight</h4>
-              </div>
-              <h5 className={`text-sm font-bold mb-1 ${
-                recommendation.type === 'warning' ? 'text-amber-300' : recommendation.type === 'info' ? 'text-blue-300' : 'text-emerald-300'
-              }`}>{recommendation.title}</h5>
-              <p className="text-xs text-gray-400 leading-relaxed">{recommendation.message}</p>
-            </div>
-          </div>
-        ) : (
-          <div className="relative overflow-hidden rounded-2xl border border-gray-500/20 bg-gradient-to-br from-gray-500/[0.08] via-gray-500/[0.02] to-transparent p-5 shadow-lg">
-            <div className="relative flex items-center gap-3 h-full">
-              <div className="w-7 h-7 rounded-lg bg-gray-500/10 flex items-center justify-center">
-                <Zap className="w-4 h-4 text-gray-500" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Log 3+ days of meals</p>
-                <p className="text-[10px] text-gray-600">to see personalized insights</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </motion.div>
-
-      {/* Meal Calendar Heatmap */}
-      <motion.div variants={itemVariants} className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.12] via-violet-500/[0.04] to-transparent p-5 shadow-lg shadow-violet-500/5">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-violet-500/10 rounded-full -mr-24 -mt-24 blur-xl" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/8 rounded-full -ml-16 -mb-16 blur-lg" />
-        <div className="relative">
-          <div className="flex items-center gap-2 mb-3">
-            <CalendarDays className="w-4 h-4 text-violet-400" />
-            <h4 className="text-[10px] font-semibold text-white/60 uppercase tracking-wider">Monthly Heatmap</h4>
-          </div>
-          <div className="flex items-center justify-center">
-            <div className="inline-grid grid-cols-7 gap-1">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                <div key={d} className="w-8 text-center text-[9px] text-gray-600 font-medium">{d}</div>
-              ))}
-              {heatmapDays.map((cell, idx) => {
-                if (cell === null) {
-                  return <div key={`e-${idx}`} className="w-8 h-8" />
-                }
-                const colorMap: Record<number, string> = {
-                  0: 'bg-gray-800 border border-white/5',
-                  1: 'bg-emerald-500/30 border border-emerald-500/40',
-                  2: 'bg-amber-500/30 border border-amber-500/40',
-                  3: 'bg-rose-500/30 border border-rose-500/40',
-                }
-                return (
-                  <div
-                    key={cell.date}
-                    className={`w-8 h-8 rounded-md flex items-center justify-center text-[10px] font-semibold cursor-default transition-all hover:scale-110 ${colorMap[cell.level]}`}
-                    title={`${cell.date}: ${cell.calories} kcal`}
-                  >
-                    <span className={cell.level === 0 ? 'text-gray-600' : 'text-white'}>{cell.day}</span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-          <div className="flex items-center justify-center gap-3 mt-2">
-            <div className="flex items-center gap-1">
-              <div className="w-2.5 h-2.5 rounded-sm bg-gray-800 border border-white/5" />
-              <span className="text-[9px] text-gray-500">No data</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500/30 border border-emerald-500/40" />
-              <span className="text-[9px] text-gray-500">On target</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2.5 h-2.5 rounded-sm bg-amber-500/30 border border-amber-500/40" />
-              <span className="text-[9px] text-gray-500">Slightly over</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2.5 h-2.5 rounded-sm bg-rose-500/30 border border-rose-500/40" />
-              <span className="text-[9px] text-gray-500">Way over</span>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
       {/* Recipes Panel */}
       <AnimatePresence>
         {showRecipes && (
-          <motion.div
-            variants={itemVariants}
-            initial="hidden"
-            animate="visible"
-            exit={{ opacity: 0, y: -16 }}
-            className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.12] via-emerald-500/[0.04] to-transparent p-5 shadow-lg shadow-emerald-500/5"
-          >
-            <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full -mr-24 -mt-24 blur-xl" />
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-teal-500/8 rounded-full -ml-16 -mb-16 blur-lg" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <ChefHat className="w-4 h-4 text-emerald-400" />
-                  <h4 className="text-[10px] font-semibold text-white/60 uppercase tracking-wider">Saved Recipes</h4>
-                </div>
-                <span className="text-[10px] text-gray-500">{recipes.length} recipes</span>
+          <motion.div variants={itemVariants} initial="hidden" animate="visible" exit={{ opacity: 0, y: -12 }}
+            className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Saved Recipes</h3>
+              <span className="text-[10px] text-gray-500">{recipes.length}</span>
+            </div>
+            {recipes.length === 0 ? (
+              <div className="text-center py-4">
+                <Bookmark className="w-8 h-8 text-gray-600 mx-auto mb-1" />
+                <p className="text-xs text-gray-500">No saved recipes yet</p>
+                <p className="text-[10px] text-gray-600 mt-0.5">Click the bookmark icon on any meal to save it</p>
               </div>
-              {recipes.length === 0 ? (
-                <div className="text-center py-4">
-                  <Bookmark className="w-8 h-8 text-gray-600 mx-auto mb-1" />
-                  <p className="text-xs text-gray-500">No saved recipes yet</p>
-                  <p className="text-[10px] text-gray-600 mt-0.5">Click the bookmark icon on any meal to save it</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
-                  {recipes.map((recipe) => (
-                    <div key={recipe.id} className="relative group rounded-xl border border-white/10 bg-white/[0.03] p-3 hover:bg-white/[0.06] transition-all">
-                      <div className="flex items-start justify-between mb-1.5">
-                        <div>
-                          <p className="text-xs font-semibold text-white line-clamp-1">{recipe.name}</p>
-                          <p className="text-[9px] text-gray-500 uppercase tracking-wider">{MEAL_TYPE_CONFIG[recipe.mealType]?.label || recipe.mealType}</p>
-                        </div>
-                        <button onClick={() => deleteRecipe(recipe.id)} className="p-0.5 rounded text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-1">
+                {recipes.map((recipe) => (
+                  <div key={recipe.id} className="rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/[0.08] transition-all group">
+                    <div className="flex items-start justify-between mb-1.5">
+                      <div>
+                        <p className="text-xs font-semibold text-white line-clamp-1">{recipe.name}</p>
+                        <p className="text-[9px] text-gray-500">{MEAL_TYPE_CONFIG[recipe.mealType]?.label || recipe.mealType}</p>
                       </div>
-                      <div className="grid grid-cols-4 gap-1 text-center mb-1.5">
-                        <div><p className="text-[10px] font-bold text-white">{recipe.calories}</p><p className="text-[8px] text-gray-600">kcal</p></div>
-                        <div><p className="text-[10px] font-bold text-emerald-400">{recipe.protein}g</p><p className="text-[8px] text-gray-600">pro</p></div>
-                        <div><p className="text-[10px] font-bold text-amber-400">{recipe.carbs}g</p><p className="text-[8px] text-gray-600">carbs</p></div>
-                        <div><p className="text-[10px] font-bold text-sky-400">{recipe.fat}g</p><p className="text-[8px] text-gray-600">fat</p></div>
-                      </div>
-                      <button
-                        onClick={() => addRecipeToDay(recipe)}
-                        className="w-full py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all text-[10px] font-medium"
-                      >
-                        Add to today
+                      <button onClick={() => deleteRecipe(recipe.id)} className="p-0.5 rounded text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">
+                        <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    <div className="grid grid-cols-4 gap-1 text-center mb-1.5">
+                      <div><p className="text-[10px] font-bold text-white">{recipe.calories}</p><p className="text-[8px] text-gray-600">kcal</p></div>
+                      <div><p className="text-[10px] font-bold text-emerald-400">{recipe.protein}g</p><p className="text-[8px] text-gray-600">pro</p></div>
+                      <div><p className="text-[10px] font-bold text-amber-400">{recipe.carbs}g</p><p className="text-[8px] text-gray-600">carbs</p></div>
+                      <div><p className="text-[10px] font-bold text-sky-400">{recipe.fat}g</p><p className="text-[8px] text-gray-600">fat</p></div>
+                    </div>
+                    <button onClick={() => addRecipeToDay(recipe)}
+                      className="w-full py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all text-[10px] font-medium">
+                      Add to today
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -920,7 +629,7 @@ export function NutritionLogger() {
       <motion.div variants={itemVariants}>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-white">Meals</h3>
-          <span className="text-xs text-gray-500">{filteredMeals.length} logged</span>
+          <span className="text-xs text-gray-500">{filteredMeals.length}</span>
         </div>
 
         {filteredMeals.length === 0 ? (
@@ -928,91 +637,63 @@ export function NutritionLogger() {
             <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-3">
               <Utensils className="w-6 h-6 text-rose-400/50" />
             </div>
-            <p className="text-gray-400 text-sm mb-1">No meals logged for this day</p>
-            <p className="text-gray-500 text-xs mb-3">Start tracking what you eat</p>
+            <p className="text-gray-400 text-sm mb-1">No meals logged</p>
+            <p className="text-gray-500 text-xs mb-3">Tap Log Meal to start tracking</p>
             <Button variant="primary" onClick={() => { setEditingMeal(null); setShowForm(true) }}>
               Log Your First Meal
             </Button>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {(Object.entries(groupedMeals) as [string, Meal[]][]).map(([type, typeMeals]) => {
               if (typeMeals.length === 0) return null
-              const config = MEAL_TYPE_CONFIG[type]
               return (
                 <div key={type}>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-base">{config.icon}</span>
-                    <h4 className="text-xs font-semibold text-white/60 uppercase tracking-wider">{config.label}</h4>
+                    <span className="text-base">{MEAL_TYPE_CONFIG[type].icon}</span>
+                    <h4 className="text-xs font-semibold text-white/60 uppercase tracking-wider">{MEAL_TYPE_CONFIG[type].label}</h4>
                     <span className="text-[10px] text-gray-600">({typeMeals.length})</span>
                   </div>
                   <div className="space-y-2">
-                    {typeMeals.map((meal) => {
-                      const cfg = MEAL_TYPE_CONFIG[meal.mealType]
-                      return (
-                        <motion.div
-                          key={meal.id}
-                          layout
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="rounded-xl border border-white/10 bg-white/[0.02] p-3 hover:bg-white/[0.04] transition-all group relative overflow-hidden"
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-rose-500/[0.02] to-transparent pointer-events-none" />
-                          <div className="relative z-10">
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="flex items-center gap-2">
-                                <div className={`w-8 h-8 rounded-lg ${cfg.bg} flex items-center justify-center text-base shadow-lg`}>
-                                  {cfg.icon}
-                                </div>
-                                <div>
-                                  <h4 className="text-sm font-semibold text-white tracking-tight">{meal.name}</h4>
-                                </div>
-                              </div>
-                              <div className="flex gap-0.5">
-                                <button
-                                  onClick={() => saveAsRecipe(meal)}
-                                  className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
-                                  title="Save as recipe"
-                                >
-                                  <BookmarkPlus className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => { setEditingMeal(meal); setShowForm(true) }}
-                                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => setDeletingMeal(meal)}
-                                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-4 gap-2">
-                              <div className="p-2 rounded-lg bg-white/5 border border-white/5 text-center">
-                                <p className="text-lg font-bold text-white">{meal.calories}</p>
-                                <p className="text-[9px] text-gray-500">kcal</p>
-                              </div>
-                              <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-center">
-                                <p className="text-lg font-bold text-emerald-400">{meal.protein}g</p>
-                                <p className="text-[9px] text-emerald-400/80">Protein</p>
-                              </div>
-                              <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
-                                <p className="text-lg font-bold text-amber-400">{meal.carbs}g</p>
-                                <p className="text-[9px] text-amber-400/80">Carbs</p>
-                              </div>
-                              <div className="p-2 rounded-lg bg-sky-500/10 border border-sky-500/20 text-center">
-                                <p className="text-lg font-bold text-sky-400">{meal.fat}g</p>
-                                <p className="text-[9px] text-sky-400/80">Fat</p>
-                              </div>
-                            </div>
+                    {typeMeals.map((meal) => (
+                      <motion.div key={meal.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                        className="rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/[0.08] transition-all group">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-semibold text-white">{meal.name}</h4>
                           </div>
-                        </motion.div>
-                      )
-                    })}
+                          <div className="flex gap-0.5">
+                            <button onClick={() => saveAsRecipe(meal)} className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all" title="Save as recipe">
+                              <BookmarkPlus className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={() => { setEditingMeal(meal); setShowForm(true) }} className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={() => setDeletingMeal(meal)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2">
+                          <div className="p-2 rounded-lg bg-white/5 border border-white/5 text-center">
+                            <p className="text-lg font-bold text-white">{meal.calories}</p>
+                            <p className="text-[9px] text-gray-500">kcal</p>
+                          </div>
+                          <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-center">
+                            <p className="text-lg font-bold text-emerald-400">{meal.protein}g</p>
+                            <p className="text-[9px] text-emerald-400/80">Protein</p>
+                          </div>
+                          <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
+                            <p className="text-lg font-bold text-amber-400">{meal.carbs}g</p>
+                            <p className="text-[9px] text-amber-400/80">Carbs</p>
+                          </div>
+                          <div className="p-2 rounded-lg bg-sky-500/10 border border-sky-500/20 text-center">
+                            <p className="text-lg font-bold text-sky-400">{meal.fat}g</p>
+                            <p className="text-[9px] text-sky-400/80">Fat</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
                   </div>
                 </div>
               )
@@ -1023,42 +704,25 @@ export function NutritionLogger() {
 
       <MealForm isOpen={showForm} onClose={() => { setShowForm(false); setEditingMeal(null) }} onSave={handleSave} meal={editingMeal} />
 
+      {/* Delete confirmation */}
       <AnimatePresence>
         {deletingMeal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
-            onClick={() => setDeletingMeal(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+            onClick={() => setDeletingMeal(null)}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
+              onClick={(e) => e.stopPropagation()}>
               <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center mx-auto mb-3">
                 <AlertTriangle className="w-5 h-5 text-red-400" />
               </div>
               <h3 className="text-base font-semibold text-white text-center mb-1">Delete Meal?</h3>
               <p className="text-gray-400 text-xs text-center mb-5">
-                This will permanently delete <span className="text-white font-medium">{deletingMeal.name}</span>. This cannot be undone.
+                Permanently delete <span className="text-white font-medium">{deletingMeal.name}</span>?
               </p>
               <div className="flex gap-3">
-                <button
-                  onClick={() => setDeletingMeal(null)}
-                  className="flex-1 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="flex-1 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-all text-sm"
-                >
-                  Delete
-                </button>
+                <button onClick={() => setDeletingMeal(null)} className="flex-1 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all text-sm">Cancel</button>
+                <button onClick={handleDelete} className="flex-1 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-all text-sm">Delete</button>
               </div>
             </motion.div>
           </motion.div>
