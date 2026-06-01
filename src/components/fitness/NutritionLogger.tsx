@@ -1087,47 +1087,13 @@ export function NutritionLogger() {
               )
             })()}
 
-            {/* Bottom Stats */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-4">
-              {/* Card 1: Weekly Averages */}
-              <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-                <h4 className="text-[9px] text-gray-500 uppercase tracking-wider mb-2">Weekly Averages</h4>
-                <div className="grid grid-cols-4 gap-2">
-                  {(() => {
-                    const logged = pastDays.filter(d => d.calories > 0)
-                    if (!logged.length) return <div className="col-span-4 py-3 text-center"><p className="text-[10px] text-gray-500">Log meals to see weekly averages</p></div>
-                    const avg = (key: 'calories' | 'protein' | 'carbs' | 'fat') => Math.round(logged.reduce((s, d) => s + d[key], 0) / logged.length)
-                    return (
-                      <>
-                        {[
-                          { label: 'Cal', value: avg('calories'), target: targets.calories, color: 'text-rose-400', bar: 'bg-rose-500', unit: '' },
-                          { label: 'Pro', value: avg('protein'), target: targets.protein, color: 'text-emerald-400', bar: 'bg-emerald-500', unit: 'g' },
-                          { label: 'Carbs', value: avg('carbs'), target: targets.carbs, color: 'text-amber-400', bar: 'bg-amber-500', unit: 'g' },
-                          { label: 'Fat', value: avg('fat'), target: targets.fat, color: 'text-sky-400', bar: 'bg-sky-500', unit: 'g' },
-                        ].map(s => {
-                          const pct = s.target > 0 ? Math.round((s.value / s.target) * 100) : 0
-                          return (
-                            <div key={s.label} className="text-center">
-                              <p className={`text-lg font-bold ${s.color}`}>{s.value}{s.unit}</p>
-                              <p className="text-[9px] text-gray-500">{s.label}</p>
-                                <div className="mt-1 h-1 rounded-full bg-white/10 overflow-hidden">
-                                <div className={`h-full rounded-full ${s.bar}`} style={{ width: `${Math.min(pct, 100)}%` }} />
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </>
-                    )
-                  })()}
-                </div>
-              </div>
-
-              {/* Card 2: Insights */}
+            {/* Bottom Stats & Unified Weekly Insights Dashboard */}
+            <div className="mt-4">
               <div className="rounded-xl bg-white/5 border border-white/10 p-4">
                 <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
                   <div className="flex items-center gap-1.5">
                     <span className="text-base">💡</span>
-                    <h4 className="text-xs font-semibold text-white">Weekly Insights</h4>
+                    <h4 className="text-xs font-semibold text-white">Weekly Analytics & Insights</h4>
                   </div>
                   {/* Tab Selector */}
                   <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5 border border-white/10">
@@ -1152,7 +1118,7 @@ export function NutritionLogger() {
                   if (!logged.length) {
                     return (
                       <div className="text-center py-6">
-                        <p className="text-[11px] text-gray-500">Log meals in this week to see insights</p>
+                        <p className="text-[11px] text-gray-500">Log meals in this week to see analytics & insights</p>
                       </div>
                     )
                   }
@@ -1186,9 +1152,34 @@ export function NutritionLogger() {
                           exit={{ opacity: 0, y: -5 }}
                           className="space-y-4"
                         >
-                          {/* 3 Metric Cards side-by-side */}
-                          <div className="grid grid-cols-3 gap-2">
-                            {/* Card A: Adherence */}
+                          {/* 4 Metric Cards in a grid */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            {/* Card A: Average Calories */}
+                            <div className="rounded-xl bg-white/5 border border-white/5 p-2.5 flex flex-col justify-between hover:bg-white/[0.08] hover:border-white/10 transition-all">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-semibold text-gray-500 uppercase">Avg Calories</span>
+                                <Flame className="w-3.5 h-3.5 text-rose-400" />
+                              </div>
+                              <div className="my-1.5 text-center">
+                                <p className="text-xl font-black text-rose-400">
+                                  {avgCalories} <span className="text-[10px] font-bold text-gray-500">kcal</span>
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="h-1 rounded-full bg-white/10 overflow-hidden">
+                                  <div 
+                                    className="h-full rounded-full bg-rose-500 transition-all duration-500" 
+                                    style={{ width: `${Math.min((avgCalories / targets.calories) * 100, 100)}%` }} 
+                                  />
+                                </div>
+                                <div className="flex justify-between text-[8px] text-gray-600 leading-none">
+                                  <span>Goal: {targets.calories}</span>
+                                  <span>{Math.round((avgCalories / targets.calories) * 100)}%</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Card B: Adherence */}
                             <div className="relative group rounded-xl bg-white/5 border border-white/5 p-2.5 flex flex-col justify-between hover:bg-white/[0.08] hover:border-white/10 transition-all cursor-pointer">
                               <div className="flex items-center justify-between">
                                 <span className="text-[9px] font-semibold text-gray-500 uppercase">Adherence</span>
@@ -1251,7 +1242,7 @@ export function NutritionLogger() {
                               </span>
                             </div>
 
-                            {/* Card B: Streak */}
+                            {/* Card C: Streak */}
                             <div className="rounded-xl bg-white/5 border border-white/5 p-2.5 flex flex-col justify-between hover:bg-white/[0.08] hover:border-white/10 transition-all">
                               <div className="flex items-center justify-between">
                                 <span className="text-[9px] font-semibold text-gray-500 uppercase">Streak</span>
@@ -1269,7 +1260,7 @@ export function NutritionLogger() {
                               </span>
                             </div>
 
-                            {/* Card C: Logged */}
+                            {/* Card D: Logged */}
                             <div className="rounded-xl bg-white/5 border border-white/5 p-2.5 flex flex-col justify-between hover:bg-white/[0.08] hover:border-white/10 transition-all">
                               <div className="flex items-center justify-between">
                                 <span className="text-[9px] font-semibold text-gray-500 uppercase">Logged</span>
@@ -1286,24 +1277,25 @@ export function NutritionLogger() {
                             </div>
                           </div>
 
-                          {/* Weekly Macro Adherence Bars */}
-                          <div className="rounded-xl bg-white/5 border border-white/5 p-3 space-y-2">
+                          {/* Weekly Macro & Fiber Adherence */}
+                          <div className="rounded-xl bg-white/5 border border-white/5 p-3 space-y-3">
                             <div className="flex items-center justify-between">
-                              <span className="text-[9px] font-semibold text-gray-500 uppercase">Weekly Macro Adherence</span>
-                              <span className="text-[8px] text-gray-500">Compared to targets</span>
+                              <span className="text-[9px] font-semibold text-gray-500 uppercase">Weekly Macro & Fiber Adherence</span>
+                              <span className="text-[8px] text-gray-500">Comparison of average weekly intake to targets</span>
                             </div>
-                            <div className="space-y-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                               {[
-                                { label: 'Protein', value: avgProtein, target: targets.protein, color: 'text-emerald-400', bar: 'bg-emerald-500' },
-                                { label: 'Carbs', value: avgCarbs, target: targets.carbs, color: 'text-amber-400', bar: 'bg-amber-500' },
-                                { label: 'Fat', value: avgFat, target: targets.fat, color: 'text-sky-400', bar: 'bg-sky-500' },
+                                { label: 'Protein', value: avgProtein, target: targets.protein, color: 'text-emerald-400', bar: 'bg-emerald-500', unit: 'g' },
+                                { label: 'Carbs', value: avgCarbs, target: targets.carbs, color: 'text-amber-400', bar: 'bg-amber-500', unit: 'g' },
+                                { label: 'Fat', value: avgFat, target: targets.fat, color: 'text-sky-400', bar: 'bg-sky-500', unit: 'g' },
+                                { label: 'Fiber', value: avgFiber, target: 25, color: 'text-indigo-400', bar: 'bg-indigo-500', unit: 'g' },
                               ].map(m => {
                                 const pct = m.target > 0 ? Math.round((m.value / m.target) * 100) : 0
                                 return (
-                                  <div key={m.label} className="space-y-1">
+                                  <div key={m.label} className="space-y-1 bg-black/10 border border-white/5 rounded-lg p-2 hover:bg-black/20 hover:border-white/10 transition-all">
                                     <div className="flex justify-between text-[9px] font-medium">
-                                      <span className="text-gray-300">{m.label}</span>
-                                      <span className={m.color}>{m.value}g <span className="text-gray-500">/ {m.target}g ({pct}%)</span></span>
+                                      <span className="text-gray-300 font-semibold">{m.label}</span>
+                                      <span className={m.color}>{m.value}{m.unit} <span className="text-gray-500">/ {m.target}{m.unit} ({pct}%)</span></span>
                                     </div>
                                     <div className="h-1 rounded-full bg-white/10 overflow-hidden">
                                       <div className={`h-full rounded-full ${m.bar} transition-all duration-500`} style={{ width: `${Math.min(pct, 100)}%` }} />
