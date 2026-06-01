@@ -1,4 +1,4 @@
-import { Bell, Search, Menu, LogOut, Wallet, Dumbbell, Columns, User, Trash2 } from 'lucide-react'
+import { Bell, Search, Menu, LogOut, Wallet, Dumbbell, Columns, User, Trash2, Heart } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
@@ -253,12 +253,10 @@ export function Header({ onMenuToggle }: HeaderProps) {
     ...(hydrationData.length === 0 ? [{
       id: 'no-hydration',
       title: 'Stay hydrated',
-      subtitle: 'Track your water intake',
-      time: 'Now',
-      unread: false,
-      type: 'fitness',
-      icon: '💧',
-      action: () => navigate('/fitness?tab=hydration')
+      body: 'Drink water to support recovery.',
+      icon: Heart,
+      color: 'text-emerald-400',
+      action: () => navigate('/fitness?tab=recovery')
     }] : []),
     // No sleep
     ...(sleepData.length === 0 ? [{

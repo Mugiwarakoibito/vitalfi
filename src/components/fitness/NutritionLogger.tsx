@@ -3,7 +3,7 @@ import {
   Plus, Trash2, Utensils, Flame, Beef, Wheat, Droplet,
   Pencil, AlertTriangle, ChevronLeft, ChevronRight,
   Calendar, BarChart3, RotateCcw,
-  ChefHat, Bookmark, BookmarkPlus,
+  ChefHat, Bookmark, BookmarkPlus, Sun, Moon,
   Target, Ruler, Brain, ArrowRight, Check, Sparkles, RefreshCw, Settings,
   TrendingUp, TrendingDown,
 } from 'lucide-react'
@@ -739,16 +739,18 @@ export function NutritionLogger() {
           )}
           {filteredMeals.length > 0 && (
             <button onClick={() => setShowWeekly(p => !p)}
-              className={`p-2 rounded-xl border transition-all ${showWeekly ? 'bg-white/10 border-white/20 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              className={`p-2 rounded-xl border transition-all ${showWeekly ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
               title="NutriScope">
               <BarChart3 className="w-5 h-5" />
             </button>
           )}
-          <button onClick={() => setShowRecipes(p => !p)}
-            className={`p-2 rounded-xl border transition-all ${showRecipes ? 'bg-white/10 border-white/20 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
-            title="Recipes">
-            <ChefHat className="w-5 h-5" />
-          </button>
+          {filteredMeals.length > 0 && (
+            <button onClick={() => setShowRecipes(p => !p)}
+              className={`p-2 rounded-xl border transition-all ${showRecipes ? 'bg-orange-500/15 border-orange-500/30 text-orange-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              title="Recipes">
+              <ChefHat className="w-5 h-5" />
+            </button>
+          )}
           <Button variant="primary" onClick={() => { setEditingMeal(null); setShowForm(true) }}>
             <Plus className="w-4 h-4 mr-2" /> Log Meal
           </Button>
@@ -1283,8 +1285,9 @@ export function NutritionLogger() {
                               <span className="text-[9px] font-semibold text-gray-500 uppercase">Weekly Macro & Fiber Adherence</span>
                               <span className="text-[8px] text-gray-500">Comparison of average weekly intake to targets</span>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                               {[
+                                { label: 'Calories', value: avgCalories, target: targets.calories, color: 'text-rose-400', bar: 'bg-rose-500', unit: 'kcal' },
                                 { label: 'Protein', value: avgProtein, target: targets.protein, color: 'text-emerald-400', bar: 'bg-emerald-500', unit: 'g' },
                                 { label: 'Carbs', value: avgCarbs, target: targets.carbs, color: 'text-amber-400', bar: 'bg-amber-500', unit: 'g' },
                                 { label: 'Fat', value: avgFat, target: targets.fat, color: 'text-sky-400', bar: 'bg-sky-500', unit: 'g' },
@@ -1398,6 +1401,72 @@ export function NutritionLogger() {
                                   <p className="text-[11px] font-bold text-emerald-300">Digestion & Fiber Champ</p>
                                   <p className="text-[10px] text-gray-400 leading-normal">
                                     Superb! You average <span className="text-white font-semibold">{avgFiber}g</span> of fiber daily. You're giving your body all the prebiotic materials it needs for top performance.
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Carbs Recommendation */}
+                            {avgCarbs < targets.carbs * 0.9 ? (
+                              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 flex gap-2.5 items-start">
+                                <div className="text-lg shrink-0 mt-0.5">🌾</div>
+                                <div className="space-y-1">
+                                  <p className="text-[11px] font-bold text-amber-300">Low Carb Intake</p>
+                                  <p className="text-[10px] text-gray-400 leading-normal">
+                                    Your carbs average <span className="text-white font-semibold">{avgCarbs}g</span> (Target: {targets.carbs}g). Carbs fuel your workouts and recovery. Try adding oats, brown rice, or sweet potatoes to your meals.
+                                  </p>
+                                </div>
+                              </div>
+                            ) : avgCarbs > targets.carbs * 1.1 ? (
+                              <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-3 flex gap-2.5 items-start">
+                                <div className="text-lg shrink-0 mt-0.5">🍚</div>
+                                <div className="space-y-1">
+                                  <p className="text-[11px] font-bold text-orange-300">Carbs Slightly High</p>
+                                  <p className="text-[10px] text-gray-400 leading-normal">
+                                    You're averaging <span className="text-white font-semibold">{avgCarbs}g</span> carbs (Target: {targets.carbs}g). Consider balancing with more protein or fiber to keep energy stable.
+                                  </p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 flex gap-2.5 items-start">
+                                <div className="text-lg shrink-0 mt-0.5">🎯</div>
+                                <div className="space-y-1">
+                                  <p className="text-[11px] font-bold text-emerald-300">Carbs on Point</p>
+                                  <p className="text-[10px] text-gray-400 leading-normal">
+                                    Your carb intake of <span className="text-white font-semibold">{avgCarbs}g</span> is right on target. Great fueling strategy!
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Fat Recommendation */}
+                            {avgFat < targets.fat * 0.9 ? (
+                              <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-3 flex gap-2.5 items-start">
+                                <div className="text-lg shrink-0 mt-0.5">🥑</div>
+                                <div className="space-y-1">
+                                  <p className="text-[11px] font-bold text-sky-300">Boost Healthy Fats</p>
+                                  <p className="text-[10px] text-gray-400 leading-normal">
+                                    Your fat intake averages <span className="text-white font-semibold">{avgFat}g</span> (Target: {targets.fat}g). Healthy fats support hormone function and nutrient absorption. Add avocado, nuts, or olive oil to your diet.
+                                  </p>
+                                </div>
+                              </div>
+                            ) : avgFat > targets.fat * 1.1 ? (
+                              <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-3 flex gap-2.5 items-start">
+                                <div className="text-lg shrink-0 mt-0.5">🫒</div>
+                                <div className="space-y-1">
+                                  <p className="text-[11px] font-bold text-yellow-300">Fat Intake Elevated</p>
+                                  <p className="text-[10px] text-gray-400 leading-normal">
+                                    You're averaging <span className="text-white font-semibold">{avgFat}g</span> fat (Target: {targets.fat}g). Consider trimming oily dressings or choosing leaner protein sources.
+                                  </p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 flex gap-2.5 items-start">
+                                <div className="text-lg shrink-0 mt-0.5">🎯</div>
+                                <div className="space-y-1">
+                                  <p className="text-[11px] font-bold text-emerald-300">Fat Intake Balanced</p>
+                                  <p className="text-[10px] text-gray-400 leading-normal">
+                                    Your fat intake of <span className="text-white font-semibold">{avgFat}g</span> is perfectly aligned with your targets. Keep it up!
                                   </p>
                                 </div>
                               </div>
@@ -1585,39 +1654,41 @@ export function NutritionLogger() {
                     <span className="text-[10px] text-gray-600">({typeMeals.length})</span>
                   </div>
                   <div className="space-y-2">
-                    {typeMeals.map((meal) => (
-                      <motion.div key={meal.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                        className="rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/[0.08] transition-all group">
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="text-sm font-semibold text-white">{meal.name}</h4>
-                          <div className="flex gap-0.5">
-                            <button onClick={() => saveAsRecipe(meal)} className="p-1.5 rounded-lg text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all" title="Save as recipe">
-                              <BookmarkPlus className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={() => { setEditingMeal(meal); setShowForm(true) }} className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={() => setDeletingMeal(meal)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                    {typeMeals.map((meal, mi) => (
+                      <motion.div key={meal.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: mi * 0.02 }}
+                        className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-4 sm:p-5 hover:bg-white/[0.04] transition-all group relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-violet-500/[0.02] to-transparent pointer-events-none" />
+                        <div className="relative z-10">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-400/20 to-violet-500/20 border border-violet-500/20 flex items-center justify-center shadow-lg" style={{ boxShadow: '0 0 20px rgba(139,92,246,0.15)' }}>
+                                {type === 'breakfast' ? <Sun className="w-5 h-5 text-amber-400" /> : type === 'lunch' ? <Utensils className="w-5 h-5 text-violet-400" /> : type === 'dinner' ? <Moon className="w-5 h-5 text-indigo-400" /> : <ChefHat className="w-5 h-5 text-emerald-400" />}
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-white tracking-tight">{meal.name}</h4>
+                                <p className="text-xs text-gray-500">{meal.calories} kcal</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => saveAsRecipe(meal)} className="p-1.5 rounded-lg text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all" title="Save as recipe">
+                                <BookmarkPlus className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => { setEditingMeal(meal); setShowForm(true) }} className="p-1.5 rounded-lg text-gray-400 hover:text-violet-400 hover:bg-violet-500/10 transition-all">
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => setDeletingMeal(meal)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                        <div className="grid grid-cols-4 gap-2">
-                          <div className="p-2 rounded-lg bg-white/5 border border-white/5 text-center">
-                            <p className="text-lg font-bold text-white">{meal.calories}</p>
-                            <p className="text-[9px] text-gray-500">kcal</p>
-                          </div>
-                          <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-center">
-                            <p className="text-lg font-bold text-emerald-400">{meal.protein}g</p>
-                            <p className="text-[9px] text-emerald-400/80">Protein</p>
-                          </div>
-                          <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
-                            <p className="text-lg font-bold text-amber-400">{meal.carbs}g</p>
-                            <p className="text-[9px] text-amber-400/80">Carbs</p>
-                          </div>
-                          <div className="p-2 rounded-lg bg-sky-500/10 border border-sky-500/20 text-center">
-                            <p className="text-lg font-bold text-sky-400">{meal.fat}g</p>
-                            <p className="text-[9px] text-sky-400/80">Fat</p>
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 text-white text-[10px] font-semibold">{meal.calories} kcal</span>
+                            <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-[10px] font-semibold">{meal.protein}g protein</span>
+                            <span className="px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/25 text-amber-400 text-[10px] font-semibold">{meal.carbs}g carbs</span>
+                            <span className="px-2.5 py-1 rounded-full bg-sky-500/15 border border-sky-500/25 text-sky-400 text-[10px] font-semibold">{meal.fat}g fat</span>
+                            {meal.fiber != null && (
+                              <span className="px-2.5 py-1 rounded-full bg-purple-500/15 border border-purple-500/25 text-purple-400 text-[10px] font-semibold">{meal.fiber}g fiber</span>
+                            )}
                           </div>
                         </div>
                       </motion.div>

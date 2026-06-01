@@ -3,7 +3,7 @@ import {
   Dumbbell,
   Utensils,
   Moon,
-  Droplets,
+  Heart,
   Settings,
   ShieldCheck,
   Wallet,
@@ -57,7 +57,7 @@ export function Sidebar() {
         { label: 'Workout Logger', path: '/fitness?tab=workouts', icon: Dumbbell, color: 'text-orange-400', shortcut: 'W' },
         { label: 'Body Metrics', path: '/fitness?tab=body', icon: Activity, color: 'text-lime-400' },
         { label: 'Nutrition Hub', path: '/fitness?tab=nutrition', icon: Utensils, color: 'text-purple-400' },
-        { label: 'Hydration Station', path: '/fitness?tab=hydration', icon: Droplets, color: 'text-blue-400' },
+        { label: 'Recovery & Hydration', path: '/fitness?tab=recovery', icon: Heart, color: 'text-emerald-400' },
         { label: 'Sleep Sanctuary', path: '/fitness?tab=sleep', icon: Moon, color: 'text-indigo-400' },
       ]
     },

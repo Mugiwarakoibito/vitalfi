@@ -200,6 +200,15 @@ export interface SleepEntry {
   quality: 1 | 2 | 3 | 4 | 5
   bedTime?: string
   wakeTime?: string
+  onsetMinutes?: number
+  nightWakings?: number
+  morningFeel?: 'refreshed' | 'tired' | 'groggy' | 'foggy'
+  screenTime?: boolean
+  roomTemp?: 'cold' | 'cool' | 'neutral' | 'warm' | 'hot'
+  dreamRecall?: boolean
+  alcohol?: boolean
+  meditation?: boolean
+  heavyMeal?: boolean
   notes?: string
   createdAt: string
   updatedAt: string

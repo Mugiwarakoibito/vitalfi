@@ -23,7 +23,7 @@ const tabConfig: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: 'training', label: 'Workout', icon: Dumbbell },
   { id: 'diet', label: 'Nutrition', icon: Utensils },
   { id: 'sleep', label: 'Sleep', icon: Moon },
-  { id: 'recovery', label: 'Hydration', icon: Heart },
+  { id: 'recovery', label: 'Recovery', icon: Heart },
   { id: 'progress', label: 'Performance', icon: TrendingUp },
   { id: 'habits', label: 'Streak', icon: Flame },
   { id: 'body', label: 'Body', icon: Activity },
@@ -35,7 +35,7 @@ const habitRingConfig = [
   { key: 'workout', label: 'Workout', icon: Dumbbell, color: '#f43f5e' },
   { key: 'nutrition', label: 'Nutrition', icon: Utensils, color: '#f97316' },
   { key: 'sleep', label: 'Sleep', icon: Moon, color: '#8b5cf6' },
-  { key: 'hydration', label: 'Hydration', icon: Droplets, color: '#06b6d4' },
+  { key: 'hydration', label: 'Recovery', icon: Droplets, color: '#06b6d4' },
 ]
 
 function calcReadiness(workoutDone: boolean, mealDone: boolean, sleepDone: boolean, hydrationDone: boolean): { score: number; label: string; color: string } {

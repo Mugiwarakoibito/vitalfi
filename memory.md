@@ -34,6 +34,19 @@
   - **Goal Projections**: Net daily calorie balance metrics and estimated 4-week & 12-week weight loss/gain forecasts driven by their profile's BMR/TDEE.
 - Deployed to https://vitalfi.vercel.app
 
+### Recovery Page UX Overhaul (June 1, 2026)
+- Restructured `Recovery.tsx` layout: hydration widget moved into main row side-by-side with Readiness gauge (5-column grid)
+- Added section dividers: "Trends & Insights", "Body & Recovery", "History"
+- Replaced old hydration quick-log (circular SVG) with WaterGlass animated component (framer-motion spring fill, wavy surface, bubble particles)
+- Added quick-add labeled buttons, custom input, today's time-stamped log feed, and hydration streak indicator
+- Enhanced stats bar with 5th column showing hydration progress %
+- Added `displayTemp`/`displayWeight` helpers for °C/°F and kg/lbs conversion
+- Added `formulaPreset` setting with preset buttons (Balanced/Energy Focus/Recovery Focus/Custom)
+- Added `tempUnit`/`weightUnit` settings fields
+- Removed duplicate hydration UI (old Quick-Log section) to avoid redundancy
+- Build: zero TypeScript errors
+- Deployed to https://vitalfi.vercel.app
+
 ### Upgrades Before Restructure
 - `BodyMetricsTracker.tsx`: body score (0-100) ring, lean/fat mass bar, BMR/TDEE, dual-axis weight+bodyfat chart, BMI color bar, goal projection
 - `WorkoutLogger.tsx`: rest timer per exercise, weekly analytics (workouts, volume, avg duration, heat score)

@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Trophy, Plus, Star, TrendingUp, Award, X,
   Dumbbell, Flame, BarChart3, Activity,
   Sparkles, Camera, Target, CheckCircle2, Medal,
-  Image, Calendar,
+  Image, Calendar, Download, Settings, Trash2, Filter,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -47,24 +47,30 @@ const PHOTOS_KEY = 'vitalfi_progress_photos'
 const ACHIEVEMENTS_KEY = 'vitalfi_progress_achievements'
 const CONFETTI_COLORS = ['#F59E0B', '#A78BFA', '#10B981', '#EF4444', '#3B82F6']
 
-const ACHIEVEMENT_DEFS: { id: string; name: string; icon: keyof typeof ACHIEVEMENT_ICON_MAP; description: string }[] = [
-  { id: 'first_pr', name: 'First PR', icon: 'star', description: 'Log your first personal record' },
-  { id: 'ten_prs', name: '10 PRs', icon: 'award', description: 'Log 10 personal records' },
-  { id: 'fifty_prs', name: '50 PRs', icon: 'medal', description: 'Log 50 personal records' },
-  { id: 'hundred_prs', name: '100 PRs', icon: 'trophy', description: 'Log 100 personal records' },
-  { id: 'volume_master', name: 'Volume Master', icon: 'flame', description: 'Reach 1,000,000 total volume' },
-  { id: 'strength_milestone', name: 'Strength Milestone', icon: 'medal', description: 'Reach Advanced tier on any exercise' },
+const ACHIEVEMENT_DEFS: { id: string; name: string; icon: keyof typeof ACHIEVEMENT_ICON_MAP; description: string; check: (stats: { prCount: number; totalVolume: number; hasAdvanced: boolean }) => boolean }[] = [
+  { id: 'first_pr', name: 'First PR', icon: 'star', description: 'Log your first personal record', check: s => s.prCount >= 1 },
+  { id: 'ten_prs', name: '10 PRs', icon: 'award', description: 'Log 10 personal records', check: s => s.prCount >= 10 },
+  { id: 'fifty_prs', name: '50 PRs', icon: 'medal', description: 'Log 50 personal records', check: s => s.prCount >= 50 },
+  { id: 'hundred_prs', name: '100 PRs', icon: 'trophy', description: 'Log 100 personal records', check: s => s.prCount >= 100 },
+  { id: 'volume_master', name: 'Volume Master', icon: 'flame', description: 'Reach 1,000,000 total volume', check: s => s.totalVolume >= 1000000 },
+  { id: 'strength_milestone', name: 'Strength Milestone', icon: 'medal', description: 'Reach Advanced tier on any exercise', check: s => s.hasAdvanced },
 ]
 
 const ACHIEVEMENT_ICON_MAP = {
   star: Star, award: Award, medal: Medal, trophy: Trophy, flame: Flame,
 }
 
+const PERIOD_OPTIONS = [
+  { value: '7d', label: '7D' },
+  { value: '14d', label: '14D' },
+  { value: '30d', label: '30D' },
+  { value: 'all', label: 'All' },
+] as const
+
 function classifyStrength(exerciseName: string, weight: number, bodyWeight: number): { level: string; color: string } | null {
   if (!bodyWeight) return null
   const ratio = weight / bodyWeight
   const name = exerciseName.toLowerCase()
-
   let thresholds: { level: string; minRatio: number; color: string }[]
   if (name.includes('bench')) {
     thresholds = [
@@ -80,13 +86,8 @@ function classifyStrength(exerciseName: string, weight: number, bodyWeight: numb
       { level: 'Intermediate', minRatio: 2.0, color: '#8b5cf6' },
       { level: 'Novice', minRatio: 1.5, color: '#10b981' },
     ]
-  } else {
-    return null
-  }
-
-  for (const t of thresholds) {
-    if (ratio >= t.minRatio) return { level: t.level, color: t.color }
-  }
+  } else { return null }
+  for (const t of thresholds) { if (ratio >= t.minRatio) return { level: t.level, color: t.color } }
   return { level: 'Untrained', color: '#6b7280' }
 }
 
@@ -95,11 +96,9 @@ function Confetti({ active }: { active: boolean }) {
   useEffect(() => {
     if (active) {
       const p = Array.from({ length: 30 }, (_, i) => ({
-        id: i,
-        x: Math.random() * 100,
+        id: i, x: Math.random() * 100,
         color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
-        delay: Math.random() * 0.5,
-        size: Math.random() * 8 + 4,
+        delay: Math.random() * 0.5, size: Math.random() * 8 + 4,
       }))
       setParticles(p)
       const timer = setTimeout(() => setParticles([]), 2000)
@@ -127,18 +126,43 @@ function estimate1RM(weight: number, reps: number): number {
   return Math.round(weight * (1 + reps / 30))
 }
 
+function exportCSV(records: PR[]) {
+  const headers = 'Exercise,Weight,Reps,Volume,Date,Type,GoalWeight,GoalReps,GoalVolume\n'
+  const rows = records.map(r =>
+    `${r.exerciseName},${r.weight},${r.reps},${r.weight * r.reps},${r.date},${r.type},${r.goalWeight ?? ''},${r.goalReps ?? ''},${r.goalVolume ?? ''}`
+  ).join('\n')
+  const blob = new Blob([headers + rows], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = `vitalfi_prs_${new Date().toISOString().split('T')[0]}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export function Progress() {
   const { workouts, bodyMetrics } = useAppStore()
   const [records, setRecords] = useState<PR[]>([])
   const [showModal, setShowModal] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [confirmClear, setConfirmClear] = useState(false)
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [justAdded, setJustAdded] = useState('')
-  const [formData, setFormData] = useState({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight' as 'weight' | 'reps' | 'volume', goalWeight: '', goalReps: '', goalVolume: '' })
+  const [formData, setFormData] = useState({
+    exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0],
+    type: 'weight' as 'weight' | 'reps' | 'volume',
+    goalWeight: '', goalReps: '', goalVolume: '',
+  })
   const [chartMetric, setChartMetric] = useState<'weight' | 'reps' | 'volume'>('weight')
+  const [selectedExercise, setSelectedExercise] = useState<string>('')
+  const [trendPeriod, setTrendPeriod] = useState<'7d' | '14d' | '30d' | 'all'>('all')
   const [photos, setPhotos] = useState<ProgressPhoto[]>([])
   const [showPhotoModal, setShowPhotoModal] = useState(false)
   const [photoDate, setPhotoDate] = useState(new Date().toISOString().split('T')[0])
   const [earned, setEarned] = useState<Set<string>>(new Set())
+  const [showCharts, setShowCharts] = useState(false)
+  const [showStrength, setShowStrength] = useState(false)
+  const [showAchievements, setShowAchievements] = useState(false)
+  const [showPhotos, setShowPhotos] = useState(false)
 
   useEffect(() => {
     try {
@@ -151,15 +175,12 @@ export function Progress() {
     } catch {}
   }, [])
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records))
-  }, [records])
-
-  useEffect(() => {
-    localStorage.setItem(PHOTOS_KEY, JSON.stringify(photos))
-  }, [photos])
+  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)) }, [records])
+  useEffect(() => { localStorage.setItem(PHOTOS_KEY, JSON.stringify(photos)) }, [photos])
 
   const exercises = useMemo(() => [...new Set(records.map(r => r.exerciseName))].sort(), [records])
+
+  useEffect(() => { if (!selectedExercise && exercises.length > 0) setSelectedExercise(exercises[0]) }, [exercises])
 
   const latestWeight = useMemo(() => {
     const withWeight = bodyMetrics.filter((m: BodyMetric) => m.weight != null)
@@ -184,6 +205,26 @@ export function Progress() {
       volume: w.exercises?.reduce((s: number, ex: WorkoutExercise) => s + ex.sets.reduce((st: number, set: ExerciseSet) => st + ((set.weight || 0) * (set.reps || 0)), 0), 0) || 0,
       name: w.name,
     }))
+  }, [workouts])
+
+  const weeklyVolumeComparison = useMemo(() => {
+    const now = new Date()
+    const weeks: { label: string; current: number; prior: number }[] = []
+    for (let i = 7; i >= 0; i--) {
+      const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate() - i * 7)
+      const weekStart = new Date(weekEnd); weekStart.setDate(weekStart.getDate() - 6)
+      const weekLabel = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      const priorWeekEnd = new Date(weekStart); priorWeekEnd.setDate(priorWeekEnd.getDate() - 1)
+      const priorWeekStart = new Date(priorWeekEnd); priorWeekStart.setDate(priorWeekStart.getDate() - 6)
+      const currentVol = workouts
+        .filter((w: Workout) => w.date >= weekStart.toISOString().split('T')[0] && w.date <= weekEnd.toISOString().split('T')[0])
+        .reduce((s: number, w: Workout) => s + (w.exercises?.reduce((se: number, ex: WorkoutExercise) => se + ex.sets.reduce((st: number, set: ExerciseSet) => st + ((set.weight || 0) * (set.reps || 0)), 0), 0) || 0), 0)
+      const priorVol = workouts
+        .filter((w: Workout) => w.date >= priorWeekStart.toISOString().split('T')[0] && w.date <= priorWeekEnd.toISOString().split('T')[0])
+        .reduce((s: number, w: Workout) => s + (w.exercises?.reduce((se: number, ex: WorkoutExercise) => se + ex.sets.reduce((st: number, set: ExerciseSet) => st + ((set.weight || 0) * (set.reps || 0)), 0), 0) || 0), 0)
+      weeks.unshift({ label: weekLabel, current: currentVol, prior: priorVol })
+    }
+    return weeks.slice(-8)
   }, [workouts])
 
   const autoPRs = useMemo(() => {
@@ -211,15 +252,25 @@ export function Progress() {
     return Math.max(...records.map(r => estimate1RM(r.weight, r.reps)))
   }, [records])
 
-  const chartData = useMemo(() =>
-    records.filter(r => r.exerciseName === (exercises[0] || ''))
+  const filteredRecords = useMemo(() => {
+    if (trendPeriod === 'all') return records
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - (trendPeriod === '7d' ? 7 : trendPeriod === '14d' ? 14 : 30))
+    const cutoffStr = cutoff.toISOString().split('T')[0]
+    return records.filter(r => r.date >= cutoffStr)
+  }, [records, trendPeriod])
+
+  const chartData = useMemo(() => {
+    const targetRecords = selectedExercise
+      ? filteredRecords.filter(r => r.exerciseName === selectedExercise)
+      : filteredRecords
+    return targetRecords
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .map(r => ({
         date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }),
         weight: r.weight, reps: r.reps, volume: r.weight * r.reps, estimated1RM: estimate1RM(r.weight, r.reps),
-      })),
-    [records, exercises]
-  )
+      }))
+  }, [filteredRecords, selectedExercise])
 
   const perExerciseBests = useMemo(() => {
     const map: Record<string, { bestWeight: number; bestReps: number; bestVolume: number }> = {}
@@ -241,14 +292,9 @@ export function Progress() {
     Object.entries(perExerciseBests).forEach(([name, data]) => {
       const classification = classifyStrength(name, data.bestWeight, latestWeight)
       if (classification) {
-        levels.push({
-          exercise: name,
-          level: classification.level,
-          color: classification.color,
+        levels.push({ exercise: name, level: classification.level, color: classification.color,
           ratio: Math.round((data.bestWeight / latestWeight) * 100) / 100,
-          weight: data.bestWeight,
-          bodyWeight: latestWeight,
-        })
+          weight: data.bestWeight, bodyWeight: latestWeight })
       }
     })
     return levels
@@ -259,22 +305,45 @@ export function Progress() {
     [strengthLevels]
   )
 
+  const prLeaderboard = useMemo(() => {
+    const countMap: Record<string, { count: number; bestWeight: number; bestReps: number }> = {}
+    records.forEach(r => {
+      if (!countMap[r.exerciseName]) countMap[r.exerciseName] = { count: 0, bestWeight: 0, bestReps: 0 }
+      countMap[r.exerciseName].count++
+      if (r.weight > countMap[r.exerciseName].bestWeight) countMap[r.exerciseName].bestWeight = r.weight
+      if (r.reps > countMap[r.exerciseName].bestReps) countMap[r.exerciseName].bestReps = r.reps
+    })
+    return Object.entries(countMap).sort((a, b) => b[1].count - a[1].count)
+  }, [records])
+
+  const prStreak = useMemo(() => {
+    if (records.length === 0) return 0
+    const sorted = [...new Set(records.map(r => r.date))].sort().reverse()
+    let streak = 0
+    const today = new Date()
+    for (let i = 0; i < sorted.length; i++) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      const ds = d.toISOString().split('T')[0]
+      if (sorted.includes(ds)) streak++
+      else if (i > 1) break
+      else return 0
+    }
+    return streak
+  }, [records])
+
   useEffect(() => {
     const newSet = new Set(earned)
     let changed = false
-
-    if (records.length >= 1 && !newSet.has('first_pr')) { newSet.add('first_pr'); changed = true }
-    if (records.length >= 10 && !newSet.has('ten_prs')) { newSet.add('ten_prs'); changed = true }
-    if (records.length >= 50 && !newSet.has('fifty_prs')) { newSet.add('fifty_prs'); changed = true }
-    if (records.length >= 100 && !newSet.has('hundred_prs')) { newSet.add('hundred_prs'); changed = true }
-    if (totalVolume >= 1000000 && !newSet.has('volume_master')) { newSet.add('volume_master'); changed = true }
-    if (hasAdvancedTier && !newSet.has('strength_milestone')) { newSet.add('strength_milestone'); changed = true }
-
+    const stats = { prCount: records.length, totalVolume, hasAdvanced: hasAdvancedTier }
+    ACHIEVEMENT_DEFS.forEach(a => {
+      if (!newSet.has(a.id) && a.check(stats)) { newSet.add(a.id); changed = true }
+    })
     if (changed) {
       localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify([...newSet]))
       setEarned(newSet)
     }
-  }, [records.length, totalVolume, hasAdvancedTier, earned])
+  }, [records.length, totalVolume, hasAdvancedTier])
 
   const addPhoto = () => {
     const newPhoto: ProgressPhoto = {
@@ -319,157 +388,382 @@ export function Progress() {
         </motion.div>
       )}
 
-      <div className="flex items-center justify-between">
+      {/* Toolbar with icon buttons */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">Progress</h2>
-          <p className="text-sm text-gray-400 mt-0.5">PRs, body trends & workout analytics</p>
+          <h2 className="text-2xl font-bold text-white tracking-tight">Performance</h2>
+          <p className="text-sm text-gray-400 mt-0.5">PRs, strength levels & workout analytics</p>
         </div>
-        <Button variant="primary" size="sm" onClick={() => setShowModal(true)}>
-          <Plus className="w-4 h-4 mr-1" />Add PR
-        </Button>
-      </div>
+        <div className="flex items-center gap-2">
+          {records.length > 0 && (
+            <button
+              className={`p-2 rounded-xl border transition-all ${showCharts ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              onClick={() => setShowCharts(p => !p)} title="PR Charts">
+              <BarChart3 className="w-5 h-5" />
+            </button>
+          )}
+          {strengthLevels.length > 0 && (
+            <button
+              className={`p-2 rounded-xl border transition-all ${showStrength ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              onClick={() => setShowStrength(p => !p)} title="Strength Levels">
+              <Dumbbell className="w-5 h-5" />
+            </button>
+          )}
+          {records.length > 0 && (
+            <button
+              className={`p-2 rounded-xl border transition-all ${showAchievements ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              onClick={() => setShowAchievements(p => !p)} title="Achievements">
+              <Trophy className="w-5 h-5" />
+            </button>
+          )}
+          <button
+            className={`p-2 rounded-xl border transition-all ${showPhotos ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+            onClick={() => setShowPhotos(p => !p)} title="Progress Photos">
+            <Camera className="w-5 h-5" />
+          </button>
+          <button onClick={() => setShowSettings(true)}
+            className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+            <Settings className="w-5 h-5" />
+          </button>
+          <Button variant="primary" size="sm" onClick={() => setShowModal(true)}>
+            <Plus className="w-4 h-4 mr-1" />Add PR
+          </Button>
+        </div>
+      </motion.div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.12] to-transparent p-5 shadow-lg min-h-[7.5rem]">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full -mr-10 -mt-10 blur-lg" />
-          <div className="relative">
-            <p className="text-xs text-amber-400/80 font-medium uppercase tracking-wider mb-1">Total PRs</p>
-            <p className="text-3xl font-bold text-amber-400 drop-shadow-lg">{records.length}</p>
+      {/* 6 Stat Cards */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/[0.04] to-transparent pointer-events-none" />
+          <div className="relative flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-amber-500/10"><Trophy className="w-4 h-4 text-amber-400" /></div>
+            <div>
+              <p className="text-2xl font-bold text-white">{records.length}</p>
+              <p className="text-xs text-gray-500">Total PRs</p>
+            </div>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/[0.12] to-transparent p-5 shadow-lg min-h-[7.5rem]">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10 blur-lg" />
-          <div className="relative">
-            <p className="text-xs text-purple-400/80 font-medium uppercase tracking-wider mb-1">Best 1RM</p>
-            <p className="text-3xl font-bold text-purple-400 drop-shadow-lg">{best1RM} <span className="text-sm font-normal text-gray-500">lbs</span></p>
+        <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/[0.04] to-transparent pointer-events-none" />
+          <div className="relative flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-purple-500/10"><Award className="w-4 h-4 text-purple-400" /></div>
+            <div>
+              <p className="text-2xl font-bold text-white">{best1RM} <span className="text-sm font-normal text-gray-500">lbs</span></p>
+              <p className="text-xs text-gray-500">Best 1RM</p>
+            </div>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.12] to-transparent p-5 shadow-lg min-h-[7.5rem]">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10 blur-lg" />
-          <div className="relative">
-            <p className="text-xs text-emerald-400/80 font-medium uppercase tracking-wider mb-1">Total Volume</p>
-            <p className="text-3xl font-bold text-emerald-400 drop-shadow-lg">{totalVolume > 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume}</p>
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.04] to-transparent pointer-events-none" />
+          <div className="relative flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-emerald-500/10"><Flame className="w-4 h-4 text-emerald-400" /></div>
+            <div>
+              <p className="text-2xl font-bold text-white">{totalVolume > 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume}</p>
+              <p className="text-xs text-gray-500">Total Volume</p>
+            </div>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/[0.12] to-transparent p-5 shadow-lg min-h-[7.5rem]">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-sky-500/10 rounded-full -mr-10 -mt-10 blur-lg" />
-          <div className="relative">
-            <p className="text-xs text-sky-400/80 font-medium uppercase tracking-wider mb-1">Body Logs</p>
-            <p className="text-3xl font-bold text-sky-400 drop-shadow-lg">{bodyMetrics.length}</p>
+        <div className="relative overflow-hidden rounded-2xl border border-sky-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg">
+          <div className="absolute inset-0 bg-gradient-to-br from-sky-500/[0.04] to-transparent pointer-events-none" />
+          <div className="relative flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-sky-500/10"><Activity className="w-4 h-4 text-sky-400" /></div>
+            <div>
+              <p className="text-2xl font-bold text-white">{exercises.length}</p>
+              <p className="text-xs text-gray-500">Exercises</p>
+            </div>
           </div>
         </div>
-      </div>
+        <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg">
+          <div className="absolute inset-0 bg-gradient-to-br from-rose-500/[0.04] to-transparent pointer-events-none" />
+          <div className="relative flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-rose-500/10"><Flame className="w-4 h-4 text-rose-400" /></div>
+            <div>
+              <p className="text-2xl font-bold text-white">{prStreak} <span className="text-sm font-normal text-gray-500">d</span></p>
+              <p className="text-xs text-gray-500">PR Streak</p>
+            </div>
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg">
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.04] to-transparent pointer-events-none" />
+          <div className="relative flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-violet-500/10"><Medal className="w-4 h-4 text-violet-400" /></div>
+            <div>
+              <p className="text-2xl font-bold text-white">{strengthLevels.length}</p>
+              <p className="text-xs text-gray-500">Strength Levels</p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
-      {/* Strength Level Classification */}
-      {latestWeight && strengthLevels.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-black/60 backdrop-blur-[12px] p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Medal className="w-4 h-4 text-violet-400" />
-            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Strength Level Classification</h4>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {strengthLevels.map((sl) => (
-              <div key={sl.exercise} className="relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-semibold text-white">{sl.exercise}</p>
-                  <div className="px-2.5 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: `${sl.color}20`, color: sl.color, border: `1px solid ${sl.color}40` }}>
-                    {sl.level}
+      {/* Charts Panel (toggleable) */}
+      <AnimatePresence>
+        {showCharts && (
+          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+            className="rounded-2xl border border-amber-500/15 bg-black/60 backdrop-blur-[12px] p-4 space-y-6">
+            {exercises.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-amber-400" />
+                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">PR Progress</h4>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1 bg-white/5 rounded-lg p-0.5">
+                      {PERIOD_OPTIONS.map(p => (
+                        <button key={p.value} onClick={() => setTrendPeriod(p.value)}
+                          className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${trendPeriod === p.value ? 'bg-amber-500/20 text-amber-300' : 'text-gray-500 hover:text-white'}`}>{p.label}</button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-baseline gap-2 text-xs text-gray-400">
-                  <span>{sl.weight} lbs</span>
-                  <span className="text-gray-600">@</span>
-                  <span>{sl.bodyWeight} lbs BW</span>
-                  <span className="text-gray-600">=</span>
-                  <span className="font-semibold" style={{ color: sl.color }}>{sl.ratio}x</span>
+                <div className="flex items-center gap-2 mb-3">
+                  <Filter className="w-3 h-3 text-gray-500" />
+                  <select value={selectedExercise} onChange={e => setSelectedExercise(e.target.value)}
+                    className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white font-medium focus:outline-none focus:border-amber-500/40">
+                    {exercises.map(ex => <option key={ex} value={ex}>{ex}</option>)}
+                  </select>
+                  <div className="flex gap-1 ml-auto">
+                    {(['weight', 'reps', 'volume'] as const).map(m => (
+                      <button key={m} onClick={() => setChartMetric(m)}
+                        className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${chartMetric === m ? 'bg-amber-500/20 text-amber-300' : 'text-gray-400 hover:text-white'}`}>{m}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                      <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
+                      <Line type="monotone" dataKey={chartMetric} stroke="#F59E0B" strokeWidth={2.5} dot={{ fill: '#F59E0B', r: 4 }} activeDot={{ r: 6 }} />
+                      {chartMetric === 'weight' && (
+                        <Line type="monotone" dataKey="estimated1RM" stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="4 4" dot={false} opacity={0.5} />
+                      )}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+            {workouts.length >= 7 && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 className="w-4 h-4 text-emerald-400" />
+                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Weekly Volume</h4>
+                </div>
+                <div className="h-40">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={weeklyVolumeComparison}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                      <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
+                      <Bar dataKey="current" name="This Week" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                      <Bar dataKey="prior" name="Last Week" fill="#374151" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex items-center gap-4 mt-2 text-[10px]">
+                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" /><span className="text-gray-400">This Week</span></div>
+                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-gray-600" /><span className="text-gray-400">Last Week</span></div>
+                </div>
+              </div>
+            )}
+            {volumeTrend.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 className="w-4 h-4 text-emerald-400" />
+                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Workout Volume</h4>
+                </div>
+                <div className="h-40">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={volumeTrend}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                      <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
+                      <Bar dataKey="volume" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={24} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+            {bodyWeightData.length > 1 && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp className="w-4 h-4 text-violet-400" />
+                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Body Weight</h4>
+                </div>
+                <div className="h-40">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={bodyWeightData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                      <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
+                      <YAxis domain={['auto', 'auto']} tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
+                      <Line type="monotone" dataKey="weight" stroke="#8b5cf6" strokeWidth={2.5} dot={{ fill: '#8b5cf6', r: 3 }} activeDot={{ r: 5 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Strength Levels Panel (toggleable) */}
+      <AnimatePresence>
+        {showStrength && strengthLevels.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+            className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Medal className="w-4 h-4 text-violet-400" />
+              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Strength Level Classification</h4>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {strengthLevels.map((sl) => (
+                <div key={sl.exercise} className="relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-white">{sl.exercise}</p>
+                    <div className="px-2.5 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: `${sl.color}20`, color: sl.color, border: `1px solid ${sl.color}40` }}>
+                      {sl.level}
+                    </div>
+                  </div>
+                  <div className="flex items-baseline gap-2 text-xs text-gray-400">
+                    <span>{sl.weight} lbs</span>
+                    <span className="text-gray-600">@</span>
+                    <span>{sl.bodyWeight} lbs BW</span>
+                    <span className="text-gray-600">=</span>
+                    <span className="font-semibold" style={{ color: sl.color }}>{sl.ratio}x</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Achievements Panel (toggleable) */}
+      <AnimatePresence>
+        {showAchievements && records.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+            className="rounded-2xl border border-amber-500/15 bg-black/60 backdrop-blur-[12px] p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-amber-400" />
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Achievement Gallery</h4>
+              </div>
+              <div className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] text-gray-400 font-medium uppercase tracking-wider">
+                {[...earned].filter(id => ACHIEVEMENT_DEFS.some(a => a.id === id)).length}/{ACHIEVEMENT_DEFS.length}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {ACHIEVEMENT_DEFS.map((ach) => {
+                const isUnlocked = earned.has(ach.id)
+                const IconComponent = ACHIEVEMENT_ICON_MAP[ach.icon]
+                return (
+                  <motion.div key={ach.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                    className={`relative overflow-hidden rounded-xl p-4 text-center border transition-all duration-500 ${
+                      isUnlocked
+                        ? 'border-amber-500/30 bg-gradient-to-br from-amber-500/15 via-amber-500/10 to-transparent shadow-lg shadow-amber-500/5'
+                        : 'border-white/[0.04] bg-white/[0.02] opacity-50'
+                    }`}>
+                    {isUnlocked && (
+                      <>
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(251,191,36,0.08),transparent_70%)] pointer-events-none rounded-xl" />
+                        <div className="absolute top-0 right-0 w-12 h-12 bg-amber-500/10 rounded-full -mr-6 -mt-6 blur-md" />
+                      </>
+                    )}
+                    <div className={`relative ${isUnlocked ? '' : 'saturate-0'}`}>
+                      <div className={`inline-flex p-2.5 rounded-xl mb-2.5 transition-all duration-500 ${
+                        isUnlocked
+                          ? 'bg-gradient-to-br from-amber-500/25 to-amber-500/10 shadow-lg shadow-amber-500/10'
+                          : 'bg-white/[0.03]'
+                      }`}>
+                        <IconComponent className={`w-5 h-5 ${isUnlocked ? 'text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]' : 'text-gray-600'}`} />
+                      </div>
+                      <p className={`text-xs font-bold ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>{ach.name}</p>
+                      <p className="text-[10px] text-gray-600 mt-0.5 leading-tight">{ach.description}</p>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Photos Panel (toggleable) */}
+      <AnimatePresence>
+        {showPhotos && (
+          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+            className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Camera className="w-4 h-4 text-violet-400" />
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Progress Photos</h4>
+              </div>
+              <Button variant="primary" size="sm" onClick={() => setShowPhotoModal(true)}>
+                <Plus className="w-3.5 h-3.5 mr-1" />Add Photo
+              </Button>
+            </div>
+            {photos.length > 0 ? (
+              <div className="space-y-2">
+                {[...photos].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((photo) => (
+                  <div key={photo.id} className="flex items-center gap-3 rounded-lg bg-white/[0.02] p-3 border border-white/5">
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-500/20 to-violet-600/10 flex items-center justify-center shrink-0">
+                      <Image className="w-5 h-5 text-violet-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        Photo from <span className="text-violet-300">{new Date(photo.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                      </p>
+                    </div>
+                    <button onClick={() => setPhotos(prev => prev.filter(p => p.id !== photo.id))}
+                      className="ml-auto p-1 text-gray-500 hover:text-red-400 transition-colors">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 text-center py-6">No progress photos yet — add your first!</p>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* PR Leaderboard */}
+      {prLeaderboard.length > 0 && (
+        <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-[12px] p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Award className="w-4 h-4 text-amber-400" />
+            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">PR Leaderboard</h4>
+          </div>
+          <div className="space-y-1.5">
+            {prLeaderboard.map(([name, data], idx) => (
+              <div key={name} className="flex items-center gap-3 rounded-lg bg-white/[0.02] p-2.5 border border-white/5">
+                <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold ${
+                  idx === 0 ? 'bg-amber-500/20 text-amber-400' :
+                  idx === 1 ? 'bg-gray-400/20 text-gray-400' :
+                  idx === 2 ? 'bg-orange-500/20 text-orange-400' :
+                  'bg-white/5 text-gray-500'
+                }`}>{idx + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{name}</p>
+                  <p className="text-[10px] text-gray-500">{data.count} PR{data.count !== 1 ? 's' : ''} · Best: {data.bestWeight}lbs</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-bold text-amber-400">{data.count}</p>
+                  <p className="text-[10px] text-gray-500">PRs</p>
                 </div>
               </div>
             ))}
-          </div>
-          {!latestWeight && (
-            <p className="text-xs text-gray-500 mt-2">Log body weight in Metrics to see strength classification</p>
-          )}
-        </motion.div>
-      )}
-
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {volumeTrend.length > 0 && (
-          <div className="relative overflow-hidden rounded-2xl border border-gray-500/20 bg-black/40 backdrop-blur-xl p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <BarChart3 className="w-4 h-4 text-emerald-400" />
-              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Workout Volume</h4>
-            </div>
-            <div className="h-40">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={volumeTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                  <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
-                  <Bar dataKey="volume" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={24} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-
-        {bodyWeightData.length > 1 && (
-          <div className="relative overflow-hidden rounded-2xl border border-gray-500/20 bg-black/40 backdrop-blur-xl p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="w-4 h-4 text-violet-400" />
-              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Body Weight</h4>
-            </div>
-            <div className="h-40">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={bodyWeightData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                  <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
-                  <YAxis domain={['auto', 'auto']} tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
-                  <Line type="monotone" dataKey="weight" stroke="#8b5cf6" strokeWidth={2.5} dot={{ fill: '#8b5cf6', r: 3 }} activeDot={{ r: 5 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* PR Progress Chart */}
-      {records.length > 0 && exercises.length > 0 && (
-        <div className="relative overflow-hidden rounded-2xl border border-gray-500/20 bg-black/40 backdrop-blur-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-              <TrendingUp className="w-3.5 h-3.5 inline mr-1.5 text-amber-400" />PR Progress
-            </h4>
-            <div className="flex gap-1">
-              {(['weight', 'reps', 'volume'] as const).map(m => (
-                <button key={m} onClick={() => setChartMetric(m)}
-                  className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${chartMetric === m ? 'bg-amber-500/20 text-amber-300' : 'text-gray-400 hover:text-white'}`}>{m}</button>
-              ))}
-            </div>
-          </div>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
-                <Line type="monotone" dataKey={chartMetric} stroke="#F59E0B" strokeWidth={2.5} dot={{ fill: '#F59E0B', r: 4 }} activeDot={{ r: 6 }} />
-                {chartMetric === 'weight' && (
-                  <Line type="monotone" dataKey="estimated1RM" stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="4 4" dot={false} opacity={0.5} />
-                )}
-              </LineChart>
-            </ResponsiveContainer>
           </div>
         </div>
       )}
 
       {/* Auto PRs from Workouts */}
       {autoPRs.length > 0 && (
-        <div className="relative overflow-hidden rounded-2xl border border-gray-500/20 bg-black/40 backdrop-blur-xl p-5">
+        <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-[12px] p-4">
           <div className="flex items-center gap-2 mb-4">
             <Activity className="w-4 h-4 text-amber-400" />
             <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Recent Lifts (from workouts)</h4>
@@ -489,89 +783,7 @@ export function Progress() {
         </div>
       )}
 
-      {/* Progress Photo Timeline */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-black/60 backdrop-blur-[12px] p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Camera className="w-4 h-4 text-violet-400" />
-            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Progress Photos</h4>
-          </div>
-          <Button variant="primary" size="sm" onClick={() => setShowPhotoModal(true)}>
-            <Plus className="w-3.5 h-3.5 mr-1" />Add Photo
-          </Button>
-        </div>
-        {photos.length > 0 ? (
-          <div className="space-y-2">
-            {[...photos].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((photo) => (
-              <div key={photo.id} className="flex items-center gap-3 rounded-lg bg-white/[0.02] p-3 border border-white/5">
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-500/20 to-violet-600/10 flex items-center justify-center shrink-0">
-                  <Image className="w-5 h-5 text-violet-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-white">
-                    Photo from <span className="text-violet-300">{new Date(photo.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                  </p>
-                </div>
-                <button onClick={() => setPhotos(prev => prev.filter(p => p.id !== photo.id))}
-                  className="ml-auto p-1 text-gray-500 hover:text-red-400 transition-colors">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-gray-500 text-center py-6">No progress photos yet — add your first!</p>
-        )}
-      </motion.div>
-
-      {/* Achievement Gallery */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-black/60 backdrop-blur-[12px] p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-400" />
-            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Achievement Gallery</h4>
-          </div>
-          <div className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] text-gray-400 font-medium uppercase tracking-wider">
-            {[...earned].filter(id => ACHIEVEMENT_DEFS.some(a => a.id === id)).length}/{ACHIEVEMENT_DEFS.length}
-          </div>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {ACHIEVEMENT_DEFS.map((ach) => {
-            const isUnlocked = earned.has(ach.id)
-            const IconComponent = ACHIEVEMENT_ICON_MAP[ach.icon]
-            return (
-              <motion.div key={ach.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                className={`relative overflow-hidden rounded-xl p-4 text-center border transition-all duration-500 ${
-                  isUnlocked
-                    ? 'border-amber-500/30 bg-gradient-to-br from-amber-500/15 via-amber-500/10 to-transparent shadow-lg shadow-amber-500/5'
-                    : 'border-white/[0.04] bg-white/[0.02] opacity-50'
-                }`}>
-                {isUnlocked && (
-                  <>
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(251,191,36,0.08),transparent_70%)] pointer-events-none rounded-xl" />
-                    <div className="absolute top-0 right-0 w-12 h-12 bg-amber-500/10 rounded-full -mr-6 -mt-6 blur-md" />
-                  </>
-                )}
-                <div className={`relative ${isUnlocked ? '' : 'saturate-0'}`}>
-                  <div className={`inline-flex p-2.5 rounded-xl mb-2.5 transition-all duration-500 ${
-                    isUnlocked
-                      ? 'bg-gradient-to-br from-amber-500/25 to-amber-500/10 shadow-lg shadow-amber-500/10'
-                      : 'bg-white/[0.03]'
-                  }`}>
-                    <IconComponent className={`w-5 h-5 ${isUnlocked ? 'text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]' : 'text-gray-600'}`} />
-                  </div>
-                  <p className={`text-xs font-bold ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>{ach.name}</p>
-                  <p className="text-[10px] text-gray-600 mt-0.5 leading-tight">{ach.description}</p>
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
-      </motion.div>
-
-      {/* PR Cards */}
+      {/* PR Cards / Empty State */}
       {records.length === 0 ? (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent p-10 text-center">
@@ -623,13 +835,9 @@ export function Progress() {
                           return (
                             <div key={g.id} className="text-xs">
                               <div className="flex justify-between text-gray-400 mb-0.5">
-                                <span className="flex items-center gap-1">
-                                  <Target className="w-3 h-3 text-amber-400" />
-                                  Goal: {g.goalWeight}lbs
-                                </span>
+                                <span className="flex items-center gap-1"><Target className="w-3 h-3 text-amber-400" />Goal: {g.goalWeight}lbs</span>
                                 <span className={achieved ? 'text-emerald-400 font-semibold' : 'text-gray-500'}>
-                                  {achieved && <CheckCircle2 className="w-3 h-3 inline mr-0.5 text-emerald-400" />}
-                                  {pct}%
+                                  {achieved && <CheckCircle2 className="w-3 h-3 inline mr-0.5 text-emerald-400" />}{pct}%
                                 </span>
                               </div>
                               <div className="h-1 rounded-full bg-white/10 overflow-hidden">
@@ -644,13 +852,9 @@ export function Progress() {
                           return (
                             <div key={g.id} className="text-xs">
                               <div className="flex justify-between text-gray-400 mb-0.5">
-                                <span className="flex items-center gap-1">
-                                  <Target className="w-3 h-3 text-purple-400" />
-                                  Goal: {g.goalReps} reps
-                                </span>
+                                <span className="flex items-center gap-1"><Target className="w-3 h-3 text-purple-400" />Goal: {g.goalReps} reps</span>
                                 <span className={achieved ? 'text-emerald-400 font-semibold' : 'text-gray-500'}>
-                                  {achieved && <CheckCircle2 className="w-3 h-3 inline mr-0.5 text-emerald-400" />}
-                                  {pct}%
+                                  {achieved && <CheckCircle2 className="w-3 h-3 inline mr-0.5 text-emerald-400" />}{pct}%
                                 </span>
                               </div>
                               <div className="h-1 rounded-full bg-white/10 overflow-hidden">
@@ -665,13 +869,9 @@ export function Progress() {
                           return (
                             <div key={g.id} className="text-xs">
                               <div className="flex justify-between text-gray-400 mb-0.5">
-                                <span className="flex items-center gap-1">
-                                  <Target className="w-3 h-3 text-emerald-400" />
-                                  Goal: {g.goalVolume.toLocaleString()} vol
-                                </span>
+                                <span className="flex items-center gap-1"><Target className="w-3 h-3 text-emerald-400" />Goal: {g.goalVolume.toLocaleString()} vol</span>
                                 <span className={achieved ? 'text-emerald-400 font-semibold' : 'text-gray-500'}>
-                                  {achieved && <CheckCircle2 className="w-3 h-3 inline mr-0.5 text-emerald-400" />}
-                                  {pct}%
+                                  {achieved && <CheckCircle2 className="w-3 h-3 inline mr-0.5 text-emerald-400" />}{pct}%
                                 </span>
                               </div>
                               <div className="h-1 rounded-full bg-white/10 overflow-hidden">
@@ -757,6 +957,66 @@ export function Progress() {
           </Button>
         </div>
       </Modal>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowSettings(false)}>
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-gray-900 to-gray-950 p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 rounded-full -mr-20 -mt-20 blur-2xl" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500/5 rounded-full -ml-12 -mb-12 blur-xl" />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shadow-lg"><Settings className="w-5 h-5 text-amber-400" /></div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">Performance Settings</h3>
+                    <p className="text-xs text-gray-500">Data management & export</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowSettings(false)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="space-y-4">
+                <div className="rounded-xl bg-white/5 border border-white/10 p-4">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium mb-2">Export Data</p>
+                  <button onClick={() => exportCSV(records)}
+                    className="w-full px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 transition-all text-sm font-medium flex items-center justify-center gap-2">
+                    <Download className="w-4 h-4" /> Export PRs as CSV
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
+                    <p className="text-[9px] text-gray-500 uppercase tracking-wider">Total PRs</p>
+                    <p className="text-lg font-bold text-white mt-1">{records.length}</p>
+                  </div>
+                  <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
+                    <p className="text-[9px] text-gray-500 uppercase tracking-wider">Exercises</p>
+                    <p className="text-lg font-bold text-white mt-1">{exercises.length}</p>
+                  </div>
+                </div>
+                <div className="rounded-xl bg-red-500/5 border border-red-500/10 p-4">
+                  <h4 className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-3">Data Management</h4>
+                  {!confirmClear ? (
+                    <button onClick={() => setConfirmClear(true)}
+                      className="w-full px-3 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 transition-all text-sm font-medium flex items-center justify-center gap-2">
+                      <Trash2 className="w-4 h-4" /> Clear All PR Data
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-red-400/80 text-center">This permanently deletes all PR records and photos.</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => setConfirmClear(false)}
+                          className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-all text-xs">Cancel</button>
+                        <button onClick={() => { setRecords([]); setPhotos([]); localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(PHOTOS_KEY); setConfirmClear(false) }}
+                          className="flex-1 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30 transition-all text-xs font-semibold">Delete All</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

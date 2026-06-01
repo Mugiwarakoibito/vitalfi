@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Moon, Star, Clock, Plus, Trash2, AlertTriangle, Brain, Target, TrendingUp, Sparkles, Activity, BarChart3, Coffee, Dumbbell, Sun } from 'lucide-react'
+import { Moon, Star, Clock, Plus, Trash2, AlertTriangle, Brain, Target, Activity, BarChart3, Coffee, Dumbbell, Sparkles as SparklesIcon, ChevronLeft, ChevronRight, Calendar, RotateCcw, RefreshCw, Settings, Pencil } from 'lucide-react'
 import { generateId, formatSleepDuration } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import type { SleepEntry } from '@/types/fitness'
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, BarChart, Bar, Cell } from 'recharts'
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
 
 const qualityLabel = (q: number) =>
   q === 1 ? 'Poor' : q === 2 ? 'Fair' : q === 3 ? 'Okay' : q === 4 ? 'Good' : 'Great'
@@ -29,13 +29,6 @@ const scoreColor = (s: number) =>
 function timeToMinutes(t: string): number {
   const [h, m] = t.split(':').map(Number)
   return h * 60 + m
-}
-
-function minutesToTime(mins: number): string {
-  const totalMins = ((mins % 1440) + 1440) % 1440
-  const h = Math.floor(totalMins / 60)
-  const m = Math.round(totalMins % 60)
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
 interface EnvData {
@@ -64,7 +57,7 @@ function stripEnvFromNotes(notes?: string): string {
 }
 
 export function SleepLogger() {
-  const { sleep, addSleep, deleteSleep } = useAppStore()
+  const { sleep, addSleep, deleteSleep, clearSleep } = useAppStore()
   const [showForm, setShowForm] = useState(false)
   const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0])
   const [formDuration, setFormDuration] = useState('')
@@ -74,15 +67,53 @@ export function SleepLogger() {
   const [formNotes, setFormNotes] = useState('')
   const [formCaffeine, setFormCaffeine] = useState(false)
   const [formExercise, setFormExercise] = useState(false)
+  const [formOnset, setFormOnset] = useState('')
+  const [formWakings, setFormWakings] = useState('')
+  const [formMorningFeel, setFormMorningFeel] = useState<'refreshed' | 'tired' | 'groggy' | 'foggy' | ''>('')
+  const [formScreenTime, setFormScreenTime] = useState(false)
+  const [formRoomTemp, setFormRoomTemp] = useState<'cold' | 'cool' | 'neutral' | 'warm' | 'hot' | ''>('')
+  const [formDreamRecall, setFormDreamRecall] = useState(false)
+  const [formAlcohol, setFormAlcohol] = useState(false)
+  const [formMeditation, setFormMeditation] = useState(false)
+  const [formHeavyMeal, setFormHeavyMeal] = useState(false)
   const [deletingEntry, setDeletingEntry] = useState<SleepEntry | null>(null)
+  const [editingEntry, setEditingEntry] = useState<SleepEntry | null>(null)
+  const [showTrendScope, setShowTrendScope] = useState(false)
+  const [showSleepCoach, setShowSleepCoach] = useState(false)
+  const [trendChartMode, setTrendChartMode] = useState<'duration' | 'quality' | 'onset' | 'wakings'>('duration')
+  const [trendWeekOffset, setTrendWeekOffset] = useState(0)
+  const [coachPref, setCoachPref] = useState<'balanced' | 'early_bird' | 'night_owl'>('balanced')
+  const [showCoachPref, setShowCoachPref] = useState(false)
+  const [coachRefreshKey, setCoachRefreshKey] = useState(0)
+  const [showSleepSettings, setShowSleepSettings] = useState(false)
   const [targetHours, setTargetHours] = useState(() => {
     const saved = localStorage.getItem('vitalfi_sleep_target')
     return saved ? parseFloat(saved) : 8
   })
 
+  const formatDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const [selectedDate, setSelectedDate] = useState(formatDate(new Date()))
+  const navigateDate = (dir: number) => {
+    const d = new Date(selectedDate)
+    d.setDate(d.getDate() + dir)
+    setSelectedDate(formatDate(d))
+  }
+  const jumpToToday = () => setSelectedDate(formatDate(new Date()))
+
   useEffect(() => {
     localStorage.setItem('vitalfi_sleep_target', targetHours.toString())
   }, [targetHours])
+
+  // Auto-calculate duration from bed/wake times
+  useEffect(() => {
+    if (formBedTime && formWakeTime) {
+      const bed = timeToMinutes(formBedTime)
+      let wake = timeToMinutes(formWakeTime)
+      if (wake <= bed) wake += 1440
+      const hours = ((wake - bed) / 60).toFixed(1)
+      setFormDuration(hours)
+    }
+  }, [formBedTime, formWakeTime])
 
   const sorted = useMemo(
     () => [...sleep].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
@@ -104,71 +135,6 @@ export function SleepLogger() {
     [avgDuration, avgQuality]
   )
 
-  const last7Days = useMemo(() => {
-    const today = new Date()
-    const days = []
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(today)
-      d.setDate(d.getDate() - i)
-      const dateStr = d.toISOString().split('T')[0]
-      const entry = sleep.find(e => e.date === dateStr)
-      days.push({
-        date: d.toLocaleDateString('en-US', { weekday: 'short' }),
-        fullDate: dateStr,
-        duration: entry ? entry.duration : 0,
-        quality: entry ? entry.quality : 0,
-        hasData: !!entry,
-      })
-    }
-    return days
-  }, [sleep])
-
-  const last30Days = useMemo(() => {
-    const today = new Date()
-    const days = []
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(today)
-      d.setDate(d.getDate() - i)
-      const dateStr = d.toISOString().split('T')[0]
-      const entry = sleep.find(e => e.date === dateStr)
-      days.push({
-        date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        duration: entry ? entry.duration : null,
-        quality: entry ? entry.quality : null,
-        hasData: !!entry,
-      })
-    }
-    return days
-  }, [sleep])
-
-  const weekComparison = useMemo(() => {
-    if (sleep.length < 2) return null
-    const sorted = [...sleep].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    const thisWeek = sorted.slice(0, 7)
-    const lastWeek = sorted.slice(7, 14)
-    if (thisWeek.length === 0 || lastWeek.length === 0) return null
-    const thisAvg = thisWeek.reduce((s, e) => s + e.duration, 0) / thisWeek.length
-    const lastAvg = lastWeek.reduce((s, e) => s + e.duration, 0) / lastWeek.length
-    const thisQual = thisWeek.reduce((s, e) => s + e.quality, 0) / thisWeek.length
-    const lastQual = lastWeek.reduce((s, e) => s + e.quality, 0) / lastWeek.length
-    return { thisAvg, lastAvg, thisQual, lastQual, diffDuration: thisAvg - lastAvg, diffQuality: thisQual - lastQual }
-  }, [sleep])
-
-  const durationDist = useMemo(() => {
-    const ranges = [
-      { label: '<5', min: 0, max: 5 },
-      { label: '5-6', min: 5, max: 6 },
-      { label: '6-7', min: 6, max: 7 },
-      { label: '7-8', min: 7, max: 8 },
-      { label: '8-9', min: 8, max: 9 },
-      { label: '9+', min: 9, max: 24 },
-    ]
-    return ranges.map(r => ({
-      label: r.label,
-      count: sleep.filter(e => e.duration >= r.min && e.duration < r.max).length,
-    }))
-  }, [sleep])
-
   const consistency = useMemo(() => {
     const withBed = sleep.filter(e => e.bedTime)
     if (withBed.length < 2) return { pct: 0, total: withBed.length }
@@ -182,72 +148,16 @@ export function SleepLogger() {
     return Math.round(debt * 10) / 10
   }, [sleep, targetHours])
 
-  const insights = useMemo(() => {
-    const lines: { icon: typeof Brain; text: string; color: string }[] = []
-    if (sleep.length < 3) {
-      lines.push({ icon: Moon, text: 'Log 3+ nights to see personalized insights', color: 'text-gray-400' })
-      return lines
-    }
-    const weekday = sleep.filter(e => {
-      const d = new Date(e.date).getDay()
-      return d >= 1 && d <= 5
-    })
-    const weekend = sleep.filter(e => {
-      const d = new Date(e.date).getDay()
-      return d === 0 || d === 6
-    })
-    if (weekday.length > 0 && weekend.length > 0) {
-      const wdAvg = weekday.reduce((s, e) => s + e.duration, 0) / weekday.length
-      const weAvg = weekend.reduce((s, e) => s + e.duration, 0) / weekend.length
-      if (weAvg > wdAvg + 0.5)
-        lines.push({ icon: Moon, text: `You sleep ${(weAvg - wdAvg).toFixed(1)}h longer on weekends`, color: 'text-violet-300' })
-      else if (wdAvg > weAvg + 0.5)
-        lines.push({ icon: Moon, text: `You sleep ${(wdAvg - weAvg).toFixed(1)}h longer on weekdays`, color: 'text-violet-300' })
-    }
-    if (sorted.length >= 4) {
-      const mid = Math.floor(sorted.length / 2)
-      const recent = sorted.slice(0, mid)
-      const older = sorted.slice(mid)
-      const rAvg = recent.reduce((s, e) => s + e.duration, 0) / recent.length
-      const oAvg = older.reduce((s, e) => s + e.duration, 0) / older.length
-      if (rAvg > oAvg + 0.3)
-        lines.push({ icon: TrendingUp, text: `Duration improving (+${(rAvg - oAvg).toFixed(1)}h)`, color: 'text-green-400' })
-      else if (oAvg > rAvg + 0.3)
-        lines.push({ icon: TrendingUp, text: `Duration declining (${(rAvg - oAvg).toFixed(1)}h)`, color: 'text-red-400' })
-      else
-        lines.push({ icon: TrendingUp, text: 'Duration is stable', color: 'text-blue-400' })
-    }
-    const withNotes = sleep.filter(e => e.notes)
-    if (withNotes.length > 0) {
-      const stressNotes = withNotes.filter(e => e.notes!.toLowerCase().includes('stress'))
-      if (stressNotes.length >= 2)
-        lines.push({ icon: Brain, text: `Stress mentioned ${stressNotes.length}x in notes`, color: 'text-amber-400' })
-    }
-    if (consistency.total >= 3) {
-      lines.push({
-        icon: Clock,
-        text: consistency.pct >= 70
-          ? `Consistent bedtime (${consistency.pct}% within 1h)`
-          : 'Try a fixed bedtime routine to improve consistency',
-        color: consistency.pct >= 70 ? 'text-green-400' : 'text-amber-400',
-      })
-    }
-    return lines
-  }, [sleep, sorted, consistency])
+  const recentWeek = useMemo(() => sleep.filter(e => {
+    const d = new Date(e.date)
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
+    return d >= weekAgo
+  }), [sleep])
 
-  const hasBedWakeData = useMemo(
-    () => sleep.filter(e => e.bedTime && e.wakeTime).length > 0,
-    [sleep]
-  )
+  const daysToRecover = sleepDebt > 0 ? Math.ceil(sleepDebt / 0.5) : 0
 
-  const bedWakeEntries = useMemo(
-    () =>
-      sleep
-        .filter(e => e.bedTime && e.wakeTime)
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .slice(-14),
-    [sleep]
-  )
+  const last7GoalHit = recentWeek.filter(e => e.duration >= targetHours).length
+  const last7GoalPct = recentWeek.length > 0 ? Math.round((last7GoalHit / recentWeek.length) * 100) : 0
 
   const resetForm = () => {
     setFormDate(new Date().toISOString().split('T')[0])
@@ -258,6 +168,38 @@ export function SleepLogger() {
     setFormNotes('')
     setFormCaffeine(false)
     setFormExercise(false)
+    setFormOnset('')
+    setFormWakings('')
+    setFormMorningFeel('')
+    setFormScreenTime(false)
+    setFormRoomTemp('')
+    setFormDreamRecall(false)
+    setFormAlcohol(false)
+    setFormMeditation(false)
+    setFormHeavyMeal(false)
+  }
+
+  const handleEdit = (entry: SleepEntry) => {
+    setFormDate(entry.date)
+    setFormDuration(entry.duration.toString())
+    setFormQuality(entry.quality as 1|2|3|4|5)
+    setFormBedTime(entry.bedTime || '')
+    setFormWakeTime(entry.wakeTime || '')
+    setFormOnset(entry.onsetMinutes?.toString() || '')
+    setFormWakings(entry.nightWakings?.toString() || '')
+    setFormMorningFeel(entry.morningFeel || '')
+    setFormScreenTime(entry.screenTime || false)
+    setFormRoomTemp(entry.roomTemp || '')
+    setFormDreamRecall(entry.dreamRecall || false)
+    setFormAlcohol(entry.alcohol || false)
+    setFormMeditation(entry.meditation || false)
+    setFormHeavyMeal(entry.heavyMeal || false)
+    const env = parseEnvFromNotes(entry.notes)
+    setFormCaffeine(env?.caffeine || false)
+    setFormExercise(env?.exercise || false)
+    setFormNotes(stripEnvFromNotes(entry.notes))
+    setEditingEntry(entry)
+    setShowForm(true)
   }
 
   const handleSave = () => {
@@ -265,18 +207,34 @@ export function SleepLogger() {
     const hasEnv = formCaffeine || formExercise
     const envSuffix = hasEnv ? `|__ENV__|${JSON.stringify({ caffeine: formCaffeine, exercise: formExercise })}` : ''
     const fullNotes = formNotes ? `${formNotes} ${envSuffix}`.trim() : envSuffix
+    const now = new Date().toISOString()
+
+    if (editingEntry) {
+      deleteSleep(editingEntry.id)
+    }
+
     addSleep({
-      id: generateId(),
+      id: editingEntry ? editingEntry.id : generateId(),
       date: formDate,
       duration: parseFloat(formDuration),
       quality: formQuality,
       bedTime: formBedTime || undefined,
       wakeTime: formWakeTime || undefined,
+      onsetMinutes: formOnset ? parseInt(formOnset) : undefined,
+      nightWakings: formWakings ? parseInt(formWakings) : undefined,
+      morningFeel: formMorningFeel || undefined,
+      screenTime: formScreenTime || undefined,
+      roomTemp: formRoomTemp || undefined,
+      dreamRecall: formDreamRecall || undefined,
+      alcohol: formAlcohol || undefined,
+      meditation: formMeditation || undefined,
+      heavyMeal: formHeavyMeal || undefined,
       notes: fullNotes || undefined,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: editingEntry ? editingEntry.createdAt : now,
+      updatedAt: now,
     })
     resetForm()
+    setEditingEntry(null)
     setShowForm(false)
   }
 
@@ -330,111 +288,157 @@ export function SleepLogger() {
   const sleepPortion = useMemo(() => sleepScore * 0.6, [sleepScore])
   const circadianPortion = useMemo(() => (circadianScore ?? 50) * 0.4, [circadianScore])
 
-  /* ---- FEATURE 1: Sleep Quality Heatmap ---- */
-  const heatmapData = useMemo(() => {
-    const today = new Date()
-    const weeks: { quality: number | null }[][] = []
-    const dayLabels: string[] = []
-
-    for (let w = 3; w >= 0; w--) {
-      const week: { quality: number | null }[] = []
-      for (let d = 6; d >= 0; d--) {
-        const date = new Date(today)
-        date.setDate(date.getDate() - (w * 7 + d))
-        const dateStr = date.toISOString().split('T')[0]
-        const entry = sleep.find(e => e.date === dateStr)
-        week.push({ quality: entry ? entry.quality : null })
-        if (w === 3) {
-          dayLabels.push(date.toLocaleDateString('en-US', { weekday: 'short' }))
-        }
-      }
-      weeks.push(week)
-    }
-    return { weeks, dayLabels }
-  }, [sleep])
-
-  const heatCellColor = (quality: number | null): string => {
-    if (quality === null) return 'bg-white/[0.03]'
-    if (quality >= 5) return 'bg-emerald-400/70'
-    if (quality >= 4) return 'bg-emerald-500/50'
-    if (quality >= 3) return 'bg-amber-500/45'
-    if (quality >= 2) return 'bg-orange-500/40'
-    return 'bg-red-500/40'
-  }
-
-  /* ---- FEATURE 2: Environment Stats ---- */
-  const environmentStats = useMemo(() => {
-    const withCaffeine = sleep.filter(e => parseEnvFromNotes(e.notes)?.caffeine)
-    const withoutCaffeine = sleep.filter(e => {
-      const env = parseEnvFromNotes(e.notes)
-      return env !== null && !env.caffeine
-    })
-    const withExercise = sleep.filter(e => parseEnvFromNotes(e.notes)?.exercise)
-    const withoutExercise = sleep.filter(e => {
-      const env = parseEnvFromNotes(e.notes)
-      return env !== null && !env.exercise
-    })
-
-    const calcAvg = (entries: SleepEntry[]) =>
-      entries.length > 0 ? entries.reduce((s, e) => s + e.duration, 0) / entries.length : null
-
-    const caffeineAvg = calcAvg(withCaffeine)
-    const noCaffeineAvg = calcAvg(withoutCaffeine)
-    const exerciseAvg = calcAvg(withExercise)
-    const noExerciseAvg = calcAvg(withoutExercise)
-
-    return {
-      caffeine: {
-        withAvg: caffeineAvg,
-        withoutAvg: noCaffeineAvg,
-        diff: caffeineAvg !== null && noCaffeineAvg !== null ? caffeineAvg - noCaffeineAvg : null,
-        count: withCaffeine.length,
-      },
-      exercise: {
-        withAvg: exerciseAvg,
-        withoutAvg: noExerciseAvg,
-        diff: exerciseAvg !== null && noExerciseAvg !== null ? exerciseAvg - noExerciseAvg : null,
-        count: withExercise.length,
-      },
-    }
-  }, [sleep])
-
-  /* ---- FEATURE 3: Optimal Bedtime Calculator ---- */
-  const optimalBedtime = useMemo(() => {
-    const goodEntries = sleep.filter(e => e.bedTime && e.quality >= 4)
-    if (goodEntries.length < 2) return null
-    const avgMinutes = goodEntries.reduce((s, e) => s + timeToMinutes(e.bedTime!), 0) / goodEntries.length
-    return {
-      time: minutesToTime(avgMinutes),
-      count: goodEntries.length,
-      total: sleep.filter(e => e.bedTime).length,
-    }
-  }, [sleep])
-
-  /* ---- Custom Tooltip (typed, no `any`) ---- */
+  /* ---- Custom Tooltip ---- */
   const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color?: string; dataKey?: string }>; label?: string }) => {
     if (!active || !payload || payload.length === 0) return null
     return (
       <div className="bg-gray-900/95 border border-white/10 rounded-xl px-3 py-2 shadow-xl backdrop-blur-md">
-        <p className="text-white/80 text-xs font-medium mb-1">{label}</p>
-        {payload.map((p, i) => (
-          <p key={i} className="text-xs" style={{ color: p.color }}>
-            {p.name}: {p.dataKey === 'quality' ? `${p.value}/5` : `${p.value}h`}
-          </p>
-        ))}
+        <p className="text-white/80 text-xs font-medium mb-1.5">{label}</p>
+        {payload.map((p, i) => {
+          if (p.dataKey === 'duration') return <p key={i} className="text-xs text-violet-400">Duration: <strong>{p.value}h</strong> <span className="text-gray-600">/ {targetHours}h goal</span></p>
+          if (p.dataKey === 'quality') return <p key={i} className="text-xs text-emerald-400">Quality: <strong>{p.value}/5</strong></p>
+          if (p.dataKey === 'onset') return <p key={i} className="text-xs text-sky-400">Onset: <strong>{p.value} min</strong> <span className="text-gray-600">(ideal ≤15)</span></p>
+          if (p.dataKey === 'wakings') return <p key={i} className="text-xs text-orange-400">Wakings: <strong>{p.value}x</strong> <span className="text-gray-600">(ideal ≤1)</span></p>
+          return null
+        })}
       </div>
     )
   }
 
+  const trendWeekData = useMemo(() => {
+    const today = new Date()
+    const days = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - (i + trendWeekOffset * 7))
+      const dateStr = d.toISOString().split('T')[0]
+      const entry = sleep.find(e => e.date === dateStr)
+      const prev = new Date(today)
+      prev.setDate(prev.getDate() - (i + 7 + trendWeekOffset * 7))
+      const prevStr = prev.toISOString().split('T')[0]
+      const prevEntry = sleep.find(e => e.date === prevStr)
+      days.push({
+        date: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        fullDate: dateStr,
+        duration: entry ? entry.duration : null,
+        quality: entry ? entry.quality : null,
+        onset: entry?.onsetMinutes ?? null,
+        wakings: entry?.nightWakings ?? null,
+        prevDuration: prevEntry ? prevEntry.duration : null,
+        prevQuality: prevEntry ? prevEntry.quality : null,
+        prevOnset: prevEntry?.onsetMinutes ?? null,
+        prevWakings: prevEntry?.nightWakings ?? null,
+        hasData: !!entry,
+      })
+    }
+    return days
+  }, [sleep, trendWeekOffset])
+
+  const isTrendCurrentWeek = trendWeekOffset === 0
+
+  // Sleep Coach AI-like recommendations
+  const coachInsights = useMemo(() => {
+    const tips: { icon: string; text: string; color: string; category: string }[] = []
+    if (sleep.length < 2) return tips
+    if (consistency.total >= 2) {
+      if (consistency.pct >= 80) tips.push({ icon: '🎯', text: 'Great bedtime consistency! Your rhythm is solid.', color: 'text-emerald-400', category: 'timing' })
+      else if (consistency.pct >= 50) tips.push({ icon: '⏰', text: 'Try going to bed within 30min of your usual time for better consistency.', color: 'text-amber-400', category: 'timing' })
+      else tips.push({ icon: '🔴', text: 'Irregular bedtimes disrupt your circadian rhythm. Aim for a fixed bedtime.', color: 'text-rose-400', category: 'timing' })
+    }
+    if (sleepDebt > 5) tips.push({ icon: '⚠️', text: `Sleep debt of ${sleepDebt}h is high. Prioritize extra rest this week.`, color: 'text-rose-400', category: 'recovery' })
+    else if (sleepDebt > 2) tips.push({ icon: '🌙', text: `You're ${sleepDebt}h behind on sleep. An early night could help.`, color: 'text-amber-400', category: 'recovery' })
+    else if (sleepDebt > 0) tips.push({ icon: '✅', text: `Minimal sleep debt (${sleepDebt}h). Keep it up!`, color: 'text-emerald-400', category: 'recovery' })
+    if (avgDuration < targetHours - 0.5) tips.push({ icon: '📈', text: `Average ${avgDuration.toFixed(1)}h is below your ${targetHours}h target. Try extending by 30min.`, color: 'text-amber-400', category: 'timing' })
+    else if (avgDuration >= targetHours) tips.push({ icon: '💪', text: `You're meeting your ${targetHours}h target on average. Excellent!`, color: 'text-emerald-400', category: 'timing' })
+    const recent = sleep.slice(0, Math.min(5, sleep.length))
+    const hasCaffeine = recent.some(e => {
+      const env = parseEnvFromNotes(e.notes)
+      return env?.caffeine
+    })
+    if (hasCaffeine) tips.push({ icon: '☕', text: 'Caffeine before bed detected. Try avoiding it 6h before sleep.', color: 'text-orange-400', category: 'lifestyle' })
+    const hasScreen = recent.some(e => e.screenTime)
+    if (hasScreen) tips.push({ icon: '📱', text: 'Screen time before bed can delay melatonin. Try a 30min digital wind-down.', color: 'text-violet-400', category: 'environment' })
+    const hasAlcohol = recent.some(e => e.alcohol)
+    if (hasAlcohol) tips.push({ icon: '🍷', text: 'Alcohol reduces REM sleep. Consider skipping it on rest nights.', color: 'text-rose-400', category: 'lifestyle' })
+    if (tips.length === 0) tips.push({ icon: '🧘', text: 'Keep logging to receive personalized sleep coaching.', color: 'text-gray-400', category: 'general' })
+    return tips
+  }, [sleep, consistency, sleepDebt, avgDuration, targetHours, coachRefreshKey])
+
   return (
     <div className="space-y-6">
+
+      {/* Date Navigation + Toolbar */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigateDate(-1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+            <Calendar className="w-4 h-4 text-violet-400 shrink-0" />
+            <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
+              className="bg-transparent border-none text-white font-medium text-sm outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:transition-opacity cursor-pointer" />
+          </div>
+          <button onClick={() => navigateDate(1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          {selectedDate !== formatDate(new Date()) && (
+            <button onClick={jumpToToday} className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="Jump to today">
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {sleep.length > 0 && (
+            <button onClick={() => setShowSleepCoach(p => !p)}
+              className={`p-2 rounded-xl border transition-all ${showSleepCoach ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              title="SleepCoach">
+              <Brain className="w-5 h-5" />
+            </button>
+          )}
+          {sleep.length > 0 && (
+            <button onClick={() => setShowTrendScope(p => !p)}
+              className={`p-2 rounded-xl border transition-all ${showTrendScope ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              title="Sleep Trends">
+              <BarChart3 className="w-5 h-5" />
+            </button>
+          )}
+          <div className="relative">
+            <button onClick={() => setShowSleepSettings(p => !p)}
+              className={`p-2 rounded-xl border transition-all ${showSleepSettings ? 'bg-white/10 border-white/20 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              title="Sleep Target">
+              <Target className="w-5 h-5" />
+            </button>
+            {showSleepSettings && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowSleepSettings(false)} />
+                <div className="absolute right-0 top-10 z-20 w-64 rounded-xl bg-gray-900 border border-white/10 shadow-2xl p-4">
+                  <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-3">Sleep Target</p>
+                  <input type="range" min="4" max="12" step="0.5" value={targetHours}
+                    onChange={e => setTargetHours(parseFloat(e.target.value))}
+                    className="w-full accent-violet-500" />
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-[11px] text-gray-500">4h</span>
+                    <span className="text-sm font-bold text-violet-400 drop-shadow-lg">{targetHours.toFixed(1)}h</span>
+                    <span className="text-[11px] text-gray-500">12h</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          <Button variant="primary" onClick={() => setShowForm(true)}>
+            <Plus className="w-4 h-4 mr-1.5" />
+            Log Sleep
+          </Button>
+        </div>
+      </motion.div>
+
       {/* Stats Dashboard */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-2 md:grid-cols-5 gap-4"
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"
       >
-        {/* Readiness + Recovery Score Breakdown */}
+        {/* Readiness */}
         <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-emerald-500/5 min-h-[7.5rem]">
           <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
           <div className="relative h-full flex flex-col justify-center">
@@ -443,8 +447,10 @@ export function SleepLogger() {
               <span>Readiness</span>
             </div>
             <p className="text-3xl font-bold text-emerald-400 drop-shadow-lg">{readinessScore}<span className="text-sm text-gray-500 ml-1 font-normal">/100</span></p>
-            <p className="text-xs text-gray-500 mt-0.5">{readinessScore >= 80 ? 'Well rested' : readinessScore >= 60 ? 'Ready' : readinessScore >= 40 ? 'Tired' : 'Exhausted'}</p>
-            {/* Recovery Score Breakdown */}
+            <p className="text-xs text-gray-500 mt-0.5">
+              {readinessScore >= 80 ? 'Well rested' : readinessScore >= 60 ? 'Ready' : readinessScore >= 40 ? 'Tired' : 'Exhausted'}
+              {sleep.length >= 2 && <span className="text-gray-600"> · {Math.round(sleepScore + (circadianScore ?? 50))} combined</span>}
+            </p>
             {sleep.length >= 2 && (
               <div className="mt-3 pt-2 border-t border-white/5">
                 <div className="flex items-center justify-between text-[10px] text-gray-500 mb-1">
@@ -452,16 +458,8 @@ export function SleepLogger() {
                   <span className="flex items-center gap-1"><BarChart3 className="w-2.5 h-2.5 text-amber-400" /> Circadian</span>
                 </div>
                 <div className="h-2 rounded-full bg-white/5 overflow-hidden flex">
-                  <div
-                    className="h-full rounded-l-full bg-gradient-to-r from-violet-500 to-violet-400 transition-all duration-500"
-                    style={{ width: `${(sleepPortion / (sleepPortion + circadianPortion)) * 100}%` }}
-                    title={`Sleep contribution: ${Math.round(sleepPortion)}`}
-                  />
-                  <div
-                    className="h-full rounded-r-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all duration-500"
-                    style={{ width: `${(circadianPortion / (sleepPortion + circadianPortion)) * 100}%` }}
-                    title={`Circadian contribution: ${Math.round(circadianPortion)}`}
-                  />
+                  <div className="h-full rounded-l-full bg-gradient-to-r from-violet-500 to-violet-400 transition-all duration-500" style={{ width: `${(sleepPortion / (sleepPortion + circadianPortion)) * 100}%` }} />
+                  <div className="h-full rounded-r-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all duration-500" style={{ width: `${(circadianPortion / (sleepPortion + circadianPortion)) * 100}%` }} />
                 </div>
                 <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
                   <span>{Math.round(sleepPortion)}</span>
@@ -480,7 +478,18 @@ export function SleepLogger() {
               <span>Sleep Score</span>
             </div>
             <p className="text-3xl font-bold text-violet-400 drop-shadow-lg">{sleep.length > 0 ? sleepScore : '--'}</p>
-            <p className="text-xs text-gray-500 mt-1">{sleep.length > 0 ? `${avgDuration.toFixed(1)}h avg` : 'No data'}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {sleep.length > 0
+                ? `${avgDuration.toFixed(1)}h avg · ${avgQuality.toFixed(1)}★ quality`
+                : 'Log your first night'}
+            </p>
+            {sleep.length >= 2 && (
+              <div className="flex items-center gap-2 mt-2 text-[10px] text-gray-500">
+                <span className="flex items-center gap-1">Duration <span className={`font-semibold ${avgDuration >= targetHours ? 'text-emerald-400' : 'text-amber-400'}`}>{Math.min(100, Math.round((avgDuration / targetHours) * 100))}%</span></span>
+                <span className="text-gray-600">·</span>
+                <span className="flex items-center gap-1">Quality <span className={`font-semibold ${avgQuality >= 4 ? 'text-emerald-400' : 'text-amber-400'}`}>{Math.round((avgQuality / 5) * 100)}%</span></span>
+              </div>
+            )}
           </div>
         </div>
         {/* Avg Duration */}
@@ -494,651 +503,436 @@ export function SleepLogger() {
             <p className="text-3xl font-bold text-sky-400 drop-shadow-lg">
               {sleep.length > 0 ? formatSleepDuration(avgDuration) : '--'}
             </p>
-          </div>
-        </div>
-          {/* Circadian Score */}
-          <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-amber-500/5 min-h-[7.5rem]">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
-            <div className="relative h-full flex flex-col justify-center">
-              <div className="flex items-center gap-2 text-amber-400/80 text-sm mb-1">
-                <BarChart3 className="w-4 h-4" />
-                <span>Circadian</span>
-              </div>
-              <p className="text-3xl font-bold text-amber-400 drop-shadow-lg">{circadianScore ?? '--'}</p>
-              <p className="text-xs text-gray-500 mt-1">{circadianScore != null ? (circadianScore >= 80 ? 'Consistent' : circadianScore >= 50 ? 'Fair' : 'Irregular') : 'Need more data'}</p>
-            </div>
-          </div>
-          {/* Sleep Debt */}
-          <div className="relative overflow-hidden rounded-2xl border border-rose-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-rose-500/5 min-h-[7.5rem]">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-rose-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
-            <div className="relative h-full flex flex-col justify-center">
-              <div className="flex items-center gap-2 text-rose-400/80 text-sm mb-1">
-                <AlertTriangle className="w-4 h-4" />
-                <span>Sleep Debt</span>
-              </div>
-              <p className="text-3xl font-bold text-rose-400 drop-shadow-lg">{sleepDebt.toFixed(1)}<span className="text-sm text-gray-500 ml-1 font-normal">hrs</span></p>
-              <p className="text-xs text-gray-500 mt-1">this week</p>
-            </div>
-          </div>
-          {/* Goal Met % */}
-          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-emerald-500/5 min-h-[7.5rem]">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
-            <div className="relative h-full flex flex-col justify-center">
-              <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-1">
-                <Target className="w-4 h-4" />
-                <span>Goal Met</span>
-              </div>
-              <p className="text-3xl font-bold text-emerald-400 drop-shadow-lg">{sleep.length > 0 ? goalMetPct : 0}<span className="text-sm text-gray-500 ml-1 font-normal">%</span></p>
-              <p className="text-xs text-gray-500 mt-1">{goalMetCount} of {sleep.length} nights</p>
-            </div>
-          </div>
-      </motion.div>
-
-      {/* Goal Setting */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-        className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/12 via-violet-500/5 to-transparent p-5 shadow-lg shadow-violet-500/5"
-      >
-        <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full -mr-16 -mt-16 blur-xl" />
-        <div className="absolute bottom-0 left-0 w-20 h-20 bg-emerald-500/5 rounded-full -ml-10 -mb-10 blur-lg" />
-        <div className="relative">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/30 to-purple-500/10 flex items-center justify-center shadow-lg shadow-violet-500/10">
-                <Target className="w-5 h-5 text-violet-300" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">Daily Sleep Goal</p>
-                <p className="text-xs text-gray-500">
-                  <span className={goalMetPct >= 80 ? 'text-green-400' : goalMetPct >= 50 ? 'text-amber-400' : 'text-rose-400'}>{goalMetPct}%</span> of nights met
-                  <span className="text-gray-600 ml-1">({goalMetCount}/{sleep.length})</span>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-white/[0.03] rounded-xl p-1 border border-white/5">
-                <button
-                  onClick={() => setTargetHours(h => Math.max(4, +(h - 0.5).toFixed(1)))}
-                  className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 text-white/70 hover:bg-gradient-to-br hover:from-violet-500/20 hover:to-transparent hover:border-violet-500/30 hover:text-white hover:shadow-lg hover:shadow-violet-500/5 flex items-center justify-center text-sm transition-all duration-200"
-                >
-                  -
-                </button>
-                <div className="relative">
-                  <input
-                    type="number"
-                    step="0.5"
-                    min={4}
-                    max={12}
-                    value={targetHours}
-                    onChange={e => setTargetHours(Math.max(4, Math.min(12, parseFloat(e.target.value) || 8)))}
-                    className="w-16 text-center px-2 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium focus:border-violet-500/50 focus:outline-none focus:shadow-lg focus:shadow-violet-500/5 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <span className="absolute -right-0.5 top-1/2 -translate-y-1/2 text-xs text-gray-500 pointer-events-none">h</span>
-                </div>
-                <button
-                  onClick={() => setTargetHours(h => Math.min(12, +(h + 0.5).toFixed(1)))}
-                  className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 text-white/70 hover:bg-gradient-to-br hover:from-violet-500/20 hover:to-transparent hover:border-violet-500/30 hover:text-white hover:shadow-lg hover:shadow-violet-500/5 flex items-center justify-center text-sm transition-all duration-200"
-                >
-                  +
-                </button>
-              </div>
-              <div className="hidden sm:flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                <span className="text-gray-500">Avg:</span>
-                <span className={`font-semibold ${avgDuration >= targetHours ? 'text-green-400' : 'text-amber-400'}`}>
-                  {formatSleepDuration(avgDuration)}
-                </span>
-                <span className="text-gray-500">/ {formatSleepDuration(targetHours)}</span>
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 h-2.5 rounded-full bg-white/5 overflow-hidden shadow-inner">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-violet-500 via-purple-400 to-emerald-400 transition-all duration-700 ease-out shadow-sm shadow-violet-500/30"
-              style={{ width: `${Math.min(100, (avgDuration / targetHours) * 100)}%` }}
-            />
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* 7-Day Trend */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.08] to-transparent p-5 shadow-lg shadow-violet-500/5"
-        >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full -mr-16 -mt-16 blur-xl" />
-          <div className="relative">
-            <h4 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-5 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-violet-400" />
-              7-Day Trend
-            </h4>
-            {last7Days.some(d => d.hasData) ? (
-              <ResponsiveContainer width="100%" height={240}>
-                <LineChart data={last7Days}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                  <XAxis dataKey="date" stroke="#ffffff40" fontSize={11} tickMargin={4} />
-                  <YAxis
-                    yAxisId="left"
-                    stroke="#8B5CF6"
-                    fontSize={11}
-                    domain={[0, 'auto']}
-                    tickMargin={4}
-                  />
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    stroke="#F59E0B"
-                    fontSize={11}
-                    domain={[0, 5]}
-                    ticks={[1, 2, 3, 4, 5]}
-                    tickMargin={4}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Line
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="duration"
-                    stroke="#8B5CF6"
-                    strokeWidth={3}
-                    dot={{ fill: '#8B5CF6', strokeWidth: 0, r: 4 }}
-                    activeDot={{ r: 7, fill: '#8B5CF6', stroke: '#1a1a2e', strokeWidth: 2 }}
-                    name="Duration"
-                    connectNulls
-                  />
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="quality"
-                    stroke="#F59E0B"
-                    strokeWidth={3}
-                    dot={{ fill: '#F59E0B', strokeWidth: 0, r: 4 }}
-                    activeDot={{ r: 7, fill: '#F59E0B', stroke: '#1a1a2e', strokeWidth: 2 }}
-                    name="Quality"
-                    connectNulls
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[240px] flex items-center justify-center text-gray-500 text-sm">
-                No data yet
-              </div>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Duration Distribution */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-4 sm:p-5"
-        >
-          <h4 className="text-sm font-medium text-gray-400 mb-4 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-blue-400" />
-            Duration Distribution
-          </h4>
-          {sleep.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={durationDist}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
-                <XAxis dataKey="label" stroke="#ffffff40" fontSize={11} tickMargin={4} />
-                <YAxis allowDecimals={false} stroke="#ffffff40" fontSize={11} tickMargin={4} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1a1a2ee6',
-                    border: '1px solid #ffffff20',
-                    borderRadius: '12px',
-                    backdropFilter: 'blur(8px)',
-                    fontSize: '12px',
-                  }}
-                  labelStyle={{ color: '#fff' }}
-                />
-                <Bar
-                  dataKey="count"
-                  radius={[6, 6, 0, 0]}
-                  maxBarSize={40}
-                  fill="#8B5CF6"
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-[200px] flex items-center justify-center text-gray-500 text-sm">
-              Log sleep to see distribution
-            </div>
-          )}
-        </motion.div>
-      </div>
-
-      {/* Second Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Bed/Wake Time Patterns */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-4 sm:p-5"
-        >
-          <h4 className="text-sm font-medium text-gray-400 mb-4 flex items-center gap-2">
-            <Moon className="w-4 h-4 text-indigo-400" />
-            Bed/Wake Patterns
-          </h4>
-          {hasBedWakeData ? (
-            <div className="relative h-[200px]">
-              {/* Hour grid lines */}
-              {[0, 3, 6, 9, 12, 15, 18, 21, 24].map(h => (
-                <div
-                  key={h}
-                  className="absolute bottom-0 top-0 border-l border-white/[0.03] text-[10px] text-gray-600 pt-1"
-                  style={{ left: `${(h / 24) * 100}%` }}
-                >
-                  <span className="pl-1">{h === 24 ? '0' : h}</span>
-                </div>
-              ))}
-              {/* Sleep bars */}
-              {bedWakeEntries.map((e, i) => {
-                const bedMins = timeToMinutes(e.bedTime!)
-                const wakeMins = timeToMinutes(e.wakeTime!)
-                const bedPct = (bedMins / (24 * 60)) * 100
-                const durMins = wakeMins >= bedMins ? wakeMins - bedMins : wakeMins + 24 * 60 - bedMins
-                const durPct = (durMins / (24 * 60)) * 100
-                const barHeight = Math.max(12, 75 / bedWakeEntries.length)
-                return (
-                  <div
-                    key={e.id}
-                    className="absolute rounded-full transition-all hover:opacity-80"
-                    style={{
-                      left: `${bedPct}%`,
-                      width: `${durPct}%`,
-                      top: `${(i / bedWakeEntries.length) * 100}%`,
-                      height: `${barHeight}%`,
-                      maxHeight: '20px',
-                      minHeight: '8px',
-                      background: `linear-gradient(90deg, 
-                        ${e.quality >= 4 ? 'rgba(74,222,128,0.5)' : e.quality >= 3 ? 'rgba(251,191,36,0.5)' : 'rgba(248,113,113,0.5)'}, 
-                        ${e.quality >= 4 ? 'rgba(74,222,128,0.3)' : e.quality >= 3 ? 'rgba(251,191,36,0.3)' : 'rgba(248,113,113,0.3)'})`,
-                      border: `1px solid ${
-                        e.quality >= 4
-                          ? 'rgba(74,222,128,0.3)'
-                          : e.quality >= 3
-                          ? 'rgba(251,191,36,0.3)'
-                          : 'rgba(248,113,113,0.3)'
-                      }`,
-                    }}
-                    title={`${e.bedTime} - ${e.wakeTime} (${formatSleepDuration(e.duration)})`}
-                  />
-                )
-              })}
-              {/* Legend */}
-              <div className="absolute bottom-1 left-0 right-0 flex justify-center gap-4 text-[10px] text-gray-500">
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-green-400/50" /> Good
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-amber-400/50" /> Okay
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-red-400/50" /> Poor
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="h-[200px] flex items-center justify-center text-gray-500 text-sm">
-              Log bed & wake times to see patterns
-            </div>
-          )}
-        </motion.div>
-
-        {/* Consistency + Sleep Debt */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="space-y-4"
-        >
-          {/* Consistency */}
-          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2 text-sm text-gray-400">
-                <Clock className="w-4 h-4 text-violet-400" />
-                <span>Bedtime Consistency</span>
-              </div>
-              <span className={`text-lg font-bold ${consistency.pct >= 70 ? 'text-green-400' : consistency.pct >= 40 ? 'text-amber-400' : 'text-red-400'}`}>
-                {consistency.total >= 2 ? `${consistency.pct}%` : '--'}
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className={`text-[10px] ${avgDuration >= targetHours ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {sleep.length > 0 ? (avgDuration >= targetHours ? '✓ on target' : `${(targetHours - avgDuration).toFixed(1)}h short`) : ''}
               </span>
             </div>
-            {consistency.total >= 2 ? (
-              <>
-                <div className="h-2 rounded-full bg-white/5 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-blue-500 transition-all duration-500"
-                    style={{ width: `${consistency.pct}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  {consistency.total} nights with bed time tracked
-                </p>
-              </>
-            ) : (
-              <p className="text-xs text-gray-500">Need at least 2 entries with bed time</p>
+            {sleep.length >= 2 && (
+              <p className="text-[10px] text-gray-600 mt-1">
+                <span className="text-emerald-400/70">{goalMetCount}</span> of <span className="text-white/70">{sleep.length}</span> nights on target
+                {sleep.length >= 3 && (
+                  <> · Best <span className="text-white/70 font-medium">{formatSleepDuration(Math.max(...sleep.map(e => e.duration)))}</span></>
+                )}
+              </p>
             )}
           </div>
-
-          {/* Sleep Debt */}
-          <div className="rounded-2xl border border-red-500/15 bg-gradient-to-br from-red-500/5 to-transparent p-4 sm:p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm text-gray-400">
-                <AlertTriangle className="w-4 h-4 text-red-400" />
-                <span>Cumulative Sleep Debt</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {sleepDebt > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-medium">
-                    {sleepDebt.toFixed(1)}h owed
-                  </span>
-                )}
-                <span className={`text-lg font-bold ${sleepDebt > 5 ? 'text-red-400' : sleepDebt > 2 ? 'text-amber-400' : 'text-green-400'}`}>
-                  {sleepDebt > 0 ? `${sleepDebt.toFixed(1)}h` : '0h'}
-                </span>
-              </div>
+        </div>
+        {/* Circadian Score */}
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-amber-500/5 min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
+          <div className="relative h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 text-amber-400/80 text-sm mb-1">
+              <BarChart3 className="w-4 h-4" />
+              <span>Circadian</span>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Against {formatSleepDuration(targetHours)} target per night
+            <p className="text-3xl font-bold text-amber-400 drop-shadow-lg">{circadianScore ?? '--'}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {circadianScore != null
+                ? (circadianScore >= 80 ? 'Consistent rhythm' : circadianScore >= 50 ? 'Fair rhythm' : 'Irregular')
+                : 'Need 3+ entries'}
             </p>
+            {consistency.total >= 2 && (
+              <>
+                <p className="text-[10px] text-gray-600 mt-0.5">{consistency.pct}% bedtime consistency</p>
+                {(() => {
+                  const bedTimes = sleep.filter(e => e.bedTime).map(e => timeToMinutes(e.bedTime!))
+                  if (bedTimes.length < 2) return null
+                  const avgBed = Math.round(bedTimes.reduce((a, b) => a + b, 0) / bedTimes.length)
+                  const hrs = Math.floor(avgBed / 60)
+                  const mins = avgBed % 60
+                  return <p className="text-[10px] text-gray-600">Avg bedtime: <span className="text-white/70">{hrs}:{mins.toString().padStart(2, '0')}</span></p>
+                })()}
+              </>
+            )}
           </div>
-        </motion.div>
-      </div>
-
-      {/* FEATURE 1: Sleep Quality Heatmap */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.28 }}
-        className="relative overflow-hidden rounded-2xl border border-violet-500/15 bg-gradient-to-br from-violet-500/5 to-transparent p-5 shadow-lg shadow-violet-500/5"
-      >
-        <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full -mr-12 -mt-12 blur-xl" />
-        <div className="relative">
-          <h4 className="text-sm font-medium text-gray-400 mb-4 flex items-center gap-2">
-            <Activity className="w-4 h-4 text-emerald-400" />
-            Sleep Quality Heatmap
-            <span className="text-[10px] text-gray-600 font-normal ml-1">4-week overview</span>
-          </h4>
-          {sleep.length > 0 ? (
-            <div className="overflow-x-auto">
-              <div className="grid grid-cols-[auto_repeat(4,1fr)] gap-1 min-w-[280px]">
-                {/* Header row */}
-                <div className="text-[10px] text-gray-600 h-5" />
-                {heatmapData.weeks.map((_, wi) => (
-                  <div key={wi} className="text-[10px] text-gray-600 text-center h-5">
-                    W{wi + 1}
-                  </div>
-                ))}
-                {/* Day rows */}
-                {heatmapData.dayLabels.map((dayLabel, di) => (
-                  <div key={dayLabel} className="contents">
-                    <div className="text-[10px] text-gray-500 pr-2 flex items-center h-6">
-                      {dayLabel}
-                    </div>
-                    {heatmapData.weeks.map((week, wi) => {
-                      const cell = week[di]
-                      return (
-                        <div
-                          key={`${wi}-${di}`}
-                          className={`h-6 rounded-md ${heatCellColor(cell ? cell.quality : null)} border border-white/[0.04] transition-all hover:scale-110 hover:ring-1 hover:ring-white/20 cursor-default`}
-                          title={
-                            cell && cell.quality != null
-                              ? `${dayLabel} W${wi + 1}: ${qualityLabel(cell.quality)} (${cell.quality}/5)`
-                              : `${dayLabel} W${wi + 1}: No data`
-                          }
-                        />
-                      )
-                    })}
-                  </div>
-                ))}
-              </div>
-              {/* Legend */}
-              <div className="flex items-center gap-3 mt-3 text-[10px] text-gray-500">
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-white/[0.03]" /> No data</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-red-500/40" /> Poor</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-orange-500/40" /> Fair</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-amber-500/45" /> Okay</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-emerald-500/50" /> Good</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-emerald-400/70" /> Great</span>
-              </div>
+        </div>
+        {/* Sleep Debt */}
+        <div className="relative overflow-hidden rounded-2xl border border-rose-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-rose-500/5 min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-rose-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
+          <div className="relative h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 text-rose-400/80 text-sm mb-1">
+              <AlertTriangle className="w-4 h-4" />
+              <span>Sleep Debt</span>
             </div>
-          ) : (
-            <div className="h-16 flex items-center justify-center text-gray-500 text-sm">
-              Log sleep to see heatmap
+            <p className="text-3xl font-bold text-rose-400 drop-shadow-lg">{sleepDebt.toFixed(1)}<span className="text-sm text-gray-500 ml-1 font-normal">hrs</span></p>
+            <p className="text-xs text-gray-500 mt-1">
+              {sleepDebt <= 0 ? 'No debt 🎉' : daysToRecover > 14 ? `Need ~${daysToRecover} early nights` : `${daysToRecover} early nights to recover`}
+            </p>
+            {sleepDebt > 0 && (
+              <p className="text-[10px] text-gray-600 mt-0.5">
+                {sleepDebt >= 10 ? 'Critical — prioritize rest' : sleepDebt >= 5 ? 'High — schedule recovery' : 'Manageable — stay consistent'}
+              </p>
+            )}
+          </div>
+        </div>
+        {/* Goal Met */}
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-emerald-500/5 min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
+          <div className="relative h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-1">
+              <Target className="w-4 h-4" />
+              <span>Goal Met</span>
             </div>
-          )}
+            <p className="text-3xl font-bold text-emerald-400 drop-shadow-lg">{sleep.length > 0 ? goalMetPct : 0}<span className="text-sm text-gray-500 ml-1 font-normal">%</span></p>
+            <p className="text-xs text-gray-500 mt-1">{goalMetCount} of {sleep.length} nights</p>
+            {(() => {
+              const streak = [...sleep].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).reduce((count, e) => {
+                if (e.duration >= targetHours) return count + 1
+                return -1
+              }, 0)
+              const currentStreak = streak > 0 ? streak : 0
+              return currentStreak > 0
+                ? <p className="text-[10px] text-emerald-400/70 mt-0.5">🔥 {currentStreak}-night streak</p>
+                : null
+            })()}
+            {recentWeek.length > 0 && (
+              <p className={`text-[10px] mt-0.5 ${last7GoalPct >= 80 ? 'text-emerald-400/70' : last7GoalPct >= 50 ? 'text-amber-400/70' : 'text-rose-400/70'}`}>
+                Last 7 days: {last7GoalHit}/{recentWeek.length} ({last7GoalPct}%)
+              </p>
+            )}
+          </div>
         </div>
       </motion.div>
 
-      {/* Insights Panel + Environment Stats */}
-      {(insights.length > 0 || environmentStats.caffeine.count > 0 || environmentStats.exercise.count > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Insights */}
+      {/* DreamScope Panel */}
+      <AnimatePresence>
+        {showTrendScope && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="rounded-2xl border border-violet-500/15 bg-gradient-to-br from-violet-500/5 to-transparent p-4 sm:p-5"
+            exit={{ opacity: 0, y: -12 }}
+            className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4 overflow-hidden"
           >
-            <h4 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
-              <Brain className="w-4 h-4 text-violet-400" />
-              Sleep Insights
-            </h4>
-            <div className="space-y-2">
-              {insights.length > 0 ? (
-                insights.map((insight, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2.5 text-sm px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04]"
-                  >
-                    <insight.icon className={`w-4 h-4 shrink-0 ${insight.color}`} />
-                    <span className="text-gray-300">{insight.text}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="flex items-center gap-2.5 text-sm px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                  <Moon className="w-4 h-4 text-gray-500" />
-                  <span className="text-gray-500">Log 3+ nights to see personalized insights</span>
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-amber-500/5 pointer-events-none" />
+            <div className="relative">
+              {/* Header */}
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setTrendWeekOffset(o => o + 1)} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">
+                    {trendWeekData[0]?.fullDate && trendWeekData[6]?.fullDate
+                      ? `${new Date(trendWeekData[0].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${new Date(trendWeekData[6].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                      : '—'}
+                  </span>
+                  <button onClick={() => setTrendWeekOffset(o => o - 1)} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  {!isTrendCurrentWeek && (
+                    <button onClick={() => setTrendWeekOffset(0)} className="p-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
+                <div className="flex items-center gap-1 bg-white/5 rounded-xl p-0.5 border border-white/10">
+                    {(['duration', 'quality', 'onset', 'wakings'] as const).map(mode => (
+                      <button key={mode} onClick={() => setTrendChartMode(mode)}
+                        className={`px-2.5 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all ${
+                          trendChartMode === mode
+                            ? mode === 'duration' ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
+                            : mode === 'quality' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            : mode === 'onset' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                            : 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+                            : 'text-gray-500 hover:text-white'
+                        }`}>
+                        {mode === 'duration' ? 'Duration' : mode === 'quality' ? 'Quality' : mode === 'onset' ? 'Onset' : 'Wakings'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+              {/* Chart */}
+              <div className="h-56" style={{ minHeight: '220px' }}>
+                {trendWeekData.some(d => d.hasData) ? (
+                  <ResponsiveContainer key="dreamscope-chart" width="100%" height="100%">
+                    {trendChartMode === 'duration' ? (
+                      <BarChart data={trendWeekData} barGap={2} barCategoryGap="20%">
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                        <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
+                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                        <Bar dataKey="duration" radius={[4, 4, 0, 0]}>
+                          {trendWeekData.map((entry) => (
+                            <Cell key={entry.fullDate} fill={entry.duration && entry.duration >= targetHours ? '#C084FC' : entry.duration && entry.duration >= targetHours * 0.85 ? '#A78BFA' : '#7C3AED'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    ) : trendChartMode === 'quality' ? (
+                      <BarChart data={trendWeekData} barGap={2} barCategoryGap="20%">
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                        <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 5]} ticks={[1, 2, 3, 4, 5]} />
+                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                        <Bar dataKey="quality" radius={[4, 4, 0, 0]}>
+                          {trendWeekData.map((entry) => (
+                            <Cell key={entry.fullDate} fill={entry.quality && entry.quality >= 4 ? '#34D399' : entry.quality && entry.quality >= 3 ? '#FBBF24' : '#F87171'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    ) : trendChartMode === 'onset' ? (
+                      <BarChart data={trendWeekData} barGap={2} barCategoryGap="20%">
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                        <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
+                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                        <Bar dataKey="onset" radius={[4, 4, 0, 0]}>
+                          {trendWeekData.map((entry) => (
+                            <Cell key={entry.fullDate} fill={entry.onset != null && entry.onset <= 15 ? '#38BDF8' : entry.onset != null && entry.onset <= 30 ? '#FB923C' : '#F43F5E'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    ) : (
+                      <BarChart data={trendWeekData} barGap={2} barCategoryGap="20%">
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                        <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, 'auto']} />
+                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                        <Bar dataKey="wakings" radius={[4, 4, 0, 0]}>
+                          {trendWeekData.map((entry) => (
+                            <Cell key={entry.fullDate} fill={entry.wakings != null && entry.wakings <= 1 ? '#FB923C' : entry.wakings != null && entry.wakings <= 3 ? '#FBBF24' : '#EF4444'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    )}
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-gray-500 text-sm">No data this week</div>
+                )}
+              </div>
+
+              {/* Per-mode context strip */}
+              {trendWeekData.some(d => d.hasData) && (
+                <>
+                  {trendChartMode === 'duration' && (() => {
+                    const logged = trendWeekData.filter(d => d.hasData && d.duration)
+                    if (!logged.length) return null
+                    const avg = logged.reduce((s, d) => s + (d.duration || 0), 0) / logged.length
+                    const best = logged.reduce((a, b) => (a.duration || 0) > (b.duration || 0) ? a : b)
+                    const worst = logged.reduce((a, b) => (a.duration || 0) < (b.duration || 0) ? a : b)
+                    return (
+                      <div className="flex items-center justify-center gap-4 mt-3 pt-3 border-t border-white/5 text-[10px] text-gray-500">
+                        <span>Avg <span className={`font-semibold ${avg >= targetHours ? 'text-emerald-400' : avg >= targetHours * 0.85 ? 'text-amber-400' : 'text-rose-400'}`}>{formatSleepDuration(avg)}</span> / {targetHours}h goal</span>
+                        <span>Best <span className="text-emerald-400 font-semibold">{new Date(best.fullDate).toLocaleDateString('en-US', { weekday: 'short' })}</span> <span className="text-gray-600">({formatSleepDuration(best.duration || 0)})</span></span>
+                        <span>Worst <span className="text-rose-400 font-semibold">{new Date(worst.fullDate).toLocaleDateString('en-US', { weekday: 'short' })}</span> <span className="text-gray-600">({formatSleepDuration(worst.duration || 0)})</span></span>
+                      </div>
+                    )
+                  })()}
+                  {trendChartMode === 'quality' && (() => {
+                    const logged = trendWeekData.filter(d => d.hasData && d.quality)
+                    if (!logged.length) return null
+                    const avg = logged.reduce((s, d) => s + (d.quality || 0), 0) / logged.length
+                    const best = logged.reduce((a, b) => (a.quality || 0) > (b.quality || 0) ? a : b)
+                    const worst = logged.reduce((a, b) => (a.quality || 0) < (b.quality || 0) ? a : b)
+                    return (
+                      <div className="flex items-center justify-center gap-4 mt-3 pt-3 border-t border-white/5 text-[10px] text-gray-500">
+                        <span>Avg <span className={`font-semibold ${avg >= 4 ? 'text-emerald-400' : avg >= 3 ? 'text-amber-400' : 'text-rose-400'}`}>{avg.toFixed(1)}★</span></span>
+                        <span>Best <span className="text-emerald-400 font-semibold">{new Date(best.fullDate).toLocaleDateString('en-US', { weekday: 'short' })}</span> <span className="text-gray-600">({(best.quality || 0).toFixed(1)})</span></span>
+                        <span>Worst <span className="text-rose-400 font-semibold">{new Date(worst.fullDate).toLocaleDateString('en-US', { weekday: 'short' })}</span> <span className="text-gray-600">({(worst.quality || 0).toFixed(1)})</span></span>
+                      </div>
+                    )
+                  })()}
+                  {trendChartMode === 'onset' && (() => {
+                    const logged = trendWeekData.filter(d => d.hasData && d.onset != null)
+                    if (!logged.length) return null
+                    const avg = logged.reduce((s, d) => s + (d.onset || 0), 0) / logged.length
+                    const best = logged.reduce((a, b) => (a.onset || 0) < (b.onset || 0) ? a : b)
+                    const worst = logged.reduce((a, b) => (a.onset || 0) > (b.onset || 0) ? a : b)
+                    return (
+                      <div className="flex items-center justify-center gap-4 mt-3 pt-3 border-t border-white/5 text-[10px] text-gray-500">
+                        <span>Avg <span className={`font-semibold ${avg <= 15 ? 'text-emerald-400' : avg <= 30 ? 'text-amber-400' : 'text-rose-400'}`}>{avg.toFixed(0)}m</span> onset</span>
+                        <span>Best <span className="text-emerald-400 font-semibold">{new Date(best.fullDate).toLocaleDateString('en-US', { weekday: 'short' })}</span> <span className="text-gray-600">({(best.onset || 0).toFixed(0)}m)</span></span>
+                        <span>Worst <span className="text-rose-400 font-semibold">{new Date(worst.fullDate).toLocaleDateString('en-US', { weekday: 'short' })}</span> <span className="text-gray-600">({(worst.onset || 0).toFixed(0)}m)</span></span>
+                      </div>
+                    )
+                  })()}
+                  {trendChartMode === 'wakings' && (() => {
+                    const logged = trendWeekData.filter(d => d.hasData && d.wakings != null)
+                    if (!logged.length) return null
+                    const avg = logged.reduce((s, d) => s + (d.wakings || 0), 0) / logged.length
+                    const best = logged.reduce((a, b) => (a.wakings || 0) < (b.wakings || 0) ? a : b)
+                    const worst = logged.reduce((a, b) => (a.wakings || 0) > (b.wakings || 0) ? a : b)
+                    return (
+                      <div className="flex items-center justify-center gap-4 mt-3 pt-3 border-t border-white/5 text-[10px] text-gray-500">
+                        <span>Avg <span className={`font-semibold ${avg <= 1 ? 'text-emerald-400' : avg <= 3 ? 'text-amber-400' : 'text-rose-400'}`}>{avg.toFixed(1)}</span> wakings</span>
+                        <span>Best <span className="text-emerald-400 font-semibold">{new Date(best.fullDate).toLocaleDateString('en-US', { weekday: 'short' })}</span> <span className="text-gray-600">({(best.wakings || 0).toFixed(0)})</span></span>
+                        <span>Worst <span className="text-rose-400 font-semibold">{new Date(worst.fullDate).toLocaleDateString('en-US', { weekday: 'short' })}</span> <span className="text-gray-600">({(worst.wakings || 0).toFixed(0)})</span></span>
+                      </div>
+                    )
+                  })()}
+                </>
               )}
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
 
-          {/* FEATURE 2: Environment Stats */}
+      {/* SleepCoach Panel */}
+      <AnimatePresence>
+        {showSleepCoach && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.32 }}
-            className="rounded-2xl border border-amber-500/15 bg-gradient-to-br from-amber-500/5 to-transparent p-4 sm:p-5"
+            exit={{ opacity: 0, y: -12 }}
+            className="rounded-2xl border border-emerald-500/15 bg-black/60 backdrop-blur-xl p-4 overflow-hidden relative"
           >
-            <h4 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
-              <Sun className="w-4 h-4 text-amber-400" />
-              Sleep Environment Impact
-            </h4>
-            {environmentStats.caffeine.count === 0 && environmentStats.exercise.count === 0 ? (
-              <div className="flex items-center gap-2.5 text-sm px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                <Coffee className="w-4 h-4 text-gray-500" />
-                <span className="text-gray-500">Log caffeine & exercise data to see their impact</span>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {environmentStats.caffeine.count > 0 && (
-                  <div className="px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                    <div className="flex items-center gap-2 text-sm mb-1">
-                      <Coffee className="w-4 h-4 text-orange-400 shrink-0" />
-                      <span className="text-gray-300 font-medium">Caffeine Before Bed</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      {environmentStats.caffeine.diff !== null ? (
-                        <>
-                          <span className="text-gray-500">
-                            With: {environmentStats.caffeine.withAvg!.toFixed(1)}h
-                            <span className="mx-1 text-gray-600">|</span>
-                            Without: {environmentStats.caffeine.withoutAvg!.toFixed(1)}h
-                          </span>
-                          <span className={environmentStats.caffeine.diff < 0 ? 'text-red-400' : 'text-green-400'}>
-                            {environmentStats.caffeine.diff > 0 ? '+' : ''}{environmentStats.caffeine.diff.toFixed(2)}h
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-gray-500">
-                          Tracked {environmentStats.caffeine.count}x &mdash; need more data for comparison
-                        </span>
-                      )}
-                    </div>
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-violet-500/5 pointer-events-none" />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400/20 to-emerald-500/20 border border-emerald-500/20 flex items-center justify-center">
+                    <SparklesIcon className="w-3.5 h-3.5 text-emerald-400" />
                   </div>
-                )}
-                {environmentStats.exercise.count > 0 && (
-                  <div className="px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                    <div className="flex items-center gap-2 text-sm mb-1">
-                      <Dumbbell className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span className="text-gray-300 font-medium">Exercise That Day</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      {environmentStats.exercise.diff !== null ? (
-                        <>
-                          <span className="text-gray-500">
-                            With: {environmentStats.exercise.withAvg!.toFixed(1)}h
-                            <span className="mx-1 text-gray-600">|</span>
-                            Without: {environmentStats.exercise.withoutAvg!.toFixed(1)}h
-                          </span>
-                          <span className={environmentStats.exercise.diff < 0 ? 'text-red-400' : 'text-green-400'}>
-                            {environmentStats.exercise.diff > 0 ? '+' : ''}{environmentStats.exercise.diff.toFixed(2)}h
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-gray-500">
-                          Tracked {environmentStats.exercise.count}x &mdash; need more data for comparison
-                        </span>
-                      )}
-                    </div>
+                  <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">SleepCoach</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button onClick={() => setCoachRefreshKey(k => k + 1)}
+                    className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all group"
+                    title="Refresh insights">
+                    <RefreshCw className="w-3 h-3 text-gray-500 group-hover:text-white transition-colors" />
+                  </button>
+                  <div className="relative">
+                    <button onClick={() => setShowCoachPref(p => !p)}
+                      className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${showCoachPref ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:bg-white/10'}`}
+                      title="Coach preferences">
+                      <Settings className="w-3 h-3" />
+                    </button>
+                    {showCoachPref && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setShowCoachPref(false)} />
+                        <div className="absolute right-0 top-8 z-20 w-48 rounded-xl bg-gray-900 border border-white/10 shadow-2xl p-3">
+                          <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Sleep Chronotype</p>
+                          <div className="flex flex-col gap-1">
+                            {([
+                              { key: 'balanced', label: '⚖️ Balanced' },
+                              { key: 'early_bird', label: '🌅 Early Bird' },
+                              { key: 'night_owl', label: '🦉 Night Owl' },
+                            ] as const).map(opt => (
+                              <button key={opt.key} onClick={() => { setCoachPref(opt.key); setShowCoachPref(false) }}
+                                className={`text-left px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${coachPref === opt.key ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
-            )}
+
+              {/* Stats summary bar */}
+              <div className="flex items-center gap-4 mb-4 px-1">
+                <div className="text-center">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">Score</p>
+                  <p className="text-lg font-bold text-violet-400">{sleep.length > 0 ? sleepScore : '--'}</p>
+                </div>
+                <div className="w-px h-8 bg-white/10" />
+                <div className="text-center">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">Avg</p>
+                  <p className="text-lg font-bold text-sky-400">{sleep.length > 0 ? formatSleepDuration(avgDuration) : '--'}</p>
+                </div>
+                <div className="w-px h-8 bg-white/10" />
+                <div className="text-center">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">Consist.</p>
+                  <p className={`text-lg font-bold ${consistency.pct >= 70 ? 'text-green-400' : consistency.pct >= 40 ? 'text-amber-400' : 'text-rose-400'}`}>
+                    {consistency.total >= 2 ? `${consistency.pct}%` : '--'}
+                  </p>
+                </div>
+                <div className="w-px h-8 bg-white/10" />
+                <div className="text-center">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">Debt</p>
+                  <p className="text-lg font-bold text-rose-400">{sleepDebt.toFixed(1)}<span className="text-[9px] text-gray-500 ml-0.5">h</span></p>
+                </div>
+              </div>
+
+              {/* Top Stats: Consistency + Debt */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                      <Clock className="w-3 h-3 text-violet-400" />
+                      <span>Consistency</span>
+                    </div>
+                    <span className={`text-sm font-bold ${consistency.pct >= 70 ? 'text-green-400' : consistency.pct >= 40 ? 'text-amber-400' : 'text-red-400'}`}>
+                      {consistency.total >= 2 ? `${consistency.pct}%` : '--'}
+                    </span>
+                  </div>
+                  {consistency.total >= 2 ? (
+                    <>
+                      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                        <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-blue-500 transition-all duration-500" style={{ width: `${consistency.pct}%` }} />
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-1">{consistency.total} nights tracked</p>
+                    </>
+                  ) : (
+                    <p className="text-[10px] text-gray-500">Need 2+ entries</p>
+                  )}
+                </div>
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                      <AlertTriangle className="w-3 h-3 text-rose-400" />
+                      <span>Sleep Debt</span>
+                    </div>
+                    <span className="text-sm font-bold text-rose-400">{sleepDebt.toFixed(1)}<span className="text-[10px] text-gray-500 ml-0.5">h</span></span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-rose-500 to-amber-400 transition-all duration-500" style={{ width: `${Math.min(100, (sleepDebt / 10) * 100)}%` }} />
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1">total accumulated</p>
+                </div>
+              </div>
+
+              {/* AI Insights with categorization */}
+              <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <SparklesIcon className="w-3 h-3 text-emerald-400" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/70">AI Insights</span>
+                </div>
+                <div className="space-y-2">
+                  {coachInsights.map((tip, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="flex items-start gap-2 text-xs"
+                    >
+                      <span className="flex-shrink-0">{tip.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className={tip.color}>{tip.text}</p>
+                        <span className={`text-[9px] inline-block mt-0.5 px-1.5 py-[1px] rounded-full ${tip.category === 'timing' ? 'bg-blue-500/10 text-blue-400' : tip.category === 'environment' ? 'bg-orange-500/10 text-orange-400' : tip.category === 'lifestyle' ? 'bg-rose-500/10 text-rose-400' : tip.category === 'recovery' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-500/10 text-gray-500'}`}>
+                          {tip.category}
+                        </span>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </motion.div>
-        </div>
-      )}
-
-      {/* 30-Day Trend */}
-      {sleep.length >= 3 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-          className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-4 sm:p-5"
-        >
-          <h4 className="text-sm font-medium text-gray-400 mb-4 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-violet-400" />
-            30-Day Trend
-          </h4>
-          <ResponsiveContainer width="100%" height={140}>
-            <BarChart data={last30Days}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
-              <XAxis dataKey="date" stroke="#ffffff40" fontSize={9} interval={4} tickMargin={2} />
-              <YAxis hide />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1a1a2ee6', border: '1px solid #ffffff20', borderRadius: '12px', fontSize: '12px' }}
-                labelStyle={{ color: '#fff' }}
-                formatter={(value: number, name: string) => [name === 'duration' ? `${value.toFixed(1)}h` : `${value}/5`, name === 'duration' ? 'Duration' : 'Quality']}
-              />
-              <Bar dataKey="duration" radius={[3, 3, 0, 0]} maxBarSize={8}>
-                {last30Days.map((entry, idx) => (
-                  <Cell key={idx} fill={entry.duration != null && entry.duration >= targetHours ? '#8B5CF6' : '#4B5563'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </motion.div>
-      )}
-
-      {/* Week-over-Week Comparison */}
-      {weekComparison && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="grid grid-cols-2 gap-4"
-        >
-          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-4 sm:p-5">
-            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-              <Activity className="w-3.5 h-3.5 text-violet-400" />
-              Duration vs Last Week
-            </div>
-            <p className="text-2xl font-bold text-white">{formatSleepDuration(weekComparison.thisAvg)}</p>
-            <div className={`flex items-center gap-1 text-xs mt-1 ${weekComparison.diffDuration >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {weekComparison.diffDuration >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingUp className="w-3 h-3 rotate-180" />}
-              {weekComparison.diffDuration >= 0 ? '+' : ''}{weekComparison.diffDuration.toFixed(1)}h vs last week
-            </div>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-4 sm:p-5">
-            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              Quality vs Last Week
-            </div>
-            <p className="text-2xl font-bold text-white">{weekComparison.thisQual.toFixed(1)}</p>
-            <div className={`flex items-center gap-1 text-xs mt-1 ${weekComparison.diffQuality >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {weekComparison.diffQuality >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingUp className="w-3 h-3 rotate-180" />}
-              {weekComparison.diffQuality >= 0 ? '+' : ''}{weekComparison.diffQuality.toFixed(2)} vs last week
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* FEATURE 3: Optimal Bedtime Calculator */}
-      {optimalBedtime && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.42 }}
-          className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/8 to-transparent p-5 shadow-lg shadow-emerald-500/5"
-        >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-16 -mt-16 blur-xl" />
-          <div className="absolute bottom-0 left-0 w-16 h-16 bg-violet-500/5 rounded-full -ml-8 -mb-8 blur-lg" />
-          <div className="relative flex items-center gap-5 flex-wrap">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/30 to-emerald-500/5 flex items-center justify-center shadow-lg shadow-emerald-500/10">
-              <Sun className="w-7 h-7 text-emerald-300" />
-            </div>
-            <div className="flex-1 min-w-[200px]">
-              <p className="text-xs font-semibold text-emerald-400/80 uppercase tracking-wider mb-0.5">Optimal Bedtime</p>
-              <p className="text-3xl font-bold text-white drop-shadow-lg tracking-tight">
-                ~{optimalBedtime.time}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Based on {optimalBedtime.count} nights of quality sleep (score &ge; 4/5)
-                {optimalBedtime.total > optimalBedtime.count && (
-                  <span className="text-gray-600"> &mdash; {optimalBedtime.total} bedtimes tracked total</span>
-                )}
-              </p>
-            </div>
-            <div className="hidden sm:flex flex-col items-center px-4 py-2 rounded-xl bg-white/[0.03] border border-white/5">
-              <span className="text-[10px] text-gray-500 uppercase tracking-wider">Quality</span>
-              <div className="flex gap-0.5 mt-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} size={10} className="fill-amber-400 text-amber-400" />
-                ))}
-              </div>
-              <span className="text-[10px] text-gray-600 mt-1">Consistent</span>
-            </div>
-          </div>
-        </motion.div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* History Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-white">Sleep History</h3>
-        <Button variant="primary" onClick={() => setShowForm(true)}>
-          <Plus className="w-4 h-4 mr-1.5" />
-          Log Sleep
-        </Button>
+        {sleep.length > 0 && (
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={async () => {
+              if (window.confirm('Delete all sleep entries? This cannot be undone.')) {
+                await clearSleep()
+              }
+            }}
+            className="px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition-all text-xs font-medium flex items-center gap-1.5"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Clear All
+          </motion.button>
+        )}
       </div>
 
       {/* History List */}
@@ -1210,12 +1004,20 @@ export function SleepLogger() {
                           </p>
                         </div>
                       </div>
-                      <button
-                        onClick={() => setDeletingEntry(entry)}
-                        className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleEdit(entry)}
+                          className="p-2 rounded-lg text-gray-500 hover:text-violet-400 hover:bg-violet-500/10 transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setDeletingEntry(entry)}
+                          className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                     <div className="flex items-center flex-wrap gap-x-4 gap-y-1">
                       <div className="flex items-center gap-1">
@@ -1239,6 +1041,60 @@ export function SleepLogger() {
                         </span>
                       )}
                     </div>
+                    {/* Enhanced detail badges */}
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {entry.onsetMinutes != null && (
+                        <span className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-medium">
+                          Fell asleep in {entry.onsetMinutes}m
+                        </span>
+                      )}
+                      {entry.nightWakings != null && entry.nightWakings > 0 && (
+                        <span className="px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-medium">
+                          {entry.nightWakings}x awakenings
+                        </span>
+                      )}
+                      {entry.morningFeel && (
+                        <span className={`px-2 py-0.5 rounded-md border text-[10px] font-medium ${
+                          entry.morningFeel === 'refreshed'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                            : entry.morningFeel === 'tired'
+                              ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                              : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                        }`}>
+                          {entry.morningFeel === 'refreshed' ? '⚡' : entry.morningFeel === 'tired' ? '😴' : entry.morningFeel === 'groggy' ? '🥴' : '🌫️'} {entry.morningFeel.charAt(0).toUpperCase() + entry.morningFeel.slice(1)}
+                        </span>
+                      )}
+                      {entry.roomTemp && (
+                        <span className="px-2 py-0.5 rounded-md bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[10px] font-medium">
+                          {entry.roomTemp} room
+                        </span>
+                      )}
+                      {entry.screenTime && (
+                        <span className="px-2 py-0.5 rounded-md bg-violet-500/10 border border-violet-500/20 text-violet-400 text-[10px] font-medium">
+                          📱 Screen
+                        </span>
+                      )}
+                      {entry.alcohol && (
+                        <span className="px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-medium">
+                          🍷 Alcohol
+                        </span>
+                      )}
+                      {entry.meditation && (
+                        <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-medium">
+                          🧘 Meditated
+                        </span>
+                      )}
+                      {entry.heavyMeal && (
+                        <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-medium">
+                          🍕 Heavy meal
+                        </span>
+                      )}
+                      {entry.dreamRecall && (
+                        <span className="px-2 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-medium">
+                          🌙 Dreamed
+                        </span>
+                      )}
+                    </div>
                     {cleanNotes && (
                       <p className="text-xs text-gray-500 mt-2 italic line-clamp-1">
                         &ldquo;{cleanNotes}&rdquo;
@@ -1259,7 +1115,7 @@ export function SleepLogger() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto"
             onClick={() => setShowForm(false)}
           >
             <motion.div
@@ -1267,21 +1123,31 @@ export function SleepLogger() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl"
+              className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl my-8"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center shadow-lg shadow-violet-500/10">
                   <Moon className="w-5 h-5 text-violet-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-white">Log Sleep</h3>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">{editingEntry ? 'Edit Sleep Entry' : 'Log Sleep Entry'}</h3>
+                  <p className="text-xs text-gray-500">{editingEntry ? 'Update your sleep details' : 'Track every detail of your rest'}</p>
+                </div>
               </div>
 
-              <div className="space-y-5">
-                {/* Date + Duration */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1.5">Date</label>
+              <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1 custom-scrollbar">
+
+                {/* ── SECTION: When ── */}
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="w-3.5 h-3.5 text-violet-400" />
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-violet-400/70">Time</span>
+                    <div className="flex-1 h-px bg-gradient-to-r from-violet-500/20 to-transparent" />
+                  </div>
+                  {/* Date */}
+                  <div className="mb-3">
+                    <label className="block text-xs text-gray-400 mb-1.5">Date</label>
                     <input
                       type="date"
                       value={formDate}
@@ -1289,97 +1155,180 @@ export function SleepLogger() {
                       className="glass-input w-full"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1.5">Duration (hours)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min={0}
-                      max={24}
-                      value={formDuration}
-                      onChange={e => setFormDuration(e.target.value)}
-                      className="glass-input w-full"
-                      placeholder="7.5"
-                    />
+                  {/* Bed / Wake */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Bed Time</label>
+                      <input
+                        type="time"
+                        value={formBedTime}
+                        onChange={e => setFormBedTime(e.target.value)}
+                        className="glass-input w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Wake Time</label>
+                      <input
+                        type="time"
+                        value={formWakeTime}
+                        onChange={e => setFormWakeTime(e.target.value)}
+                        className="glass-input w-full"
+                      />
+                    </div>
                   </div>
+                  {formBedTime && formWakeTime ? (
+                    <div className="mt-2 flex items-center gap-2 text-xs text-violet-400/80 bg-violet-500/10 rounded-lg px-3 py-1.5 border border-violet-500/20">
+                      <Clock className="w-3 h-3" />
+                      <span>Duration: <strong>{formDuration}h</strong></span>
+                    </div>
+                  ) : (
+                    <div className="mt-3">
+                      <label className="block text-xs text-gray-400 mb-1.5">Duration (hours)</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min={0}
+                          max={24}
+                          value={formDuration}
+                          onChange={e => setFormDuration(e.target.value)}
+                          className="glass-input w-full"
+                          placeholder="7.5"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Bed / Wake Time */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1.5">Bed Time</label>
-                    <input
-                      type="time"
-                      value={formBedTime}
-                      onChange={e => setFormBedTime(e.target.value)}
-                      className="glass-input w-full"
-                    />
+                {/* ── SECTION: Quality ── */}
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Star className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-amber-400/70">Quality &amp; Restfulness</span>
+                    <div className="flex-1 h-px bg-gradient-to-r from-amber-500/20 to-transparent" />
                   </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1.5">Wake Time</label>
-                    <input
-                      type="time"
-                      value={formWakeTime}
-                      onChange={e => setFormWakeTime(e.target.value)}
-                      className="glass-input w-full"
-                    />
-                  </div>
-                </div>
-
-                {/* Star Quality Selector */}
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Sleep Quality</label>
-                  <div className="flex gap-2">
-                    {([1, 2, 3, 4, 5] as const).map(q => (
-                      <motion.button
-                        key={q}
-                        whileTap={{ scale: 0.92 }}
-                        onClick={() => setFormQuality(q)}
-                        className={`flex-1 p-3 rounded-xl text-center transition-all ${
-                          formQuality === q
-                            ? 'bg-violet-500/20 border border-violet-500/50 shadow-lg shadow-violet-500/10'
-                            : 'bg-white/5 border border-white/10 hover:border-white/20'
-                        }`}
-                      >
-                        <div className="flex justify-center mb-1">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              size={11}
-                              className={
-                                i < q
-                                  ? 'fill-amber-400 text-amber-400'
-                                  : 'text-white/10'
-                              }
-                            />
-                          ))}
-                        </div>
-                        <span
-                          className={`text-[10px] ${
-                            formQuality === q ? 'text-violet-400' : 'text-gray-500'
+                  {/* Star Rating */}
+                  <div className="mb-3">
+                    <label className="block text-xs text-gray-400 mb-2">Overall Quality</label>
+                    <div className="flex gap-2">
+                      {([1, 2, 3, 4, 5] as const).map(q => (
+                        <motion.button
+                          key={q}
+                          whileTap={{ scale: 0.92 }}
+                          onClick={() => setFormQuality(q)}
+                          className={`flex-1 p-3 rounded-xl text-center transition-all ${
+                            formQuality === q
+                              ? 'bg-amber-500/20 border border-amber-500/40 shadow-lg shadow-amber-500/10'
+                              : 'bg-white/5 border border-white/10 hover:border-white/20'
                           }`}
                         >
-                          {qualityLabel(q)}
-                        </span>
-                      </motion.button>
-                    ))}
+                          <div className="flex justify-center mb-1 gap-px">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star
+                                key={i}
+                                size={10}
+                                className={
+                                  i < q
+                                    ? 'fill-amber-400 text-amber-400'
+                                    : 'text-white/10'
+                                }
+                              />
+                            ))}
+                          </div>
+                          <span className={`text-[10px] ${formQuality === q ? 'text-amber-400' : 'text-gray-500'}`}>
+                            {qualityLabel(q)}
+                          </span>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Onset + Wakings */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Time to fall asleep (min)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={180}
+                        value={formOnset}
+                        onChange={e => setFormOnset(e.target.value)}
+                        className="glass-input w-full"
+                        placeholder="15"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Awakenings</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={20}
+                        value={formWakings}
+                        onChange={e => setFormWakings(e.target.value)}
+                        className="glass-input w-full"
+                        placeholder="0"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* FEATURE 2: Environment Toggles */}
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Sleep Environment</label>
-                  <div className="grid grid-cols-2 gap-3">
+                {/* ── SECTION: Environment ── */}
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Moon className="w-3.5 h-3.5 text-sky-400" />
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-sky-400/70">Environment &amp; Habits</span>
+                    <div className="flex-1 h-px bg-gradient-to-r from-sky-500/20 to-transparent" />
+                  </div>
+                  {/* Room Temp */}
+                  <div className="mb-3">
+                    <label className="block text-xs text-gray-400 mb-2">Room Temperature</label>
+                    <div className="flex gap-1.5">
+                      {(['cold', 'cool', 'neutral', 'warm', 'hot'] as const).map(t => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setFormRoomTemp(formRoomTemp === t ? '' : t)}
+                          className={`flex-1 py-2 rounded-lg text-[11px] font-medium border transition-all capitalize ${
+                            formRoomTemp === t
+                              ? t === 'cold' || t === 'cool'
+                                ? 'bg-blue-500/15 border-blue-500/40 text-blue-300'
+                                : t === 'warm' || t === 'hot'
+                                  ? 'bg-orange-500/15 border-orange-500/40 text-orange-300'
+                                  : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                              : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Toggles row */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormScreenTime(!formScreenTime)}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all ${
+                        formScreenTime
+                          ? 'bg-violet-500/15 border-violet-500/40 text-violet-300 shadow-lg shadow-violet-500/5'
+                          : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'
+                      }`}
+                    >
+                      <span className="text-xs">📱</span>
+                      <span className="text-xs font-medium">Screen Time</span>
+                      <span className={`ml-auto text-[10px] ${formScreenTime ? 'text-violet-400' : 'text-gray-600'}`}>
+                        {formScreenTime ? 'Yes' : 'No'}
+                      </span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => setFormCaffeine(!formCaffeine)}
-                      className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all ${
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all ${
                         formCaffeine
                           ? 'bg-orange-500/15 border-orange-500/40 text-orange-300 shadow-lg shadow-orange-500/5'
                           : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'
                       }`}
                     >
-                      <Coffee className="w-4 h-4" />
+                      <Coffee className="w-3.5 h-3.5" />
                       <span className="text-xs font-medium">Caffeine</span>
                       <span className={`ml-auto text-[10px] ${formCaffeine ? 'text-orange-400' : 'text-gray-600'}`}>
                         {formCaffeine ? 'Yes' : 'No'}
@@ -1388,49 +1337,152 @@ export function SleepLogger() {
                     <button
                       type="button"
                       onClick={() => setFormExercise(!formExercise)}
-                      className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all ${
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all ${
                         formExercise
                           ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-lg shadow-emerald-500/5'
                           : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'
                       }`}
                     >
-                      <Dumbbell className="w-4 h-4" />
+                      <Dumbbell className="w-3.5 h-3.5" />
                       <span className="text-xs font-medium">Exercise</span>
                       <span className={`ml-auto text-[10px] ${formExercise ? 'text-emerald-400' : 'text-gray-600'}`}>
                         {formExercise ? 'Yes' : 'No'}
                       </span>
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormAlcohol(!formAlcohol)}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all ${
+                        formAlcohol
+                          ? 'bg-rose-500/15 border-rose-500/40 text-rose-300 shadow-lg shadow-rose-500/5'
+                          : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'
+                      }`}
+                    >
+                      <span className="text-xs">🍷</span>
+                      <span className="text-xs font-medium">Alcohol</span>
+                      <span className={`ml-auto text-[10px] ${formAlcohol ? 'text-rose-400' : 'text-gray-600'}`}>
+                        {formAlcohol ? 'Yes' : 'No'}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormMeditation(!formMeditation)}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all ${
+                        formMeditation
+                          ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-300 shadow-lg shadow-indigo-500/5'
+                          : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'
+                      }`}
+                    >
+                      <span className="text-xs">🧘</span>
+                      <span className="text-xs font-medium">Meditation</span>
+                      <span className={`ml-auto text-[10px] ${formMeditation ? 'text-indigo-400' : 'text-gray-600'}`}>
+                        {formMeditation ? 'Yes' : 'No'}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormHeavyMeal(!formHeavyMeal)}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all ${
+                        formHeavyMeal
+                          ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-lg shadow-amber-500/5'
+                          : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'
+                      }`}
+                    >
+                      <span className="text-xs">🍕</span>
+                      <span className="text-xs font-medium">Heavy Meal</span>
+                      <span className={`ml-auto text-[10px] ${formHeavyMeal ? 'text-amber-400' : 'text-gray-600'}`}>
+                        {formHeavyMeal ? 'Yes' : 'No'}
+                      </span>
+                    </button>
                   </div>
                 </div>
 
-                {/* Notes */}
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1.5">Notes</label>
+                {/* ── SECTION: Mind ── */}
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Brain className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-emerald-400/70">Mind &amp; Recovery</span>
+                    <div className="flex-1 h-px bg-gradient-to-r from-emerald-500/20 to-transparent" />
+                  </div>
+                  {/* Morning Feel */}
+                  <div className="mb-3">
+                    <label className="block text-xs text-gray-400 mb-2">How did you feel this morning?</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {([
+                        { value: 'refreshed' as const, emoji: '⚡', label: 'Refreshed' },
+                        { value: 'tired' as const, emoji: '😴', label: 'Tired' },
+                        { value: 'groggy' as const, emoji: '🥴', label: 'Groggy' },
+                        { value: 'foggy' as const, emoji: '🌫️', label: 'Foggy' },
+                      ]).map(({ value, emoji, label }) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setFormMorningFeel(formMorningFeel === value ? '' : value)}
+                          className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border transition-all ${
+                            formMorningFeel === value
+                              ? 'bg-emerald-500/15 border-emerald-500/40'
+                              : 'bg-white/5 border-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          <span className="text-sm">{emoji}</span>
+                          <span className={`text-[10px] font-medium ${formMorningFeel === value ? 'text-emerald-300' : 'text-gray-500'}`}>
+                            {label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Dream Recall */}
+                  <button
+                    type="button"
+                    onClick={() => setFormDreamRecall(!formDreamRecall)}
+                    className={`w-full flex items-center gap-2.5 p-2.5 rounded-xl border transition-all ${
+                      formDreamRecall
+                        ? 'bg-purple-500/15 border-purple-500/40 text-purple-300 shadow-lg shadow-purple-500/5'
+                        : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'
+                    }`}
+                  >
+                    <span className="text-xs">🌙</span>
+                    <span className="text-xs font-medium">Dreams</span>
+                    <span className={`ml-auto text-[10px] ${formDreamRecall ? 'text-purple-400' : 'text-gray-600'}`}>
+                      {formDreamRecall ? 'Yes' : 'No'}
+                    </span>
+                  </button>
+                </div>
+
+                {/* ── SECTION: Notes ── */}
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs">📝</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500/70">Notes</span>
+                    <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
+                  </div>
                   <textarea
                     value={formNotes}
                     onChange={e => setFormNotes(e.target.value)}
-                    placeholder="Woke up once, room was cold..."
-                    className="glass-input w-full resize-none h-20"
+                    placeholder="Any additional details about your night..."
+                    className="glass-input w-full resize-none h-16 text-sm"
                   />
                 </div>
 
-                {/* Actions */}
-                <div className="flex gap-3 pt-1">
-                  <button
-                    onClick={() => { setShowForm(false); resetForm() }}
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all text-sm font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={handleSave}
-                    disabled={!formDuration}
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-violet-500/20 border border-violet-500/30 text-violet-400 font-medium hover:bg-violet-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm"
-                  >
-                    Save Entry
-                  </motion.button>
-                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 mt-5 pt-4 border-t border-white/5">
+                <button
+                  onClick={() => { setShowForm(false); resetForm(); setEditingEntry(null) }}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all text-sm font-medium"
+                >
+                  Cancel
+                </button>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleSave}
+                  disabled={!formDuration}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-violet-500/20 border border-violet-500/30 text-violet-400 font-medium hover:bg-violet-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm"
+                >
+                  {editingEntry ? 'Update Entry' : 'Save Entry'}
+                </motion.button>
               </div>
             </motion.div>
           </motion.div>

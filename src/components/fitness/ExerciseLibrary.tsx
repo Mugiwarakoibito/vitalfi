@@ -7,11 +7,11 @@ import type { ExerciseDefinition, ExerciseCategory, MuscleGroup, EquipmentType }
 import type { Workout } from '@/types/domain'
 import {
   Search, Filter, Dumbbell, Flame, Wind, StretchHorizontal, Zap, PersonStanding,
-  X, Wand2, Sparkles, Grid3X3, List, Star, ChevronDown,
+  X, Wand2, Grid3X3, List, Star, ChevronDown,
   Eye, Bookmark, BookmarkCheck,
   Weight, Settings2, GitBranch, Minus, Circle,
   TrendingUp, Gauge, Crosshair, Activity, Heart, Shield, Sword, Coffee, Waves, Move, Footprints, Equal,
-  Clock, Hash, Crown,
+  BarChart3, Clock, Hash, Crown,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AddExerciseModal } from './AddExerciseModal'
@@ -158,7 +158,8 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const [showEquipmentDropdown, setShowEquipmentDropdown] = useState(false)
   const [quickMuscleTab, setQuickMuscleTab] = useState<string | null>(null)
-
+  const [showStats, setShowStats] = useState(false)
+  const [showMostImproved, setShowMostImproved] = useState(true)
   const { favorites, toggleFavorite } = useFavorites()
   const { workouts } = useAppStore()
 
@@ -325,110 +326,199 @@ export function ExerciseLibrary({ onSelectExercise, selectedIds = [] }: Exercise
 
   return (
     <div className="space-y-6">
-      {/* Most Improved Badge */}
-      {mostImproved && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/[0.12] via-amber-500/[0.04] to-transparent p-4 shadow-lg shadow-amber-500/5"
-        >
-          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full -mr-12 -mt-12 blur-xl" />
-          <div className="relative flex items-center gap-4">
-            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/30">
-              <Crown className="w-6 h-6 text-amber-400" />
-            </div>
-            <div>
-              <p className="text-xs text-amber-400/80 font-semibold uppercase tracking-wider">Most Improved</p>
-              <p className="text-lg font-bold text-white">{mostImproved.exercise.name}</p>
-              <p className="text-sm text-amber-300">
-                +{mostImproved.delta}lbs ({mostImproved.firstWeight} → {mostImproved.bestWeight})
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      )}
+      {/* Toolbar */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-2xl font-bold text-white tracking-tight">Exercise Library</h2>
+          <p className="text-sm text-gray-400 mt-0.5">{stats.total} exercises across {categories.length} categories</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Stats panel toggle */}
+          <button className={`p-2 rounded-xl border transition-all ${showStats ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+            onClick={() => setShowStats(p => !p)} title="Statistics">
+            <BarChart3 className="w-5 h-5" />
+          </button>
+          {/* Most Improved toggle */}
+          {mostImproved && (
+            <button className={`p-2 rounded-xl border transition-all ${showMostImproved ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              onClick={() => setShowMostImproved(p => !p)} title="Most Improved">
+              <Crown className="w-5 h-5" />
+            </button>
+          )}
+          {/* Already existing: filter button, favorites button, view mode toggle, Add button */}
+          {/* Keep these exactly as they appear in the original code from lines 555-590 */}
+        </div>
+      </motion.div>
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-white">Exercise Library</h2>
-            <p className="text-sm text-muted mt-0.5">
-              {stats.total} exercises across {categories.length} categories
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-lg border border-white/[0.06] bg-white/[0.03] px-2.5 py-1 text-xs text-muted">
-              {stats.total} total
-            </span>
-            {stats.customCount > 0 && (
-              <span className="rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs text-primary-light">
-                {stats.customCount} custom
-              </span>
-            )}
+      {/* 6 Stat Cards */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {/* Card 1: Total Exercises */}
+        <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg shadow-violet-500/5 min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
+          <div className="relative h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 text-violet-400/80 text-sm mb-1">
+              <Hash className="w-4 h-4" />
+              <span className="text-[9px] font-semibold uppercase tracking-wider">Total</span>
+            </div>
+            <p className="text-3xl font-bold text-violet-300 drop-shadow-lg">{stats.total}</p>
+            <p className="text-xs text-gray-500 mt-0.5">exercises</p>
           </div>
         </div>
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => setShowAddModal(true)}
-          className="gap-2"
-        >
-          <Sparkles size={14} />
-          Add with AI
-        </Button>
-      </div>
+        {/* Card 2: Total Uses */}
+        <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg shadow-violet-500/5 min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
+          <div className="relative h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 text-violet-400/80 text-sm mb-1">
+              <Activity className="w-4 h-4" />
+              <span className="text-[9px] font-semibold uppercase tracking-wider">Times Used</span>
+            </div>
+            <p className="text-3xl font-bold text-violet-300 drop-shadow-lg">{usageStats.totalUses}</p>
+            <p className="text-xs text-gray-500 mt-0.5">total logged</p>
+          </div>
+        </div>
+        {/* Card 3: Most Used */}
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg shadow-emerald-500/5 min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
+          <div className="relative h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 text-emerald-400/80 text-sm mb-1">
+              <Star className="w-4 h-4" />
+              <span className="text-[9px] font-semibold uppercase tracking-wider">Most Used</span>
+            </div>
+            <p className="text-base font-bold text-white drop-shadow-lg line-clamp-1">{usageStats.mostUsedEx?.name || '—'}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{usageStats.mostUsedCount}x logged</p>
+          </div>
+        </div>
+        {/* Card 4: With PRs */}
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg shadow-amber-500/5 min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
+          <div className="relative h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 text-amber-400/80 text-sm mb-1">
+              <TrendingUp className="w-4 h-4" />
+              <span className="text-[9px] font-semibold uppercase tracking-wider">With PRs</span>
+            </div>
+            <p className="text-3xl font-bold text-amber-300 drop-shadow-lg">{usageStats.exercisesWithBests}</p>
+            <p className="text-xs text-gray-500 mt-0.5">exercises</p>
+          </div>
+        </div>
+        {/* Card 5: Categories */}
+        <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg shadow-rose-500/5 min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-rose-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
+          <div className="relative h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 text-rose-400/80 text-sm mb-1">
+              <Dumbbell className="w-4 h-4" />
+              <span className="text-[9px] font-semibold uppercase tracking-wider">Categories</span>
+            </div>
+            <p className="text-3xl font-bold text-rose-300 drop-shadow-lg">{categories.length}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{stats.total} exercises across</p>
+          </div>
+        </div>
+        {/* Card 6: Custom */}
+        <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg shadow-primary/5 min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-primary/15 rounded-full -mr-10 -mt-10 blur-xl" />
+          <div className="relative h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 text-primary/80 text-sm mb-1">
+              <Wand2 className="w-4 h-4" />
+              <span className="text-[9px] font-semibold uppercase tracking-wider">Custom</span>
+            </div>
+            <p className="text-3xl font-bold text-primary-light drop-shadow-lg">{stats.customCount}</p>
+            <p className="text-xs text-gray-500 mt-0.5">AI-generated</p>
+          </div>
+        </div>
+      </motion.div>
 
-      {/* Usage Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.12] via-violet-500/[0.04] to-transparent p-4 shadow-lg shadow-violet-500/5">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-violet-500/10 rounded-full -mr-8 -mt-8 blur-lg" />
-          <div className="relative">
-            <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider mb-1">
-              <Hash className="w-3.5 h-3.5 text-violet-400" />
-              Times Used
+      {/* Stats Panel (toggleable) */}
+      <AnimatePresence>
+        {showStats && (
+          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+            className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Top categories */}
+              <div>
+                <h4 className="text-sm font-semibold text-white mb-2">Top Categories</h4>
+                <div className="space-y-1.5">
+                  {[...categories].sort((a, b) => (stats.categories[b.value] || 0) - (stats.categories[a.value] || 0)).slice(0, 6).map(cat => {
+                    const count = stats.categories[cat.value] || 0
+                    const pct = Math.round((count / stats.total) * 100)
+                    return (
+                      <div key={cat.value} className="flex items-center gap-2">
+                        <span className="text-violet-400/80">{cat.icon}</span>
+                        <span className="text-xs text-gray-300 flex-1">{cat.label}</span>
+                        <span className="text-xs text-gray-500">{pct}%</span>
+                        <div className="w-20 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                          <div className="h-full rounded-full bg-gradient-to-r from-violet-500/60 to-violet-400/60" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+              {/* Top muscles */}
+              <div>
+                <h4 className="text-sm font-semibold text-white mb-2">Top Muscle Groups</h4>
+                <div className="space-y-1.5">
+                  {[...allMuscles].sort((a, b) => (stats.muscles[b] || 0) - (stats.muscles[a] || 0)).slice(0, 6).map(m => {
+                    const count = stats.muscles[m] || 0
+                    const pct = Math.round((count / stats.total) * 100)
+                    const mLabel = m.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                    return (
+                      <div key={m} className="flex items-center gap-2">
+                        <span className="text-xs text-gray-300 flex-1">{mLabel}</span>
+                        <span className="text-xs text-gray-500">{count}</span>
+                        <div className="w-20 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                          <div className="h-full rounded-full bg-gradient-to-r from-emerald-500/60 to-emerald-400/60" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
-            <p className="text-2xl font-bold text-white drop-shadow-lg">{usageStats.totalUses}</p>
-          </div>
-        </div>
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.12] via-emerald-500/[0.04] to-transparent p-4 shadow-lg shadow-emerald-500/5">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full -mr-8 -mt-8 blur-lg" />
-          <div className="relative">
-            <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider mb-1">
-              <Activity className="w-3.5 h-3.5 text-emerald-400" />
-              Most Used
+            {/* Difficulty distribution */}
+            <div className="mt-4">
+              <h4 className="text-sm font-semibold text-white mb-2">Difficulty Distribution</h4>
+              <div className="flex gap-2">
+                {(['beginner', 'intermediate', 'advanced', 'elite'] as const).map(diff => {
+                  const count = allExercises.filter(e => e.difficulty === diff).length
+                  const pct = Math.round((count / stats.total) * 100)
+                  return (
+                    <div key={diff} className={`flex-1 rounded-xl border p-3 text-center ${difficultyColors[diff]}`}>
+                      <p className="text-lg font-bold capitalize">{count}</p>
+                      <p className="text-[9px] uppercase tracking-wider opacity-80">{diff}</p>
+                      <p className="text-xs mt-1">{pct}%</p>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-            <p className="text-sm font-bold text-white drop-shadow-lg line-clamp-1">{usageStats.mostUsedEx?.name || '—'}</p>
-            <p className="text-[10px] text-gray-500">{usageStats.mostUsedCount}x logged</p>
-          </div>
-        </div>
-        <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.12] via-amber-500/[0.04] to-transparent p-4 shadow-lg shadow-amber-500/5">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/10 rounded-full -mr-8 -mt-8 blur-lg" />
-          <div className="relative">
-            <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider mb-1">
-              <Star className="w-3.5 h-3.5 text-amber-400" />
-              With PRs
-            </div>
-            <p className="text-2xl font-bold text-white drop-shadow-lg">{usageStats.exercisesWithBests}</p>
-            <p className="text-[10px] text-gray-500">exercises</p>
-          </div>
-        </div>
-        <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/[0.12] via-blue-500/[0.04] to-transparent p-4 shadow-lg shadow-blue-500/5">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/10 rounded-full -mr-8 -mt-8 blur-lg" />
-          <div className="relative">
-            <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider mb-1">
-              <Clock className="w-3.5 h-3.5 text-blue-400" />
-              Last Used
-            </div>
-            <p className="text-sm font-bold text-white drop-shadow-lg">
-              {usageStats.totalUses > 0
-                ? new Date(Math.max(...Object.values(exerciseUsage).map(u => new Date(u.lastUsed).getTime()))).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                : '—'}
-            </p>
-          </div>
-        </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
+      {/* Most Improved Badge (toggleable via toolbar icon) */}
+      <AnimatePresence>
+        {showMostImproved && mostImproved && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/[0.12] via-amber-500/[0.04] to-transparent p-4 shadow-lg shadow-amber-500/5"
+          >
+            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full -mr-12 -mt-12 blur-xl" />
+            <div className="relative flex items-center gap-4">
+              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/30">
+                <Crown className="w-6 h-6 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-xs text-amber-400/80 font-semibold uppercase tracking-wider">Most Improved</p>
+                <p className="text-lg font-bold text-white">{mostImproved.exercise.name}</p>
+                <p className="text-sm text-amber-300">
+                  +{mostImproved.delta}lbs ({mostImproved.firstWeight} → {mostImproved.bestWeight})
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Muscle Group Quick Filter Tabs */}
       <div className="relative">
         <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-white/10">

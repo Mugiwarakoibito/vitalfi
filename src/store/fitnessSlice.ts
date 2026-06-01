@@ -62,6 +62,10 @@ export const createFitnessSlice: StateCreator<AppState, [], [], FitnessSlice> = 
     set((state) => ({ sleep: state.sleep.filter(s => s.id !== id), dataVersion: state.dataVersion + 1 }));
     await storage.delete('sleep', id);
   },
+  clearSleep: async () => {
+    set((state) => ({ sleep: [], dataVersion: state.dataVersion + 1 }));
+    await storage.clear('sleep');
+  },
 
   addGoal: async (goal) => {
     set((state) => ({ goals: [...state.goals, goal], dataVersion: state.dataVersion + 1 }));
