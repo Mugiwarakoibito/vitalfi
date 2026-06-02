@@ -1,56 +1,59 @@
-# VitalFi Memory
+# VitalFi — Project Memory
 
-## Completed
+## Last Updated: June 2, 2026
 
-### Fitness Tracker Restructure (9 Ultimate Tabs)
-- **Date**: May 30, 2026
-- **Changes**:
-  - Rewrote `Fitness.tsx` with 9 new tabs: Dashboard, Training, Body, Diet, Sleep, Progress, Habits, Exercises, Supplements
-  - Created `Dashboard.tsx`: health score ring (0-100 with 5 breakdown bars), quick stats, calorie trend chart, body composition panel (BMI/BMR/TDEE/target), smart insights, quick action buttons, motivational quote
-  - Created `Habits.tsx` (replaces WorkoutStreak.tsx): multi-habit streaks (workout, nutrition, sleep, hydration), diversity badges (Explorer, Collector, All-Rounder, Versatile, Specialist), monthly challenges, achievement system, level system, activity calendar
-  - Created `Progress.tsx` (replaces PersonalRecords.tsx): unified progress hub with PRs, confetti celebration, workout volume bar chart, body weight line chart, PR progress with metric toggle and estimated 1RM overlay (Epley formula), auto-populated recent lifts from workouts, exercise PR cards grouped by exercise, PR add modal with autocomplete
-   - Created `Recovery.tsx` (replaces HydrationTracker.tsx): readiness score (0-100 from energy/soreness/stress/mood), 4 metric cards (Energy/Soreness/Stress/Mood), 7-day readiness bar chart, DOMS body map grid (10 muscle areas), hydration logging (quick amounts + custom + store-backed), recovery history with delete, modal for logging daily recovery with sliders and DOMS toggles
-   - Deleted old files: HydrationTracker.tsx, PersonalRecords.tsx, WorkoutStreak.tsx, HealthDashboard.tsx
-   - Live at: https://vitalfi.vercel.app
+## Session: Enhance HydrationHub with SleepLogger-style cards and settings improvements
 
-### Nutrition Wizard Bugfix (May 31, 2026)
-- Fixed "Start Tracking" not working when weight/height values are empty or invalid — added NaN guard and numeric validation (not just string truthiness)
-- Fixed wizard step 1 validation to check parsed number values (positive, realistic age range)
-- Fixed wizard step 2 surplus/deficit message to show transparent calculation instead of hardcoded values
+### What was done
+- **Enhanced HydrationHub.tsx** with comprehensive UI improvements:
+  - **Stats cards**: Rewrote 6 stat cards with SleepLogger-style per-card accent colors (cyan, violet, amber, sky, emerald, rose each have their own border color, glow blob, shadow, and text color)
+  - **Settings popover**: Cleaned up layout with organized sections (Goal slider, Unit toggle, Quick Amounts with add/remove/reorder, Reset to defaults button). Added backdrop blur, animations, and better spacing.
+  - **Log Water button**: Added a popover with quick-amount grid (sorted by usage frequency), custom amount input, and repeat-last button for fast logging from the toolbar
+  - **Panel theming**: Consistent per-panel color identities (cyan for Intake, violet for History, emerald for Insights)
+  - **Calendar icon**: Changed from cyan to violet to match app identity
+  - **Jump-to-today button**: Changed from cyan to violet for consistency
 
-### MacroCoach + NutriScope (May 31, 2026)
-- Added MacroCoach: AI-powered food suggestion panel with preference modes (Balanced/High Protein/Low Carb/Keto), calorie remaining display, refresh cycling, "All macros met!" celebration
-- Added NutriScope: weekly analytics dashboard with 4 chart modes (Calories/Macros/Fiber/Meals), per-mode context strips, bottom stats (Weekly Averages + Insights), empty state when no historical data
-- Fixed NutriScope excluding today from stats (intentional — past days only)
-- Fixed MacroCoach showing independently of NutriScope toggle
-- Fixed unused variables (weeklySummary, adherence) causing build errors
-- Made NutriScope independent with its own week navigator (◀ ▶ controls) separate from main date picker
-- Made Insights section interactive with hover tooltips and lift effects on metric cards
-- Converted Insights to horizontal bar charts showing On Target %, Streak, and Logged Days
-- Enhanced Insights with dynamic multi-tab navigation:
-  - **Consistency Hub**: Interactive cards for Adherence %, Streak size (with heat badge), and Logged days, plus average macronutrient adherence bars.
-  - **Adherence Threshold settings**: Clickable gear dropdown to configure calorie adherence sensitivity: Strict (±5%), Normal (±10%), and Relaxed (±15%), dynamically updating stats in real-time.
-  - **AI-Powered Analyzer**: Intelligent, habit-based suggestions for calorie surplus/deficit, protein density optimization, and dietary fiber targets based on weekly eating records.
-  - **Goal Projections**: Net daily calorie balance metrics and estimated 4-week & 12-week weight loss/gain forecasts driven by their profile's BMR/TDEE.
-- Deployed to https://vitalfi.vercel.app
+### Key decisions
+- Used inline styles (`style={{ borderColor, boxShadow, background }}`) for dynamic per-card accent colors to avoid Tailwind class purging issues
+- Each stats card has: `rounded-2xl border bg-black/60 backdrop-blur-[12px] p-5 min-h-[7.5rem]` with colored glow blob, icon, value, and subtext
+- Settings popover uses `AnimatePresence` with scale/fade animation matching SleepLogger's approach
+- Log Water popover has its own `logCustomAmount` state to avoid conflicts with the panel's custom amount input
 
-### Recovery Page UX Overhaul (June 1, 2026)
-- Restructured `Recovery.tsx` layout: hydration widget moved into main row side-by-side with Readiness gauge (5-column grid)
-- Added section dividers: "Trends & Insights", "Body & Recovery", "History"
-- Replaced old hydration quick-log (circular SVG) with WaterGlass animated component (framer-motion spring fill, wavy surface, bubble particles)
-- Added quick-add labeled buttons, custom input, today's time-stamped log feed, and hydration streak indicator
-- Enhanced stats bar with 5th column showing hydration progress %
-- Added `displayTemp`/`displayWeight` helpers for °C/°F and kg/lbs conversion
-- Added `formulaPreset` setting with preset buttons (Balanced/Energy Focus/Recovery Focus/Custom)
-- Added `tempUnit`/`weightUnit` settings fields
-- Removed duplicate hydration UI (old Quick-Log section) to avoid redundancy
-- Build: zero TypeScript errors
-- Deployed to https://vitalfi.vercel.app
+### Dependencies added
+- None (used existing lucide-react, framer-motion, recharts)
 
-### Upgrades Before Restructure
-- `BodyMetricsTracker.tsx`: body score (0-100) ring, lean/fat mass bar, BMR/TDEE, dual-axis weight+bodyfat chart, BMI color bar, goal projection
-- `WorkoutLogger.tsx`: rest timer per exercise, weekly analytics (workouts, volume, avg duration, heat score)
-- `SleepLogger.tsx`: 5-card stat dashboard (Readiness, Sleep Score, Circadian Score, Sleep Debt, Goal Met %)
-- `NutritionLogger.tsx`: recipe saving (bookmark, browse, add-to-today)
-- `ExerciseLibrary.tsx`: usage stats bar, per-exercise usage count & personal best
-- `SupplementTracker.tsx`: refill tracking with days-remaining badge (green/amber/red)
+### Known issues
+- None
+
+### Next steps
+- [ ] Deploy to Vercel
+
+### What was done
+- Removed leftover old code and fixed TypeScript errors in **Recovery.tsx** (unused imports, vars, components)
+- Refactored **5 fitness pages** to the consistent SleepLogger pattern:
+  - **Progress.tsx** (Performance) — toolbar + 6 stat cards + toggleable panels (Trends, Strength, Achievements, Photos)
+  - **Habits.tsx** (Streak) — same pattern with Breakdown, Charts, Heatmap, Achievements panels
+  - **BodyMetricsTracker.tsx** (Body) — same pattern with Charts, Body Shape, Goal Projection, Insights panels
+  - **ExerciseLibrary.tsx** (Exercises) — catalog adaptation with 6 stat cards, Stats panel, Most Improved toggle
+  - **SupplementTracker.tsx** (Supps) — same pattern with Adherence, Stacks, Timing, History, Refill panels
+
+### Key decisions
+- All pages use glassmorphism frosted-glass stat cards (`bg-black/60 backdrop-blur-[12px]`)
+- Toolbar icon buttons with active/inactive styling (rose-500 for active, white/5 for inactive)
+- AnimatePresence with motion.div for toggleable panel transitions
+- 6 stat cards in `grid-cols-2 sm:grid-cols-3 lg:grid-cols-6`
+- Each page keeps its unique data models, computations, and modal forms
+
+### Dependencies added
+- None (used existing lucide-react, framer-motion, recharts)
+
+### Known issues
+- ExerciseLibrary.tsx has a large `Fitness-Bt0kMp7P.js` chunk (616 KB) — consider code-splitting
+
+### Deployed to
+- **Vercel:** https://vitalfi.vercel.app
+- **GitHub:** https://github.com/Mugiwarakoibito/vitalfi
+
+### Next steps
+- [ ] Send Slack notification with live URL
+- [ ] Create Linear ticket marking task as "Done"

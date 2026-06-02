@@ -75,6 +75,7 @@ export interface FitnessSlice {
   deleteBodyMetric: (id: string) => Promise<void>;
   addHydration: (entry: HydrationEntry) => Promise<void>;
   deleteHydration: (id: string) => Promise<void>;
+  clearHydration: () => Promise<void>;
   addSleep: (entry: SleepEntry) => Promise<void>;
   deleteSleep: (id: string) => Promise<void>;
   clearSleep: () => Promise<void>;
