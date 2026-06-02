@@ -987,67 +987,137 @@ export function SleepLogger() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="rounded-xl border border-emerald-500/10 bg-emerald-500/[0.03] p-3 mb-3 overflow-hidden"
+                    className="rounded-xl border border-emerald-500/10 bg-emerald-500/[0.03] p-4 mb-3 overflow-hidden"
                   >
                     <div className="flex items-center gap-1.5 mb-3">
-                      <Moon className="w-3 h-3 text-emerald-400" />
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/70">Tonight's Plan</span>
+                      <div className="w-5 h-5 rounded-md bg-gradient-to-br from-emerald-400/20 to-emerald-500/20 border border-emerald-500/20 flex items-center justify-center">
+                        <Moon className="w-3 h-3 text-emerald-400" />
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400/80">Tonight's Plan</span>
                     </div>
                     {(() => {
                       const defaultHr = coachPref === 'early_bird' ? 22 : coachPref === 'night_owl' ? 23.5 : 22.5
-                      const withBed = sleep.filter(e => e.bedTime)
+                      const withBedEntries = sleep.filter(e => e.bedTime)
                       let bedHr = defaultHr
-                      if (withBed.length >= 2) {
-                        const avgMins = Math.round(withBed.reduce((s, e) => s + timeToMinutes(e.bedTime!), 0) / withBed.length)
-                        bedHr = avgMins / 60
+                      if (withBedEntries.length >= 2) {
+                        const avgMins = Math.round(withBedEntries.reduce((s, e) => s + timeToMinutes(e.bedTime!), 0) / withBedEntries.length)
+                        const chronoOffset = coachPref === 'early_bird' ? -0.25 : coachPref === 'night_owl' ? 0.25 : 0
+                        bedHr = Math.max(20, Math.min(24, (avgMins / 60) + chronoOffset))
                       }
-                      const bedTotalMins = Math.round(bedHr * 60)
-                      const bedH = Math.floor(bedTotalMins / 60) % 12 || 12
-                      const bedM = bedTotalMins % 60
-                      const bedPeriod = bedTotalMins >= 720 ? 'PM' : 'AM'
-                      const windDownH = Math.floor((bedTotalMins - 30) / 60) % 12 || 12
-                      const windDownM = (bedTotalMins - 30) % 60
-                      const windDownPeriod = (bedTotalMins - 30) >= 720 ? 'PM' : 'AM'
+                      const to12h = (mins: number) => {
+                        const h = Math.floor((mins % 1440) / 60) % 12 || 12
+                        const m = mins % 60
+                        const p = (mins % 1440) >= 720 ? 'PM' : 'AM'
+                        return `${h}:${m.toString().padStart(2, '0')} ${p}`
+                      }
+                      const bedMins = Math.round(bedHr * 60)
+                      const windDownMins = bedMins - 30
+                      const wakeMins = (bedMins + Math.round(targetHours * 60)) % 1440
 
-                      const wakeTotalMins = (bedTotalMins + Math.round(targetHours * 60)) % 1440
-                      const wakeH = Math.floor(wakeTotalMins / 60) % 12 || 12
-                      const wakeM = wakeTotalMins % 60
-                      const wakePeriod = wakeTotalMins >= 720 ? 'PM' : 'AM'
+                      const recent = sleep.slice(0, Math.min(5, sleep.length))
+                      const hasCaffeine = recent.some(e => { const env = parseEnvFromNotes(e.notes); return env?.caffeine })
+                      const hasScreen = recent.some(e => e.screenTime)
+                      const hasAlcohol = recent.some(e => e.alcohol)
+                      const hasMeditation = recent.some(e => e.meditation)
+                      const hasHeavyMeal = recent.some(e => e.heavyMeal)
+                      const hasData = sleep.length >= 2
+
+                      let readiness = 50
+                      let readinessFactors = 0
+                      if (hasData) {
+                        readiness = 50
+                        if (consistency.pct >= 80) readiness += 20
+                        else if (consistency.pct >= 50) readiness += 10
+                        const qScore = avgQuality / 5 * 20
+                        readiness += qScore
+                        if (consistency.total >= 2 && bedMins >= 20*60 && bedMins <= 24*60) readiness += 10 - (Math.abs(bedMins - 22.5*60) / 120) * 5
+                        if (sleepDebt <= 1) readiness += 10
+                        else if (sleepDebt <= 3) readiness += 5
+                        if (hasCaffeine) readiness -= 10
+                        if (hasAlcohol) readiness -= 10
+                        if (hasHeavyMeal) readiness -= 5
+                        readiness = Math.max(0, Math.min(100, Math.round(readiness)))
+                        readinessFactors = (hasCaffeine ? 1 : 0) + (hasAlcohol ? 1 : 0) + (hasHeavyMeal ? 1 : 0)
+                      }
+
+                      const actions: { icon: string; text: string; color: string }[] = []
+                      if (hasCaffeine) actions.push({ icon: '☕', text: 'Caffeine detected — block after 4 PM to protect sleep onset', color: 'text-orange-400' })
+                      if (hasAlcohol) actions.push({ icon: '🍷', text: 'Alcohol reduces REM by ~20% — skip tonight for deeper rest', color: 'text-rose-400' })
+                      if (hasHeavyMeal) actions.push({ icon: '🍕', text: 'Heavy meal late — try eating 3h before bed for better digestion', color: 'text-amber-400' })
+                      if (hasScreen && !hasAlcohol && !hasCaffeine && !hasHeavyMeal) actions.push({ icon: '📱', text: 'Screen light suppresses melatonin — start wind-down 30min early', color: 'text-violet-400' })
+                      if (sleepDebt > 3) actions.push({ icon: '⚠️', text: `${sleepDebt.toFixed(1)}h sleep debt — add 30-45min tonight to start recovering`, color: 'text-amber-400' })
+                      if (sleepDebt > 0 && sleepDebt <= 3) actions.push({ icon: '📊', text: `${sleepDebt.toFixed(1)}h debt — +30min tonight clears it in ${daysToRecover} nights`, color: 'text-cyan-400' })
+                      if (consistency.pct < 50 && consistency.total >= 2) actions.push({ icon: '⏰', text: 'Bedtime varies by 1h+ — set a fixed bedtime alarm this week', color: 'text-rose-400' })
+                      if (!hasMeditation && actions.length < 2) actions.push({ icon: '🧘', text: '5 min deep breathing before bed lowers cortisol and speeds sleep onset', color: 'text-emerald-400' })
+                      if (actions.length === 0 && hasData) actions.push({ icon: '✅', text: coachPref === 'early_bird' ? 'All clear — stick to your early schedule' : coachPref === 'night_owl' ? 'All clear — maintain your wind-down routine' : 'All clear — keep your balanced rhythm going', color: 'text-emerald-400' })
+                      if (!hasData) actions.push({ icon: '📝', text: 'Log 2+ nights to unlock personalized tonight recommendations', color: 'text-gray-500' })
+
+                      const readColor = readiness >= 80 ? 'text-emerald-400' : readiness >= 60 ? 'text-cyan-400' : readiness >= 40 ? 'text-amber-400' : 'text-rose-400'
+                      const readBarColor = readiness >= 80 ? 'bg-emerald-500' : readiness >= 60 ? 'bg-cyan-500' : readiness >= 40 ? 'bg-amber-500' : 'bg-rose-500'
 
                       return (
-                        <div className="space-y-2.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-500">🛌 Bedtime</span>
-                            <span className="text-white font-medium">{bedH}:{bedM.toString().padStart(2, '0')} {bedPeriod}</span>
+                        <div className="space-y-3">
+                          {/* Schedule row */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5 text-center">
+                              <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Bedtime</p>
+                              <p className="text-sm font-bold text-amber-400">{to12h(bedMins)}</p>
+                              <p className="text-[8px] text-gray-600 mt-0.5">
+                                {withBedEntries.length >= 2 ? 'adjusted avg' : coachPref === 'early_bird' ? 'early bird' : coachPref === 'night_owl' ? 'night owl' : 'balanced'}
+                              </p>
+                            </div>
+                            <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5 text-center">
+                              <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Wind-down</p>
+                              <p className="text-sm font-bold text-violet-400">{to12h(windDownMins)}</p>
+                              <p className="text-[8px] text-gray-600 mt-0.5">lights out + no screens</p>
+                            </div>
+                            <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5 text-center">
+                              <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Wake up</p>
+                              <p className="text-sm font-bold text-emerald-400">{to12h(wakeMins)}</p>
+                              <p className="text-[8px] text-gray-600 mt-0.5">{targetHours}h target</p>
+                            </div>
                           </div>
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-500">🌙 Wind-down</span>
-                            <span className="text-white font-medium">{windDownH}:{windDownM.toString().padStart(2, '0')} {windDownPeriod}</span>
-                          </div>
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-500">⏰ Wake time</span>
-                            <span className="text-white font-medium">{wakeH}:{wakeM.toString().padStart(2, '0')} {wakePeriod}</span>
-                          </div>
-                          <div className="h-px bg-white/5 my-1" />
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-500">🎯 Target hours</span>
-                            <span className="text-emerald-400 font-medium">{targetHours}h</span>
-                          </div>
-                          {(() => {
-                            const recent = sleep.slice(0, Math.min(5, sleep.length))
-                            const tips: string[] = []
-                            if (recent.some(e => { const env = parseEnvFromNotes(e.notes); return env?.caffeine })) tips.push('☕ Skip caffeine after 4 PM')
-                            if (recent.some(e => e.screenTime)) tips.push('📱 No screens 30min before bed')
-                            if (recent.some(e => e.alcohol)) tips.push('🍷 Skip alcohol for deeper sleep')
-                            if (recent.some(e => e.heavyMeal)) tips.push('🍕 Avoid heavy meals 3h before bed')
-                            if (sleepDebt > 2) tips.push(`⚠️ You're ${sleepDebt.toFixed(1)}h in debt — try +30min tonight`)
-                            if (tips.length === 0) tips.push(coachPref === 'early_bird' ? '🌅 Early Bird — stick to your early bedtime' : coachPref === 'night_owl' ? '🦉 Night Owl — keep your rhythm steady' : '⚖️ Balanced — consistency is key')
-                            return tips.slice(0, 2).map((t, i) => (
-                              <div key={i} className="flex items-center gap-1.5 text-[10px] text-gray-400">
-                                <span className="text-[9px]">•</span><span>{t}</span>
+
+                          {/* Readiness bar */}
+                          {hasData && (
+                            <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-[10px] text-gray-500 font-medium">Sleep Readiness</span>
+                                <span className={`text-xs font-bold ${readColor}`}>{readiness}<span className="text-[9px] text-gray-600 font-normal">/100</span></span>
                               </div>
-                            ))
-                          })()}
+                              <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden">
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${readiness}%` }}
+                                  transition={{ duration: 0.6, ease: 'easeOut' }}
+                                  className={`h-full rounded-full ${readBarColor}`}
+                                />
+                              </div>
+                              <div className="flex items-center gap-2 mt-1.5">
+                                <span className={`text-[9px] ${readColor}`}>
+                                  {readiness >= 80 ? 'Optimal — body is ready for deep rest' : readiness >= 60 ? 'Good — minor adjustments for peak sleep' : readiness >= 40 ? 'Fair — address a few factors for better sleep' : 'Suboptimal — several factors affecting your sleep tonight'}
+                                </span>
+                              </div>
+                              {readinessFactors > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                  {hasCaffeine && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20">☕ Caffeine</span>}
+                                  {hasAlcohol && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">🍷 Alcohol</span>}
+                                  {hasHeavyMeal && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">🍕 Late meal</span>}
+                                  {hasScreen && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">📱 Screen</span>}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Prescription */}
+                          <div className="space-y-1.5">
+                            {actions.slice(0, 2).map((a, i) => (
+                              <div key={i} className="flex items-start gap-2 text-[11px] leading-relaxed">
+                                <span className="flex-shrink-0 mt-0.5">{a.icon}</span>
+                                <span className={a.color}>{a.text}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )
                     })()}
