@@ -176,23 +176,23 @@ export function HydrationHub() {
           <button onClick={() => setShowIntake(p => !p)}
             className={`p-2 rounded-xl border transition-all ${showIntake ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
             title="Intake Dashboard">
-            <Droplets size={16} />
+            <Droplets className="w-5 h-5" />
           </button>
           <button onClick={() => setShowHistory(p => !p)}
             className={`p-2 rounded-xl border transition-all ${showHistory ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
             title="7-Day History">
-            <BarChart3 size={16} />
+            <BarChart3 className="w-5 h-5" />
           </button>
           <button onClick={() => setShowInsights(p => !p)}
             className={`p-2 rounded-xl border transition-all ${showInsights ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
             title="Quality Insights">
-            <Brain size={16} />
+            <Brain className="w-5 h-5" />
           </button>
           <div className="relative">
             <button onClick={() => setShowSettings(p => !p)}
               className={`p-2 rounded-xl border transition-all ${showSettings ? 'bg-white/10 border-white/20 text-white' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
               title="Settings">
-              <Settings size={16} />
+              <Settings className="w-5 h-5" />
             </button>
             {showSettings && (
               <>

@@ -503,20 +503,20 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
           <button onClick={() => setShowTrendsPanel(p => !p)}
             className={`p-2 rounded-xl border transition-all ${showTrendsPanel ? 'bg-purple-500/15 border-purple-500/30 text-purple-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
             title="Trends & Insights">
-            <BarChart3 size={16} />
+            <BarChart3 className="w-5 h-5" />
           </button>
           {/* Body panel toggle */}
           <button onClick={() => setShowBodyPanel(p => !p)}
             className={`p-2 rounded-xl border transition-all ${showBodyPanel ? 'bg-rose-500/15 border-rose-500/30 text-rose-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
             title="Body & Recovery">
-            <Activity size={16} />
+            <Activity className="w-5 h-5" />
           </button>
           {/* Achievements toggle */}
           {earnedCount > 0 && (
             <button onClick={() => setShowAchievementsPanel(p => !p)}
               className={`p-2 rounded-xl border transition-all ${showAchievementsPanel ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
               title="Achievements">
-              <Award size={16} />
+              <Award className="w-5 h-5" />
             </button>
           )}
           <button onClick={() => { setFormData(prev => ({ ...prev, energy: settings.defaultEnergy, soreness: settings.defaultSoreness, stress: settings.defaultStress, mood: settings.defaultMood, sleepQuality: settings.defaultSleepQuality, sleepHours: '', recoveryFeeling: 3, domsAreas: [], domsSeverity: {}, hrv: '', rhr: '', bodyTemp: '', trainingLoad: 5, recoveryProtocol: '', bodyWeight: '', notes: '', journal: '' })); setShowForm(true) }}

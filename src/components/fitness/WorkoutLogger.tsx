@@ -1070,6 +1070,49 @@ export function WorkoutLogger() {
 
   return (
     <div className="space-y-6">
+
+      {/* Toolbar: Date Nav + Panel Toggles */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigateDate(-1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+            <Calendar className="w-4 h-4 text-indigo-400 shrink-0" />
+            <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
+              className="bg-transparent border-none text-white font-medium text-sm outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:transition-opacity cursor-pointer" />
+          </div>
+          <button onClick={() => navigateDate(1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          {selectedDate !== formatDate(new Date()) && (
+            <button onClick={jumpToToday} className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 transition-all" title="Jump to today">
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowTemplatePicker(p => !p)}
+            className={`p-2 rounded-xl border transition-all ${showTemplatePicker ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
+            title="Templates">
+            <Layers className="w-5 h-5" />
+          </button>
+          <button onClick={() => setShowWeeklyAnalytics(p => !p)}
+            className={`p-2 rounded-xl border transition-all ${showWeeklyAnalytics ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
+            title="Weekly Analytics">
+            <Activity className="w-5 h-5" />
+          </button>
+          <Button variant="primary" onClick={() => {
+            setWorkoutName(''); setWorkoutType('strength'); setDuration('')
+            setDate(new Date().toISOString().split('T')[0]); setExercises([])
+            setExpandedExercises(new Set()); setShowForm(true)
+          }}>
+            <Plus className="w-4 h-4 mr-1.5" />
+            Log Workout
+          </Button>
+        </div>
+      </motion.div>
+
       <div className="grid grid-cols-3 gap-4">
           <div className="relative overflow-hidden rounded-2xl border border-orange-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-orange-500/5 min-h-[7.5rem]">
           <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/15 rounded-full -mr-12 -mt-12 blur-xl" />
@@ -1161,48 +1204,6 @@ export function WorkoutLogger() {
           </div>
         </motion.div>
       )}</AnimatePresence>
-
-      {/* Toolbar: Date Nav + Panel Toggles */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-2">
-          <button onClick={() => navigateDate(-1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all">
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-            <Calendar className="w-4 h-4 text-indigo-400 shrink-0" />
-            <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
-              className="bg-transparent border-none text-white font-medium text-sm outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:transition-opacity cursor-pointer" />
-          </div>
-          <button onClick={() => navigateDate(1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all">
-            <ChevronRight className="w-5 h-5" />
-          </button>
-          {selectedDate !== formatDate(new Date()) && (
-            <button onClick={jumpToToday} className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 transition-all" title="Jump to today">
-              <RotateCcw className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowTemplatePicker(p => !p)}
-            className={`p-2 rounded-xl border transition-all ${showTemplatePicker ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
-            title="Templates">
-            <Layers size={16} />
-          </button>
-          <button onClick={() => setShowWeeklyAnalytics(p => !p)}
-            className={`p-2 rounded-xl border transition-all ${showWeeklyAnalytics ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
-            title="Weekly Analytics">
-            <Activity size={16} />
-          </button>
-          <Button variant="primary" onClick={() => {
-            setWorkoutName(''); setWorkoutType('strength'); setDuration('')
-            setDate(new Date().toISOString().split('T')[0]); setExercises([])
-            setExpandedExercises(new Set()); setShowForm(true)
-          }}>
-            <Plus className="w-4 h-4 mr-1.5" />
-            Log Workout
-          </Button>
-        </div>
-      </motion.div>
 
       <AnimatePresence>
         {showFilters && (
