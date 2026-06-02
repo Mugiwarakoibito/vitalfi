@@ -1,19 +1,20 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Heart, Activity, Droplets, Plus, Trash2, X, AlertTriangle,
-  CalendarDays, TrendingUp, Settings, Check, RefreshCw,
-  ArrowUp, ArrowDown, Flame, Award, Download, Thermometer, ChevronRight,
-  Clock, Sparkles, Pill, Moon, Upload,
-  BarChart3, Star, Gift, Medal, Trophy,
+  Heart, Activity, Plus, Trash2, X, AlertTriangle,
+  TrendingUp, Settings, Check,
+  ArrowUp, ArrowDown, Award, Flame, Download, RefreshCw, Thermometer,
+  Clock, Sparkles, Pill, Moon, Pencil, Upload,
+  BarChart3, Star, Gift, Medal, Trophy, Lock, Circle,
 } from 'lucide-react'
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
-import { useAppStore } from '@/store/useAppStore'
 import { generateId, cn } from '@/lib/utils'
 
 interface RecoveryEntry {
   id: string; date: string
   energy: number; soreness: number; stress: number; mood: number; sleepQuality: number
+  sleepHours?: number
+  recoveryFeeling?: number
   domsAreas: string[]
   domsSeverity?: Record<string, 'mild' | 'moderate' | 'severe'>
   hrv?: number; rhr?: number; bodyTemp?: number
@@ -21,11 +22,6 @@ interface RecoveryEntry {
   recoveryProtocol?: string
   bodyWeight?: number
   notes?: string; journal?: string; createdAt: string
-}
-
-interface HydrationEntry {
-  id: string; date: string; amount: number; timestamp: string
-  note?: string; createdAt: string; updatedAt: string
 }
 
 const MUSCLE_AREAS = [
@@ -60,8 +56,6 @@ const ACHIEVEMENTS = [
 
 const STORAGE_KEY = 'vitalfi_recovery_entries'
 const SETTINGS_KEY = 'vitalfi_recovery_settings'
-const DEFAULT_HYDRATION_GOAL = 2500
-
 interface RecoverySettings {
   hydrationGoal: number
   energyTarget: number; stressTarget: number; sorenessTarget: number; moodTarget: number; sleepQualityTarget: number
@@ -99,7 +93,7 @@ function loadSettings(): RecoverySettings {
 
 function defaultSettings(): RecoverySettings {
   return {
-    hydrationGoal: DEFAULT_HYDRATION_GOAL, energyTarget: 7, stressTarget: 5, sorenessTarget: 5, moodTarget: 4, sleepQualityTarget: 4,
+    hydrationGoal: 2500, energyTarget: 7, stressTarget: 5, sorenessTarget: 5, moodTarget: 4, sleepQualityTarget: 4,
     enablePrediction: true, domsEnabled: true,
     unit: 'ml', quickWaterAmounts: [100, 250, 500, 750, 1000],
     readinessWeights: { energy: 30, soreness: 25, stress: 25, mood: 20 },
@@ -236,34 +230,7 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
   )
 }
 
-function WaterGlass({ progress }: { progress: number }) {
-  const pct = Math.min(100, Math.max(0, progress * 100))
-  return (
-    <div className="relative w-16 h-24 shrink-0">
-      <div className="absolute inset-0 rounded-b-2xl rounded-t-lg border-2 border-cyan-500/25 overflow-hidden bg-slate-900/60">
-        <motion.div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-cyan-500/45 via-cyan-400/25 to-transparent"
-          initial={{ height: '0%' }} animate={{ height: `${pct}%` }}
-          transition={{ type: 'spring', stiffness: 50, damping: 14 }}
-        >
-          <motion.div className="absolute -top-[2px] left-0 right-0 h-[4px] bg-cyan-400/30 rounded-full blur-[1px]"
-            animate={{ x: [-1, 1, -1] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }} />
-        </motion.div>
-      </div>
-      <div className="absolute -top-[1px] left-1/2 -translate-x-1/2 w-10 h-1 rounded-sm border border-cyan-500/15" />
-      {pct > 60 && (
-        <motion.div className="absolute top-[10%] left-[30%] w-1 h-1 rounded-full bg-cyan-300/20"
-          animate={{ y: [-2, -8, -2], opacity: [0.3, 0, 0.3] }} transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }} />
-      )}
-      {pct > 40 && (
-        <motion.div className="absolute top-[20%] right-[35%] w-[3px] h-[3px] rounded-full bg-cyan-300/15"
-          animate={{ y: [0, -6, 0], opacity: [0.2, 0, 0.2] }} transition={{ duration: 3, repeat: Infinity, delay: 1 }} />
-      )}
-    </div>
-  )
-}
-
-export function Recovery() {
-  const { hydration, addHydration } = useAppStore()
+  export function Recovery() {
   const [settings, setSettings] = useState<RecoverySettings>(loadSettings)
   const [showSettings, setShowSettings] = useState(false)
   const [entries, setEntries] = useState<RecoveryEntry[]>(loadEntries)
@@ -271,28 +238,33 @@ export function Recovery() {
   const [formData, setFormData] = useState({
     energy: loadSettings().defaultEnergy, soreness: loadSettings().defaultSoreness,
     stress: loadSettings().defaultStress, mood: loadSettings().defaultMood, sleepQuality: loadSettings().defaultSleepQuality,
+    sleepHours: '', recoveryFeeling: 3,
     domsAreas: [] as string[], domsSeverity: {} as Record<string, 'mild' | 'moderate' | 'severe'>,
     hrv: '', rhr: '', bodyTemp: '', trainingLoad: 5, recoveryProtocol: '', bodyWeight: '',
     notes: '', journal: '',
   })
   const [deleteTarget, setDeleteTarget] = useState<RecoveryEntry | null>(null)
-  const [waterAmount, setWaterAmount] = useState('')
   const [trendDays, setTrendDays] = useState<7 | 14 | 30>(7)
-  const [showHistory, setShowHistory] = useState(false)
-  const [expandedEntry, setExpandedEntry] = useState<string | null>(null)
   const [importStatus, setImportStatus] = useState<'' | 'success' | 'error'>('')
-  const [showHydrationPanel, setShowHydrationPanel] = useState(false)
   const [showTrendsPanel, setShowTrendsPanel] = useState(false)
   const [showBodyPanel, setShowBodyPanel] = useState(false)
   const [showAchievementsPanel, setShowAchievementsPanel] = useState(false)
+  const [trendMetric, setTrendMetric] = useState<'readiness' | 'energy' | 'sleep' | 'soreness' | 'stress' | 'mood'>('readiness')
+  const [vitalDays, setVitalDays] = useState<7 | 14 | 30>(7)
+  const [domsView, setDomsView] = useState<'map' | 'list'>('map')
+  const [achSort, setAchSort] = useState<'order' | 'earned'>('earned')
+  const [showLocked, setShowLocked] = useState(true)
 
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)) }, [entries])
   useEffect(() => { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)) }, [settings])
 
-  const HYDRATION_GOAL = settings.hydrationGoal
   const today = new Date().toISOString().split('T')[0]
   const todayEntry = useMemo(() => entries.find(e => e.date === today), [entries, today])
   const weights = settings.readinessWeights
+  const todayReadiness = useMemo(() => {
+    if (!todayEntry) return null
+    return getReadiness(todayEntry.energy, todayEntry.soreness, todayEntry.stress, todayEntry.mood, weights)
+  }, [todayEntry, weights])
 
   const getWeekDays = useCallback((daysBack: number, entriesList: RecoveryEntry[]) => {
     const days: { date: string; label: string; readiness: number; energy: number; soreness: number; stress: number; mood: number; sleepQuality: number; trainingLoad: number; hrv: number }[] = []
@@ -358,58 +330,6 @@ export function Recovery() {
     return { value: Math.max(0, Math.min(100, predicted + adjustment)), confidence }
   }, [recentWeek, todayEntry])
 
-  const todayHydration = useMemo(() => hydration.filter((h: HydrationEntry) => h.date === today).reduce((s: number, h: HydrationEntry) => s + h.amount, 0), [hydration, today])
-  const todayHydrationProgress = useMemo(() => Math.min(todayHydration / HYDRATION_GOAL, 1), [todayHydration, HYDRATION_GOAL])
-
-  const hydrationWeek = useMemo(() => {
-    const days: { date: string; label: string; amount: number }[] = []
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - i)
-      const ds = d.toISOString().split('T')[0]
-      const total = hydration.filter((h: HydrationEntry) => h.date === ds).reduce((s: number, h: HydrationEntry) => s + h.amount, 0)
-      days.push({ date: ds, label: d.toLocaleDateString('en-US', { weekday: 'short' }), amount: total })
-    }
-    return days
-  }, [hydration])
-
-  const avgHydration = useMemo(() => {
-    const daysWithData = hydrationWeek.filter(d => d.amount > 0)
-    return daysWithData.length > 0 ? Math.round(daysWithData.reduce((s, d) => s + d.amount, 0) / daysWithData.length) : 0
-  }, [hydrationWeek])
-
-  const todayReadiness = todayEntry ? getReadiness(todayEntry.energy, todayEntry.soreness, todayEntry.stress, todayEntry.mood, weights) : null
-  const protocolEffectiveness = useMemo(() => getProtocolEffectiveness(entries), [entries])
-  const achievements = useMemo(() => getAchievements(entries), [entries])
-  const earnedCount = useMemo(() => achievements.filter(a => a.earned).length, [achievements])
-  const sleepDebt = useMemo(() => settings.enableSleepDebt ? getSleepDebt(entries, settings.sleepNeed) : 0, [entries, settings.sleepNeed, settings.enableSleepDebt])
-
-  const loggingStreak = useMemo(() => {
-    if (entries.length === 0) return 0
-    let streak = 0; const d = new Date()
-    while (streak < 365) {
-      const ds = d.toISOString().split('T')[0]
-      if (!entries.find(e => e.date === ds)) break
-      streak++; d.setDate(d.getDate() - 1)
-    }
-    return streak
-  }, [entries])
-
-  const hydrationStreak = useMemo(() => {
-    let streak = 0; const d = new Date()
-    while (streak < 365) {
-      const ds = d.toISOString().split('T')[0]
-      const total = hydration.filter((h: HydrationEntry) => h.date === ds).reduce((s: number, h: HydrationEntry) => s + h.amount, 0)
-      if (total < HYDRATION_GOAL - 100) break
-      streak++; d.setDate(d.getDate() - 1)
-    }
-    return streak
-  }, [hydration, HYDRATION_GOAL])
-
-  const todayHydrationLogs = useMemo(() => {
-    return [...hydration].filter((h: HydrationEntry) => h.date === today)
-      .sort((a: HydrationEntry, b: HydrationEntry) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-  }, [hydration, today])
-
   const hrvTrend = useMemo(() => entries.filter(e => e.hrv).slice(0, 14).reverse().map(e => e.hrv!), [entries])
   const rhrTrend = useMemo(() => entries.filter(e => e.rhr).slice(0, 14).reverse().map(e => e.rhr!), [entries])
   const bodyTempTrend = useMemo(() => entries.filter(e => e.bodyTemp).slice(0, 14).reverse().map(e => e.bodyTemp!), [entries])
@@ -443,8 +363,39 @@ export function Recovery() {
     }
   }, [entries])
 
-  const hUnit = (ml: number) => settings.unit === 'oz' ? Math.round(ml / 29.57) : ml
-  const hLabel = settings.unit
+  // Trend metric data (switches the chart based on selected metric)
+  const trendMetricData = useMemo(() => {
+    return recentDays.map(d => {
+      const val = trendMetric === 'readiness' ? d.readiness :
+                  trendMetric === 'energy' ? d.energy * 10 :
+                  trendMetric === 'sleep' ? d.sleepQuality * 20 :
+                  trendMetric === 'soreness' ? (10 - d.soreness) * 10 :
+                  trendMetric === 'stress' ? (10 - d.stress) * 10 :
+                  d.mood * 20
+      return { ...d, value: Math.round(val) }
+    })
+  }, [recentDays, trendMetric])
+
+  const trendMetricLabel = trendMetric === 'readiness' ? 'Readiness' :
+    trendMetric === 'energy' ? 'Energy' : trendMetric === 'sleep' ? 'Sleep Q' :
+    trendMetric === 'soreness' ? 'Soreness (inv)' : trendMetric === 'stress' ? 'Stress (inv)' : 'Mood'
+
+  const protocolEffectiveness = useMemo(() => getProtocolEffectiveness(entries), [entries])
+  const sortedEntries = useMemo(() =>
+    [...entries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+  [entries])
+  const achievements = useMemo(() => getAchievements(entries), [entries])
+  const earnedCount = useMemo(() => achievements.filter(a => a.earned).length, [achievements])
+  const loggingStreak = useMemo(() => getStreak(entries), [entries])
+  const sleepDebt = useMemo(() => getSleepDebt(entries, settings.sleepNeed), [entries, settings.sleepNeed])
+
+  const filteredAchievements = useMemo(() => {
+    const list = achSort === 'earned'
+      ? [...achievements].sort((a, b) => (a.earned === b.earned ? 0 : a.earned ? -1 : 1))
+      : achievements
+    return showLocked ? list : list.filter(a => a.earned)
+  }, [achievements, achSort, showLocked])
+
   const displayTemp = (temp: number) => settings.tempUnit === '°F' ? Math.round(temp * 9 / 5 + 32) : temp
   const displayWeight = (weight: number) => settings.weightUnit === 'lbs' ? Math.round(weight * 2.20462 * 10) / 10 : weight
 
@@ -453,6 +404,8 @@ export function Recovery() {
       id: generateId(), date: today,
       energy: formData.energy, soreness: formData.soreness, stress: formData.stress,
       mood: formData.mood, sleepQuality: formData.sleepQuality,
+      sleepHours: formData.sleepHours ? parseFloat(formData.sleepHours) : undefined,
+      recoveryFeeling: formData.recoveryFeeling,
       domsAreas: formData.domsAreas, domsSeverity: formData.domsSeverity,
       hrv: formData.hrv ? parseInt(formData.hrv) : undefined,
       rhr: formData.rhr ? parseInt(formData.rhr) : undefined,
@@ -467,10 +420,6 @@ export function Recovery() {
     if (existing >= 0) { const updated = [...entries]; updated[existing] = entry; setEntries(updated) }
     else setEntries([entry, ...entries])
     setShowForm(false)
-  }
-
-  const addWater = (amount: number) => {
-    addHydration({ id: generateId(), date: today, amount, timestamp: new Date().toISOString(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
   }
 
   const toggleDomArea = (area: string) => {
@@ -548,26 +497,8 @@ export function Recovery() {
     <div className="space-y-6">
 
       {/* Toolbar */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-end flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2.5">
-            <motion.div className="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center relative overflow-hidden" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <motion.div className="absolute inset-0 bg-emerald-500/10" animate={{ opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 3, repeat: Infinity }} />
-              <Heart size={17} className="text-emerald-400 relative z-10" />
-            </motion.div>
-            <div>
-              <h2 className="text-base font-black text-white tracking-tight">Recovery</h2>
-              {todayReadiness && <p className="text-[10px] text-slate-500">{todayReadiness.label} · {loggingStreak}d streak</p>}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Hydration panel toggle */}
-          <button onClick={() => setShowHydrationPanel(p => !p)}
-            className={`p-2 rounded-xl border transition-all ${showHydrationPanel ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
-            title="Hydration Log">
-            <Droplets size={16} />
-          </button>
           {/* Trends panel toggle */}
           <button onClick={() => setShowTrendsPanel(p => !p)}
             className={`p-2 rounded-xl border transition-all ${showTrendsPanel ? 'bg-purple-500/15 border-purple-500/30 text-purple-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
@@ -588,13 +519,9 @@ export function Recovery() {
               <Award size={16} />
             </button>
           )}
-          <button onClick={() => setShowSettings(true)}
-            className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all" title="Settings">
-            <Settings size={16} />
-          </button>
-          <button onClick={() => { setFormData(prev => ({ ...prev, energy: settings.defaultEnergy, soreness: settings.defaultSoreness, stress: settings.defaultStress, mood: settings.defaultMood, sleepQuality: settings.defaultSleepQuality, domsAreas: [], domsSeverity: {}, hrv: '', rhr: '', bodyTemp: '', trainingLoad: 5, recoveryProtocol: '', bodyWeight: '', notes: '', journal: '' })); setShowForm(true) }}
+          <button onClick={() => { setFormData(prev => ({ ...prev, energy: settings.defaultEnergy, soreness: settings.defaultSoreness, stress: settings.defaultStress, mood: settings.defaultMood, sleepQuality: settings.defaultSleepQuality, sleepHours: '', recoveryFeeling: 3, domsAreas: [], domsSeverity: {}, hrv: '', rhr: '', bodyTemp: '', trainingLoad: 5, recoveryProtocol: '', bodyWeight: '', notes: '', journal: '' })); setShowForm(true) }}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/25 transition-all text-[10px] font-bold uppercase tracking-wider"
-          ><Plus size={12} />{todayEntry ? 'Update' : 'Log Today'}</button>
+          ><Plus size={12} />Log Recovery</button>
         </div>
       </motion.div>
 
@@ -604,7 +531,6 @@ export function Recovery() {
           { label: 'Readiness', value: todayReadiness ? `${todayReadiness.score}` : '--', sub: todayReadiness?.label || 'No data', color: todayReadiness?.color || '#6b7280', icon: Heart },
           { label: 'Week Avg', value: avgReadiness ? `${avgReadiness}` : '--', sub: readinessTrend ? `${readinessTrend.diff > 0 ? '+' : ''}${readinessTrend.diff} vs prior` : '', color: '#a855f7', icon: BarChart3 },
           { label: 'Streak', value: `${loggingStreak}d`, sub: `${earnedCount} badges`, color: '#f59e0b', icon: Flame },
-          { label: 'Hydration', value: `${Math.round(todayHydrationProgress * 100)}%`, sub: `${hUnit(todayHydration)}/${hUnit(HYDRATION_GOAL)}${hLabel}`, color: '#06b6d4', icon: Droplets },
           { label: 'Sleep Debt', value: settings.enableSleepDebt ? `${sleepDebt}h` : '--', sub: settings.enableSleepDebt ? `need ${settings.sleepNeed}h` : 'off', color: '#6366f1', icon: Moon },
           { label: 'Balance', value: (() => { const w = recentWeek.filter(d => d.trainingLoad > 0 && d.readiness > 0); if (!w.length) return '--'; const r = Math.round(w.reduce((s, d) => s + d.readiness, 0) / w.length); const l = w.reduce((s, d) => s + d.trainingLoad, 0) / w.length; const sc = Math.round((r / 100) * 10 - l); return sc > 0 ? `+${sc}` : `${sc}` })(), sub: (() => { const w = recentWeek.filter(d => d.trainingLoad > 0 && d.readiness > 0); if (!w.length) return 'No data'; const r = Math.round(w.reduce((s, d) => s + d.readiness, 0) / w.length); const l = w.reduce((s, d) => s + d.trainingLoad, 0) / w.length; const sc = Math.round((r / 100) * 10 - l); const labels = ['Overreaching', 'Strained', 'Strained', 'Neutral', 'Neutral', 'Well balanced']; return labels[Math.min(5, Math.max(0, sc + 3))] })(), color: (() => { const w = recentWeek.filter(d => d.trainingLoad > 0 && d.readiness > 0); if (!w.length) return '#6b7280'; const r = Math.round(w.reduce((s, d) => s + d.readiness, 0) / w.length); const l = w.reduce((s, d) => s + d.trainingLoad, 0) / w.length; const sc = Math.round((r / 100) * 10 - l); return sc >= 2 ? '#10b981' : sc >= 0 ? '#f59e0b' : sc >= -3 ? '#f97316' : '#ef4444' })(), icon: Sparkles },
       ].map((stat) => (
@@ -619,162 +545,145 @@ export function Recovery() {
       ))}
       </motion.div>
 
-      {/* Hydration Panel */}
-      <AnimatePresence>{showHydrationPanel && (
-        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-          <div className="rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-slate-900 via-cyan-950/20 to-slate-900 p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <Droplets size={14} className="text-cyan-400" /><h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Hydration</h3>
-              <span className="text-xs text-slate-500 ml-auto">{hUnit(todayHydration)}{hLabel} / {hUnit(HYDRATION_GOAL)}{hLabel}</span>
-              <span className="text-xs font-bold text-cyan-400">{Math.round(todayHydrationProgress * 100)}%</span>
-            </div>
-            <div className="flex items-center gap-5">
-              <div className="shrink-0"><WaterGlass progress={Math.round(todayHydrationProgress * 100)} /></div>
-              <div className="flex-1 min-w-0 space-y-2.5">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                  {settings.quickWaterAmounts.map(amount => (
-                    <motion.button key={amount} onClick={() => addWater(amount)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                      className="py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-all text-[9px] font-bold">+{hUnit(amount)}{hLabel}</motion.button>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input type="number" value={waterAmount} onChange={e => setWaterAmount(e.target.value)} placeholder={`Custom (${hLabel})`}
-                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-xs focus:border-cyan-500/50 focus:outline-none transition-all" />
-                  <motion.button onClick={() => { if (waterAmount) { addWater(Number(waterAmount)); setWaterAmount('') } }}
-                    className="px-3 py-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/25 text-cyan-300 hover:bg-cyan-500/25 transition-all text-[9px] font-bold flex items-center gap-1"
-                    whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}><Plus size={10} />Add</motion.button>
-                </div>
-                <div className="flex items-center gap-3">
-                  {todayHydrationLogs.length > 0 && (
-                    <div className="max-h-16 overflow-y-auto space-y-0.5 flex-1">
-                      <p className="text-[7px] text-slate-600 uppercase tracking-wider">Today's logs</p>
-                      {todayHydrationLogs.map(log => (
-                        <div key={log.id} className="flex items-center justify-between text-[8px] text-slate-400">
-                          <span>+{hUnit(log.amount)}{hLabel}</span><span>{new Date(log.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {hydrationStreak > 0 && (
-                    <div className="flex items-center gap-1 text-[8px] text-cyan-400/70 bg-cyan-500/10 px-2 py-1 rounded-lg shrink-0">
-                      <Flame size={8} />{hydrationStreak} day streak
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            {/* Hydration history mini chart */}
-            <div className="mt-3 pt-3 border-t border-white/5">
-              <div className="flex items-center gap-2 mb-2"><h4 className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">7-Day History</h4><span className="text-[8px] text-slate-500 ml-auto">{avgHydration > 0 ? `Avg: ${hUnit(avgHydration)}${hLabel}` : ''}</span></div>
-              <div className="h-16">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={hydrationWeek}>
-                    <XAxis dataKey="label" tick={{ fill: '#64748b', fontSize: 8 }} axisLine={false} tickLine={false} />
-                    <YAxis hide domain={[0, 'auto']} />
-                    <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px' }} formatter={(value: number) => [`${hUnit(value)}${hLabel}`, 'Hydration']} />
-                    <Bar dataKey="amount" radius={[3, 3, 0, 0]} maxBarSize={20}>
-                      {hydrationWeek.map((entry, idx) => (<rect key={idx} fill={entry.amount > 0 ? '#06b6d4' : '#1e293b'} rx={3} />))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}</AnimatePresence>
+
 
       {/* Trends Panel */}
       <AnimatePresence>{showTrendsPanel && (
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-          <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-br from-slate-900 via-purple-950/20 to-slate-900 p-5">
-            <div className="flex items-center gap-2 mb-4">
+          <div className="rounded-2xl border border-purple-500/15 bg-black/60 backdrop-blur-xl p-4 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-violet-500/5 pointer-events-none" />
+            <div className="relative">
+            <div className="flex items-center gap-2 mb-3">
               <TrendingUp size={14} className="text-purple-400" /><h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Trends & Insights</h3>
+              <div className="flex gap-1 ml-auto">
+                {(['readiness', 'energy', 'sleep'] as const).map(m => (
+                  <button key={m} onClick={() => setTrendMetric(m)}
+                    className={cn("px-1.5 py-0.5 rounded text-[7px] font-bold border transition-all capitalize", trendMetric === m ? "bg-purple-500/15 border-purple-500/25 text-purple-300" : "text-slate-600 border-transparent hover:text-slate-400")}>{m}</button>
+                ))}
+              </div>
+              {readinessTrend && (
+                <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                  className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[7px] font-bold border", readinessTrend.arrow === 'up' ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" : readinessTrend.arrow === 'down' ? "text-rose-400 bg-rose-500/10 border-rose-500/20" : "text-slate-400 bg-white/5 border-white/10")}>
+                  {readinessTrend.arrow === 'up' ? <ArrowUp size={7} /> : readinessTrend.arrow === 'down' ? <ArrowDown size={7} /> : <span className="inline-block w-1.5 h-0.5 bg-slate-400 rounded" />}
+                  {readinessTrend.arrow === 'up' ? `+${readinessTrend.diff}` : readinessTrend.diff}
+                </motion.div>
+              )}
             </div>
-            <div className="space-y-4">
-              {/* Sleep-Readiness */}
+            {/* Stats bar */}
+            {(() => {
+              const readyDays = recentDays.filter(d => d.readiness > 0)
+              const above70 = readyDays.filter(d => d.readiness >= 70).length
+              let readyStreak = 0
+              for (let i = readyDays.length - 1; i >= 0; i--) { if (readyDays[i].readiness >= 70) readyStreak++; else break }
+              const trendVals = trendMetricData.filter(d => d.value > 0)
+              const avgVal = trendVals.length > 0 ? Math.round(trendVals.reduce((s, d) => s + d.value, 0) / trendVals.length) : 0
+              return (
+                <div className="flex items-center gap-3 mb-3 text-[8px] text-slate-600 flex-wrap">
+                  <span>{trendMetricLabel} avg: <span className="font-bold text-purple-300">{avgVal}</span></span>
+                  {trendMetric === 'readiness' && <><span>Streak: <span className="font-bold text-emerald-400">{readyStreak}</span></span><span>Good: <span className="font-bold text-emerald-400">{above70}</span>/{readyDays.length}</span></>}
+                  <span>Range: <span className="font-bold text-purple-300">{trendVals.length > 0 ? Math.min(...trendVals.map(d => d.value)) : 0}</span>–<span className="font-bold text-purple-300">{trendVals.length > 0 ? Math.max(...trendVals.map(d => d.value)) : 0}</span></span>
+                  <span className="text-slate-500 ml-auto">{trendDays}d</span>
+                </div>
+              )
+            })()}
+            <div className="space-y-3">
+              {/* Sleep-Readiness (always on readiness metric) */}
               {sleepReadinessData.length >= 3 && (
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Moon size={12} className="text-indigo-400" /><h4 className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Sleep vs Readiness</h4>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Moon size={12} className="text-indigo-400" /><h4 className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">Sleep vs Readiness</h4>
+                    <span className="text-[7px] text-slate-600 ml-auto">{sleepReadinessData.length} entries</span>
                   </div>
-                  <div className="h-20">
+                  <div className="h-16">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={sleepReadinessData}>
-                        <XAxis dataKey="sleepLabel" tick={{ fill: '#64748b', fontSize: 8 }} axisLine={false} tickLine={false} />
+                        <XAxis dataKey="sleepLabel" tick={{ fill: '#64748b', fontSize: 7 }} axisLine={false} tickLine={false} />
                         <YAxis hide domain={[0, 100]} />
-                        <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px' }} />
-                        <Line type="monotone" dataKey="readiness" stroke="#818cf8" strokeWidth={2} dot={{ fill: '#818cf8', r: 2 }} />
+                        <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '9px' }} />
+                        <defs><linearGradient id="sleepLineGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#6366f1" stopOpacity={0.4} /><stop offset="100%" stopColor="#818cf8" stopOpacity={1} /></linearGradient><linearGradient id="readLineGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#a855f7" stopOpacity={0.6} /><stop offset="100%" stopColor="#c084fc" stopOpacity={1} /></linearGradient></defs>
+                        <Line type="monotone" dataKey="readiness" stroke="url(#readLineGrad)" strokeWidth={2} dot={{ fill: '#c084fc', r: 1.5, strokeWidth: 0 }} name="Readiness" />
+                        <Line type="monotone" dataKey="sleepQuality" stroke="url(#sleepLineGrad)" strokeWidth={1.5} strokeDasharray="3 2" dot={{ fill: '#818cf8', r: 1.5, strokeWidth: 0 }} name="Sleep Q" />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
               )}
-              {/* Readiness Trend */}
+              {/* Metric Trend with inline time range */}
               <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp size={12} className="text-purple-400" /><h4 className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Readiness Trend</h4>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <TrendingUp size={12} className="text-purple-400" /><h4 className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">{trendMetricLabel} Trend</h4>
                   <div className="flex gap-1 ml-2">
                     {([7, 14, 30] as const).map(d => (
                       <button key={d} onClick={() => setTrendDays(d)}
-                        className={cn("px-1.5 py-0.5 rounded text-[7px] font-bold transition-all", trendDays === d ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" : "text-slate-600 hover:text-slate-400")}>{d}d</button>
+                        className={cn("px-1.5 py-0.5 rounded text-[7px] font-bold transition-all", trendDays === d ? "bg-purple-500/15 text-purple-300 border border-purple-500/25" : "text-slate-600 hover:text-slate-400")}>{d}d</button>
                     ))}
                   </div>
-                  <span className="text-[8px] text-slate-500 ml-auto">Avg: {avgReadiness}</span>
+                  <div className="flex gap-1 ml-1">
+                    {(['bar', 'area'] as const).map(ct => (
+                      <button key={ct} onClick={() => setSettings(prev => ({ ...prev, chartType: ct }))}
+                        className={cn("px-1.5 py-0.5 rounded text-[7px] font-bold border transition-all capitalize", settings.chartType === ct ? "bg-purple-500/15 border-purple-500/25 text-purple-300" : "text-slate-600 border-transparent hover:text-slate-400")}>{ct}</button>
+                    ))}
+                  </div>
                 </div>
-                <div className="h-24">
+                <div className="h-20">
                   <ResponsiveContainer width="100%" height="100%">
                     {settings.chartType === 'area' ? (
-                      <AreaChart data={recentDays}>
-                        <XAxis dataKey="label" tick={{ fill: '#64748b', fontSize: 8 }} axisLine={false} tickLine={false} interval={trendDays > 14 ? 1 : 0} />
+                      <AreaChart data={trendMetricData}>
+                        <XAxis dataKey="label" tick={{ fill: '#64748b', fontSize: 7 }} axisLine={false} tickLine={false} interval={trendDays > 14 ? 1 : 0} />
                         <YAxis hide domain={[0, 100]} />
-                        <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px' }} />
-                        <defs><linearGradient id="readGrad2" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} /><stop offset="95%" stopColor="#a855f7" stopOpacity={0} /></linearGradient></defs>
-                        <Area type="monotone" dataKey="readiness" stroke="#a855f7" fill="url(#readGrad2)" strokeWidth={2} dot={{ fill: '#a855f7', r: 2 }} />
+                        <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '9px' }} />
+                        <defs><linearGradient id="trendAreaGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#a855f7" stopOpacity={0.35} /><stop offset="40%" stopColor="#a855f7" stopOpacity={0.15} /><stop offset="95%" stopColor="#a855f7" stopOpacity={0} /></linearGradient></defs>
+                        <Area type="monotone" dataKey="value" stroke="#c084fc" fill="url(#trendAreaGrad)" strokeWidth={2} dot={{ fill: '#c084fc', r: 1.5, strokeWidth: 0 }} />
+                        {trendMetric === 'readiness' && <Line data={[{ label: '', value: 70 }]} dataKey="value" stroke="#a855f7" strokeDasharray="2 2" strokeWidth={1} dot={false} activeDot={false} />}
                       </AreaChart>
                     ) : (
-                      <BarChart data={recentDays}>
-                        <XAxis dataKey="label" tick={{ fill: '#64748b', fontSize: 8 }} axisLine={false} tickLine={false} interval={trendDays > 14 ? 1 : 0} />
+                      <BarChart data={trendMetricData}>
+                        <XAxis dataKey="label" tick={{ fill: '#64748b', fontSize: 7 }} axisLine={false} tickLine={false} interval={trendDays > 14 ? 1 : 0} />
                         <YAxis hide domain={[0, 100]} />
-                        <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px' }} />
-                        <Bar dataKey="readiness" radius={[3, 3, 0, 0]} maxBarSize={trendDays > 14 ? 10 : 22}>
-                          {recentDays.map((entry, idx) => (<rect key={idx} fill={entry.readiness > 0 ? getScoreColor(entry.readiness) : '#334155'} rx={3} />))}
+                        <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '9px' }} />
+                        <Bar dataKey="value" radius={[3, 3, 0, 0]} maxBarSize={trendDays > 14 ? 10 : 20}>
+                          {trendMetricData.map((entry, idx) => (<rect key={idx} fill={entry.value > 0 ? getScoreColor(entry.value) : '#334155'} rx={3} />))}
                         </Bar>
                       </BarChart>
                     )}
                   </ResponsiveContainer>
                 </div>
-                {readinessPrediction !== null && (
-                  <div className="mt-2 flex items-center gap-2 text-[9px] flex-wrap">
-                    <Clock size={8} className="text-slate-500" />
-                    <span className="text-slate-500">Tomorrow:</span>
+                {readinessPrediction !== null && trendMetric === 'readiness' && (
+                  <div className="mt-1.5 flex items-center gap-2 text-[8px] flex-wrap">
+                    <Clock size={7} className="text-slate-500" /><span className="text-slate-500">Tomorrow:</span>
                     <span className={cn("font-bold", readinessPrediction.value >= 70 ? "text-emerald-400" : readinessPrediction.value >= 50 ? "text-amber-400" : "text-rose-400")}>{readinessPrediction.value}</span>
-                    <span className="text-slate-600">/100 · {readinessPrediction.confidence}%</span>
+                    <span className="text-slate-600">/100 · {readinessPrediction.confidence}% confidence</span>
                   </div>
                 )}
               </div>
               {/* Weekly Comparison */}
               {weeklyComparison.energy.this !== null && (
                 <div>
-                  <div className="flex items-center gap-2 mb-2"><BarChart3 size={12} className="text-purple-400" /><h4 className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">This vs Last Week</h4></div>
-                  <div className="grid grid-cols-4 gap-2 text-center">
+                  <div className="flex items-center gap-2 mb-1.5"><BarChart3 size={12} className="text-purple-400" /><h4 className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">This vs Last Week</h4></div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                     {(['energy', 'soreness', 'stress', 'mood'] as const).map(key => {
                       const t = weeklyComparison[key].this; const l = weeklyComparison[key].last
                       if (t === null || l === null) return null
-                      const diff = t - l; // const colors unused
+                      const diff = Math.round((t - l) * 10) / 10
                       const improved = key === 'soreness' || key === 'stress' ? diff < 0 : diff > 0
                       return (
-                        <div key={key}>
-                          <p className="text-[7px] text-slate-600 uppercase tracking-wider">{key}</p>
-                          <div className="flex items-center justify-center gap-1"><span className="text-[9px] text-slate-500">{l}</span><span className="text-xs font-bold text-white">{t}</span></div>
-                          <span className={cn("text-[8px] font-bold flex items-center justify-center gap-0.5", improved ? "text-emerald-400" : "text-rose-400")}>
-                            {diff > 0 ? <ArrowUp size={7} /> : <ArrowDown size={7} />}{Math.abs(Math.round(diff * 10) / 10)}
-                          </span>
+                        <div key={key} className={`rounded-xl bg-gradient-to-b ${improved ? 'from-emerald-500/[0.04]' : 'from-rose-500/[0.04]'} to-transparent border ${improved ? 'border-emerald-500/10' : 'border-rose-500/10'} px-2.5 py-1.5`}>
+                          <p className="text-[7px] text-slate-600 uppercase tracking-wider mb-0.5">{key}</p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[8px] text-slate-600">{l}</span>
+                            <span className="text-[10px] font-bold text-white">→ {t}</span>
+                          </div>
+                          <div className={cn("text-[7px] font-bold flex items-center gap-0.5 mt-0.5", improved ? "text-emerald-400" : diff === 0 ? "text-slate-500" : "text-rose-400")}>
+                            {diff > 0 ? <ArrowUp size={6} /> : diff < 0 ? <ArrowDown size={6} /> : <span className="w-1 h-0.5 bg-slate-500 rounded inline-block" />}
+                            {Math.abs(diff)}
+                          </div>
                         </div>
                       )
                     })}
                   </div>
                 </div>
               )}
+            </div>
             </div>
           </div>
         </motion.div>
@@ -783,35 +692,71 @@ export function Recovery() {
       {/* Body Panel */}
       <AnimatePresence>{showBodyPanel && (
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-          <div className="rounded-2xl border border-rose-500/20 bg-gradient-to-br from-slate-900 via-rose-950/20 to-slate-900 p-5">
-            <div className="flex items-center gap-2 mb-4">
+          <div className="rounded-2xl border border-rose-500/15 bg-black/60 backdrop-blur-xl p-4 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-rose-500/5 via-transparent to-orange-500/5 pointer-events-none" />
+            <div className="relative">
+            <div className="flex items-center gap-2 mb-3">
               <Activity size={14} className="text-rose-400" /><h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Body & Recovery</h3>
+              <div className="flex gap-1 ml-auto">
+                {(['map', 'list'] as const).map(v => (
+                  <button key={v} onClick={() => setDomsView(v)}
+                    className={cn("px-1.5 py-0.5 rounded text-[7px] font-bold border transition-all capitalize", domsView === v ? "bg-rose-500/15 border-rose-500/25 text-rose-300" : "text-slate-600 border-transparent hover:text-slate-400")}>{v}</button>
+                ))}
+              </div>
+              <div className="flex gap-1">
+                {([7, 14, 30] as const).map(d => (
+                  <button key={d} onClick={() => setVitalDays(d)}
+                    className={cn("px-1.5 py-0.5 rounded text-[7px] font-bold border transition-all", vitalDays === d ? "bg-rose-500/15 border-rose-500/25 text-rose-300" : "text-slate-600 border-transparent hover:text-slate-400")}>{d}d</button>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {/* DOMS */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <Heart size={12} className="text-rose-400" /><h4 className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">DOMS Map</h4>
-                  {todayEntry && <span className="text-[8px] text-slate-500 ml-auto">{todayEntry.domsAreas.length} areas</span>}
+                  <Heart size={12} className="text-rose-400" /><h4 className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">DOMS</h4>
+                  {todayEntry && <span className="text-[7px] text-slate-500 ml-auto">{todayEntry.domsAreas.length} areas</span>}
                 </div>
                 {!todayEntry ? (
-                  <p className="text-[9px] text-slate-500 text-center py-3">Log today to track soreness</p>
+                  <p className="text-[8px] text-slate-500 text-center py-2">Log today to track soreness</p>
+                ) : domsView === 'list' ? (
+                  <div className="space-y-1">
+                    {todayEntry.domsAreas.length === 0 ? <p className="text-[8px] text-slate-500 text-center py-2">No areas marked</p> : (
+                      MUSCLE_AREAS.filter(a => todayEntry.domsAreas.includes(a)).map(area => (
+                        <div key={area} className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.05] text-[8px]">
+                          <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", todayEntry.domsSeverity?.[area] === 'severe' ? "bg-rose-500 shadow-[0_0_4px_#ef4444]" : todayEntry.domsSeverity?.[area] === 'moderate' ? "bg-amber-500 shadow-[0_0_3px_#f59e0b]" : "bg-emerald-500")} />
+                          <span className="text-slate-300">{area}</span>
+                          <span className="text-[6px] text-slate-600 ml-auto uppercase">{todayEntry.domsSeverity?.[area] || 'mild'}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center">
                     <DomsBodyMap domsSeverity={todayEntry.domsSeverity || {}} domsAreas={todayEntry.domsAreas} onToggle={() => {}} readonly />
                     <div className="flex gap-2 mt-1.5">{(['mild', 'moderate', 'severe'] as const).map(sev => (
-                      <div key={sev} className="flex items-center gap-1"><div className={cn("w-1.5 h-1.5 rounded-full", sev === 'severe' ? "bg-rose-500" : sev === 'moderate' ? "bg-amber-500" : "bg-emerald-500")} /><span className="text-[7px] text-slate-600 capitalize">{sev}</span></div>
+                      <div key={sev} className="flex items-center gap-1"><div className={cn("w-1.5 h-1.5 rounded-full", sev === 'severe' ? "bg-rose-500 shadow-[0_0_4px_#ef4444]" : sev === 'moderate' ? "bg-amber-500 shadow-[0_0_3px_#f59e0b]" : "bg-emerald-500 shadow-[0_0_3px_#10b981]")} /><span className="text-[7px] text-slate-600 capitalize">{sev}</span></div>
                     ))}</div>
+                    {todayEntry.domsAreas.length > 0 && (
+                      <div className="flex items-center gap-2 mt-1 text-[7px] text-slate-500">
+                        {(['mild', 'moderate', 'severe'] as const).map(sev => (
+                          <span key={sev} className="flex items-center gap-0.5">
+                            <Circle size={5} className={sev === 'mild' ? 'text-emerald-500' : sev === 'moderate' ? 'text-amber-500' : 'text-rose-500'} fill={sev === 'mild' ? '#10b981' : sev === 'moderate' ? '#f59e0b' : '#ef4444'} />
+                            {todayEntry.domsAreas.filter(a => todayEntry.domsSeverity?.[a] === sev).length}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
                 {domsTrend.length >= 3 && (
                   <div className="mt-2 pt-2 border-t border-white/5">
-                    <p className="text-[7px] text-slate-600 mb-1">DOMS trend</p>
-                    {domsTrend.slice(-5).reverse().map(d => (
+                    <p className="text-[7px] text-slate-600 mb-1">Trend ({domsTrend.length}d)</p>
+                    {domsTrend.slice(-vitalDays).reverse().map(d => (
                       <div key={d.date} className="flex items-center gap-1.5 text-[7px]">
-                        <span className="text-slate-600 w-8">{new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                        <span className="text-slate-600 w-7">{new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' })}</span>
                         <div className="flex-1 h-1 rounded-full bg-white/5 overflow-hidden">
-                          <motion.div className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500" initial={{ width: 0 }} animate={{ width: `${(d.domsScore / 15) * 100}%` }} transition={{ duration: 0.6 }} />
+                          <motion.div className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500" initial={{ width: 0 }} animate={{ width: `${(d.domsScore / 15) * 100}%` }} transition={{ duration: 0.5 }} />
                         </div>
                         <span className="text-slate-500">{d.areaCount}</span>
                       </div>
@@ -821,161 +766,305 @@ export function Recovery() {
               </div>
               {/* Bio Vitals */}
               <div>
-                <div className="flex items-center gap-2 mb-2"><Activity size={12} className="text-sky-400" /><h4 className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Bio Vitals</h4></div>
-                <div className="space-y-2">
+                <div className="flex items-center gap-2 mb-2"><Activity size={12} className="text-sky-400" /><h4 className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">Bio Vitals</h4></div>
+                <div className="space-y-1.5">
                   {hrvTrend.length >= 2 ? (
-                    <div><div className="flex justify-between text-[9px] mb-0.5"><span className="text-slate-400">HRV</span><span className="text-sky-400 font-bold">{hrvTrend[hrvTrend.length - 1]} ms</span></div><BioSparkline data={hrvTrend} color="#06b6d4" /></div>
-                  ) : <p className="text-[8px] text-slate-600 text-center py-1">Enable HRV in settings</p>}
+                    <div className="rounded-xl bg-gradient-to-br from-cyan-500/[0.04] to-transparent border border-cyan-500/15 px-2.5 py-1.5">
+                      <div className="flex justify-between text-[8px] mb-0.5">
+                        <div className="flex items-center gap-1"><span className="text-slate-400">HRV</span>{(() => { const t = hrvTrend[hrvTrend.length - 1] - hrvTrend[Math.max(0, hrvTrend.length - 4)]; return t > 2 ? <ArrowUp size={6} className="text-emerald-400" /> : t < -2 ? <ArrowDown size={6} className="text-rose-400" /> : <span className="w-1 h-0.5 bg-slate-500 rounded inline-block" /> })()}</div>
+                        <span className="text-sky-400 font-bold">{hrvTrend[hrvTrend.length - 1]} ms</span>
+                      </div>
+                      <BioSparkline data={hrvTrend} color="#06b6d4" height={24} />
+                      <div className="flex justify-between text-[6px] text-slate-600 mt-0.5"><span>Lo {Math.min(...hrvTrend)}</span><span>Hi {Math.max(...hrvTrend)}</span></div>
+                    </div>
+                  ) : <p className="text-[7px] text-slate-600 text-center py-1">Enable HRV in settings</p>}
                   {rhrTrend.length >= 2 ? (
-                    <div><div className="flex justify-between text-[9px] mb-0.5"><span className="text-slate-400">RHR</span><span className="text-rose-400 font-bold">{rhrTrend[rhrTrend.length - 1]} bpm</span></div><BioSparkline data={rhrTrend} color="#f43f5e" /></div>
-                  ) : <p className="text-[8px] text-slate-600 text-center py-1">Enable RHR in settings</p>}
+                    <div className="rounded-xl bg-gradient-to-br from-rose-500/[0.04] to-transparent border border-rose-500/15 px-2.5 py-1.5">
+                      <div className="flex justify-between text-[8px] mb-0.5">
+                        <div className="flex items-center gap-1"><span className="text-slate-400">RHR</span>{(() => { const t = rhrTrend[Math.max(0, rhrTrend.length - 4)] - rhrTrend[rhrTrend.length - 1]; return t > 2 ? <ArrowDown size={6} className="text-emerald-400" /> : t < -2 ? <ArrowUp size={6} className="text-rose-400" /> : <span className="w-1 h-0.5 bg-slate-500 rounded inline-block" /> })()}</div>
+                        <span className="text-rose-400 font-bold">{rhrTrend[rhrTrend.length - 1]} bpm</span>
+                      </div>
+                      <BioSparkline data={rhrTrend} color="#f43f5e" height={24} />
+                      <div className="flex justify-between text-[6px] text-slate-600 mt-0.5"><span>Lo {Math.min(...rhrTrend)}</span><span>Hi {Math.max(...rhrTrend)}</span></div>
+                    </div>
+                  ) : <p className="text-[7px] text-slate-600 text-center py-1">Enable RHR in settings</p>}
                   {settings.enableBodyTemp && bodyTempTrend.length >= 2 && (
-                    <div><div className="flex justify-between text-[9px] mb-0.5"><span className="text-slate-400">Body Temp</span><span className="text-orange-400 font-bold">{displayTemp(bodyTempTrend[bodyTempTrend.length - 1])}{settings.tempUnit}</span></div><BioSparkline data={bodyTempTrend} color="#f97316" /></div>
+                    <div className="rounded-xl bg-gradient-to-br from-orange-500/[0.04] to-transparent border border-orange-500/15 px-2.5 py-1.5">
+                      <div className="flex justify-between text-[8px] mb-0.5">
+                        <div className="flex items-center gap-1"><span className="text-slate-400">Temp</span>{(() => { const t = bodyTempTrend[bodyTempTrend.length - 1] - bodyTempTrend[Math.max(0, bodyTempTrend.length - 4)]; return Math.abs(t) > 0.3 ? (t > 0 ? <ArrowUp size={6} className="text-orange-400" /> : <ArrowDown size={6} className="text-cyan-400" />) : <span className="w-1 h-0.5 bg-slate-500 rounded inline-block" /> })()}</div>
+                        <span className="text-orange-400 font-bold">{displayTemp(bodyTempTrend[bodyTempTrend.length - 1])}{settings.tempUnit}</span>
+                      </div>
+                      <BioSparkline data={bodyTempTrend} color="#f97316" height={24} />
+                      <div className="flex justify-between text-[6px] text-slate-600 mt-0.5"><span>Lo {displayTemp(Math.min(...bodyTempTrend))}{settings.tempUnit}</span><span>Hi {displayTemp(Math.max(...bodyTempTrend))}{settings.tempUnit}</span></div>
+                    </div>
                   )}
                 </div>
               </div>
-              {/* Protocols */}
-              <div>
+              {/* Protocols + Week Summary */}
+              <div className="space-y-2">
                 {protocolEffectiveness.length > 1 && (
-                  <div className="mb-3">
-                    <div className="flex items-center gap-2 mb-2"><Pill size={12} className="text-purple-400" /><h4 className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Protocols</h4></div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5"><Pill size={12} className="text-purple-400" /><h4 className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">Protocols</h4><span className="text-[7px] text-slate-600 ml-auto">{protocolEffectiveness.length} types</span></div>
                     <div className="space-y-1">
                       {protocolEffectiveness.slice(0, 5).map(p => (
-                        <div key={p.protocol} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.03] border border-white/5 text-[8px]">
-                          <span className="text-slate-300">{p.protocol}</span>
-                          <span className={cn("font-bold ml-auto", p.avgReadiness >= 70 ? "text-emerald-400" : p.avgReadiness >= 50 ? "text-amber-400" : "text-rose-400")}>{p.avgReadiness}</span>
-                          <span className="text-slate-600">({p.count}x)</span>
+                        <div key={p.protocol} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.02] border border-white/5 text-[7px]">
+                          <span className="text-slate-300 min-w-0 truncate">{p.protocol}</span>
+                          <div className="flex-1 h-1 rounded-full bg-white/5 overflow-hidden mx-1">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${p.avgReadiness}%` }} transition={{ duration: 0.5 }}
+                              className={cn("h-full rounded-full", p.avgReadiness >= 70 ? "bg-gradient-to-r from-emerald-500 to-emerald-300" : p.avgReadiness >= 50 ? "bg-gradient-to-r from-amber-500 to-amber-300" : "bg-gradient-to-r from-rose-500 to-rose-300")}
+                              style={{ boxShadow: p.avgReadiness >= 70 ? '0 0 6px rgba(16,185,129,0.3)' : p.avgReadiness >= 50 ? '0 0 4px rgba(245,158,11,0.3)' : '0 0 4px rgba(239,68,68,0.3)' }} />
+                          </div>
+                          <span className={cn("font-bold shrink-0", p.avgReadiness >= 70 ? "text-emerald-400" : p.avgReadiness >= 50 ? "text-amber-400" : "text-rose-400")}>{p.avgReadiness}</span>
+                          <span className="text-slate-600 shrink-0">({p.count}x)</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-                {/* Weekly summary mini */}
+                {/* Weekly summary */}
                 <div>
-                  <div className="flex items-center gap-2 mb-2"><Award size={12} className="text-amber-400" /><h4 className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Week Summary</h4></div>
+                  <div className="flex items-center gap-2 mb-1.5"><Award size={12} className="text-amber-400" /><h4 className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">Week Summary</h4></div>
                   {recentWeek.some(d => d.readiness > 0) ? (
-                    <div className="space-y-1">
+                    <div className="grid grid-cols-3 gap-1">
                       {[
-                        { label: 'Average', value: avgReadiness, color: 'text-white' },
-                        { label: 'Best', value: bestReadinessDay ? `${bestReadinessDay.readiness}` : '--', color: 'text-emerald-400' },
-                        { label: 'Worst', value: worstReadinessDay ? `${worstReadinessDay.readiness}` : '--', color: 'text-rose-400' },
+                        { label: 'Average', value: avgReadiness, color: 'text-white', bg: 'from-purple-500/10 to-transparent', border: 'border-purple-500/15' },
+                        { label: 'Best', value: bestReadinessDay ? `${bestReadinessDay.readiness}` : '--', color: 'text-emerald-400', bg: 'from-emerald-500/10 to-transparent', border: 'border-emerald-500/15' },
+                        { label: 'Worst', value: worstReadinessDay ? `${worstReadinessDay.readiness}` : '--', color: 'text-rose-400', bg: 'from-rose-500/10 to-transparent', border: 'border-rose-500/15' },
                       ].map(s => (
-                        <div key={s.label} className="flex justify-between text-[8px] px-2 py-1 rounded bg-white/[0.02]">
-                          <span className="text-slate-500">{s.label}</span><span className={`font-bold ${s.color}`}>{s.value}</span>
+                        <div key={s.label} className={`rounded-xl bg-gradient-to-b ${s.bg} border ${s.border} px-2 py-1.5 text-center`}>
+                          <p className="text-[6px] text-slate-600 uppercase tracking-wider">{s.label}</p>
+                          <p className={`text-xs font-black ${s.color} mt-0.5`}>{s.value}</p>
                         </div>
                       ))}
                     </div>
-                  ) : <p className="text-[8px] text-slate-500 text-center py-2">No data this week</p>}
+                  ) : <p className="text-[7px] text-slate-500 text-center py-2">No data this week</p>}
                 </div>
               </div>
+            </div>
             </div>
           </div>
         </motion.div>
       )}</AnimatePresence>
 
       {/* Achievements Panel */}
-      <AnimatePresence>{showAchievementsPanel && earnedCount > 0 && (
+      <AnimatePresence>{showAchievementsPanel && (
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-          <div className="rounded-2xl border border-amber-500/20 bg-gradient-to-br from-slate-900 via-amber-950/20 to-slate-900 p-5">
+          <div className="rounded-2xl border border-amber-500/15 bg-black/60 backdrop-blur-xl p-4 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-yellow-500/5 pointer-events-none" />
+            <div className="relative">
             <div className="flex items-center gap-2 mb-3">
-              <Trophy size={14} className="text-amber-400" /><h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Achievements ({earnedCount}/{achievements.length})</h3>
+              <Trophy size={14} className="text-amber-400" /><h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Achievements</h3>
+              <div className="flex gap-1 ml-2">
+                {(['order', 'earned'] as const).map(s => (
+                  <button key={s} onClick={() => setAchSort(s)}
+                    className={cn("px-1.5 py-0.5 rounded text-[7px] font-bold border transition-all capitalize", achSort === s ? "bg-amber-500/15 border-amber-500/25 text-amber-300" : "text-slate-600 border-transparent hover:text-slate-400")}>{s}</button>
+                ))}
+              </div>
+              <button onClick={() => setShowLocked(p => !p)}
+                className={cn("px-1.5 py-0.5 rounded text-[7px] font-bold border transition-all", showLocked ? "bg-amber-500/15 border-amber-500/25 text-amber-300" : "text-slate-600 border-transparent hover:text-slate-400")}>
+                {showLocked ? 'All' : 'Earned'}
+              </button>
+              <span className="text-[8px] text-slate-500 ml-auto">
+                <span className="text-amber-400 font-bold">{earnedCount}</span>/{achievements.length}
+              </span>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {achievements.filter(a => a.earned).map(a => (
-                <div key={a.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-300/80" title={a.desc}>
-                  <a.icon size={11} className="text-amber-400" />{a.label}
-                </div>
-              ))}
+            {/* Progress bar */}
+            <div className="mb-3 h-1.5 rounded-full bg-white/5 overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${(earnedCount / achievements.length) * 100}%` }}
+                className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-300"
+                style={{ boxShadow: '0 0 8px rgba(245,158,11,0.3)' }}
+                transition={{ duration: 0.8, ease: 'easeOut' }}
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5">
+              {filteredAchievements.length === 0 ? (
+                <p className="text-[8px] text-slate-500 col-span-full text-center py-4">No achievements match filter</p>
+              ) : filteredAchievements.map((a, i) => {
+                const earned = a.earned
+                const isNext = !earned && (i === 0 || filteredAchievements.slice(0, i).every(prev => prev.earned))
+                return (
+                  <motion.div key={a.id} whileHover={{ scale: 1.02 }}
+                    className={cn(
+                      "rounded-xl border px-2.5 py-2 transition-all relative overflow-hidden",
+                      earned ? "bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/25" :
+                      isNext ? "bg-gradient-to-br from-amber-500/5 to-transparent border-amber-500/10 opacity-80" :
+                      "bg-white/[0.02] border-white/[0.06] opacity-60 hover:opacity-80"
+                    )}
+                    title={a.desc}
+                  >
+                    {earned && <div className="absolute top-0 right-0 w-12 h-12 rounded-full -mr-6 -mt-6 blur-xl bg-amber-500/20" />}
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <div className={cn("p-1 rounded-lg", earned ? "bg-amber-500/20 text-amber-400" : isNext ? "bg-amber-500/10 text-amber-500/50" : "bg-slate-800 text-slate-600")}>
+                        {earned ? <a.icon size={9} /> : <Lock size={9} />}
+                      </div>
+                      <span className={cn("text-[8px] font-bold truncate", earned ? "text-amber-300" : "text-slate-500")}>{a.label}</span>
+                      {earned && <Check size={7} className="text-emerald-400 ml-auto shrink-0" />}
+                      {isNext && <span className="text-[6px] text-amber-500/50 ml-auto shrink-0 font-bold uppercase tracking-wider">Next</span>}
+                    </div>
+                    <p className="text-[6px] text-slate-600 leading-tight">{a.desc}</p>
+                  </motion.div>
+                )
+              })}
             </div>
           </div>
+        </div>
         </motion.div>
       )}</AnimatePresence>
 
       {/* History */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-            <CalendarDays size={12} className="text-purple-400" /> Logged Entries {entries.length > 0 && `(${entries.length})`}
-          </h4>
-          <div className="flex items-center gap-2">
-            {entries.length > 0 && (
-              <motion.button onClick={() => setShowHistory(!showHistory)} whileHover={{ x: showHistory ? 0 : 2 }}
-                className="text-[9px] text-slate-500 hover:text-white transition-colors flex items-center gap-1">
-                {showHistory ? 'Hide' : 'View all'} <ChevronRight size={10} className={cn("transition-transform", showHistory && "rotate-90")} />
-              </motion.button>
-            )}
-            {entries.length > 0 && (
-              <motion.button onClick={exportCSV} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all text-[9px]"><Download size={9} /> CSV</motion.button>
-            )}
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-white">Recovery History</h3>
+        {entries.length > 0 && (
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => { if (window.confirm('Delete all recovery entries? This cannot be undone.')) { setEntries([]); localStorage.removeItem(STORAGE_KEY) } }}
+            className="px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition-all text-xs font-medium flex items-center gap-1.5"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Clear All
+          </motion.button>
+        )}
+      </div>
+      {entries.length === 0 ? (
+        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent py-12 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+              <Heart className="w-8 h-8 text-emerald-400/50" />
+            </div>
+            <p className="text-gray-400 mb-1">No recovery entries yet</p>
+            <p className="text-gray-500 text-sm mb-4">Start tracking your readiness and recovery</p>
+            <button onClick={() => { setFormData(prev => ({ ...prev, energy: settings.defaultEnergy, soreness: settings.defaultSoreness, stress: settings.defaultStress, mood: settings.defaultMood, sleepQuality: settings.defaultSleepQuality, sleepHours: '', recoveryFeeling: 3, domsAreas: [], domsSeverity: {}, hrv: '', rhr: '', bodyTemp: '', trainingLoad: 5, recoveryProtocol: '', bodyWeight: '', notes: '', journal: '' })); setShowForm(true) }}
+              className="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/25 transition-all text-xs font-bold flex items-center gap-1.5">
+              <Plus className="w-3.5 h-3.5" /> Log Your First Recovery
+            </button>
           </div>
-        </div>
-        {entries.length > 0 ? (
-          <div className={cn("space-y-1 overflow-y-auto", showHistory ? "max-h-[32rem]" : "max-h-48")}>
-            {entries.slice(0, showHistory ? entries.length : 10).map((entry, idx) => {
+        </motion.div>
+      ) : (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+          <AnimatePresence mode="popLayout">
+            {sortedEntries.map((entry, i) => {
               const r = getReadiness(entry.energy, entry.soreness, entry.stress, entry.mood, weights)
-              const prev = idx < entries.length - 1 ? getReadiness(entries[idx + 1].energy, entries[idx + 1].soreness, entries[idx + 1].stress, entries[idx + 1].mood, weights) : null
+              const prev = i < sortedEntries.length - 1 ? getReadiness(sortedEntries[i + 1].energy, sortedEntries[i + 1].soreness, sortedEntries[i + 1].stress, sortedEntries[i + 1].mood, weights) : null
               const delta = prev ? r.score - prev.score : null
-              const isExpanded = expandedEntry === entry.id
               return (
-                <motion.div key={entry.id}
-                  className={cn("rounded-xl border border-white/5 bg-white/[0.02] transition-all cursor-pointer", isExpanded ? "bg-white/[0.04]" : "hover:bg-white/[0.04]")}
-                  initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.02 }}
-                  onClick={() => setExpandedEntry(isExpanded ? null : entry.id)}
+                <motion.div
+                  key={entry.id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -20, height: 0, marginBottom: 0 }}
+                  transition={{ delay: i * 0.02 }}
+                  className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-4 sm:p-5 hover:bg-white/[0.04] transition-all group relative overflow-hidden"
                 >
-                  <div className="flex items-center gap-2.5 p-2.5">
-                    <motion.div className="w-9 h-9 rounded-full flex items-center justify-center border-2 shrink-0" style={{ borderColor: r.color }} whileHover={{ scale: 1.1 }}>
-                      <span className="text-[10px] font-bold text-white">{r.score}</span>
-                    </motion.div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-white">{new Date(entry.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
-                      <div className="flex flex-wrap gap-x-1.5 gap-y-0 text-[8px] text-slate-500">
-                        <span className={entry.energy >= settings.energyTarget ? 'text-amber-400/80' : ''}>E:{entry.energy}</span>
-                        <span className={entry.soreness <= settings.sorenessTarget ? 'text-rose-400/80' : ''}>S:{entry.soreness}</span>
-                        <span className={entry.stress <= settings.stressTarget ? 'text-violet-400/80' : ''}>St:{entry.stress}</span>
-                        <span className={entry.mood >= settings.moodTarget ? 'text-emerald-400/80' : ''}>M:{entry.mood}</span>
-                        {entry.domsAreas.length > 0 && <span>· DOMS:{entry.domsAreas.length}</span>}
-                        {entry.hrv && <span>· HRV:{entry.hrv}</span>}
-                        {entry.rhr && <span>· RHR:{entry.rhr}</span>}
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/[0.02] to-transparent pointer-events-none" />
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-xl bg-emerald-500/20 flex items-center justify-center shadow-lg" style={{ boxShadow: '0 0 20px rgba(16,185,129,0.15)' }}>
+                          <Heart className="w-5 h-5 text-emerald-400" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-white tracking-tight">
+                              {new Date(entry.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                            </h4>
+                            {r.score >= 85 ? (
+                              <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-[10px] font-medium">Peak</span>
+                            ) : r.score >= 70 ? (
+                              <span className="px-1.5 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/25 text-cyan-400 text-[10px] font-medium">Ready</span>
+                            ) : r.score >= 50 ? (
+                              <span className="px-1.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/25 text-amber-400 text-[10px] font-medium">Fair</span>
+                            ) : r.score >= 30 ? (
+                              <span className="px-1.5 py-0.5 rounded-full bg-orange-500/15 border border-orange-500/25 text-orange-400 text-[10px] font-medium">Tired</span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/25 text-rose-400 text-[10px] font-medium">Exhausted</span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-400">
+                            Score: <span className="font-semibold text-white">{r.score}</span> / 100
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {delta !== null && (
+                          <span className={`text-xs font-medium flex items-center gap-0.5 mr-1 ${delta > 0 ? 'text-emerald-400' : delta < 0 ? 'text-rose-400' : 'text-gray-500'}`}>
+                            {delta > 0 ? <ArrowUp size={10} /> : delta < 0 ? <ArrowDown size={10} /> : <Minus size={10} />}{Math.abs(delta)}
+                          </span>
+                        )}
+                        <motion.button
+                          onClick={(e) => { e.stopPropagation(); setFormData({ energy: entry.energy, soreness: entry.soreness, stress: entry.stress, mood: entry.mood, sleepQuality: entry.sleepQuality, sleepHours: entry.sleepHours?.toString() || '', recoveryFeeling: entry.recoveryFeeling || 3, domsAreas: entry.domsAreas, domsSeverity: entry.domsSeverity || {}, hrv: entry.hrv?.toString() || '', rhr: entry.rhr?.toString() || '', bodyTemp: entry.bodyTemp?.toString() || '', trainingLoad: entry.trainingLoad || 5, recoveryProtocol: entry.recoveryProtocol || '', bodyWeight: entry.bodyWeight?.toString() || '', notes: entry.notes || '', journal: entry.journal || '' }); setShowForm(true) }}
+                          className="p-2 rounded-lg text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </motion.button>
+                        <motion.button
+                          onClick={(e) => { e.stopPropagation(); setDeleteTarget(entry) }}
+                          className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </motion.button>
                       </div>
                     </div>
-                    {delta !== null && (
-                      <span className={cn("text-[8px] font-bold flex items-center gap-0.5 shrink-0", delta > 0 ? "text-emerald-400" : delta < 0 ? "text-rose-400" : "text-slate-500")}>
-                        {delta > 0 ? <ArrowUp size={8} /> : delta < 0 ? <ArrowDown size={8} /> : <Minus size={8} />}{Math.abs(delta)}
-                      </span>
+                    <div className="flex items-center flex-wrap gap-x-4 gap-y-1">
+                      <span className="text-xs font-medium text-white">E:{entry.energy}</span>
+                      <span className="text-xs font-medium text-white">S:{entry.soreness}</span>
+                      <span className="text-xs font-medium text-white">St:{entry.stress}</span>
+                      <span className="text-xs font-medium text-white">M:{entry.mood}</span>
+                      <span className="text-xs font-medium text-white">Sleep Q:{entry.sleepQuality}</span>
+                      {entry.sleepHours && <span className="text-xs text-gray-500">{entry.sleepHours}h slept</span>}
+                      {entry.recoveryFeeling && <span className="text-xs text-emerald-400">Feeling: {entry.recoveryFeeling}/5</span>}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {entry.domsAreas.length > 0 && (
+                        <span className="px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-medium">
+                          DOMS: {entry.domsAreas.length} areas
+                        </span>
+                      )}
+                      {entry.hrv && (
+                        <span className="px-2 py-0.5 rounded-md bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[10px] font-medium">
+                          HRV: {entry.hrv}ms
+                        </span>
+                      )}
+                      {entry.rhr && (
+                        <span className="px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-medium">
+                          RHR: {entry.rhr}bpm
+                        </span>
+                      )}
+                      {entry.bodyTemp && (
+                        <span className="px-2 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[10px] font-medium">
+                          Temp: {displayTemp(entry.bodyTemp)}{settings.tempUnit}
+                        </span>
+                      )}
+                      {entry.bodyWeight && (
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-medium">
+                          Weight: {displayWeight(entry.bodyWeight)}{settings.weightUnit}
+                        </span>
+                      )}
+                      {entry.trainingLoad && (
+                        <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-medium">
+                          Load: {entry.trainingLoad}/10
+                        </span>
+                      )}
+                      {entry.recoveryProtocol && (
+                        <span className="px-2 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-medium">
+                          {entry.recoveryProtocol}
+                        </span>
+                      )}
+                    </div>
+                    {(entry.notes || entry.journal) && (
+                      <p className="text-xs text-gray-500 mt-2 italic line-clamp-1">
+                        &ldquo;{(entry.journal || entry.notes)}&rdquo;
+                      </p>
                     )}
-                    <motion.button onClick={(e) => { e.stopPropagation(); setDeleteTarget(entry) }} whileHover={{ scale: 1.2 }}
-                      className="p-1 rounded-lg text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all shrink-0"><Trash2 size={11} /></motion.button>
                   </div>
-                  {isExpanded && (entry.notes || entry.journal) && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="px-3 pb-2.5 border-t border-white/5 pt-2">
-                      {entry.journal && <p className="text-[10px] text-slate-400 whitespace-pre-wrap leading-relaxed">{entry.journal}</p>}
-                      {entry.notes && !entry.journal && <p className="text-[10px] text-slate-500 italic">{entry.notes}</p>}
-                      <div className="flex gap-2 mt-1.5 text-[8px] text-slate-600 flex-wrap">
-                        {entry.recoveryProtocol && <span>Protocol: {entry.recoveryProtocol}</span>}
-                        {entry.hrv && <span>HRV: {entry.hrv}ms</span>}
-                        {entry.rhr && <span>RHR: {entry.rhr}bpm</span>}
-                        {entry.bodyTemp && <span>Temp: {displayTemp(entry.bodyTemp)}{settings.tempUnit}</span>}
-                        {entry.bodyWeight && <span>Weight: {displayWeight(entry.bodyWeight)}{settings.weightUnit}</span>}
-                        {entry.trainingLoad && <span>Load: {entry.trainingLoad}/10</span>}
-                      </div>
-                    </motion.div>
-                  )}
-                  {!isExpanded && (entry.notes || entry.journal) && (
-                    <div className="px-3 pb-1.5 flex items-center gap-1 text-[8px] text-slate-600"><ChevronRight size={6} />{entry.journal ? 'Journal' : 'Notes'}</div>
-                  )}
                 </motion.div>
               )
             })}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-slate-500">
-            <Heart size={24} className="mx-auto mb-2 text-slate-600" />
-            <p className="text-xs">No recovery entries yet</p>
-            <p className="text-[10px] text-slate-600 mt-1">Log your first day to start tracking readiness</p>
-          </div>
-        )}
-      </div>
+          </AnimatePresence>
+        </motion.div>
+      )}
 
       {/* Log Modal */}
       <AnimatePresence>{showForm && (
@@ -988,7 +1077,7 @@ export function Recovery() {
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
                   <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }}><Heart size={20} className="text-emerald-400" /></motion.div>
                 </div>
-                <div><h3 className="text-lg font-bold text-white">{todayEntry ? 'Update' : 'Log'} Recovery</h3><p className="text-xs text-slate-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p></div>
+                <div><h3 className="text-lg font-bold text-white">{todayEntry ? 'Edit Recovery' : 'Log Recovery'}</h3><p className="text-xs text-slate-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p></div>
               </div>
               <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5"><X size={16} /></button>
             </div>
@@ -1002,6 +1091,29 @@ export function Recovery() {
                 <Slider label="Mood" value={formData.mood} onChange={v => setFormData(prev => ({ ...prev, mood: v }))} min={1} max={5} color="#10b981" hint="Overall emotional state" />
               </div>
               <Slider label="Sleep Quality" value={formData.sleepQuality} onChange={v => setFormData(prev => ({ ...prev, sleepQuality: v }))} min={1} max={5} color="#06b6d4" hint="How well you slept" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] text-slate-400 font-medium">Sleep Hours</label>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Moon size={13} className="text-indigo-400 shrink-0" />
+                    <input type="number" step="0.5" min={0} max={24} value={formData.sleepHours} onChange={e => setFormData(prev => ({ ...prev, sleepHours: e.target.value }))} placeholder="hours"
+                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-indigo-500/50 focus:outline-none transition-all" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 font-medium">Recovery Feeling</label>
+                  <div className="flex items-center gap-2 mt-2">
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <button key={n} type="button" onClick={() => setFormData(prev => ({ ...prev, recoveryFeeling: n }))}
+                        className={`w-8 h-8 rounded-full text-xs font-bold border transition-all ${
+                          formData.recoveryFeeling === n
+                            ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-lg shadow-emerald-500/10 scale-110'
+                            : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:bg-white/10'
+                        }`}>{n}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
               <div>
                 <p className="text-xs text-slate-400 font-medium mb-2">DOMS Areas <span className="text-slate-600 font-normal">— tap to cycle</span></p>
                 <div className="flex flex-wrap gap-1.5">
@@ -1119,14 +1231,7 @@ export function Recovery() {
                   ))}
                 </div>
               </div>
-              <div className="border-t border-white/5 pt-4">
-                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">Hydration</h4>
-                <div className="flex justify-between text-xs mb-1.5"><span className="text-slate-400">Daily water goal</span><span className="text-cyan-400 font-bold">{hUnit(settings.hydrationGoal)}{hLabel}</span></div>
-                <input type="range" min={1000} max={5000} step={100} value={settings.hydrationGoal}
-                  onChange={e => setSettings(prev => ({ ...prev, hydrationGoal: Number(e.target.value) }))}
-                  className="w-full h-2 rounded-full appearance-none bg-white/10 cursor-pointer accent-cyan-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-lg" />
-                <div className="flex justify-between text-[10px] text-slate-600 mt-0.5"><span>1L</span><span>3L</span><span>5L</span></div>
-              </div>
+
               <div className="border-t border-white/5 pt-4">
                 <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">Readiness Score Weights</h4>
                 <p className="text-[10px] text-slate-600 mb-2">How each metric contributes to your readiness score</p>
@@ -1262,31 +1367,7 @@ export function Recovery() {
                   ))}
                 </div>
               </div>
-              <div className="border-t border-white/5 pt-4">
-                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">Units & Quick Water</h4>
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    {(['ml', 'oz'] as const).map(u => (
-                      <button key={u} onClick={() => setSettings(prev => {
-                        const goal = u === 'oz' ? Math.round(prev.hydrationGoal / 29.57) : prev.hydrationGoal * 29.57
-                        const amounts = prev.quickWaterAmounts.map(a => u === 'oz' ? Math.round(a / 29.57) : Math.round(a * 29.57))
-                        return { ...prev, unit: u, hydrationGoal: goal, quickWaterAmounts: amounts }
-                      })}
-                        className={cn("flex-1 py-2 rounded-xl text-xs font-bold border transition-all", settings.unit === u ? "bg-cyan-500/20 border-cyan-500/40 text-cyan-300" : "bg-white/5 border-white/10 text-slate-400 hover:text-white")}>{u.toUpperCase()}</button>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {settings.quickWaterAmounts.map((amount, i) => (
-                      <div key={i} className="flex items-center gap-1">
-                        <input type="number" value={amount} min={25} max={2000} step={25}
-                          onChange={e => { const a = [...settings.quickWaterAmounts]; a[i] = Number(e.target.value); setSettings(prev => ({ ...prev, quickWaterAmounts: a })) }}
-                          className="w-16 px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-white text-xs text-center focus:border-cyan-500/50 focus:outline-none" />
-                        <span className="text-[10px] text-slate-500">{hLabel}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+
               <div className="border-t border-white/5 pt-4">
                 <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">Data Management</h4>
                 <div className="grid grid-cols-2 gap-2">

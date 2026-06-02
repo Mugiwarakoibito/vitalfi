@@ -7,17 +7,16 @@ import { NutritionLogger } from '@/components/fitness/NutritionLogger'
 import { SleepLogger } from '@/components/fitness/SleepLogger'
 import { Progress } from '@/components/fitness/Progress'
 import { Habits } from '@/components/fitness/Habits'
-import { ExerciseLibrary } from '@/components/fitness/ExerciseLibrary'
-import { ExerciseDetail } from '@/components/fitness/ExerciseDetail'
+import { HydrationHub } from '@/components/fitness/HydrationHub'
 import { SupplementTracker } from '@/components/fitness/SupplementTracker'
 import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/lib/utils'
 import {
   Heart, Dumbbell, Activity, Utensils, Moon,
-  TrendingUp, Flame, BookOpen, Coffee, Plus, Droplets,
+  TrendingUp, Flame, Coffee, Plus, Droplets,
 } from 'lucide-react'
 
-type TabId = 'training' | 'diet' | 'sleep' | 'recovery' | 'progress' | 'habits' | 'body' | 'exercises' | 'supplements'
+type TabId = 'training' | 'diet' | 'sleep' | 'recovery' | 'progress' | 'habits' | 'body' | 'hydration' | 'supplements'
 
 const tabConfig: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: 'training', label: 'Workout', icon: Dumbbell },
@@ -27,7 +26,7 @@ const tabConfig: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: 'progress', label: 'Performance', icon: TrendingUp },
   { id: 'habits', label: 'Streak', icon: Flame },
   { id: 'body', label: 'Body', icon: Activity },
-  { id: 'exercises', label: 'Exercises', icon: BookOpen },
+  { id: 'hydration', label: 'Hydration', icon: Droplets },
   { id: 'supplements', label: 'Supps', icon: Coffee },
 ]
 
@@ -70,7 +69,6 @@ export default function Fitness() {
   const tabFromUrl = searchParams.get('tab') as TabId | null
   const actionFromUrl = searchParams.get('action')
   const [activeTab, setActiveTab] = useState<TabId>(tabFromUrl || 'recovery')
-  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null)
   const { workouts, meals, sleep, hydration, loadAllData } = useAppStore()
 
   useEffect(() => { loadAllData() }, [loadAllData])
@@ -252,15 +250,7 @@ export default function Fitness() {
         {activeTab === 'progress' && <Progress />}
         {activeTab === 'habits' && <Habits />}
         {activeTab === 'body' && <BodyMetricsTracker />}
-        {activeTab === 'exercises' && (
-          <div className="space-y-4">
-            {selectedExerciseId ? (
-              <ExerciseDetail exerciseId={selectedExerciseId} onClose={() => setSelectedExerciseId(null)} />
-            ) : (
-              <ExerciseLibrary onSelectExercise={(id) => setSelectedExerciseId(id)} />
-            )}
-          </div>
-        )}
+        {activeTab === 'hydration' && <HydrationHub />}
         {activeTab === 'supplements' && <SupplementTracker />}
       </div>
     </div>

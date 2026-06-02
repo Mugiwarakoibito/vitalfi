@@ -2,8 +2,8 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Plus, Trash2, Pencil, Dumbbell, Flame, ChevronDown, ChevronUp, Check,
-  AlertTriangle, Copy, Search, Filter, X,
+  Plus, Trash2, Pencil, Dumbbell, Flame, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Check,
+  AlertTriangle, Copy, Search, Filter, RotateCcw, Calendar, X,
   TrendingUp, TrendingDown, Minus, Layers,
   FileText, Activity, Zap, Wind, Settings2, Move, StretchHorizontal,
   PersonStanding, Gauge, Crosshair, Weight, Heart, Shield, Sword, Coffee,
@@ -640,8 +640,18 @@ export function WorkoutLogger() {
   const [saveModalFromPicker, setSaveModalFromPicker] = useState(false)
   const [pendingExerciseConfig, setPendingExerciseConfig] = useState<{ id: string; name: string; targetSets: string; targetReps: string; targetRpe: string; editExerciseId?: string } | null>(null)
 
+  const formatDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const [selectedDate, setSelectedDate] = useState(formatDate(new Date()))
+  const navigateDate = (dir: number) => {
+    const d = new Date(selectedDate)
+    d.setDate(d.getDate() + dir)
+    setSelectedDate(formatDate(d))
+  }
+  const jumpToToday = () => setSelectedDate(formatDate(new Date()))
+
   const [filters, setFilters] = useState<WorkoutFilter>({})
-  const [showFilters, setShowFilters] = useState(false)
+  const [showFilters, _setShowFilters] = useState(false)
+  const [showWeeklyAnalytics, setShowWeeklyAnalytics] = useState(false)
   const [showTypeDropdown, setShowTypeDropdown] = useState(false)
   const fromDayRef = useRef<HTMLInputElement>(null)
   const fromMonthRef = useRef<HTMLInputElement>(null)
@@ -1110,68 +1120,89 @@ export function WorkoutLogger() {
         </div>
       </div>
 
-      {/* Weekly Analytics */}
-      {workouts.length > 0 && (
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-16 -mt-16 blur-xl" />
-          <div className="relative">
-            <div className="flex items-center gap-2 text-indigo-400/80 text-sm mb-4">
-              <Activity className="w-4 h-4" />
-              <span className="font-medium">Weekly Analytics</span>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider">This Week</p>
-                <p className="text-xl font-bold text-white mt-1">{thisWeek} <span className="text-xs text-gray-500 font-normal">workouts</span></p>
+      {/* Weekly Analytics Panel */}
+      <AnimatePresence>{showWeeklyAnalytics && workouts.length > 0 && (
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+          <div className="relative overflow-hidden rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-xl p-5 shadow-lg">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full -mr-16 -mt-16 blur-xl" />
+            <div className="relative">
+              <div className="flex items-center gap-2 text-violet-400/80 text-sm mb-4">
+                <Activity className="w-4 h-4" />
+                <span className="font-medium">Weekly Analytics</span>
               </div>
-              <div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Weekly Volume</p>
-                <p className="text-xl font-bold text-white mt-1">{workouts.filter(w => new Date(w.date) >= (() => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); d.setHours(0,0,0,0); return d })()).reduce((s,w) => s + calcVolume(w.exercises), 0).toLocaleString()} <span className="text-xs text-gray-500 font-normal">kg</span></p>
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Avg Duration</p>
-                <p className="text-xl font-bold text-white mt-1">
-                  {(() => {
-                    const thisWeekWorkouts = workouts.filter(w => new Date(w.date) >= (() => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); d.setHours(0,0,0,0); return d })())
-                    const avg = thisWeekWorkouts.length > 0 ? Math.round(thisWeekWorkouts.reduce((s,w) => s + (w.duration || 0), 0) / thisWeekWorkouts.length) : 0
-                    return avg > 0 ? `${avg}min` : '--'
-                  })()}
-                </p>
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Heat Score</p>
-                <p className="text-xl font-bold text-white mt-1">
-                  <span className="text-orange-400">{heatScore.score}</span>
-                  <span className="text-xs text-gray-500 font-normal ml-1">{heatScore.label}</span>
-                </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">This Week</p>
+                  <p className="text-xl font-bold text-white mt-1">{thisWeek} <span className="text-xs text-gray-500 font-normal">workouts</span></p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">Weekly Volume</p>
+                  <p className="text-xl font-bold text-white mt-1">{workouts.filter(w => new Date(w.date) >= (() => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); d.setHours(0,0,0,0); return d })()).reduce((s,w) => s + calcVolume(w.exercises), 0).toLocaleString()} <span className="text-xs text-gray-500 font-normal">kg</span></p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">Avg Duration</p>
+                  <p className="text-xl font-bold text-white mt-1">
+                    {(() => {
+                      const thisWeekWorkouts = workouts.filter(w => new Date(w.date) >= (() => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); d.setHours(0,0,0,0); return d })())
+                      const avg = thisWeekWorkouts.length > 0 ? Math.round(thisWeekWorkouts.reduce((s,w) => s + (w.duration || 0), 0) / thisWeekWorkouts.length) : 0
+                      return avg > 0 ? `${avg}min` : '--'
+                    })()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">Heat Score</p>
+                  <p className="text-xl font-bold text-white mt-1">
+                    <span className="text-orange-400">{heatScore.score}</span>
+                    <span className="text-xs text-gray-500 font-normal ml-1">{heatScore.label}</span>
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </motion.div>
+      )}</AnimatePresence>
 
-      <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-2">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16 blur-xl" />
-        <div className="relative flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <button onClick={() => setShowTemplatePicker(true)} className="text-xs rounded-lg px-2.5 py-1 font-medium border border-white/[0.06] text-gray-500 hover:text-white hover:bg-white/[0.06] hover:border-white/[0.12] transition-all flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-cyan-400" />
-              Templates
-            </button>
-            <button onClick={() => setShowFilters(!showFilters)} className={`text-xs rounded-lg px-2.5 py-1 font-medium border transition-all flex items-center gap-1.5 ${
-              Object.values(filters).some(Boolean)
-                ? 'border-rose-500/30 bg-rose-500/10 text-rose-300'
-                : 'border-white/[0.06] text-gray-500 hover:text-white hover:bg-white/[0.06] hover:border-white/[0.12]'
-            }`}>
-              <Filter className={`w-3.5 h-3.5 ${Object.values(filters).some(Boolean) ? 'text-rose-400' : 'text-gray-500'}`} />
-              {Object.values(filters).some(Boolean) && (
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-              )}
-            </button>
+      {/* Toolbar: Date Nav + Panel Toggles */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigateDate(-1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+            <Calendar className="w-4 h-4 text-indigo-400 shrink-0" />
+            <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
+              className="bg-transparent border-none text-white font-medium text-sm outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:transition-opacity cursor-pointer" />
           </div>
-
+          <button onClick={() => navigateDate(1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          {selectedDate !== formatDate(new Date()) && (
+            <button onClick={jumpToToday} className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 transition-all" title="Jump to today">
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
         </div>
-      </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowTemplatePicker(p => !p)}
+            className={`p-2 rounded-xl border transition-all ${showTemplatePicker ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
+            title="Templates">
+            <Layers size={16} />
+          </button>
+          <button onClick={() => setShowWeeklyAnalytics(p => !p)}
+            className={`p-2 rounded-xl border transition-all ${showWeeklyAnalytics ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
+            title="Weekly Analytics">
+            <Activity size={16} />
+          </button>
+          <Button variant="primary" onClick={() => {
+            setWorkoutName(''); setWorkoutType('strength'); setDuration('')
+            setDate(new Date().toISOString().split('T')[0]); setExercises([])
+            setExpandedExercises(new Set()); setShowForm(true)
+          }}>
+            <Plus className="w-4 h-4 mr-1.5" />
+            Log Workout
+          </Button>
+        </div>
+      </motion.div>
 
       <AnimatePresence>
         {showFilters && (

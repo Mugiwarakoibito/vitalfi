@@ -1131,7 +1131,7 @@ export function SleepLogger() {
                   <Moon className="w-5 h-5 text-violet-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">{editingEntry ? 'Edit Sleep Entry' : 'Log Sleep Entry'}</h3>
+                  <h3 className="text-lg font-semibold text-white">{editingEntry ? 'Edit Sleep' : 'Log Sleep'}</h3>
                   <p className="text-xs text-gray-500">{editingEntry ? 'Update your sleep details' : 'Track every detail of your rest'}</p>
                 </div>
               </div>
