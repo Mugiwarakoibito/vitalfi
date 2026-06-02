@@ -84,6 +84,7 @@ export function SleepLogger() {
   const [showCoachPref, setShowCoachPref] = useState(false)
   const [trendChartMode, setTrendChartMode] = useState<'duration' | 'quality' | 'onset' | 'wakings'>('duration')
   const [trendWeekOffset, setTrendWeekOffset] = useState(0)
+  const [showTonightPlan, setShowTonightPlan] = useState(false)
   const [showSleepSettings, setShowSleepSettings] = useState(false)
   const [targetHours, setTargetHours] = useState(() => {
     const saved = localStorage.getItem('vitalfi_sleep_target')
@@ -359,12 +360,12 @@ export function SleepLogger() {
           const period = avgMins >= 720 ? 'PM' : 'AM'
           const displayHr = hrs > 12 ? hrs - 12 : hrs === 0 ? 12 : hrs
           const windowStr = `${displayHr}:${mins.toString().padStart(2, '0')} ${period}`
-          tips.push({ icon: '🌅', text: `Early Bird — your avg bedtime is ${windowStr}. Try shifting 30min earlier for deeper sleep cycles.`, color: 'text-amber-400', category: 'timing' })
+          tips.push({ icon: '🌅', text: `Early Bird — avg bedtime ${windowStr}. Aim 30min earlier for deeper cycles.`, color: 'text-amber-400', category: 'timing' })
         } else {
-          tips.push({ icon: '🌅', text: `Early Birds thrive with consistent bedtimes. Start logging bedtimes to unlock personalized timing tips.`, color: 'text-amber-400', category: 'timing' })
+          tips.push({ icon: '🌅', text: 'Early Bird mode — morning light boosts your alertness. Log bedtimes to refine your window.', color: 'text-amber-400', category: 'timing' })
         }
       } else {
-        tips.push({ icon: '🌅', text: `Early Bird mode active! Log 3+ nights to get personalized bedtime recommendations.`, color: 'text-amber-400', category: 'timing' })
+        tips.push({ icon: '🌅', text: 'Early Bird active — your sleep thrives on early, consistent bedtimes. Log 3+ nights for custom tips.', color: 'text-amber-400', category: 'timing' })
       }
     } else if (coachPref === 'night_owl') {
       if (sleep.length >= 3) {
@@ -376,12 +377,12 @@ export function SleepLogger() {
           const period = avgMins >= 720 ? 'PM' : 'AM'
           const displayHr = hrs > 12 ? hrs - 12 : hrs === 0 ? 12 : hrs
           const windowStr = `${displayHr}:${mins.toString().padStart(2, '0')} ${period}`
-          tips.push({ icon: '🦉', text: `Night Owl — your avg bedtime is ${windowStr}. Keep it consistent to protect your rhythm.`, color: 'text-violet-400', category: 'timing' })
+          tips.push({ icon: '🦉', text: `Night Owl — avg bedtime ${windowStr}. Keep a consistent wind-down to protect REM.`, color: 'text-violet-400', category: 'timing' })
         } else {
-          tips.push({ icon: '🦉', text: `Night Owls need consistent wind-down routines. Log bedtimes to see your late-night pattern.`, color: 'text-violet-400', category: 'timing' })
+          tips.push({ icon: '🦉', text: 'Night Owl mode — your creativity peaks at night. Log bedtimes to map your ideal rhythm.', color: 'text-violet-400', category: 'timing' })
         }
       } else {
-        tips.push({ icon: '🦉', text: `Night Owl mode active! Log 3+ nights for personalized late-night sleep coaching.`, color: 'text-violet-400', category: 'timing' })
+        tips.push({ icon: '🦉', text: 'Night Owl active — late nights suit you, but consistency still matters. Log 3+ nights for insights.', color: 'text-violet-400', category: 'timing' })
       }
     } else {
       if (sleep.length >= 3) {
@@ -393,12 +394,12 @@ export function SleepLogger() {
           const period = avgMins >= 720 ? 'PM' : 'AM'
           const displayHr = hrs > 12 ? hrs - 12 : hrs === 0 ? 12 : hrs
           const windowStr = `${displayHr}:${mins.toString().padStart(2, '0')} ${period}`
-          tips.push({ icon: '⚖️', text: `Balanced type — your avg bedtime is ${windowStr}. Great consistency helps deep sleep.`, color: 'text-emerald-400', category: 'timing' })
+          tips.push({ icon: '⚖️', text: `Balanced — avg bedtime ${windowStr}. Great consistency is your superpower.`, color: 'text-emerald-400', category: 'timing' })
         } else {
-          tips.push({ icon: '⚖️', text: `Balanced sleepers shine with routine. Log bedtimes to unlock your optimal sleep window.`, color: 'text-emerald-400', category: 'timing' })
+          tips.push({ icon: '⚖️', text: 'Balanced mode — your body adapts well. Log bedtimes to fine-tune your natural rhythm.', color: 'text-emerald-400', category: 'timing' })
         }
       } else {
-        tips.push({ icon: '⚖️', text: `Balanced mode active! Log 3+ nights to receive personalized sleep insights.`, color: 'text-emerald-400', category: 'timing' })
+        tips.push({ icon: '⚖️', text: 'Balanced active — you thrive on routine. Log 3+ nights for custom recommendations.', color: 'text-emerald-400', category: 'timing' })
       }
     }
 
@@ -914,21 +915,11 @@ export function SleepLogger() {
                   <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">SleepCoach</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <button onClick={() => {
-                    const spells = []
-                    if (sleepDebt > 0) spells.push(`✨ Sleep Spell: "By the power of restful might, banish ${sleepDebt.toFixed(1)}h debt tonight!"`)
-                    if (avgQuality < 3) spells.push('🌙 Slumber Charm: "Cool the room to 65°F, darken all — deep rest shall fall."')
-                    if (consistency.pct < 50) spells.push('⏳ Rhythm Ritual: "Same time night after night, let your rhythm burn so bright."')
-                    if (coachPref === 'early_bird') spells.push('🌅 Dawn Blessing: "Early to bed, early to rise — unlocks the morning lullabies."')
-                    if (coachPref === 'night_owl') spells.push('🦉 Night Ward: "The moon is high, the world is still — protect your rhythm, bend your will."')
-                    if (coachPref === 'balanced') spells.push('⚖️ Harmony Hex: "Balance found in rest and play — perfect rhythm day by day."')
-                    if (spells.length === 0) spells.push('💤 Dream Weaver: "Close your eyes and drift away — tomorrow is a brighter day."')
-                    alert(spells[Math.floor(Math.random() * spells.length)])
-                  }}
-                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] transition-all"
-                    title="Sleep Spell">
-                    <span className="text-[10px]">✨</span>
-                    <span className="text-[9px] font-medium text-gray-400">Spell</span>
+                  <button onClick={() => setShowTonightPlan(p => !p)}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg border transition-all ${showTonightPlan ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/[0.03] border-white/10 text-gray-400 hover:text-white hover:bg-white/[0.06]'}`}
+                    title="Tonight's Plan">
+                    <span className="text-[10px]">🌙</span>
+                    <span className="text-[9px] font-medium">Plan</span>
                   </button>
                   <div className="relative">
                     <button onClick={() => setShowCoachPref(p => !p)}
@@ -988,6 +979,81 @@ export function SleepLogger() {
                   </p>
                 </div>
               </div>
+
+              {/* Tonight's Plan */}
+              <AnimatePresence>
+                {showTonightPlan && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="rounded-xl border border-emerald-500/10 bg-emerald-500/[0.03] p-3 mb-3 overflow-hidden"
+                  >
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <Moon className="w-3 h-3 text-emerald-400" />
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/70">Tonight's Plan</span>
+                    </div>
+                    {(() => {
+                      const defaultHr = coachPref === 'early_bird' ? 22 : coachPref === 'night_owl' ? 23.5 : 22.5
+                      const withBed = sleep.filter(e => e.bedTime)
+                      let bedHr = defaultHr
+                      if (withBed.length >= 2) {
+                        const avgMins = Math.round(withBed.reduce((s, e) => s + timeToMinutes(e.bedTime!), 0) / withBed.length)
+                        bedHr = avgMins / 60
+                      }
+                      const bedTotalMins = Math.round(bedHr * 60)
+                      const bedH = Math.floor(bedTotalMins / 60) % 12 || 12
+                      const bedM = bedTotalMins % 60
+                      const bedPeriod = bedTotalMins >= 720 ? 'PM' : 'AM'
+                      const windDownH = Math.floor((bedTotalMins - 30) / 60) % 12 || 12
+                      const windDownM = (bedTotalMins - 30) % 60
+                      const windDownPeriod = (bedTotalMins - 30) >= 720 ? 'PM' : 'AM'
+
+                      const wakeTotalMins = (bedTotalMins + Math.round(targetHours * 60)) % 1440
+                      const wakeH = Math.floor(wakeTotalMins / 60) % 12 || 12
+                      const wakeM = wakeTotalMins % 60
+                      const wakePeriod = wakeTotalMins >= 720 ? 'PM' : 'AM'
+
+                      return (
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-500">🛌 Bedtime</span>
+                            <span className="text-white font-medium">{bedH}:{bedM.toString().padStart(2, '0')} {bedPeriod}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-500">🌙 Wind-down</span>
+                            <span className="text-white font-medium">{windDownH}:{windDownM.toString().padStart(2, '0')} {windDownPeriod}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-500">⏰ Wake time</span>
+                            <span className="text-white font-medium">{wakeH}:{wakeM.toString().padStart(2, '0')} {wakePeriod}</span>
+                          </div>
+                          <div className="h-px bg-white/5 my-1" />
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-500">🎯 Target hours</span>
+                            <span className="text-emerald-400 font-medium">{targetHours}h</span>
+                          </div>
+                          {(() => {
+                            const recent = sleep.slice(0, Math.min(5, sleep.length))
+                            const tips: string[] = []
+                            if (recent.some(e => { const env = parseEnvFromNotes(e.notes); return env?.caffeine })) tips.push('☕ Skip caffeine after 4 PM')
+                            if (recent.some(e => e.screenTime)) tips.push('📱 No screens 30min before bed')
+                            if (recent.some(e => e.alcohol)) tips.push('🍷 Skip alcohol for deeper sleep')
+                            if (recent.some(e => e.heavyMeal)) tips.push('🍕 Avoid heavy meals 3h before bed')
+                            if (sleepDebt > 2) tips.push(`⚠️ You're ${sleepDebt.toFixed(1)}h in debt — try +30min tonight`)
+                            if (tips.length === 0) tips.push(coachPref === 'early_bird' ? '🌅 Early Bird — stick to your early bedtime' : coachPref === 'night_owl' ? '🦉 Night Owl — keep your rhythm steady' : '⚖️ Balanced — consistency is key')
+                            return tips.slice(0, 2).map((t, i) => (
+                              <div key={i} className="flex items-center gap-1.5 text-[10px] text-gray-400">
+                                <span className="text-[9px]">•</span><span>{t}</span>
+                              </div>
+                            ))
+                          })()}
+                        </div>
+                      )
+                    })()}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Coach cards */}
               <div className="grid grid-cols-2 gap-3 mb-4">
