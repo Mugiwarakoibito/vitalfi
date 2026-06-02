@@ -348,19 +348,57 @@ export function SleepLogger() {
   const coachInsights = useMemo(() => {
     const tips: { icon: string; text: string; color: string; category: string }[] = []
 
-    // Chronotype-based recommendation (high priority)
-    if (sleep.length >= 3) {
-      const withBed = sleep.filter(e => e.bedTime)
-      if (withBed.length >= 2) {
-        const avgMins = Math.round(withBed.reduce((s, e) => s + timeToMinutes(e.bedTime!), 0) / withBed.length)
-        const hrs = Math.floor(avgMins / 60)
-        const mins = avgMins % 60
-        const period = avgMins >= 720 ? 'PM' : 'AM'
-        const displayHr = hrs > 12 ? hrs - 12 : hrs === 0 ? 12 : hrs
-        const windowStr = `${displayHr}:${mins.toString().padStart(2, '0')} ${period}`
-        if (coachPref === 'early_bird') tips.push({ icon: '🌅', text: `Early Bird — your avg bedtime is ${windowStr}. Try shifting 30min earlier for deeper sleep cycles.`, color: 'text-amber-400', category: 'timing' })
-        else if (coachPref === 'night_owl') tips.push({ icon: '🦉', text: `Night Owl — your avg bedtime is ${windowStr}. Keep it consistent to protect your rhythm.`, color: 'text-violet-400', category: 'timing' })
-        else tips.push({ icon: '⚖️', text: `Balanced type — your avg bedtime is ${windowStr}. Great consistency helps deep sleep.`, color: 'text-emerald-400', category: 'timing' })
+    // Chronotype-based recommendation (high priority — always shows)
+    if (coachPref === 'early_bird') {
+      if (sleep.length >= 3) {
+        const withBed = sleep.filter(e => e.bedTime)
+        if (withBed.length >= 2) {
+          const avgMins = Math.round(withBed.reduce((s, e) => s + timeToMinutes(e.bedTime!), 0) / withBed.length)
+          const hrs = Math.floor(avgMins / 60)
+          const mins = avgMins % 60
+          const period = avgMins >= 720 ? 'PM' : 'AM'
+          const displayHr = hrs > 12 ? hrs - 12 : hrs === 0 ? 12 : hrs
+          const windowStr = `${displayHr}:${mins.toString().padStart(2, '0')} ${period}`
+          tips.push({ icon: '🌅', text: `Early Bird — your avg bedtime is ${windowStr}. Try shifting 30min earlier for deeper sleep cycles.`, color: 'text-amber-400', category: 'timing' })
+        } else {
+          tips.push({ icon: '🌅', text: `Early Birds thrive with consistent bedtimes. Start logging bedtimes to unlock personalized timing tips.`, color: 'text-amber-400', category: 'timing' })
+        }
+      } else {
+        tips.push({ icon: '🌅', text: `Early Bird mode active! Log 3+ nights to get personalized bedtime recommendations.`, color: 'text-amber-400', category: 'timing' })
+      }
+    } else if (coachPref === 'night_owl') {
+      if (sleep.length >= 3) {
+        const withBed = sleep.filter(e => e.bedTime)
+        if (withBed.length >= 2) {
+          const avgMins = Math.round(withBed.reduce((s, e) => s + timeToMinutes(e.bedTime!), 0) / withBed.length)
+          const hrs = Math.floor(avgMins / 60)
+          const mins = avgMins % 60
+          const period = avgMins >= 720 ? 'PM' : 'AM'
+          const displayHr = hrs > 12 ? hrs - 12 : hrs === 0 ? 12 : hrs
+          const windowStr = `${displayHr}:${mins.toString().padStart(2, '0')} ${period}`
+          tips.push({ icon: '🦉', text: `Night Owl — your avg bedtime is ${windowStr}. Keep it consistent to protect your rhythm.`, color: 'text-violet-400', category: 'timing' })
+        } else {
+          tips.push({ icon: '🦉', text: `Night Owls need consistent wind-down routines. Log bedtimes to see your late-night pattern.`, color: 'text-violet-400', category: 'timing' })
+        }
+      } else {
+        tips.push({ icon: '🦉', text: `Night Owl mode active! Log 3+ nights for personalized late-night sleep coaching.`, color: 'text-violet-400', category: 'timing' })
+      }
+    } else {
+      if (sleep.length >= 3) {
+        const withBed = sleep.filter(e => e.bedTime)
+        if (withBed.length >= 2) {
+          const avgMins = Math.round(withBed.reduce((s, e) => s + timeToMinutes(e.bedTime!), 0) / withBed.length)
+          const hrs = Math.floor(avgMins / 60)
+          const mins = avgMins % 60
+          const period = avgMins >= 720 ? 'PM' : 'AM'
+          const displayHr = hrs > 12 ? hrs - 12 : hrs === 0 ? 12 : hrs
+          const windowStr = `${displayHr}:${mins.toString().padStart(2, '0')} ${period}`
+          tips.push({ icon: '⚖️', text: `Balanced type — your avg bedtime is ${windowStr}. Great consistency helps deep sleep.`, color: 'text-emerald-400', category: 'timing' })
+        } else {
+          tips.push({ icon: '⚖️', text: `Balanced sleepers shine with routine. Log bedtimes to unlock your optimal sleep window.`, color: 'text-emerald-400', category: 'timing' })
+        }
+      } else {
+        tips.push({ icon: '⚖️', text: `Balanced mode active! Log 3+ nights to receive personalized sleep insights.`, color: 'text-emerald-400', category: 'timing' })
       }
     }
 
@@ -877,13 +915,20 @@ export function SleepLogger() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <button onClick={() => {
-                    const pct = sleep.length > 0 ? Math.round((sleep.filter(e => e.duration >= targetHours).length / sleep.length) * 100) : 0
-                    alert(`📊 Sleep Summary\n\nTotal nights: ${sleep.length}\nGoal hit: ${pct}%\nAvg quality: ${avgQuality.toFixed(1)}★\nAvg duration: ${avgDuration.toFixed(1)}h\nDebt: ${sleepDebt.toFixed(1)}h`)
+                    const spells = []
+                    if (sleepDebt > 0) spells.push(`✨ Sleep Spell: "By the power of restful might, banish ${sleepDebt.toFixed(1)}h debt tonight!"`)
+                    if (avgQuality < 3) spells.push('🌙 Slumber Charm: "Cool the room to 65°F, darken all — deep rest shall fall."')
+                    if (consistency.pct < 50) spells.push('⏳ Rhythm Ritual: "Same time night after night, let your rhythm burn so bright."')
+                    if (coachPref === 'early_bird') spells.push('🌅 Dawn Blessing: "Early to bed, early to rise — unlocks the morning lullabies."')
+                    if (coachPref === 'night_owl') spells.push('🦉 Night Ward: "The moon is high, the world is still — protect your rhythm, bend your will."')
+                    if (coachPref === 'balanced') spells.push('⚖️ Harmony Hex: "Balance found in rest and play — perfect rhythm day by day."')
+                    if (spells.length === 0) spells.push('💤 Dream Weaver: "Close your eyes and drift away — tomorrow is a brighter day."')
+                    alert(spells[Math.floor(Math.random() * spells.length)])
                   }}
                     className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] transition-all"
-                    title="Sleep summary">
-                    <span className="text-[10px]">📊</span>
-                    <span className="text-[9px] font-medium text-gray-400">Summary</span>
+                    title="Sleep Spell">
+                    <span className="text-[10px]">✨</span>
+                    <span className="text-[9px] font-medium text-gray-400">Spell</span>
                   </button>
                   <div className="relative">
                     <button onClick={() => setShowCoachPref(p => !p)}
