@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Moon, Star, Clock, Plus, Trash2, AlertTriangle, Brain, Target, Activity, BarChart3, Coffee, Dumbbell, Sparkles as SparklesIcon, ChevronLeft, ChevronRight, Calendar, RotateCcw, Pencil } from 'lucide-react'
+import { Moon, Star, Clock, Plus, Trash2, AlertTriangle, Brain, Target, Activity, BarChart3, Coffee, Dumbbell, Sparkles as SparklesIcon, ChevronLeft, ChevronRight, Calendar, RotateCcw, RefreshCw, Settings, Pencil } from 'lucide-react'
 import { generateId, formatSleepDuration } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 import { Card } from '@/components/ui/Card'
@@ -80,10 +80,11 @@ export function SleepLogger() {
   const [editingEntry, setEditingEntry] = useState<SleepEntry | null>(null)
   const [showTrendScope, setShowTrendScope] = useState(false)
   const [showSleepCoach, setShowSleepCoach] = useState(false)
-  const [coachPref, setCoachPref] = useState<'balanced' | 'early_bird' | 'night_owl'>('balanced')
-  const [showCoachPref, setShowCoachPref] = useState(false)
   const [trendChartMode, setTrendChartMode] = useState<'duration' | 'quality' | 'onset' | 'wakings'>('duration')
   const [trendWeekOffset, setTrendWeekOffset] = useState(0)
+  const [coachPref, setCoachPref] = useState<'balanced' | 'early_bird' | 'night_owl'>('balanced')
+  const [showCoachPref, setShowCoachPref] = useState(false)
+  const [coachRefreshKey, setCoachRefreshKey] = useState(0)
   const [showSleepSettings, setShowSleepSettings] = useState(false)
   const [targetHours, setTargetHours] = useState(() => {
     const saved = localStorage.getItem('vitalfi_sleep_target')
@@ -283,15 +284,6 @@ export function SleepLogger() {
     return Math.round(Math.min(100, s * 0.6 + c * 0.4))
   }, [sleepScore, circadianScore])
 
-  const sleepTrend = useMemo(() => {
-    if (sleep.length < 2) return 0
-    const sorted = [...sleep].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    const half = Math.floor(sorted.length / 2)
-    const firstHalf = sorted.slice(0, half).reduce((s, e) => s + e.quality, 0) / half
-    const secondHalf = sorted.slice(half).reduce((s, e) => s + e.quality, 0) / (sorted.length - half)
-    return Math.round((secondHalf - firstHalf) * 10) / 10
-  }, [sleep])
-
   /* ---- FEATURE 4: Recovery Score Breakdown ---- */
   const sleepPortion = useMemo(() => sleepScore * 0.6, [sleepScore])
   const circadianPortion = useMemo(() => (circadianScore ?? 50) * 0.4, [circadianScore])
@@ -347,149 +339,30 @@ export function SleepLogger() {
   // Sleep Coach AI-like recommendations
   const coachInsights = useMemo(() => {
     const tips: { icon: string; text: string; color: string; category: string }[] = []
-
-    // Chronotype-based recommendation (high priority — always shows)
-    if (coachPref === 'early_bird') {
-      if (sleep.length >= 3) {
-        const withBed = sleep.filter(e => e.bedTime)
-        if (withBed.length >= 2) {
-          const avgMins = Math.round(withBed.reduce((s, e) => s + timeToMinutes(e.bedTime!), 0) / withBed.length)
-          const hrs = Math.floor(avgMins / 60)
-          const mins = avgMins % 60
-          const period = avgMins >= 720 ? 'PM' : 'AM'
-          const displayHr = hrs > 12 ? hrs - 12 : hrs === 0 ? 12 : hrs
-          const windowStr = `${displayHr}:${mins.toString().padStart(2, '0')} ${period}`
-          tips.push({ icon: '🌅', text: `Early Bird — avg bedtime ${windowStr}. Aim 30min earlier for deeper cycles.`, color: 'text-amber-400', category: 'timing' })
-        } else {
-          tips.push({ icon: '🌅', text: 'Early Bird mode — morning light boosts your alertness. Log bedtimes to refine your window.', color: 'text-amber-400', category: 'timing' })
-        }
-      } else {
-        tips.push({ icon: '🌅', text: 'Early Bird active — your sleep thrives on early, consistent bedtimes. Log 3+ nights for custom tips.', color: 'text-amber-400', category: 'timing' })
-      }
-    } else if (coachPref === 'night_owl') {
-      if (sleep.length >= 3) {
-        const withBed = sleep.filter(e => e.bedTime)
-        if (withBed.length >= 2) {
-          const avgMins = Math.round(withBed.reduce((s, e) => s + timeToMinutes(e.bedTime!), 0) / withBed.length)
-          const hrs = Math.floor(avgMins / 60)
-          const mins = avgMins % 60
-          const period = avgMins >= 720 ? 'PM' : 'AM'
-          const displayHr = hrs > 12 ? hrs - 12 : hrs === 0 ? 12 : hrs
-          const windowStr = `${displayHr}:${mins.toString().padStart(2, '0')} ${period}`
-          tips.push({ icon: '🦉', text: `Night Owl — avg bedtime ${windowStr}. Keep a consistent wind-down to protect REM.`, color: 'text-violet-400', category: 'timing' })
-        } else {
-          tips.push({ icon: '🦉', text: 'Night Owl mode — your creativity peaks at night. Log bedtimes to map your ideal rhythm.', color: 'text-violet-400', category: 'timing' })
-        }
-      } else {
-        tips.push({ icon: '🦉', text: 'Night Owl active — late nights suit you, but consistency still matters. Log 3+ nights for insights.', color: 'text-violet-400', category: 'timing' })
-      }
-    } else {
-      if (sleep.length >= 3) {
-        const withBed = sleep.filter(e => e.bedTime)
-        if (withBed.length >= 2) {
-          const avgMins = Math.round(withBed.reduce((s, e) => s + timeToMinutes(e.bedTime!), 0) / withBed.length)
-          const hrs = Math.floor(avgMins / 60)
-          const mins = avgMins % 60
-          const period = avgMins >= 720 ? 'PM' : 'AM'
-          const displayHr = hrs > 12 ? hrs - 12 : hrs === 0 ? 12 : hrs
-          const windowStr = `${displayHr}:${mins.toString().padStart(2, '0')} ${period}`
-          tips.push({ icon: '⚖️', text: `Balanced — avg bedtime ${windowStr}. Great consistency is your superpower.`, color: 'text-emerald-400', category: 'timing' })
-        } else {
-          tips.push({ icon: '⚖️', text: 'Balanced mode — your body adapts well. Log bedtimes to fine-tune your natural rhythm.', color: 'text-emerald-400', category: 'timing' })
-        }
-      } else {
-        tips.push({ icon: '⚖️', text: 'Balanced active — you thrive on routine. Log 3+ nights for custom recommendations.', color: 'text-emerald-400', category: 'timing' })
-      }
-    }
-
-    if (sleep.length >= 2) {
-      // Pattern: best day of the week
-      const dayQualities: Record<number, number[]> = {}
-      sleep.forEach(e => {
-        const day = new Date(e.date).getDay()
-        if (!dayQualities[day]) dayQualities[day] = []
-        dayQualities[day].push(e.quality)
-      })
-      const bestDay = Object.entries(dayQualities).map(([d, qs]) => ({ day: Number(d), avg: qs.reduce((a, b) => a + b, 0) / qs.length })).sort((a, b) => b.avg - a.avg)[0]
-      if (bestDay) {
-        const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][bestDay.day]
-        if (bestDay.avg >= 4) tips.push({ icon: '🌟', text: `${dayName} is your best sleep night (${bestDay.avg.toFixed(1)}★). What's different that day?`, color: 'text-emerald-400', category: 'pattern' })
-        else if (bestDay.avg >= 3) tips.push({ icon: '📊', text: `You sleep best on ${dayName}s (${bestDay.avg.toFixed(1)}★). Try carrying that routine forward.`, color: 'text-cyan-400', category: 'pattern' })
-      }
-
-      // Weekend vs weekday comparison
-      const weekdays = sleep.filter(e => { const d = new Date(e.date).getDay(); return d >= 1 && d <= 5 })
-      const weekends = sleep.filter(e => { const d = new Date(e.date).getDay(); return d === 0 || d === 6 })
-      if (weekdays.length >= 2 && weekends.length >= 1) {
-        const wdAvg = weekdays.reduce((s, e) => s + e.duration, 0) / weekdays.length
-        const weAvg = weekends.reduce((s, e) => s + e.duration, 0) / weekends.length
-        const diff = Math.round(weAvg - wdAvg)
-        if (diff > 30) tips.push({ icon: '⏰', text: `You sleep ${Math.round(diff / 60)}h${diff % 60 > 0 ? ` ${diff % 60}m` : ''} more on weekends. Try a consistent wake time for better rhythm.`, color: 'text-amber-400', category: 'timing' })
-        else if (diff < -15) tips.push({ icon: '💪', text: `You sleep ${Math.round(Math.abs(diff) / 60)}h${Math.abs(diff) % 60 > 0 ? ` ${Math.abs(diff) % 60}m` : ''} more on weekdays — impressive discipline!`, color: 'text-emerald-400', category: 'pattern' })
-      }
-
-      // Trend: this week vs last week
-      const now = new Date()
-      const thisWeek = sleep.filter(e => { const d = new Date(e.date); return d >= new Date(now.getTime() - 7 * 86400000) })
-      const lastWeek = sleep.filter(e => { const d = new Date(e.date); return d < new Date(now.getTime() - 7 * 86400000) && d >= new Date(now.getTime() - 14 * 86400000) })
-      if (thisWeek.length >= 2 && lastWeek.length >= 2) {
-        const twAvg = thisWeek.reduce((s, e) => s + e.duration, 0) / thisWeek.length
-        const lwAvg = lastWeek.reduce((s, e) => s + e.duration, 0) / lastWeek.length
-        const durDiff = Math.round((twAvg - lwAvg) * 10) / 10
-        if (durDiff > 0.3) tips.push({ icon: '📈', text: `This week you're averaging ${durDiff.toFixed(1)}h more sleep than last week. Keep it up!`, color: 'text-emerald-400', category: 'recovery' })
-        else if (durDiff < -0.3) tips.push({ icon: '📉', text: `Sleep duration dropped ${Math.abs(durDiff).toFixed(1)}h this week vs last. Try an earlier bedtime.`, color: 'text-rose-400', category: 'recovery' })
-      }
-
-      // Recovery projection
-      if (sleepDebt > 0) {
-        const recentAvg = sleep.slice(0, Math.min(3, sleep.length)).reduce((s, e) => s + e.duration, 0) / Math.min(3, sleep.length)
-        const surplus = recentAvg - targetHours
-        if (surplus > 0) {
-          const projected = Math.ceil(sleepDebt / surplus)
-          tips.push({ icon: '🧮', text: `At your current pace (${surplus.toFixed(1)}h above target), you'll clear your ${sleepDebt.toFixed(1)}h debt in ~${projected} night${projected > 1 ? 's' : ''}.`, color: 'text-emerald-400', category: 'recovery' })
-        } else {
-          tips.push({ icon: '⚠️', text: `Debt of ${sleepDebt.toFixed(1)}h is growing. Adding ${(sleepDebt / 3).toFixed(1)}h to 3 nights would clear it.`, color: 'text-amber-400', category: 'recovery' })
-        }
-      }
-
-      // Quality streak
-      let streak = 0
-      for (const e of sorted) {
-        if (e.quality >= 4) streak++
-        else break
-      }
-      if (streak >= 3) tips.push({ icon: '🔥', text: `${streak}-night quality streak! Your sleep habits are paying off.`, color: 'text-orange-400', category: 'pattern' })
-    }
-
-    // Bedtime consistency
+    if (sleep.length < 2) return tips
     if (consistency.total >= 2) {
-      if (consistency.pct >= 80) tips.push({ icon: '🎯', text: `Bedtime is ${consistency.pct}% consistent — your circadian rhythm is dialed in.`, color: 'text-emerald-400', category: 'timing' })
-      else if (consistency.pct >= 50) tips.push({ icon: '⏰', text: `${consistency.pct}% bedtime consistency. Try fixing your bedtime within 30min for deeper sleep.`, color: 'text-amber-400', category: 'timing' })
-      else tips.push({ icon: '🔴', text: `Only ${consistency.pct}% bedtime consistency. Irregular timing disrupts deep sleep phases.`, color: 'text-rose-400', category: 'timing' })
+      if (consistency.pct >= 80) tips.push({ icon: '🎯', text: 'Great bedtime consistency! Your rhythm is solid.', color: 'text-emerald-400', category: 'timing' })
+      else if (consistency.pct >= 50) tips.push({ icon: '⏰', text: 'Try going to bed within 30min of your usual time for better consistency.', color: 'text-amber-400', category: 'timing' })
+      else tips.push({ icon: '🔴', text: 'Irregular bedtimes disrupt your circadian rhythm. Aim for a fixed bedtime.', color: 'text-rose-400', category: 'timing' })
     }
-
-    // Lifestyle factors from recent entries
-    if (sleep.length > 0) {
-      const recent = sleep.slice(0, Math.min(5, sleep.length))
-      const hasCaffeine = recent.some(e => { const env = parseEnvFromNotes(e.notes); return env?.caffeine })
-      if (hasCaffeine) tips.push({ icon: '☕', text: 'Caffeine before bed detected. It blocks adenosine — try stopping 6h before sleep.', color: 'text-orange-400', category: 'lifestyle' })
-      const hasScreen = recent.some(e => e.screenTime)
-      if (hasScreen) tips.push({ icon: '📱', text: 'Screen time before bed suppresses melatonin by up to 50%. A 30min digital wind-down helps.', color: 'text-violet-400', category: 'environment' })
-      const hasAlcohol = recent.some(e => e.alcohol)
-      if (hasAlcohol) tips.push({ icon: '🍷', text: 'Alcohol fragments sleep architecture. Even 1 drink reduces REM by ~20%.', color: 'text-rose-400', category: 'lifestyle' })
-      const hasMeditation = recent.some(e => e.meditation)
-      if (hasMeditation) tips.push({ icon: '🧘', text: 'Meditation before bed detected! It lowers cortisol and improves sleep onset by up to 50%.', color: 'text-cyan-400', category: 'lifestyle' })
-    }
-
-    // Goal hit rate
-    if (recentWeek.length >= 2) {
-      if (last7GoalPct >= 80) tips.push({ icon: '🏆', text: `Hit your ${targetHours}h target ${last7GoalPct}% of nights this week. Elite consistency!`, color: 'text-emerald-400', category: 'recovery' })
-      else if (last7GoalPct >= 50) tips.push({ icon: '📊', text: `${last7GoalPct}% goal hit rate this week. ${(7 - last7GoalHit)} more on-target nights would hit 80%+.`, color: 'text-amber-400', category: 'recovery' })
-    }
-
+    if (sleepDebt > 5) tips.push({ icon: '⚠️', text: `Sleep debt of ${sleepDebt}h is high. Prioritize extra rest this week.`, color: 'text-rose-400', category: 'recovery' })
+    else if (sleepDebt > 2) tips.push({ icon: '🌙', text: `You're ${sleepDebt}h behind on sleep. An early night could help.`, color: 'text-amber-400', category: 'recovery' })
+    else if (sleepDebt > 0) tips.push({ icon: '✅', text: `Minimal sleep debt (${sleepDebt}h). Keep it up!`, color: 'text-emerald-400', category: 'recovery' })
+    if (avgDuration < targetHours - 0.5) tips.push({ icon: '📈', text: `Average ${avgDuration.toFixed(1)}h is below your ${targetHours}h target. Try extending by 30min.`, color: 'text-amber-400', category: 'timing' })
+    else if (avgDuration >= targetHours) tips.push({ icon: '💪', text: `You're meeting your ${targetHours}h target on average. Excellent!`, color: 'text-emerald-400', category: 'timing' })
+    const recent = sleep.slice(0, Math.min(5, sleep.length))
+    const hasCaffeine = recent.some(e => {
+      const env = parseEnvFromNotes(e.notes)
+      return env?.caffeine
+    })
+    if (hasCaffeine) tips.push({ icon: '☕', text: 'Caffeine before bed detected. Try avoiding it 6h before sleep.', color: 'text-orange-400', category: 'lifestyle' })
+    const hasScreen = recent.some(e => e.screenTime)
+    if (hasScreen) tips.push({ icon: '📱', text: 'Screen time before bed can delay melatonin. Try a 30min digital wind-down.', color: 'text-violet-400', category: 'environment' })
+    const hasAlcohol = recent.some(e => e.alcohol)
+    if (hasAlcohol) tips.push({ icon: '🍷', text: 'Alcohol reduces REM sleep. Consider skipping it on rest nights.', color: 'text-rose-400', category: 'lifestyle' })
     if (tips.length === 0) tips.push({ icon: '🧘', text: 'Keep logging to receive personalized sleep coaching.', color: 'text-gray-400', category: 'general' })
     return tips
-  }, [sleep, consistency, sleepDebt, avgDuration, targetHours, recentWeek, last7GoalPct, last7GoalHit, sorted, coachPref])
+  }, [sleep, consistency, sleepDebt, avgDuration, targetHours, coachRefreshKey])
 
   return (
     <div className="space-y-6">
@@ -519,7 +392,7 @@ export function SleepLogger() {
             <button onClick={() => setShowSleepCoach(p => !p)}
               className={`p-2 rounded-xl border transition-all ${showSleepCoach ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
               title="SleepCoach">
-              <SparklesIcon className="w-5 h-5" />
+              <Brain className="w-5 h-5" />
             </button>
           )}
           {sleep.length > 0 && (
@@ -601,7 +474,7 @@ export function SleepLogger() {
           <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
           <div className="relative h-full flex flex-col justify-center">
             <div className="flex items-center gap-2 text-violet-400/80 text-sm mb-1">
-              <SparklesIcon className="w-4 h-4" />
+              <Brain className="w-4 h-4" />
               <span>Sleep Score</span>
             </div>
             <p className="text-3xl font-bold text-violet-400 drop-shadow-lg">{sleep.length > 0 ? sleepScore : '--'}</p>
@@ -914,18 +787,22 @@ export function SleepLogger() {
                   <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">SleepCoach</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  
+                  <button onClick={() => setCoachRefreshKey(k => k + 1)}
+                    className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all group"
+                    title="Refresh insights">
+                    <RefreshCw className="w-3 h-3 text-gray-500 group-hover:text-white transition-colors" />
+                  </button>
                   <div className="relative">
                     <button onClick={() => setShowCoachPref(p => !p)}
                       className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${showCoachPref ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:bg-white/10'}`}
-                      title="Chronotype">
-                      <span className="text-[10px]">{coachPref === 'early_bird' ? '🌅' : coachPref === 'night_owl' ? '🦉' : '⚖️'}</span>
+                      title="Coach preferences">
+                      <Settings className="w-3 h-3" />
                     </button>
                     {showCoachPref && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setShowCoachPref(false)} />
                         <div className="absolute right-0 top-8 z-20 w-48 rounded-xl bg-gray-900 border border-white/10 shadow-2xl p-3">
-                          <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Chronotype</p>
+                          <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Sleep Chronotype</p>
                           <div className="flex flex-col gap-1">
                             {([
                               { key: 'balanced', label: '⚖️ Balanced' },
@@ -948,10 +825,13 @@ export function SleepLogger() {
               {/* Stats summary bar */}
               <div className="flex items-center gap-4 mb-4 px-1">
                 <div className="text-center">
-                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">Trend</p>
-                  <p className={`text-lg font-bold ${sleepTrend >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {sleep.length >= 2 ? (sleepTrend >= 0 ? '↑' : '↓') : '--'}
-                  </p>
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">Score</p>
+                  <p className="text-lg font-bold text-violet-400">{sleep.length > 0 ? sleepScore : '--'}</p>
+                </div>
+                <div className="w-px h-8 bg-white/10" />
+                <div className="text-center">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">Avg</p>
+                  <p className="text-lg font-bold text-sky-400">{sleep.length > 0 ? formatSleepDuration(avgDuration) : '--'}</p>
                 </div>
                 <div className="w-px h-8 bg-white/10" />
                 <div className="text-center">
@@ -962,96 +842,57 @@ export function SleepLogger() {
                 </div>
                 <div className="w-px h-8 bg-white/10" />
                 <div className="text-center">
-                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">Goal Hit</p>
-                  <p className="text-lg font-bold text-amber-400">{last7GoalPct > 0 ? `${last7GoalPct}%` : '--'}</p>
-                </div>
-                <div className="w-px h-8 bg-white/10" />
-                <div className="text-center">
-                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">Recovery</p>
-                  <p className={`text-lg font-bold ${sleepDebt > 5 ? 'text-rose-400' : sleepDebt > 2 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                    {sleepDebt > 0 ? `${daysToRecover}d` : '--'}
-                  </p>
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">Debt</p>
+                  <p className="text-lg font-bold text-rose-400">{sleepDebt.toFixed(1)}<span className="text-[9px] text-gray-500 ml-0.5">h</span></p>
                 </div>
               </div>
 
-              {/* Coach cards */}
+              {/* Top Stats: Consistency + Debt */}
               <div className="grid grid-cols-2 gap-3 mb-4">
-                {/* Optimal Window */}
                 <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Clock className="w-3 h-3 text-violet-400" />
-                    <span className="text-[10px] text-gray-400">Optimal Window</span>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                      <Clock className="w-3 h-3 text-violet-400" />
+                      <span>Consistency</span>
+                    </div>
+                    <span className={`text-sm font-bold ${consistency.pct >= 70 ? 'text-green-400' : consistency.pct >= 40 ? 'text-amber-400' : 'text-red-400'}`}>
+                      {consistency.total >= 2 ? `${consistency.pct}%` : '--'}
+                    </span>
                   </div>
-                  {(() => {
-                    const withBed = sleep.filter(e => e.bedTime && e.wakeTime)
-                    if (withBed.length >= 2) {
-                      const bedMins = withBed.map(e => timeToMinutes(e.bedTime!))
-                      const avgBed = Math.round(bedMins.reduce((a, b) => a + b, 0) / bedMins.length)
-                      const hrs = Math.floor(avgBed / 60)
-                      const mins = avgBed % 60
-                      const period = avgBed >= 720 ? 'PM' : 'AM'
-                      const displayHr = hrs > 12 ? hrs - 12 : hrs === 0 ? 12 : hrs
-                      return (
-                        <>
-                          <p className="text-sm font-bold text-violet-400 drop-shadow-lg">{displayHr}:{mins.toString().padStart(2, '0')} {period}</p>
-                          <p className="text-[10px] text-gray-500 mt-0.5">
-                            {consistency.pct >= 80 ? 'Bedtime is very consistent' : consistency.pct >= 50 ? 'Moderate consistency — aim within 1h' : 'Irregular — try a fixed bedtime'}
-                            {coachPref !== 'balanced' && <span className="text-gray-600"> · {coachPref === 'early_bird' ? '🌅 Early Bird' : '🦉 Night Owl'}</span>}
-                          </p>
-                        </>
-                      )
-                    }
-                  })()}
+                  {consistency.total >= 2 ? (
+                    <>
+                      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                        <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-blue-500 transition-all duration-500" style={{ width: `${consistency.pct}%` }} />
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-1">{consistency.total} nights tracked</p>
+                    </>
+                  ) : (
+                    <p className="text-[10px] text-gray-500">Need 2+ entries</p>
+                  )}
                 </div>
-                {/* Quality Trend */}
                 <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Activity className="w-3 h-3 text-emerald-400" />
-                    <span className="text-[10px] text-gray-400">Quality Trend</span>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                      <AlertTriangle className="w-3 h-3 text-rose-400" />
+                      <span>Sleep Debt</span>
+                    </div>
+                    <span className="text-sm font-bold text-rose-400">{sleepDebt.toFixed(1)}<span className="text-[10px] text-gray-500 ml-0.5">h</span></span>
                   </div>
-                  {(() => {
-                    if (sleep.length < 2) return (
-                      <>
-                        <p className="text-sm font-bold text-gray-500 drop-shadow-lg">Log to begin</p>
-                        <p className="text-[10px] text-gray-500 mt-0.5">Track your sleep quality to see trends</p>
-                      </>
-                    )
-                    const first = sleep.slice(0, Math.ceil(sleep.length / 2))
-                    const last = sleep.slice(Math.ceil(sleep.length / 2))
-                    const firstAvg = first.reduce((s, e) => s + e.quality, 0) / first.length
-                    const lastAvg = last.reduce((s, e) => s + e.quality, 0) / last.length
-                    const diff = Math.round((lastAvg - firstAvg) * 10) / 10
-                    const isFlat = Math.abs(diff) < 0.2
-                    if (isFlat) return (
-                      <>
-                        <p className="text-sm font-bold text-gray-400 drop-shadow-lg">Stable —</p>
-                        <p className="text-[10px] text-gray-500 mt-0.5">Quality holding steady at {lastAvg.toFixed(1)}★ average</p>
-                      </>
-                    )
-                    return (
-                      <>
-                        <p className={`text-sm font-bold ${diff > 0 ? 'text-emerald-400' : 'text-rose-400'} drop-shadow-lg`}>
-                          {diff > 0 ? 'Improving ↗' : 'Declining ↘'}
-                        </p>
-                        <p className="text-[10px] text-gray-500 mt-0.5">
-                          {Math.abs(diff) > 0.5
-                            ? diff > 0 ? `${diff.toFixed(1)}★ gain — great progress!` : `${Math.abs(diff).toFixed(1)}★ drop — consider adjusting`
-                            : diff > 0 ? 'Slight upward trend' : 'Slight downward trend'}
-                        </p>
-                      </>
-                    )
-                  })()}
+                  <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-rose-500 to-amber-400 transition-all duration-500" style={{ width: `${Math.min(100, (sleepDebt / 10) * 100)}%` }} />
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1">total accumulated</p>
                 </div>
               </div>
 
-              {/* AI TIP */}
+              {/* AI Insights with categorization */}
               <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
                 <div className="flex items-center gap-1.5 mb-2">
                   <SparklesIcon className="w-3 h-3 text-emerald-400" />
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/70">AI TIP</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/70">AI Insights</span>
                 </div>
                 <div className="space-y-2">
-                  {coachInsights.slice(0, 3).map((tip, i) => (
+                  {coachInsights.map((tip, i) => (
                     <motion.div
                       key={i}
                       initial={{ opacity: 0, x: -8 }}
@@ -1062,7 +903,7 @@ export function SleepLogger() {
                       <span className="flex-shrink-0">{tip.icon}</span>
                       <div className="flex-1 min-w-0">
                         <p className={tip.color}>{tip.text}</p>
-                        <span className={`text-[9px] inline-block mt-0.5 px-1.5 py-[1px] rounded-full ${tip.category === 'timing' || tip.category === 'environment' ? 'bg-blue-500/10 text-blue-400' : tip.category === 'lifestyle' ? 'bg-amber-500/10 text-amber-400' : tip.category === 'recovery' ? 'bg-emerald-500/10 text-emerald-400' : tip.category === 'pattern' ? 'bg-violet-500/10 text-violet-400' : 'bg-gray-500/10 text-gray-500'}`}>
+                        <span className={`text-[9px] inline-block mt-0.5 px-1.5 py-[1px] rounded-full ${tip.category === 'timing' ? 'bg-blue-500/10 text-blue-400' : tip.category === 'environment' ? 'bg-orange-500/10 text-orange-400' : tip.category === 'lifestyle' ? 'bg-rose-500/10 text-rose-400' : tip.category === 'recovery' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-500/10 text-gray-500'}`}>
                           {tip.category}
                         </span>
                       </div>
