@@ -4,7 +4,8 @@ import {
   Droplets, Plus, Trash2,
   Target, ChevronLeft, ChevronRight,
   Calendar, RotateCcw, Brain, Clock,
-  TrendingUp, TrendingDown, Activity, BarChart3,
+  TrendingUp, Activity, BarChart3,
+  Sparkles as SparklesIcon, RefreshCw, Settings,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { generateId, cn } from '@/lib/utils'
@@ -27,8 +28,11 @@ function getStreak(hydration: HydrationEntry[], goal: number): number {
 export function HydrationHub() {
   const { hydration, addHydration, deleteHydration } = useAppStore()
 
-  const [showInsights, setShowInsights] = useState(false)
+  const [showHydraCoach, setShowHydraCoach] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showCoachPref, setShowCoachPref] = useState(false)
+  const [coachPref, setCoachPref] = useState<'morning' | 'evening' | 'spread'>('spread')
+  const [hydraCoachKey, setHydraCoachKey] = useState(0)
   const [showForm, setShowForm] = useState(false)
   const [formAmount, setFormAmount] = useState(0)
   const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0])
@@ -51,7 +55,6 @@ export function HydrationHub() {
     return (localStorage.getItem('vitalfi_hydration_unit') as 'ml' | 'oz') || 'ml'
   })
   const [quickAmounts, setQuickAmounts] = useState<number[]>([240, 480, 720, 960])
-  const [insightTab, setInsightTab] = useState<'metrics' | 'analyzer' | 'projections'>('metrics')
 
   useEffect(() => { localStorage.setItem('vitalfi_hydration_goal', hydGoal.toString()) }, [hydGoal])
   useEffect(() => { localStorage.setItem('vitalfi_hydration_unit', unit) }, [unit])
@@ -78,7 +81,6 @@ export function HydrationHub() {
 
   const streak = useMemo(() => getStreak(hydration, hydGoal), [hydration, hydGoal])
 
-  const weekTotal = useMemo(() => hydrationWeek.reduce((s, d) => s + d.amount, 0), [hydrationWeek])
   const daysLogged = useMemo(() => hydrationWeek.filter(d => d.amount > 0).length, [hydrationWeek])
   const goalMetThisWeek = useMemo(() => hydrationWeek.filter(d => d.amount >= hydGoal).length, [hydrationWeek, hydGoal])
   const weekAvg = useMemo(() => {
@@ -104,6 +106,87 @@ export function HydrationHub() {
     [...hydration].filter(h => h.date === today)
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()),
   [hydration, today])
+
+  const sorted = useMemo(() =>
+    [...hydration].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+  [hydration])
+
+  const coachInsights = useMemo(() => {
+    const tips: { icon: string; text: string; color: string; category: string }[] = []
+    if (hydration.length < 2) return tips
+
+    const onTargetDays = hydrationWeek.filter(d => d.amount >= hydGoal).length
+    const loggedDays = hydrationWeek.filter(d => d.amount > 0).length
+    const adherencePct = Math.round((onTargetDays / Math.max(loggedDays, 1)) * 100) || 0
+    const weekAvgVal = weekAvg
+
+    // Consistency assessment
+    if (loggedDays >= 5) {
+      if (adherencePct >= 80) tips.push({ icon: '🎯', text: `${adherencePct}% goal hit rate — your hydration discipline is elite!`, color: 'text-emerald-400', category: 'consistency' })
+      else if (adherencePct >= 50) tips.push({ icon: '📊', text: `${adherencePct}% goal hit rate. ${7 - onTargetDays} more on-target days would hit 80%+.`, color: 'text-amber-400', category: 'consistency' })
+      else tips.push({ icon: '🔴', text: `Only ${adherencePct}% of logged days hit your ${hUnit(hydGoal)}${hLabel} goal. Try pre-filling a bottle each morning.`, color: 'text-rose-400', category: 'consistency' })
+    } else {
+      tips.push({ icon: '⏰', text: `Only ${loggedDays}/7 days logged this week. Consistency is key — log every drop to see the full picture.`, color: 'text-amber-400', category: 'consistency' })
+    }
+
+    // Intake assessment
+    if (weekAvgVal > 0) {
+      if (weekAvgVal >= hydGoal) {
+        tips.push({ icon: '💪', text: `Averaging ${hUnit(weekAvgVal)}${hLabel}/day — meeting your ${hUnit(hydGoal)}${hLabel} goal! Outstanding.`, color: 'text-emerald-400', category: 'intake' })
+      } else if (weekAvgVal >= hydGoal * 0.8) {
+        const gap = hydGoal - weekAvgVal
+        tips.push({ icon: '💧', text: `${hUnit(weekAvgVal)}${hLabel}/day avg — just ${hUnit(gap)}${hLabel} shy of goal. One more glass per day would seal it.`, color: 'text-amber-400', category: 'intake' })
+      } else {
+        const gap = hydGoal - weekAvgVal
+        tips.push({ icon: '⚠️', text: `Low avg of ${hUnit(weekAvgVal)}${hLabel}/day (goal: ${hUnit(hydGoal)}${hLabel}). Need +${hUnit(gap)}${hLabel}/day. Try a marked bottle to track.`, color: 'text-rose-400', category: 'intake' })
+      }
+    }
+
+    // Best day
+    if (loggedDays >= 2) {
+      const best = hydrationWeek.reduce((a, b) => a.amount > b.amount ? a : b)
+      if (best.amount > 0) tips.push({ icon: '🏆', text: `${best.label} is your best hydration day (${hUnit(best.amount)}${hLabel}). What made that day work?`, color: 'text-cyan-400', category: 'pattern' })
+    }
+
+    // Streak
+    if (streak >= 7) tips.push({ icon: '🔥', text: `${streak}-day streak! Your hydration habit is fully locked in.`, color: 'text-orange-400', category: 'pattern' })
+    else if (streak >= 3) tips.push({ icon: '🌱', text: `${streak}-day streak and growing! Keep showing up daily.`, color: 'text-emerald-400', category: 'pattern' })
+
+    // Caffeine awareness
+    const recent = sorted.slice(0, Math.min(10, sorted.length))
+    const caffeineDays = new Set(recent.filter(h => h.caffeine).map(h => h.date)).size
+    const waterDays = new Set(recent.filter(h => h.drinkType === 'water').map(h => h.date)).size
+    if (caffeineDays > 0 && waterDays > 0) {
+      const ratio = caffeineDays / waterDays
+      if (ratio > 0.5) tips.push({ icon: '☕', text: `Caffeine logged on ${caffeineDays} of ${recent.length} recent entries. Each coffee needs ~1.5× water to offset dehydration.`, color: 'text-amber-400', category: 'lifestyle' })
+    }
+
+    // Exercise / hot weather
+    const exerciseDays = new Set(recent.filter(h => h.exercise).map(h => h.date)).size
+    if (exerciseDays > 0) tips.push({ icon: '💪', text: `Exercise logged on ${exerciseDays} days. Add 500-750ml extra on workout days to replace fluid loss.`, color: 'text-blue-400', category: 'lifestyle' })
+    const hotDays = new Set(recent.filter(h => h.hotWeather).map(h => h.date)).size
+    if (hotDays > 0) tips.push({ icon: '☀️', text: `Hot weather on ${hotDays} days. Increase intake by 300-500ml when temps rise.`, color: 'text-orange-400', category: 'environment' })
+
+    // Drink variety
+    const nonWaterEntries = recent.filter(h => h.drinkType && h.drinkType !== 'water' && h.drinkType !== 'other')
+    if (nonWaterEntries.length > 0) {
+      const topDrink = nonWaterEntries.map(h => h.drinkType).reduce((a: string[], b) => { if (!a.includes(b!)) a.push(b!); return a }, [])
+      if (topDrink.includes('coffee')) tips.push({ icon: '☕', text: 'Coffee is your go-to. Great in moderation — but water should make up 80%+ of fluid intake.', color: 'text-amber-400', category: 'lifestyle' })
+    }
+
+    // Trend
+    if (sorted.length >= 4) {
+      const first4 = sorted.slice(0, 4).reduce((s, e) => s + e.amount, 0) / 4
+      const last4 = sorted.slice(-4).reduce((s, e) => s + e.amount, 0) / 4
+      const diff = last4 - first4
+      if (diff > 100) tips.push({ icon: '📈', text: `Hydration trending up by ${hUnit(Math.round(diff))}${hLabel} per day! Excellent improvement.`, color: 'text-emerald-400', category: 'recovery' })
+      else if (diff < -100) tips.push({ icon: '📉', text: `Intake dropped ${hUnit(Math.round(Math.abs(diff)))}${hLabel}/day. Try scheduling a mid-day hydration check.`, color: 'text-rose-400', category: 'recovery' })
+    }
+
+    // Empty state
+    if (tips.length === 0) tips.push({ icon: '🧘', text: 'Keep logging to receive personalized hydration coaching.', color: 'text-gray-400', category: 'general' })
+    return tips
+  }, [hydration, hydrationWeek, weekAvg, hydGoal, streak, hUnit, hLabel, sorted, hydraCoachKey])
 
   const resetForm = () => {
     setFormAmount(0); setFormDate(new Date().toISOString().split('T')[0])
@@ -163,10 +246,10 @@ export function HydrationHub() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowInsights(p => !p)}
-            className={`p-2 rounded-xl border transition-all ${showInsights ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
-            title="HydraScope">
-            <Brain size={16} />
+          <button onClick={() => setShowHydraCoach(p => !p)}
+            className={`p-2 rounded-xl border transition-all ${showHydraCoach ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
+            title="HydraCoach">
+            <SparklesIcon size={16} />
           </button>
           <div className="relative">
             <button onClick={() => setShowSettings(p => !p)}
@@ -370,365 +453,183 @@ export function HydrationHub() {
         </motion.div>
       )}
 
-      {/* HydraScope Insights Panel */}
-      <AnimatePresence>{showInsights && (
-        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-          <div className="rounded-2xl border border-cyan-500/15 bg-black/60 backdrop-blur-xl p-5 overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-sky-500/5 pointer-events-none" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-base">💧</span>
-                  <h4 className="text-xs font-semibold text-white">HydraScope</h4>
+      {/* HydraCoach AI Panel */}
+      <AnimatePresence>{showHydraCoach && (
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          className="rounded-2xl border border-cyan-500/15 bg-black/60 backdrop-blur-xl p-4 overflow-hidden relative"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-violet-500/5 pointer-events-none" />
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-400/20 to-cyan-500/20 border border-cyan-500/20 flex items-center justify-center">
+                  <Droplets className="w-3.5 h-3.5 text-cyan-400" />
                 </div>
-                <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5 border border-white/10">
-                  {(['metrics', 'analyzer', 'projections'] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setInsightTab(tab)}
-                      className={`px-2 py-1 rounded-md text-[9px] font-semibold uppercase tracking-wider transition-all ${
-                        insightTab === tab
-                          ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-500/30'
-                          : 'text-gray-500 hover:text-white'
-                      }`}
-                    >
-                      {tab === 'metrics' ? 'Consistency' : tab === 'analyzer' ? 'Analyzer' : 'Projections'}
-                    </button>
-                  ))}
+                <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">HYDRACOACH</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => setHydraCoachKey(k => k + 1)}
+                  className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all group"
+                  title="Refresh insights">
+                  <RefreshCw className="w-3 h-3 text-gray-500 group-hover:text-white transition-colors" />
+                </button>
+                <div className="relative">
+                  <button onClick={() => setShowCoachPref(p => !p)}
+                    className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${showCoachPref ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:bg-white/10'}`}
+                    title="Hydration style">
+                    <Settings className="w-3 h-3" />
+                  </button>
+                  {showCoachPref && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setShowCoachPref(false)} />
+                      <div className="absolute right-0 top-8 z-20 w-48 rounded-xl bg-gray-900 border border-white/10 shadow-2xl p-3">
+                        <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Drinking Style</p>
+                        <div className="flex flex-col gap-1">
+                          {([
+                            { key: 'spread' as const, label: '💧 Spread evenly' },
+                            { key: 'morning' as const, label: '🌅 Morning focus' },
+                            { key: 'evening' as const, label: '🌙 Evening focus' },
+                          ]).map(opt => (
+                            <button key={opt.key} onClick={() => { setCoachPref(opt.key); setShowCoachPref(false) }}
+                              className={`text-left px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${coachPref === opt.key ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
+            </div>
 
-              {(() => {
-                const logged = hydrationWeek.filter(d => d.amount > 0)
-                if (!logged.length) {
-                  return (
-                    <div className="text-center py-6">
-                      <p className="text-[11px] text-gray-500">Log drinks this week to see analytics & insights</p>
-                    </div>
+            {/* Stats summary bar */}
+            <div className="flex items-center gap-4 mb-4 px-1">
+              <div className="text-center">
+                <p className="text-[9px] text-gray-500 uppercase tracking-wider">Avg</p>
+                <p className="text-lg font-bold text-cyan-400">{todayHydration > 0 ? `${hUnit(weekAvg)}${hLabel}` : '--'}</p>
+              </div>
+              <div className="w-px h-8 bg-white/10" />
+              <div className="text-center">
+                <p className="text-[9px] text-gray-500 uppercase tracking-wider">Consist.</p>
+                <p className={`text-lg font-bold ${daysLogged >= 5 ? 'text-green-400' : daysLogged >= 3 ? 'text-amber-400' : 'text-rose-400'}`}>
+                  {todayHydration > 0 ? `${Math.round((daysLogged / 7) * 100)}%` : '--'}
+                </p>
+              </div>
+              <div className="w-px h-8 bg-white/10" />
+              <div className="text-center">
+                <p className="text-[9px] text-gray-500 uppercase tracking-wider">Goal Hit</p>
+                <p className="text-lg font-bold text-amber-400">{todayHydration > 0 ? `${Math.round((goalMetThisWeek / Math.max(daysLogged, 1)) * 100)}%` : '--'}</p>
+              </div>
+              <div className="w-px h-8 bg-white/10" />
+              <div className="text-center">
+                <p className="text-[9px] text-gray-500 uppercase tracking-wider">Streak</p>
+                <p className={`text-lg font-bold ${streak >= 7 ? 'text-emerald-400' : streak >= 3 ? 'text-cyan-400' : 'text-gray-400'}`}>
+                  {streak > 0 ? `${streak}d` : '--'}
+                </p>
+              </div>
+            </div>
+
+            {/* Coach cards */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Clock className="w-3 h-3 text-violet-400" />
+                  <span className="text-[10px] text-gray-400">Optimal Timing</span>
+                </div>
+                {(() => {
+                  if (todayHydration === 0) return <p className="text-sm font-bold text-gray-500">No data</p>
+                  if (todayLogs.length > 0) {
+                    const lastDrink = new Date(todayLogs[todayLogs.length - 1].timestamp)
+                    const hours = lastDrink.getHours()
+                    const mins = lastDrink.getMinutes()
+                    const period = hours >= 12 ? 'PM' : 'AM'
+                    const displayHr = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours
+                    if (todayHydration < hydGoal) {
+                      const remaining = hydGoal - todayHydration
+                      return (
+                        <>
+                          <p className="text-sm font-bold text-cyan-400 drop-shadow-lg">{remaining > 0 ? `${hUnit(remaining)}${hLabel} to go` : 'Goal met!'}</p>
+                          <p className="text-[10px] text-gray-500 mt-0.5">Last logged: {displayHr}:{mins.toString().padStart(2, '0')} {period}</p>
+                        </>
+                      )
+                    }
+                    return (
+                      <>
+                        <p className="text-sm font-bold text-emerald-400 drop-shadow-lg">Goal met! 🎯</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">{hUnit(todayHydration)}{hLabel} today — keep sipping</p>
+                      </>
+                    )
+                  }
+                  return <p className="text-sm font-bold text-gray-500">No drinks yet</p>
+                })()}
+              </div>
+              <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Activity className="w-3 h-3 text-emerald-400" />
+                  <span className="text-[10px] text-gray-400">Quality Trend</span>
+                </div>
+                {(() => {
+                  if (sorted.length < 2) return (
+                    <>
+                      <p className="text-sm font-bold text-gray-500 drop-shadow-lg">Log to begin</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Track hydration to see trends</p>
+                    </>
                   )
-                }
+                  const half = Math.ceil(sorted.length / 2)
+                  const first = sorted.slice(0, half)
+                  const last = sorted.slice(half)
+                  const firstAvg = first.reduce((s, e) => s + e.amount, 0) / first.length
+                  const lastAvg = last.reduce((s, e) => s + e.amount, 0) / last.length
+                  const diff = Math.round((lastAvg - firstAvg) * 10) / 10
+                  if (Math.abs(diff) < 50) return (
+                    <>
+                      <p className="text-sm font-bold text-gray-400 drop-shadow-lg">Stable —</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Avg {hUnit(Math.round(lastAvg))}{hLabel} per log</p>
+                    </>
+                  )
+                  return (
+                    <>
+                      <p className={`text-sm font-bold ${diff > 0 ? 'text-emerald-400' : 'text-rose-400'} drop-shadow-lg`}>
+                        {diff > 0 ? 'Improving ↗' : 'Declining ↘'}
+                      </p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">
+                        {diff > 0 ? `+${hUnit(Math.round(diff))}${hLabel} gain — great progress!` : `${hUnit(Math.round(Math.abs(diff)))}${hLabel} drop — consider adjusting`}
+                      </p>
+                    </>
+                  )
+                })()}
+              </div>
+            </div>
 
-                const onTarget = hydrationWeek.filter(d => d.amount >= hydGoal).length
-                const adherencePct = Math.round((onTarget / Math.max(logged.length, 1)) * 100) || 0
-
-                let dataStreak = 0
-                for (let i = hydrationWeek.length - 1; i >= 0; i--) {
-                  if (hydrationWeek[i].amount > 0) dataStreak++
-                  else if (dataStreak > 0) break
-                }
-
-                return (
-                  <AnimatePresence mode="wait">
-                    {insightTab === 'metrics' && (
-                      <motion.div
-                        key="metrics"
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -5 }}
-                        className="space-y-4"
-                      >
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                          <div className="rounded-xl bg-white/5 border border-white/5 p-2.5 flex flex-col justify-between hover:bg-white/[0.08] hover:border-white/10 transition-all">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[9px] font-semibold text-gray-500 uppercase">Avg Intake</span>
-                              <Droplets className="w-3.5 h-3.5 text-cyan-400" />
-                            </div>
-                            <div className="my-1.5 text-center">
-                              <p className="text-xl font-black text-cyan-400">
-                                {hUnit(weekAvg)} <span className="text-[10px] font-bold text-gray-500">{hLabel}</span>
-                              </p>
-                            </div>
-                            <div className="space-y-1">
-                              <div className="h-1 rounded-full bg-white/10 overflow-hidden">
-                                <div className="h-full rounded-full bg-cyan-500 transition-all duration-500"
-                                  style={{ width: `${Math.min((weekAvg / hydGoal) * 100, 100)}%` }} />
-                              </div>
-                              <div className="flex justify-between text-[8px] text-gray-600 leading-none">
-                                <span>Goal: {hUnit(hydGoal)}</span>
-                                <span>{Math.round((weekAvg / hydGoal) * 100)}%</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="rounded-xl bg-white/5 border border-white/5 p-2.5 flex flex-col justify-between hover:bg-white/[0.08] hover:border-white/10 transition-all">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[9px] font-semibold text-gray-500 uppercase">Adherence</span>
-                              <Target className="w-3.5 h-3.5 text-violet-400" />
-                            </div>
-                            <div className="my-1.5 text-center">
-                              <p className={`text-xl font-black ${
-                                adherencePct >= 80 ? 'text-emerald-400' :
-                                adherencePct >= 50 ? 'text-amber-400' : 'text-rose-400'
-                              }`}>
-                                {adherencePct}%
-                              </p>
-                            </div>
-                            <span className="text-[8px] text-gray-600 block text-center leading-tight">
-                              Days hitting goal
-                            </span>
-                          </div>
-
-                          <div className="rounded-xl bg-white/5 border border-white/5 p-2.5 flex flex-col justify-between hover:bg-white/[0.08] hover:border-white/10 transition-all">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[9px] font-semibold text-gray-500 uppercase">Streak</span>
-                              <Droplets className={`w-3.5 h-3.5 ${
-                                dataStreak >= 3 ? 'text-cyan-400 animate-pulse' : 'text-gray-500'
-                              }`} />
-                            </div>
-                            <div className="my-1.5 text-center">
-                              <p className="text-xl font-black text-cyan-400">
-                                {dataStreak} <span className="text-[10px] font-bold text-gray-500">days</span>
-                              </p>
-                            </div>
-                            <span className="text-[8px] text-gray-600 block text-center leading-tight">
-                              {dataStreak >= 5 ? '🔥 Hydration master!' : dataStreak >= 3 ? '🔥 Building habit' : '🎯 Log daily to grow'}
-                            </span>
-                          </div>
-
-                          <div className="rounded-xl bg-white/5 border border-white/5 p-2.5 flex flex-col justify-between hover:bg-white/[0.08] hover:border-white/10 transition-all">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[9px] font-semibold text-gray-500 uppercase">Logged</span>
-                              <Calendar className="w-3.5 h-3.5 text-blue-400" />
-                            </div>
-                            <div className="my-1.5 text-center">
-                              <p className="text-xl font-black text-blue-400">
-                                {logged.length} <span className="text-[10px] font-bold text-gray-500">/ 7</span>
-                              </p>
-                            </div>
-                            <span className="text-[8px] text-gray-600 block text-center leading-tight font-medium">
-                              Days logged this week
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="rounded-xl bg-white/5 border border-white/5 p-3 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-semibold text-gray-500 uppercase">Weekly Hydration Breakdown</span>
-                            <span className="text-[8px] text-gray-500">Daily intake vs goal</span>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-7 gap-2">
-                            {hydrationWeek.map(d => {
-                              const pct = hydGoal > 0 ? Math.round((d.amount / hydGoal) * 100) : 0
-                              return (
-                                <div key={d.date} className="space-y-1 bg-black/10 border border-white/5 rounded-lg p-2 hover:bg-black/20 hover:border-white/10 transition-all">
-                                  <div className="flex justify-between text-[9px] font-medium">
-                                    <span className="text-gray-300 font-semibold">{d.label.slice(0, 3)}</span>
-                                    <span className={d.amount >= hydGoal ? 'text-emerald-400' : d.amount > 0 ? 'text-amber-400' : 'text-gray-500'}>{hUnit(d.amount)}{hLabel}</span>
-                                  </div>
-                                  <div className="h-1 rounded-full bg-white/10 overflow-hidden">
-                                    <div className={`h-full rounded-full transition-all duration-500 ${
-                                      d.amount >= hydGoal ? 'bg-emerald-500' : d.amount > 0 ? 'bg-amber-500' : 'bg-gray-600'
-                                    }`} style={{ width: `${Math.min(pct, 100)}%` }} />
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {insightTab === 'analyzer' && (
-                      <motion.div
-                        key="analyzer"
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -5 }}
-                        className="space-y-2"
-                      >
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <span className="text-xs text-cyan-400">💡</span>
-                          <span className="text-[9px] font-semibold text-gray-500 uppercase">AI-Powered Hydration Analyzer</span>
-                        </div>
-
-                        <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                          {weekAvg < hydGoal * 0.8 ? (
-                            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 flex gap-2.5 items-start">
-                              <div className="text-lg shrink-0 mt-0.5">⚠️</div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] font-bold text-amber-300">Low Hydration Detected</p>
-                                <p className="text-[10px] text-gray-400 leading-normal">
-                                  Your average daily intake is <span className="text-white font-semibold">{hUnit(weekAvg)}{hLabel}</span> (goal: {hUnit(hydGoal)}{hLabel}).
-                                  Try setting a glass of water by your workspace or setting hourly reminders to stay on track.
-                                </p>
-                              </div>
-                            </div>
-                          ) : weekAvg >= hydGoal ? (
-                            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 flex gap-2.5 items-start">
-                              <div className="text-lg shrink-0 mt-0.5">🎯</div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] font-bold text-emerald-300">Hydration Goal Mastery</p>
-                                <p className="text-[10px] text-gray-400 leading-normal">
-                                  Your weekly average of <span className="text-white font-semibold">{hUnit(weekAvg)}{hLabel}</span> meets your hydration target! Excellent work maintaining proper hydration.
-                                </p>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 flex gap-2.5 items-start">
-                              <div className="text-lg shrink-0 mt-0.5">💧</div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] font-bold text-amber-300">Getting Close to Goal</p>
-                                <p className="text-[10px] text-gray-400 leading-normal">
-                                  You're averaging <span className="text-white font-semibold">{hUnit(weekAvg)}{hLabel}</span> (goal: {hUnit(hydGoal)}{hLabel}). Adding just one more glass of water per day will put you right on track!
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          {adherencePct < 50 ? (
-                            <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 flex gap-2.5 items-start">
-                              <div className="text-lg shrink-0 mt-0.5">📅</div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] font-bold text-rose-300">Inconsistent Hydration</p>
-                                <p className="text-[10px] text-gray-400 leading-normal">
-                                  You're hitting your goal on only <span className="text-white font-semibold">{adherencePct}%</span> of days. Try linking water drinking to your daily routines — like a glass after every bathroom break or meal.
-                                </p>
-                              </div>
-                            </div>
-                          ) : adherencePct >= 80 ? (
-                            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 flex gap-2.5 items-start">
-                              <div className="text-lg shrink-0 mt-0.5">🌟</div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] font-bold text-emerald-300">Consistency Champion</p>
-                                <p className="text-[10px] text-gray-400 leading-normal">
-                                  You consistently hit your hydration goal on {adherencePct}% of days! This level of consistency is excellent for your health and energy levels.
-                                </p>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 flex gap-2.5 items-start">
-                              <div className="text-lg shrink-0 mt-0.5">📈</div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] font-bold text-blue-300">Building Consistency</p>
-                                <p className="text-[10px] text-gray-400 leading-normal">
-                                  You hit your goal on {adherencePct}% of days. Small improvements each week will build a lasting hydration habit!
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          {streak >= 7 ? (
-                            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 flex gap-2.5 items-start">
-                              <div className="text-lg shrink-0 mt-0.5">🔥</div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] font-bold text-emerald-300">Impressive Streak!</p>
-                                <p className="text-[10px] text-gray-400 leading-normal">
-                                  You're on a <span className="text-white font-semibold">{streak}-day</span> hydration streak! Your body is reaping the benefits of consistent hydration.
-                                </p>
-                              </div>
-                            </div>
-                          ) : streak >= 3 ? (
-                            <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 flex gap-2.5 items-start">
-                              <div className="text-lg shrink-0 mt-0.5">💪</div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] font-bold text-cyan-300">Streak Growing</p>
-                                <p className="text-[10px] text-gray-400 leading-normal">
-                                  You're on a <span className="text-white font-semibold">{streak}-day</span> streak! Keep it going — consistency is key to forming a habit.
-                                </p>
-                              </div>
-                            </div>
-                          ) : streak > 0 ? (
-                            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 flex gap-2.5 items-start">
-                              <div className="text-lg shrink-0 mt-0.5">🌱</div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] font-bold text-amber-300">Getting Started</p>
-                                <p className="text-[10px] text-gray-400 leading-normal">
-                                  You're on a <span className="text-white font-semibold">{streak}-day</span> streak. Every day counts — keep logging to build momentum!
-                                </p>
-                              </div>
-                            </div>
-                          ) : null}
-
-                          {weekAvg > 0 && (
-                            <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-3 flex gap-2.5 items-start">
-                              <div className="text-lg shrink-0 mt-0.5">⏰</div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] font-bold text-purple-300">Spread Your Intake</p>
-                                <p className="text-[10px] text-gray-400 leading-normal">
-                                  For optimal hydration, spread your {hUnit(weekAvg)}{hLabel} throughout the day rather than drinking large amounts at once. Your body absorbs water more efficiently in smaller, regular doses.
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {insightTab === 'projections' && (
-                      <motion.div
-                        key="projections"
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -5 }}
-                        className="space-y-3"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-indigo-400">📈</span>
-                          <span className="text-[9px] font-semibold text-gray-500 uppercase">Hydration Projections</span>
-                        </div>
-
-                        {(() => {
-                          const projectedMonthly = weekTotal * 4.33
-                          const projectedQuarterly = weekTotal * 13
-                          const goalPct = hydGoal > 0 ? Math.round((weekAvg / hydGoal) * 100) : 0
-
-                          return (
-                            <div className="space-y-3">
-                              <div className="rounded-xl bg-white/5 border border-white/5 p-3 space-y-2">
-                                <div className="flex items-center justify-between text-xs text-white">
-                                  <span>Weekly Avg Intake:</span>
-                                  <span className="font-bold">{hUnit(weekAvg)}{hLabel}</span>
-                                </div>
-                                <div className="flex items-center justify-between text-xs text-white">
-                                  <span>Daily Goal:</span>
-                                  <span className="font-bold text-gray-400">{hUnit(hydGoal)}{hLabel}</span>
-                                </div>
-                                <div className="flex items-center justify-between text-xs border-t border-white/5 pt-2">
-                                  <span>Goal Achievement:</span>
-                                  <span className={`font-bold ${goalPct >= 100 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                                    {goalPct}%
-                                  </span>
-                                </div>
-                              </div>
-
-                              <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 space-y-2.5">
-                                <div className="flex items-center gap-2">
-                                  {goalPct >= 100 ? (
-                                    <TrendingUp className="w-4 h-4 text-emerald-400" />
-                                  ) : (
-                                    <TrendingDown className="w-4 h-4 text-amber-400" />
-                                  )}
-                                  <p className="text-[11px] font-bold text-cyan-300">
-                                    {goalPct >= 100 ? 'Sustaining Hydration' : 'Room for Improvement'}
-                                  </p>
-                                </div>
-                                <p className="text-[10px] text-gray-400 leading-relaxed">
-                                  At your current rate, you'll consume approximately <span className="text-white font-semibold">{hUnit(projectedMonthly)}{hLabel}</span> per month and <span className="text-white font-semibold">{hUnit(projectedQuarterly)}{hLabel}</span> per quarter.
-                                </p>
-
-                                <div className="grid grid-cols-2 gap-2 pt-1">
-                                  <div className="rounded-lg bg-black/35 p-2 border border-white/5 text-center">
-                                    <p className={`text-base font-bold ${goalPct >= 100 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                                      {hUnit(projectedMonthly)}{hLabel}
-                                    </p>
-                                    <p className="text-[8px] text-gray-500 uppercase tracking-wider font-semibold">4 Weeks</p>
-                                  </div>
-                                  <div className="rounded-lg bg-black/35 p-2 border border-white/5 text-center">
-                                    <p className={`text-lg font-black ${goalPct >= 100 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                                      {hUnit(projectedQuarterly)}{hLabel}
-                                    </p>
-                                    <p className="text-[8px] text-gray-500 uppercase tracking-wider font-semibold">12 Weeks</p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })()}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                )
-              })()}
+            {/* AI TIPS */}
+            <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+              <div className="flex items-center gap-1.5 mb-2">
+                <SparklesIcon className="w-3 h-3 text-cyan-400" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-cyan-400/70">AI TIPS</span>
+              </div>
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                {coachInsights.slice(0, 5).map((tip, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="flex items-start gap-2 text-xs"
+                  >
+                    <span className="flex-shrink-0">{tip.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className={tip.color}>{tip.text}</p>
+                      <span className={`text-[9px] inline-block mt-0.5 px-1.5 py-[1px] rounded-full ${tip.category === 'consistency' || tip.category === 'environment' ? 'bg-blue-500/10 text-blue-400' : tip.category === 'lifestyle' ? 'bg-amber-500/10 text-amber-400' : tip.category === 'recovery' ? 'bg-emerald-500/10 text-emerald-400' : tip.category === 'pattern' ? 'bg-violet-500/10 text-violet-400' : tip.category === 'intake' ? 'bg-cyan-500/10 text-cyan-400' : 'bg-gray-500/10 text-gray-500'}`}>
+                        {tip.category}
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           </div>
         </motion.div>
