@@ -189,6 +189,12 @@ export interface HydrationEntry {
   date: string;
   amount: number;
   timestamp: string;
+  drinkType?: 'water' | 'coffee' | 'tea' | 'juice' | 'sports' | 'other';
+  thirst?: 'none' | 'slight' | 'thirsty' | 'very';
+  exercise?: boolean;
+  hotWeather?: boolean;
+  caffeine?: boolean;
+  withMeal?: boolean;
   note?: string;
   createdAt: string;
   updatedAt: string;

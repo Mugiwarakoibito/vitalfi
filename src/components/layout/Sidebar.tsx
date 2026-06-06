@@ -54,20 +54,20 @@ export function Sidebar() {
     {
       title: 'BodyForge Core',
       items: [
-        { label: 'Workout Logger', path: '/fitness?tab=workouts', icon: Dumbbell, color: 'text-orange-400', shortcut: 'W' },
-        { label: 'Body Metrics', path: '/fitness?tab=body', icon: Activity, color: 'text-lime-400' },
-        { label: 'Nutrition Hub', path: '/fitness?tab=nutrition', icon: Utensils, color: 'text-purple-400' },
-        { label: 'Recovery & Hydration', path: '/fitness?tab=recovery', icon: Heart, color: 'text-emerald-400' },
-        { label: 'Sleep Sanctuary', path: '/fitness?tab=sleep', icon: Moon, color: 'text-indigo-400' },
+        { label: 'Workout Logger',       path: '/fitness?tab=workouts',    icon: Dumbbell, color: 'text-orange-400', shortcut: 'W' },
+        { label: 'Nutrition Hub',        path: '/fitness?tab=nutrition',   icon: Utensils,  color: 'text-purple-400' },
+        { label: 'Sleep Sanctuary',      path: '/fitness?tab=sleep',       icon: Moon,      color: 'text-indigo-400' },
+        { label: 'Recovery & Hydration', path: '/fitness?tab=recovery',    icon: Heart,     color: 'text-emerald-400' },
+        { label: 'Body Metrics',         path: '/fitness?tab=body',        icon: Activity,  color: 'text-lime-400' },
       ]
     },
     {
       title: 'Performance',
       items: [
-        { label: 'Exercise Library', path: '/fitness?tab=exercises', icon: BookOpen, color: 'text-amber-400' },
-        { label: 'PR Hall of Fame', path: '/fitness?tab=records', icon: Trophy, color: 'text-yellow-400' },
-        { label: 'Streak Engine', path: '/fitness?tab=streak', icon: Flame, color: 'text-orange-500' },
-        { label: 'Supplement Center', path: '/fitness?tab=supplements', icon: Coffee, color: 'text-cyan-400' },
+        { label: 'Streak Engine',        path: '/fitness?tab=streak',      icon: Flame,     color: 'text-orange-500' },
+        { label: 'Exercise Library',     path: '/fitness?tab=exercises',   icon: BookOpen,  color: 'text-amber-400' },
+        { label: 'PR Hall of Fame',      path: '/fitness?tab=records',     icon: Trophy,    color: 'text-yellow-400' },
+        { label: 'Supplement Center',    path: '/fitness?tab=supplements', icon: Coffee,    color: 'text-cyan-400' },
       ]
     }
   ]

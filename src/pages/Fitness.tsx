@@ -16,18 +16,18 @@ import {
   TrendingUp, Flame, Coffee, Plus, Droplets,
 } from 'lucide-react'
 
-type TabId = 'training' | 'diet' | 'sleep' | 'recovery' | 'progress' | 'habits' | 'body' | 'hydration' | 'supplements'
+type TabId = 'training' | 'diet' | 'sleep' | 'hydration' | 'recovery' | 'body' | 'progress' | 'habits' | 'supplements'
 
 const tabConfig: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: 'training', label: 'Workout', icon: Dumbbell },
-  { id: 'diet', label: 'Nutrition', icon: Utensils },
-  { id: 'sleep', label: 'Sleep', icon: Moon },
-  { id: 'recovery', label: 'Recovery', icon: Heart },
-  { id: 'progress', label: 'Performance', icon: TrendingUp },
-  { id: 'habits', label: 'Streak', icon: Flame },
-  { id: 'body', label: 'Body', icon: Activity },
-  { id: 'hydration', label: 'Hydration', icon: Droplets },
-  { id: 'supplements', label: 'Supps', icon: Coffee },
+  { id: 'training',    label: 'Workout',     icon: Dumbbell },
+  { id: 'diet',        label: 'Nutrition',   icon: Utensils },
+  { id: 'sleep',       label: 'Sleep',       icon: Moon },
+  { id: 'hydration',   label: 'Hydration',   icon: Droplets },
+  { id: 'recovery',    label: 'Recovery',    icon: Heart },
+  { id: 'body',        label: 'Body',        icon: Activity },
+  { id: 'progress',    label: 'Performance', icon: TrendingUp },
+  { id: 'habits',      label: 'Streak',      icon: Flame },
+  { id: 'supplements', label: 'Supps',       icon: Coffee },
 ]
 
 const habitRingConfig = [
