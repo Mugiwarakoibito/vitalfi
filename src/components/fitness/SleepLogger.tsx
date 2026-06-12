@@ -525,7 +525,7 @@ export function SleepLogger() {
           {sleep.length > 0 && (
             <button onClick={() => setShowTrendScope(p => !p)}
               className={`p-2 rounded-xl border transition-all ${showTrendScope ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
-              title="Sleep Trends">
+              title="SleepScope">
               <BarChart3 className="w-5 h-5" />
             </button>
           )}

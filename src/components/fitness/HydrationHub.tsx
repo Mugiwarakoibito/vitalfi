@@ -5,7 +5,7 @@ import {
   Target, ChevronLeft, ChevronRight,
   Calendar, RotateCcw, Brain, Clock,
   TrendingUp, Activity, BarChart3,
-  Sparkles as SparklesIcon, Settings,
+  Sparkles as SparklesIcon,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { generateId, cn } from '@/lib/utils'
@@ -112,6 +112,16 @@ export function HydrationHub() {
 
   const coachInsights = useMemo(() => {
     const tips: { icon: string; text: string; color: string; category: string }[] = []
+
+    // Drinking style preference (always first, even with no data)
+    if (coachPref === 'morning') {
+      tips.push({ icon: '🌅', text: 'Morning focus selected. Try 500-750ml within 30min of waking to kickstart hydration.', color: 'text-amber-400', category: 'lifestyle' })
+    } else if (coachPref === 'evening') {
+      tips.push({ icon: '🌙', text: 'Evening focus active. Try shifting 1-2 glasses earlier for better sleep quality.', color: 'text-violet-400', category: 'lifestyle' })
+    } else {
+      tips.push({ icon: '💧', text: 'Spread evenly selected. Aim for a glass every 1-2 hours for steady hydration.', color: 'text-cyan-400', category: 'lifestyle' })
+    }
+
     if (hydration.length < 2) return tips
 
     const onTargetDays = hydrationWeek.filter(d => d.amount >= hydGoal).length
@@ -180,19 +190,6 @@ export function HydrationHub() {
       const diff = last4 - first4
       if (diff > 100) tips.push({ icon: '📈', text: `Hydration trending up by ${hUnit(Math.round(diff))}${hLabel} per day! Excellent improvement.`, color: 'text-emerald-400', category: 'recovery' })
       else if (diff < -100) tips.push({ icon: '📉', text: `Intake dropped ${hUnit(Math.round(Math.abs(diff)))}${hLabel}/day. Try scheduling a mid-day hydration check.`, color: 'text-rose-400', category: 'recovery' })
-    }
-
-    // Drinking style preference
-    if (coachPref === 'morning') {
-      tips.push({ icon: '🌅', text: 'You prefer morning focus. Try drinking 500-750ml within 30min of waking to kickstart hydration.', color: 'text-amber-400', category: 'lifestyle' })
-    } else if (coachPref === 'evening') {
-      if (todayHydration < hydGoal && todayHydration > 0) {
-        const rem = hydGoal - todayHydration
-        tips.push({ icon: '🌙', text: `Evening focus: ${hUnit(rem)}${hLabel} remaining today. Sip gradually — don't chug before bed.`, color: 'text-violet-400', category: 'lifestyle' })
-      }
-      tips.push({ icon: '🌙', text: 'Evening drinker detected. Try shifting 1-2 glasses earlier in the day for better sleep quality.', color: 'text-violet-400', category: 'lifestyle' })
-    } else {
-      tips.push({ icon: '💧', text: 'Spreading intake evenly throughout the day maximizes absorption. Aim for a glass every 1-2 hours for steady energy.', color: 'text-cyan-400', category: 'lifestyle' })
     }
 
     // Empty state
@@ -487,7 +484,7 @@ export function HydrationHub() {
                   <button onClick={() => setShowCoachPref(p => !p)}
                     className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${showCoachPref ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:bg-white/10'}`}
                     title="Hydration style">
-                    <Settings className="w-3 h-3" />
+                    <Droplets className="w-3 h-3" />
                   </button>
                   {showCoachPref && (
                     <>
@@ -619,7 +616,7 @@ export function HydrationHub() {
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-cyan-400/70">AI TIPS</span>
               </div>
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                {coachInsights.slice(0, 5).map((tip, i) => (
+                {coachInsights.slice(0, 3).map((tip, i) => (
                   <motion.div
                     key={i}
                     initial={{ opacity: 0, x: -8 }}
