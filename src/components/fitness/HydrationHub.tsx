@@ -192,7 +192,7 @@ export function HydrationHub() {
       }
       tips.push({ icon: '🌙', text: 'Evening drinker detected. Try shifting 1-2 glasses earlier in the day for better sleep quality.', color: 'text-violet-400', category: 'lifestyle' })
     } else {
-      if (loggedDays >= 2) tips.push({ icon: '💧', text: 'Spreading intake evenly throughout the day maximizes absorption. Aim for a glass every 1-2 hours.', color: 'text-cyan-400', category: 'lifestyle' })
+      tips.push({ icon: '💧', text: 'Spreading intake evenly throughout the day maximizes absorption. Aim for a glass every 1-2 hours for steady energy.', color: 'text-cyan-400', category: 'lifestyle' })
     }
 
     // Empty state
