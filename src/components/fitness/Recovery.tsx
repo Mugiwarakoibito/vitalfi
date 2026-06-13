@@ -1075,92 +1075,115 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowForm(false)}>
           <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            className="relative w-full max-w-xl rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-950 p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
+            className="relative w-full max-w-xl rounded-2xl border border-white/[0.06] bg-gradient-to-br from-slate-900/95 via-slate-900 to-slate-950 p-6 shadow-2xl backdrop-blur-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                  <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }}><Heart size={20} className="text-emerald-400" /></motion.div>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/25 to-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                  <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ duration: 2, repeat: Infinity }}><Heart size={20} className="text-emerald-400" /></motion.div>
                 </div>
                 <div><h3 className="text-lg font-bold text-white">{todayEntry ? 'Edit Recovery' : 'Log Recovery'}</h3><p className="text-xs text-slate-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p></div>
               </div>
-              <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5"><X size={16} /></button>
+              <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-all"><X size={16} /></button>
             </div>
             <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
-              <div className="grid grid-cols-2 gap-3">
-                <Slider label="Energy Level" value={formData.energy} onChange={v => setFormData(prev => ({ ...prev, energy: v }))} color="#f59e0b" hint="Physical & mental energy" />
-                <Slider label="Muscle Soreness" value={formData.soreness} onChange={v => setFormData(prev => ({ ...prev, soreness: v }))} color="#ef4444" hint="How sore are your muscles" />
+              <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Activity size={12} className="text-emerald-400" />
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Recovery Metrics</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <Slider label="Energy Level" value={formData.energy} onChange={v => setFormData(prev => ({ ...prev, energy: v }))} color="#f59e0b" hint="Physical & mental energy" />
+                  <Slider label="Muscle Soreness" value={formData.soreness} onChange={v => setFormData(prev => ({ ...prev, soreness: v }))} color="#ef4444" hint="How sore are your muscles" />
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-3">
+                  <Slider label="Stress Level" value={formData.stress} onChange={v => setFormData(prev => ({ ...prev, stress: v }))} color="#a855f7" hint="Mental & emotional stress" />
+                  <Slider label="Mood" value={formData.mood} onChange={v => setFormData(prev => ({ ...prev, mood: v }))} min={1} max={5} color="#10b981" hint="Overall emotional state" />
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Slider label="Stress Level" value={formData.stress} onChange={v => setFormData(prev => ({ ...prev, stress: v }))} color="#a855f7" hint="Mental & emotional stress" />
-                <Slider label="Mood" value={formData.mood} onChange={v => setFormData(prev => ({ ...prev, mood: v }))} min={1} max={5} color="#10b981" hint="Overall emotional state" />
-              </div>
-              <div className="rounded-xl border border-indigo-500/15 bg-gradient-to-r from-indigo-500/[0.04] to-violet-500/[0.04] p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Moon size={12} className="text-indigo-400" />
+              <div className="rounded-xl border border-indigo-500/15 bg-gradient-to-r from-indigo-500/[0.06] to-violet-500/[0.06] p-4 shadow-[inset_0_0_20px_rgba(99,102,241,0.03)]">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-5 h-5 rounded-lg bg-indigo-500/15 flex items-center justify-center"><Moon size={10} className="text-indigo-400" /></div>
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Last Night's Sleep</span>
-                  {todaySleep ? (
-                    <span className="text-[7px] text-indigo-400/60 ml-auto">from Sleep log</span>
-                  ) : (
-                    <span className="text-[7px] text-amber-400/60 ml-auto">not logged</span>
+                  {todaySleep && (
+                    <span className="text-[7px] text-indigo-400/60 ml-auto px-1.5 py-0.5 rounded-md bg-indigo-500/10">from Sleep log</span>
                   )}
                 </div>
                 {todaySleep ? (
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
                     <div className="flex items-center gap-0.5">
                       {[1,2,3,4,5].map(n => (
-                        <div key={n} className={`w-2.5 h-2.5 rounded-full ${n <= todaySleep.quality ? 'bg-indigo-400 shadow-[0_0_4px_#818cf8]' : 'bg-white/10'}`} />
+                        <div key={n} className={`w-3 h-3 rounded-full transition-all ${n <= todaySleep.quality ? 'bg-indigo-400 shadow-[0_0_6px_rgba(129,140,248,0.6)]' : 'bg-white/[0.06] border border-white/[0.04]'}`} />
                       ))}
                     </div>
+                    <div className="h-6 w-px bg-white/[0.06]" />
                     <div className="flex items-center gap-1 text-xs text-white font-bold">
-                      <span>{todaySleep.duration}h</span>
-                      <span className="text-slate-500 font-normal">·</span>
+                      <span className="text-indigo-200">{todaySleep.duration}h</span>
+                      <span className="text-slate-600 font-normal">·</span>
                       <span className="text-indigo-300">Q{todaySleep.quality}/5</span>
                     </div>
-                    <span className="text-[8px] text-slate-600 ml-auto">
-                      {todaySleep.bedTime && todaySleep.wakeTime ? `${todaySleep.bedTime}–${todaySleep.wakeTime}` : ''}
-                    </span>
+                    {(todaySleep.bedTime && todaySleep.wakeTime) && (
+                      <>
+                        <div className="h-6 w-px bg-white/[0.06]" />
+                        <span className="text-[9px] text-slate-500 flex items-center gap-1">
+                          <Clock size={9} className="text-slate-600" />
+                          {todaySleep.bedTime} – {todaySleep.wakeTime}
+                        </span>
+                      </>
+                    )}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <p className="text-[9px] text-slate-500">No sleep logged today</p>
+                  <div className="flex items-center gap-2 py-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-slate-600 animate-pulse" />
+                    <p className="text-[10px] text-slate-500">No sleep logged today</p>
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] text-slate-400 font-medium">Recovery Feeling</label>
-                  <div className="flex items-center gap-2 mt-2">
-                    {[1, 2, 3, 4, 5].map(n => (
-                      <button key={n} type="button" onClick={() => setFormData(prev => ({ ...prev, recoveryFeeling: n }))}
-                        className={`w-8 h-8 rounded-full text-xs font-bold border transition-all ${
-                          formData.recoveryFeeling === n
-                            ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-lg shadow-emerald-500/10 scale-110'
-                            : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:bg-white/10'
-                        }`}>{n}</button>
-                    ))}
+              <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Activity size={12} className="text-emerald-400" />
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Body Response</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] text-slate-400 font-medium mb-2 block">Recovery Feeling</label>
+                    <div className="flex items-center gap-2">
+                      {[1, 2, 3, 4, 5].map(n => (
+                        <button key={n} type="button" onClick={() => setFormData(prev => ({ ...prev, recoveryFeeling: n }))}
+                          className={`w-10 h-10 rounded-xl text-xs font-bold border transition-all ${
+                            formData.recoveryFeeling === n
+                              ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-lg shadow-emerald-500/10 scale-110'
+                              : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:bg-white/10'
+                          }`}>{n}</button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 font-medium mb-2">DOMS Areas <span className="text-slate-600 font-normal">— tap to cycle</span></p>
-                <div className="flex flex-wrap gap-1.5">
-                  {MUSCLE_AREAS.map(area => {
-                    const sev = formData.domsSeverity[area]
-                    return (
-                      <motion.button key={area} onClick={() => toggleDomArea(area)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                        className={cn("px-2.5 py-1 rounded-lg text-xs border transition-all",
-                          !formData.domsAreas.includes(area) ? "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
-                            : sev === 'severe' ? "bg-rose-500/20 border-rose-500/40 text-rose-300"
-                              : sev === 'moderate' ? "bg-amber-500/15 border-amber-500/30 text-amber-300" : "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
-                        )}>{area}{formData.domsAreas.includes(area) ? ` (${sev || 'mild'})` : ''}</motion.button>
-                    )
-                  })}
+                <div className="mt-3">
+                  <p className="text-[10px] text-slate-400 font-medium mb-2">DOMS Areas <span className="text-slate-600 font-normal">— tap to cycle</span></p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {MUSCLE_AREAS.map(area => {
+                      const sev = formData.domsSeverity[area]
+                      return (
+                        <motion.button key={area} onClick={() => toggleDomArea(area)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                          className={cn("px-2.5 py-1 rounded-lg text-xs border transition-all",
+                            !formData.domsAreas.includes(area) ? "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
+                              : sev === 'severe' ? "bg-rose-500/20 border-rose-500/40 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.15)]"
+                                : sev === 'moderate' ? "bg-amber-500/15 border-amber-500/30 text-amber-300" : "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+                          )}>{area}{formData.domsAreas.includes(area) ? ` (${sev || 'mild'})` : ''}</motion.button>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
               {settings.enableTrainingLoad && (
                 <Slider label="Training Load (RPE)" value={formData.trainingLoad} onChange={v => setFormData(prev => ({ ...prev, trainingLoad: v }))} color="#f97316" hint="Rate of perceived exertion" />
               )}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock size={12} className="text-sky-400" />
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Vitals</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
                 {settings.enableHRV && (
                   <div><label className="text-[11px] text-slate-400 font-medium">HRV</label>
                     <div className="flex items-center gap-1 mt-1">
@@ -1180,55 +1203,84 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                {settings.enableBodyTemp && (
-                  <div><label className="text-[11px] text-slate-400 font-medium">Body Temp</label>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Thermometer size={13} className="text-orange-400 shrink-0" />
-                      <input type="number" step="0.1" value={formData.bodyTemp} onChange={e => setFormData(prev => ({ ...prev, bodyTemp: e.target.value }))} placeholder="°C"
-                        className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-orange-500/50 focus:outline-none transition-all" />
-                    </div>
+              {settings.enableBodyTemp && (
+                <div className="mt-3">
+                  <label className="text-[10px] text-slate-400 font-medium">Body Temp</label>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Thermometer size={13} className="text-orange-400 shrink-0" />
+                    <input type="number" step="0.1" value={formData.bodyTemp} onChange={e => setFormData(prev => ({ ...prev, bodyTemp: e.target.value }))} placeholder="°C"
+                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-orange-500/50 focus:outline-none transition-all" />
                   </div>
-                )}
-                {settings.enableBodyWeight && (
-                  <div><label className="text-[11px] text-slate-400 font-medium">Body Weight</label>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Activity size={13} className="text-emerald-400 shrink-0" />
-                      <input type="number" step="0.1" value={formData.bodyWeight} onChange={e => setFormData(prev => ({ ...prev, bodyWeight: e.target.value }))} placeholder="kg"
-                        className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-emerald-500/50 focus:outline-none transition-all" />
-                    </div>
+                </div>
+              )}
+              {settings.enableBodyWeight && (
+                <div className="mt-3">
+                  <label className="text-[10px] text-slate-400 font-medium">Body Weight</label>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Activity size={13} className="text-emerald-400 shrink-0" />
+                    <input type="number" step="0.1" value={formData.bodyWeight} onChange={e => setFormData(prev => ({ ...prev, bodyWeight: e.target.value }))} placeholder="kg"
+                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-emerald-500/50 focus:outline-none transition-all" />
                   </div>
-                )}
-              </div>
-              {settings.enableProtocols && (
+                </div>
+              )}
+            </div>
+            {settings.enableProtocols && (
+              <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Activity size={12} className="text-purple-400" />
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Protocol & Notes</span>
+                </div>
                 <div>
-                  <label className="text-[11px] text-slate-400 font-medium">Recovery Protocol</label>
+                  <label className="text-[10px] text-slate-400 font-medium">Recovery Protocol</label>
                   <select value={formData.recoveryProtocol} onChange={e => setFormData(prev => ({ ...prev, recoveryProtocol: e.target.value }))}
                     className="w-full mt-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:border-purple-500/50 focus:outline-none transition-all appearance-none">
                     <option value="" className="bg-slate-900">None</option>
                     {RECOVERY_PROTOCOLS.map(p => <option key={p} value={p} className="bg-slate-900">{p}</option>)}
                   </select>
                 </div>
-              )}
-              <div>
-                <label className="text-[11px] text-slate-400 font-medium">Quick Notes</label>
-                <input value={formData.notes} onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Brief notes (e.g., 'Leg day was brutal')"
-                  className="w-full mt-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-emerald-500/50 focus:outline-none transition-all" />
-              </div>
-              {settings.showJournal && (
-                <div>
-                  <label className="text-[11px] text-slate-400 font-medium">Recovery Journal</label>
-                  <textarea value={formData.journal} onChange={e => setFormData(prev => ({ ...prev, journal: e.target.value }))}
-                    placeholder="Write a longer reflection on your recovery today..."
-                    rows={3} className="w-full mt-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-emerald-500/50 focus:outline-none transition-all resize-none" />
+                <div className="mt-3">
+                  <label className="text-[10px] text-slate-400 font-medium">Quick Notes</label>
+                  <input value={formData.notes} onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Brief notes (e.g., 'Leg day was brutal')"
+                    className="w-full mt-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-purple-500/50 focus:outline-none transition-all" />
                 </div>
-              )}
-              <div className="flex gap-3 pt-2">
-                <motion.button onClick={() => setShowForm(false)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all text-sm font-bold">Cancel</motion.button>
-                <motion.button onClick={saveEntry} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/30 transition-all text-sm font-bold flex items-center justify-center gap-2"><Heart size={16} /> Save</motion.button>
+                {settings.showJournal && (
+                  <div className="mt-3">
+                    <label className="text-[10px] text-slate-400 font-medium">Recovery Journal</label>
+                    <textarea value={formData.journal} onChange={e => setFormData(prev => ({ ...prev, journal: e.target.value }))}
+                      placeholder="Write a longer reflection on your recovery today..."
+                      rows={3} className="w-full mt-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-purple-500/50 focus:outline-none transition-all resize-none" />
+                  </div>
+                )}
+              </div>
+            )}
+            {!settings.enableProtocols && (
+              <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Activity size={12} className="text-purple-400" />
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Notes</span>
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 font-medium">Quick Notes</label>
+                  <input value={formData.notes} onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Brief notes (e.g., 'Leg day was brutal')"
+                    className="w-full mt-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-purple-500/50 focus:outline-none transition-all" />
+                </div>
+                {settings.showJournal && (
+                  <div className="mt-3">
+                    <label className="text-[10px] text-slate-400 font-medium">Recovery Journal</label>
+                    <textarea value={formData.journal} onChange={e => setFormData(prev => ({ ...prev, journal: e.target.value }))}
+                      placeholder="Write a longer reflection on your recovery today..."
+                      rows={3} className="w-full mt-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-purple-500/50 focus:outline-none transition-all resize-none" />
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="flex gap-3 pt-2">
+              <motion.button onClick={() => setShowForm(false)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all text-sm font-bold">Cancel</motion.button>
+              <motion.button onClick={saveEntry} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500/20 to-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:from-emerald-500/30 hover:to-emerald-500/20 transition-all text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/5"><Heart size={16} /> Save Entry</motion.button>
               </div>
             </div>
           </motion.div>
