@@ -1157,6 +1157,13 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
                       ))}
                     </div>
                   </div>
+                  {settings.enableTrainingLoad && (
+                    <div>
+                      <label className="text-[10px] text-slate-400 font-medium mb-2 block">Training Load (RPE)</label>
+                      <input type="number" min={1} max={10} value={formData.trainingLoad} onChange={e => setFormData(prev => ({ ...prev, trainingLoad: parseInt(e.target.value) || 5 }))}
+                        className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-orange-500/50 focus:outline-none transition-all" />
+                    </div>
+                  )}
                 </div>
                 <div className="mt-3">
                   <p className="text-[10px] text-slate-400 font-medium mb-2">DOMS Areas <span className="text-slate-600 font-normal">— tap to cycle</span></p>
@@ -1174,56 +1181,53 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
                     })}
                   </div>
                 </div>
+                <div className="mt-4 pt-4 border-t border-white/[0.04]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock size={12} className="text-sky-400" />
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Vitals</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {settings.enableHRV && (
+                      <div><label className="text-[10px] text-slate-400 font-medium">HRV</label>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Clock size={13} className="text-sky-400 shrink-0" />
+                          <input type="number" value={formData.hrv} onChange={e => setFormData(prev => ({ ...prev, hrv: e.target.value }))} placeholder="ms"
+                            className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-sky-500/50 focus:outline-none transition-all" />
+                        </div>
+                      </div>
+                    )}
+                    {settings.enableRHR && (
+                      <div><label className="text-[10px] text-slate-400 font-medium">RHR</label>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Heart size={13} className="text-rose-400 shrink-0" />
+                          <input type="number" value={formData.rhr} onChange={e => setFormData(prev => ({ ...prev, rhr: e.target.value }))} placeholder="bpm"
+                            className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-rose-500/50 focus:outline-none transition-all" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    {settings.enableBodyTemp && (
+                      <div><label className="text-[10px] text-slate-400 font-medium">Body Temp</label>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Thermometer size={13} className="text-orange-400 shrink-0" />
+                          <input type="number" step="0.1" value={formData.bodyTemp} onChange={e => setFormData(prev => ({ ...prev, bodyTemp: e.target.value }))} placeholder="°C"
+                            className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-orange-500/50 focus:outline-none transition-all" />
+                        </div>
+                      </div>
+                    )}
+                    {settings.enableBodyWeight && (
+                      <div><label className="text-[10px] text-slate-400 font-medium">Body Weight</label>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Activity size={13} className="text-emerald-400 shrink-0" />
+                          <input type="number" step="0.1" value={formData.bodyWeight} onChange={e => setFormData(prev => ({ ...prev, bodyWeight: e.target.value }))} placeholder="kg"
+                            className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-emerald-500/50 focus:outline-none transition-all" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-              {settings.enableTrainingLoad && (
-                <Slider label="Training Load (RPE)" value={formData.trainingLoad} onChange={v => setFormData(prev => ({ ...prev, trainingLoad: v }))} color="#f97316" hint="Rate of perceived exertion" />
-              )}
-              <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Clock size={12} className="text-sky-400" />
-                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Vitals</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                {settings.enableHRV && (
-                  <div><label className="text-[11px] text-slate-400 font-medium">HRV</label>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Clock size={13} className="text-sky-400 shrink-0" />
-                      <input type="number" value={formData.hrv} onChange={e => setFormData(prev => ({ ...prev, hrv: e.target.value }))} placeholder="ms"
-                        className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-sky-500/50 focus:outline-none transition-all" />
-                    </div>
-                  </div>
-                )}
-                {settings.enableRHR && (
-                  <div><label className="text-[11px] text-slate-400 font-medium">RHR</label>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Heart size={13} className="text-rose-400 shrink-0" />
-                      <input type="number" value={formData.rhr} onChange={e => setFormData(prev => ({ ...prev, rhr: e.target.value }))} placeholder="bpm"
-                        className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-rose-500/50 focus:outline-none transition-all" />
-                    </div>
-                  </div>
-                )}
-              </div>
-              {settings.enableBodyTemp && (
-                <div className="mt-3">
-                  <label className="text-[10px] text-slate-400 font-medium">Body Temp</label>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Thermometer size={13} className="text-orange-400 shrink-0" />
-                    <input type="number" step="0.1" value={formData.bodyTemp} onChange={e => setFormData(prev => ({ ...prev, bodyTemp: e.target.value }))} placeholder="°C"
-                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-orange-500/50 focus:outline-none transition-all" />
-                  </div>
-                </div>
-              )}
-              {settings.enableBodyWeight && (
-                <div className="mt-3">
-                  <label className="text-[10px] text-slate-400 font-medium">Body Weight</label>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Activity size={13} className="text-emerald-400 shrink-0" />
-                    <input type="number" step="0.1" value={formData.bodyWeight} onChange={e => setFormData(prev => ({ ...prev, bodyWeight: e.target.value }))} placeholder="kg"
-                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-emerald-500/50 focus:outline-none transition-all" />
-                  </div>
-                </div>
-              )}
-            </div>
             {settings.enableProtocols && (
               <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
                 <div className="flex items-center gap-2 mb-3">
