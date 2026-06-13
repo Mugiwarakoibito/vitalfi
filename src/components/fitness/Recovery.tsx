@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 import { generateId, cn } from '@/lib/utils'
+import { useAppStore } from '@/store/useAppStore'
 
 interface RecoveryEntry {
   id: string; date: string
@@ -255,11 +256,14 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
   const [achSort, setAchSort] = useState<'order' | 'earned'>('earned')
   const [showLocked, setShowLocked] = useState(true)
 
+  const { sleep } = useAppStore()
+
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)) }, [entries])
   useEffect(() => { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)) }, [settings])
 
   const today = new Date().toISOString().split('T')[0]
   const todayEntry = useMemo(() => entries.find(e => e.date === today), [entries, today])
+  const todaySleep = useMemo(() => sleep.find(s => s.date === today), [sleep, today])
   const weights = settings.readinessWeights
   const todayReadiness = useMemo(() => {
     if (!todayEntry) return null
@@ -935,7 +939,7 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
             </div>
             <p className="text-gray-400 mb-1">No recovery entries yet</p>
             <p className="text-gray-500 text-sm mb-4">Start tracking your readiness and recovery</p>
-            <button onClick={() => { setFormData(prev => ({ ...prev, energy: settings.defaultEnergy, soreness: settings.defaultSoreness, stress: settings.defaultStress, mood: settings.defaultMood, sleepQuality: settings.defaultSleepQuality, sleepHours: '', recoveryFeeling: 3, domsAreas: [], domsSeverity: {}, hrv: '', rhr: '', bodyTemp: '', trainingLoad: 5, recoveryProtocol: '', bodyWeight: '', notes: '', journal: '' })); setShowForm(true) }}
+          <button onClick={() => { setFormData(prev => ({ ...prev, energy: todayEntry?.energy ?? settings.defaultEnergy, soreness: todayEntry?.soreness ?? settings.defaultSoreness, stress: todayEntry?.stress ?? settings.defaultStress, mood: todayEntry?.mood ?? settings.defaultMood, sleepQuality: todaySleep?.quality ?? settings.defaultSleepQuality, sleepHours: todaySleep?.duration?.toString() ?? '', recoveryFeeling: 3, domsAreas: [], domsSeverity: {}, hrv: '', rhr: '', bodyTemp: '', trainingLoad: 5, recoveryProtocol: '', bodyWeight: '', notes: '', journal: '' })); setShowForm(true) }}
               className="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/25 transition-all text-xs font-bold flex items-center gap-1.5">
               <Plus className="w-3.5 h-3.5" /> Log Your First Recovery
             </button>
@@ -1090,16 +1094,39 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
                 <Slider label="Stress Level" value={formData.stress} onChange={v => setFormData(prev => ({ ...prev, stress: v }))} color="#a855f7" hint="Mental & emotional stress" />
                 <Slider label="Mood" value={formData.mood} onChange={v => setFormData(prev => ({ ...prev, mood: v }))} min={1} max={5} color="#10b981" hint="Overall emotional state" />
               </div>
-              <Slider label="Sleep Quality" value={formData.sleepQuality} onChange={v => setFormData(prev => ({ ...prev, sleepQuality: v }))} min={1} max={5} color="#06b6d4" hint="How well you slept" />
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] text-slate-400 font-medium">Sleep Hours</label>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Moon size={13} className="text-indigo-400 shrink-0" />
-                    <input type="number" step="0.5" min={0} max={24} value={formData.sleepHours} onChange={e => setFormData(prev => ({ ...prev, sleepHours: e.target.value }))} placeholder="hours"
-                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-indigo-500/50 focus:outline-none transition-all" />
-                  </div>
+              <div className="rounded-xl border border-indigo-500/15 bg-gradient-to-r from-indigo-500/[0.04] to-violet-500/[0.04] p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Moon size={12} className="text-indigo-400" />
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Last Night's Sleep</span>
+                  {todaySleep ? (
+                    <span className="text-[7px] text-indigo-400/60 ml-auto">from Sleep log</span>
+                  ) : (
+                    <span className="text-[7px] text-amber-400/60 ml-auto">not logged</span>
+                  )}
                 </div>
+                {todaySleep ? (
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-0.5">
+                      {[1,2,3,4,5].map(n => (
+                        <div key={n} className={`w-2.5 h-2.5 rounded-full ${n <= todaySleep.quality ? 'bg-indigo-400 shadow-[0_0_4px_#818cf8]' : 'bg-white/10'}`} />
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-white font-bold">
+                      <span>{todaySleep.duration}h</span>
+                      <span className="text-slate-500 font-normal">·</span>
+                      <span className="text-indigo-300">Q{todaySleep.quality}/5</span>
+                    </div>
+                    <span className="text-[8px] text-slate-600 ml-auto">
+                      {todaySleep.bedTime && todaySleep.wakeTime ? `${todaySleep.bedTime}–${todaySleep.wakeTime}` : ''}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <p className="text-[9px] text-slate-500">No sleep logged today</p>
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-slate-400 font-medium">Recovery Feeling</label>
                   <div className="flex items-center gap-2 mt-2">

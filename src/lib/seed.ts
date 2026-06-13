@@ -1,6 +1,6 @@
 import { storage } from './storage';
 import { generateId } from './utils';
-import type { Account, Transaction, Budget, Investment, Bill, Debt, Goal, Workout, BodyMetric, HydrationEntry, SleepEntry, AppSettings } from '../types/domain';
+import type { Account, Transaction, Budget, Investment, Bill, Debt, Goal, Workout, BodyMetric, SleepEntry, AppSettings } from '../types/domain';
 
 function daysAgo(n: number): string {
   const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().split('T')[0];
@@ -28,12 +28,17 @@ const incomeDescs = [
 ];
 
 export async function seedIfNeeded(): Promise<boolean> {
-  // Clean up any previously seeded meals (fake data from older version)
+  // Clean up any previously seeded meals & hydration (fake data from older version)
   try {
     const existingMeals = await storage.getAll('meals');
     const seededMealNames = ['Chicken & Rice', 'Salad Bowl', 'Protein Shake', 'Oatmeal', 'Steak & Veggies', 'Pasta', 'Smoothie', 'Eggs & Toast'];
     const seededMeals = existingMeals.filter(m => seededMealNames.includes(m.name));
     for (const m of seededMeals) await storage.delete('meals', m.id);
+  } catch {}
+  try {
+    const existingHydration = await storage.getAll('hydration');
+    const seededHydration = existingHydration.filter((h: any) => !h.drinkType);
+    for (const h of seededHydration) await storage.delete('hydration', h.id);
   } catch {}
 
   const seeded = localStorage.getItem('vitalfi_seeded');
@@ -138,13 +143,7 @@ export async function seedIfNeeded(): Promise<boolean> {
     await storage.put('sleep', {
       id: generateId(), date, duration: rand(6, 9), quality: rand(2, 5) as 1|2|3|4|5,
       bedTime: '22:30', wakeTime: '06:30', createdAt: date, updatedAt: date,
-    } as SleepEntry);
-
-    if (Math.random() > 0.3) {
-      await storage.put('hydration', {
-        id: generateId(), date, amount: rand(1500, 3000), timestamp: date + 'T18:00:00Z', createdAt: date, updatedAt: date,
-      } as HydrationEntry);
-    }
+    } as SleepEntry    );
 
     if (i % 3 === 0) {
       await storage.put('bodyMetrics', {

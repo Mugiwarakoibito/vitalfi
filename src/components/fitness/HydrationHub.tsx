@@ -8,8 +8,10 @@ import {
   Sparkles as SparklesIcon,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, ReferenceLine, PieChart, Pie } from 'recharts'
 import { generateId, cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import type { HydrationEntry } from '@/types/fitness'
 
 const HYDRATION_GOAL_DEFAULT = 2500
@@ -28,7 +30,30 @@ function getStreak(hydration: HydrationEntry[], goal: number): number {
 export function HydrationHub() {
   const { hydration, addHydration, deleteHydration } = useAppStore()
 
+  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color?: string; dataKey?: string }>; label?: string }) => {
+    if (!active || !payload?.[0]) return null
+    const p = payload[0] as any
+    return (
+      <div className="relative bg-gray-900/80 backdrop-blur-xl border border-white/[0.08] rounded-xl px-4 py-3 shadow-2xl shadow-violet-500/10 min-w-[130px]">
+        <div className="absolute inset-0 rounded-xl bg-gradient-to-b from-white/[0.04] to-transparent pointer-events-none" />
+        <div className="relative">
+          <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mb-1">{label}</p>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color || '#A78BFA' }} />
+            <p className="text-white font-bold text-sm">{hUnit(p.value)}{hLabel}</p>
+          </div>
+          {p.payload?.icon && (
+            <p className="text-gray-500 text-[10px] mt-0.5">{p.payload.icon} {p.payload.type}</p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   const [showHydraCoach, setShowHydraCoach] = useState(false)
+  const [showHydraScope, setShowHydraScope] = useState(false)
+  const [hydraChartMode, setHydraChartMode] = useState<'volume' | 'timeline' | 'types'>('volume')
+  const [hydraScopeOffset, setHydraScopeOffset] = useState(0)
   const [showSettings, setShowSettings] = useState(false)
   const [showCoachPref, setShowCoachPref] = useState(false)
   const [coachPref, setCoachPref] = useState<'morning' | 'evening' | 'spread'>('spread')
@@ -100,6 +125,68 @@ export function HydrationHub() {
     const goalHitRate = goalMetThisWeek / Math.max(daysLogged, 1)
     return Math.round((consistency * consistencyWeight + goalHitRate * goalHitWeight) * 100)
   }, [daysLogged, goalMetThisWeek])
+
+  const hydraScopeWeek = useMemo(() => {
+    const days: { date: string; label: string; amount: number; fullDate: string; hasData: boolean }[] = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i + hydraScopeOffset * 7)
+      const ds = d.toISOString().split('T')[0]
+      const total = hydration.filter(h => h.date === ds).reduce((s, h) => s + Number(h.amount || 0), 0)
+      days.push({ date: ds, label: i === 0 && hydraScopeOffset === 0 ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' }), amount: total, fullDate: ds, hasData: total > 0 })
+    }
+    return days
+  }, [hydration, hydraScopeOffset])
+
+  const isHydraScopeCurrentWeek = hydraScopeOffset === 0
+
+  const hydraScopeWeekTotal = useMemo(() => hydraScopeWeek.reduce((s, d) => s + d.amount, 0), [hydraScopeWeek])
+  const hydraScopeAvg = useMemo(() => {
+    const withData = hydraScopeWeek.filter(d => d.amount > 0)
+    return withData.length > 0 ? Math.round(withData.reduce((s, d) => s + d.amount, 0) / withData.length) : 0
+  }, [hydraScopeWeek])
+  const hydraScopeGoalMet = useMemo(() => hydraScopeWeek.filter(d => d.amount >= hydGoal).length, [hydraScopeWeek, hydGoal])
+  const hydraScopeBestDay = useMemo(() => {
+    if (!hydraScopeWeek.length) return { amount: 0, label: '--' }
+    return hydraScopeWeek.reduce((best, d) => d.amount > best.amount ? d : best, hydraScopeWeek[0])
+  }, [hydraScopeWeek])
+
+  // Timeline: hourly distribution across the week
+  const hydraScopeHourlyData = useMemo(() => {
+    const hours = Array.from({ length: 24 }, (_, i) => ({ hour: i, label: i === 0 ? '12a' : i < 12 ? `${i}a` : i === 12 ? '12p' : `${i - 12}p`, amount: 0 }))
+    hydraScopeWeek.forEach(day => {
+      const dayEntries = hydration.filter(h => h.date === day.date)
+      dayEntries.forEach(h => {
+        const hr = new Date(h.timestamp).getHours()
+        hours[hr].amount += h.amount
+      })
+    })
+    return hours
+  }, [hydration, hydraScopeWeek])
+
+  // Types: drink type breakdown
+  const hydraScopeTypeData = useMemo(() => {
+    const typeMap: Record<string, { type: string; amount: number; count: number; icon: string; color: string }> = {
+      water: { type: 'Water', amount: 0, count: 0, icon: '💧', color: '#38BDF8' },
+      coffee: { type: 'Coffee', amount: 0, count: 0, icon: '☕', color: '#A16207' },
+      tea: { type: 'Tea', amount: 0, count: 0, icon: '🍵', color: '#65A30D' },
+      juice: { type: 'Juice', amount: 0, count: 0, icon: '🧃', color: '#FB923C' },
+      sports: { type: 'Sports', amount: 0, count: 0, icon: '⚡', color: '#F472B6' },
+      other: { type: 'Other', amount: 0, count: 0, icon: '🫗', color: '#A78BFA' },
+    }
+    hydraScopeWeek.forEach(day => {
+      const dayEntries = hydration.filter(h => h.date === day.date)
+      dayEntries.forEach(h => {
+        const t = h.drinkType || 'water'
+        if (typeMap[t]) { typeMap[t].amount += h.amount; typeMap[t].count++ }
+      })
+    })
+    return Object.values(typeMap).filter(t => t.count > 0)
+  }, [hydration, hydraScopeWeek])
+
+  const hydraScopePeakHour = useMemo(() => {
+    if (!hydraScopeHourlyData.some(h => h.amount > 0)) return null
+    return hydraScopeHourlyData.reduce((a, b) => a.amount > b.amount ? a : b)
+  }, [hydraScopeHourlyData])
 
   const todayLogs = useMemo(() =>
     [...hydration].filter(h => h.date === today)
@@ -237,34 +324,43 @@ export function HydrationHub() {
       {/* Toolbar */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
-          <button onClick={() => navigateDate(-1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all">
+          <button onClick={() => navigateDate(-1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-            <Calendar className="w-4 h-4 text-cyan-400 shrink-0" />
+            <Calendar className="w-4 h-4 text-violet-400 shrink-0" />
             <input type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)}
               className="bg-transparent border-none text-white font-medium text-sm outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:transition-opacity cursor-pointer" />
           </div>
-          <button onClick={() => navigateDate(1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all">
+          <button onClick={() => navigateDate(1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
             <ChevronRight className="w-5 h-5" />
           </button>
           {!isToday && (
-            <button onClick={() => setTargetDate(formatDate(new Date()))} className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-all" title="Jump to today">
+            <button onClick={() => setTargetDate(formatDate(new Date()))} className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="Jump to today">
               <RotateCcw className="w-4 h-4" />
             </button>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowHydraCoach(p => !p)}
-            className={`p-2 rounded-xl border transition-all ${showHydraCoach ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
-            title="HydraCoach">
-            <SparklesIcon size={16} />
-          </button>
+          {hydrationWeek.some(d => d.amount > 0) && (
+            <button onClick={() => setShowHydraCoach(p => !p)}
+              className={`p-2 rounded-xl border transition-all ${showHydraCoach ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              title="HydraCoach">
+              <SparklesIcon className="w-5 h-5" />
+            </button>
+          )}
+          {hydrationWeek.some(d => d.amount > 0) && (
+            <button onClick={() => setShowHydraScope(p => !p)}
+              className={`p-2 rounded-xl border transition-all ${showHydraScope ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              title="HydraScope">
+              <BarChart3 className="w-5 h-5" />
+            </button>
+          )}
           <div className="relative">
             <button onClick={() => setShowSettings(p => !p)}
-              className={`p-2 rounded-xl border transition-all ${showSettings ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
-              title="Hydration Target">
-              <Target size={16} />
+              className={`p-2 rounded-xl border transition-all ${showSettings ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              title="Water Target">
+              <Target className="w-5 h-5" />
             </button>
             {showSettings && (
               <>
@@ -288,7 +384,7 @@ export function HydrationHub() {
                           setUnit(u)
                         }
                       }}
-                        className={cn("flex-1 py-2 rounded-xl text-xs font-bold border transition-all", unit === u ? "bg-violet-500/20 border-violet-500/40 text-violet-300" : "bg-white/5 border-white/10 text-slate-400 hover:text-white")}>{u.toUpperCase()}</button>
+                        className={cn("flex-1 py-2 rounded-xl text-xs font-bold border transition-all", unit === u ? "bg-violet-500/20 border-violet-500/40 text-violet-300" : "bg-white/5 border-white/10 text-gray-400 hover:text-white")}>{u.toUpperCase()}</button>
                     ))}
                   </div>
                 </div>
@@ -384,86 +480,8 @@ export function HydrationHub() {
         </div>
       </motion.div>
 
-      {/* Empty State / Logged Entries */}
-      {todayLogs.length === 0 ? (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-cyan-500/15 bg-black/60 backdrop-blur-xl p-10 text-center overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-sky-500/5 pointer-events-none" />
-          <div className="relative">
-            <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-cyan-500/10">
-              <Droplets className="w-7 h-7 text-cyan-400/70" />
-            </div>
-            <p className="text-gray-400 text-sm mb-1">No drinks logged</p>
-            <p className="text-gray-500 text-xs mb-4">Tap Log Water to start tracking</p>
-            <Button variant="primary" onClick={() => { resetForm(); setShowForm(true) }}>
-              <Plus className="w-4 h-4 mr-1.5" />
-              Log Your First Water
-            </Button>
-          </div>
-        </motion.div>
-      ) : (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-          <AnimatePresence mode="popLayout">
-            {[...todayLogs].reverse().map((entry, i) => (
-              <motion.div
-                key={entry.id}
-                layout
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -20, height: 0, marginBottom: 0 }}
-                transition={{ delay: i * 0.03 }}
-                className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-4 sm:p-5 hover:bg-white/[0.04] transition-all group relative overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/[0.02] to-transparent pointer-events-none" />
-                <div className="relative z-10">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center shadow-lg" style={{ boxShadow: '0 0 20px rgba(6,182,212,0.15)' }}>
-                        <Droplets className="w-5 h-5 text-cyan-400" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-semibold text-white tracking-tight">
-                            {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </h4>
-                          <span className="px-1.5 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/25 text-cyan-400 text-[10px] font-medium">
-                            +{hUnit(entry.amount)}{hLabel}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          {todayHydration > 0 && `${hUnit(todayLogs.filter(l => new Date(l.timestamp).getTime() <= new Date(entry.timestamp).getTime()).reduce((s, l) => s + l.amount, 0))} total today`}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => { deleteHydration(entry.id) }}
-                        className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <span className="px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[10px] font-medium">
-                      💧 {hUnit(entry.amount)}{hLabel}
-                    </span>
-                    {(() => {
-                      const runningTotal = todayLogs.filter(l => new Date(l.timestamp).getTime() <= new Date(entry.timestamp).getTime()).reduce((s, l) => s + l.amount, 0)
-                      const pct = Math.round((runningTotal / hydGoal) * 100)
-                      return (
-                        <span className={`px-2 py-0.5 rounded-md border text-[10px] font-medium ${pct >= 100 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-amber-500/10 border-amber-500/20 text-amber-400'}`}>
-                          {pct >= 100 ? '✅ Goal met' : `${Math.round((hydGoal - runningTotal) / (entry.amount || 1))} more to goal`}
-                        </span>
-                      )
-                    })()}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </motion.div>
-      )}
-
       {/* HydraCoach AI Panel */}
-      <AnimatePresence>{showHydraCoach && (
+      <AnimatePresence>{hydrationWeek.some(d => d.amount > 0) && showHydraCoach && (
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -482,9 +500,13 @@ export function HydrationHub() {
               <div className="flex items-center gap-1.5">
                 <div className="relative">
                   <button onClick={() => setShowCoachPref(p => !p)}
-                    className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${showCoachPref ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:bg-white/10'}`}
+                    className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${showCoachPref
+                      ? coachPref === 'morning' ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                        : coachPref === 'evening' ? 'bg-violet-500/15 border-violet-500/30 text-violet-400'
+                        : 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400'
+                      : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:bg-white/10'}`}
                     title="Hydration style">
-                    <Droplets className="w-3 h-3" />
+                    <span className="text-[11px] leading-none">{coachPref === 'morning' ? '🌅' : coachPref === 'evening' ? '🌙' : '💧'}</span>
                   </button>
                   {showCoachPref && (
                     <>
@@ -498,7 +520,11 @@ export function HydrationHub() {
                             { key: 'evening' as const, label: '🌙 Evening focus' },
                           ]).map(opt => (
                             <button key={opt.key} onClick={() => { setCoachPref(opt.key); setShowCoachPref(false) }}
-                              className={`text-left px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${coachPref === opt.key ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                              className={`text-left px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${coachPref === opt.key
+                                ? opt.key === 'morning' ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                                  : opt.key === 'evening' ? 'bg-violet-500/15 text-violet-300 border border-violet-500/30'
+                                  : 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
                               {opt.label}
                             </button>
                           ))}
@@ -639,7 +665,296 @@ export function HydrationHub() {
         </motion.div>
       )}</AnimatePresence>
 
-      {/* Log Water Modal */}
+      {/* HydraScope Panel */}
+      <AnimatePresence>
+        {hydrationWeek.some(d => d.amount > 0) && showHydraScope && (
+          <motion.div key="hydrascope"
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4 overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
+            {!hydraScopeWeek.some(d => d.hasData) ? (
+              <div className="relative flex flex-col items-center justify-center h-48 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-violet-500/5 border border-violet-500/10 flex items-center justify-center mb-4">
+                  <BarChart3 className="w-7 h-7 text-violet-400/30" />
+                </div>
+                <p className="text-gray-400 text-sm font-medium mb-1">No drinks this week</p>
+                <p className="text-gray-500 text-xs">Log some water to unlock your HydraScope</p>
+              </div>
+            ) : (
+              <div className="relative">
+                {/* Header with title + week nav + mode toggle */}
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-400/20 to-violet-500/20 border border-violet-500/20 flex items-center justify-center">
+                    <BarChart3 className="w-3 h-3 text-violet-400" />
+                  </div>
+                  <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">HydraScope</span>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setHydraScopeOffset(o => o + 1)} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">
+                      {new Date(hydraScopeWeek[0].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(hydraScopeWeek[6].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                    <button onClick={() => setHydraScopeOffset(o => o - 1)} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                    {!isHydraScopeCurrentWeek && (
+                      <button onClick={() => setHydraScopeOffset(0)} className="p-1.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
+                    {(['volume', 'timeline', 'types'] as const).map(mode => (
+                      <button key={mode} onClick={() => setHydraChartMode(mode)}
+                        className={`relative px-3.5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
+                          hydraChartMode === mode
+                            ? mode === 'volume'
+                              ? 'text-violet-300 bg-gradient-to-b from-violet-500/20 to-violet-500/5 border border-violet-500/25 shadow-lg shadow-violet-500/8'
+                              : mode === 'timeline'
+                                ? 'text-cyan-300 bg-gradient-to-b from-cyan-500/20 to-cyan-500/5 border border-cyan-500/25 shadow-lg shadow-cyan-500/8'
+                                : 'text-emerald-300 bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border border-emerald-500/25 shadow-lg shadow-emerald-500/8'
+                            : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'
+                        }`}>
+                        <span className="relative z-10 flex items-center gap-1.5">
+                          <span className={hydraChartMode === mode ? '' : 'opacity-50'}>{mode === 'volume' ? '📊' : mode === 'timeline' ? '⏱' : '🧃'}</span>
+                          {mode === 'volume' ? 'Volume' : mode === 'timeline' ? 'Timeline' : 'Types'}
+                        </span>
+                        {hydraChartMode === mode && <span className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/[0.06]" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+              {/* Charts */}
+              <div className="h-56 rounded-xl bg-gradient-to-b from-white/[0.03] to-transparent border border-white/[0.04] p-3" style={{ minHeight: '220px' }}>
+                {hydraChartMode === 'volume' ? (
+                  hydraScopeWeek.some(d => d.hasData) ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={hydraScopeWeek.filter(d => d.hasData)} barGap={8} barCategoryGap="30%">
+                        <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
+                        <XAxis dataKey="label" tick={{ fill: '#e5e7eb', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} dy={6} />
+                        <YAxis tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} domain={[0, Math.max(hydGoal * 1.4, ...hydraScopeWeek.filter(d => d.hasData).map(d => d.amount))]} tickFormatter={v => `${hUnit(v)}`} width={48} />
+                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(139,92,246,0.15)', radius: 10 }} />
+                        <defs>
+                          <linearGradient id="volGradGoal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#D8B4FE" stopOpacity={1} /><stop offset="50%" stopColor="#A78BFA" stopOpacity={0.85} /><stop offset="100%" stopColor="#7C3AED" stopOpacity={0.2} /></linearGradient>
+                          <linearGradient id="volGradMiss" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#A5B4FC" stopOpacity={0.85} /><stop offset="100%" stopColor="#4F46E5" stopOpacity={0.15} /></linearGradient>
+                          <linearGradient id="volLineGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#C084FC" stopOpacity={0} /><stop offset="50%" stopColor="#C084FC" stopOpacity={1} /><stop offset="100%" stopColor="#C084FC" stopOpacity={0} /></linearGradient>
+                          <filter id="glowGoal"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                        </defs>
+                        <ReferenceLine y={hydGoal} stroke="url(#volLineGrad)" strokeWidth={2.5} strokeDasharray="6 4" label={{ value: `🎯 ${hUnit(hydGoal)}${hLabel}`, fill: '#D8B4FE', fontSize: 11, fontWeight: 800, position: 'right' }} />
+                        <Bar dataKey="amount" radius={[12, 12, 0, 0]} maxBarSize={40} animationDuration={800} animationEasing="ease-out">
+                          {hydraScopeWeek.filter(d => d.hasData).map((entry, idx) => (
+                            <Cell key={idx} fill={entry.amount >= hydGoal ? 'url(#volGradGoal)' : 'url(#volGradMiss)'} filter={entry.amount >= hydGoal ? 'url(#glowGoal)' : undefined} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-gray-500 text-sm">No hydration data this week</div>
+                  )
+                ) : hydraChartMode === 'timeline' ? (
+                  hydraScopeHourlyData.some(h => h.amount > 0) ? (
+                    <div className="flex flex-col h-full justify-center px-2">
+                      <div className="grid grid-cols-6 gap-2 w-full">
+                        {hydraScopeHourlyData.map((h) => {
+                          const maxAmt = hydraScopeHourlyData.reduce((m, x) => Math.max(m, x.amount), 0)
+                          const pct = maxAmt > 0 ? h.amount / maxAmt : 0
+                          const size = 20 + pct * 32
+                          const isPeak = h.amount === maxAmt && maxAmt > 0
+                          const [r, g, b] = isPeak ? [251, 191, 36] : pct > 0.6 ? [52, 211, 153] : pct > 0.3 ? [34, 211, 238] : [129, 140, 248]
+                          return (
+                            <div key={h.hour} className="flex flex-col items-center gap-0.5">
+                              <div className="relative flex items-center justify-center transition-all duration-300 rounded-full"
+                                style={{
+                                  width: h.amount > 0 ? `${size}px` : '14px',
+                                  height: h.amount > 0 ? `${size}px` : '14px',
+                                  background: h.amount > 0
+                                    ? `radial-gradient(circle at 35% 30%, rgba(${r},${g},${b},${0.3 + pct * 0.5}), rgba(${r},${g},${b},${0.1 + pct * 0.3}))`
+                                    : 'rgba(255,255,255,0.03)',
+                                  border: isPeak ? `1.5px solid rgba(${r},${g},${b},0.7)` : h.amount > 0 ? `1px solid rgba(${r},${g},${b},0.2)` : '1px solid rgba(255,255,255,0.03)',
+                                  boxShadow: h.amount > 0 ? `0 0 ${isPeak ? 16 : 8}px rgba(${r},${g},${b},0.25)` : 'none',
+                                }}
+                              >
+                                {h.amount > 0 && (
+                                  <span className="text-[7px] font-bold leading-none text-white/80">{hUnit(h.amount)}</span>
+                                )}
+                              </div>
+                              <span className={`text-[7px] font-semibold ${h.amount > 0 ? 'text-gray-400' : 'text-gray-600'}`}>{h.label}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <div className="flex items-center justify-center gap-4 mt-2 text-[8px] text-gray-500">
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-indigo-400/70" /> Low</span>
+                        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-cyan-400/70" /> Med</span>
+                        <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded-full bg-emerald-400/80" /> High</span>
+                        {hydraScopePeakHour && <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded-full bg-amber-400 shadow-lg shadow-amber-400/40" /> Peak</span>}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-gray-500 text-sm">No timing data available</div>
+                  )
+                ) : (
+                  hydraScopeTypeData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <defs>
+                          {hydraScopeTypeData.map((entry, idx) => (
+                            <linearGradient key={idx} id={`typeDonutGrad${idx}`} x1="0" y1="0" x2="1" y2="1">
+                              <stop offset="0%" stopColor={entry.color} stopOpacity={0.9} />
+                              <stop offset="100%" stopColor={entry.color} stopOpacity={0.4} />
+                            </linearGradient>
+                          ))}
+                          <filter id="glowDonut"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                        </defs>
+                        <Pie data={hydraScopeTypeData} cx="50%" cy="50%" innerRadius={52} outerRadius={78} paddingAngle={4} dataKey="amount" nameKey="type" animationDuration={800} animationEasing="ease-out" stroke="rgba(255,255,255,0.06)" strokeWidth={1.5}>
+                          {hydraScopeTypeData.map((_, idx) => (
+                            <Cell key={idx} fill={`url(#typeDonutGrad${idx})`} filter="url(#glowDonut)" />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                        <text x="50%" y="47%" textAnchor="middle" fill="#d1d5db" fontSize={11} fontWeight={700}>
+                          {hydraScopeTypeData.length}
+                        </text>
+                        <text x="50%" y="56%" textAnchor="middle" fill="#6b7280" fontSize={9} fontWeight={600}>
+                          types
+                        </text>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log different drink types to see breakdown</div>
+                  )
+                )}
+              </div>
+
+              {/* Stats strip - Premium Glass */}
+              {hydraScopeWeek.some(d => d.hasData) && (
+                <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
+                  <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
+                    {hydraChartMode === 'volume' && (
+                      <>
+                        <span>📊 Avg <span className={`font-semibold ${hydraScopeAvg >= hydGoal ? 'text-emerald-400' : hydraScopeAvg >= hydGoal * 0.7 ? 'text-amber-400' : 'text-rose-400'}`}>{hUnit(hydraScopeAvg)}{hLabel}</span> / {hUnit(hydGoal)}{hLabel}</span>
+                        <span>🏆 Best <span className="text-emerald-400 font-semibold">{hydraScopeBestDay.label}</span> <span className="text-gray-600">({hUnit(hydraScopeBestDay.amount)}{hLabel})</span></span>
+                        <span>🎯 Hit <span className={`font-semibold ${hydraScopeGoalMet >= 5 ? 'text-emerald-400' : hydraScopeGoalMet >= 3 ? 'text-amber-400' : 'text-rose-400'}`}>{hydraScopeGoalMet}/7</span></span>
+                        <span>💧 Total <span className="font-semibold text-violet-400">{hUnit(hydraScopeWeekTotal)}{hLabel}</span></span>
+                      </>
+                    )}
+                    {hydraChartMode === 'timeline' && hydraScopePeakHour && (
+                      <>
+                        <span>⏰ Peak <span className="font-semibold text-cyan-400">{hydraScopePeakHour.label}</span> <span className="text-gray-600">({hUnit(hydraScopePeakHour.amount)}{hLabel})</span></span>
+                        <span>🕐 Active <span className="font-semibold text-cyan-400">{hydraScopeHourlyData.filter(h => h.amount > 0).length}h</span> / 24h</span>
+                        <span>📈 Avg/h <span className="font-semibold text-gray-300">{hUnit(Math.round(hydraScopeWeekTotal / Math.max(hydraScopeHourlyData.filter(h => h.amount > 0).length, 1)))}{hLabel}</span></span>
+                      </>
+                    )}
+                    {hydraChartMode === 'types' && (
+                      <>
+                        <span>🧃 Types <span className="font-semibold text-emerald-400">{hydraScopeTypeData.length}</span></span>
+                        <span>⭐ Top <span className="font-semibold text-emerald-400">{hydraScopeTypeData.sort((a, b) => b.amount - a.amount)[0]?.type || '--'}</span> <span className="text-gray-600">({hydraScopeTypeData.length > 0 ? `${Math.round(hydraScopeTypeData.sort((a, b) => b.amount - a.amount)[0].amount / hydraScopeWeekTotal * 100)}%` : '--'})</span></span>
+                        <span>📋 Entries <span className="font-semibold text-gray-300">{hydraScopeTypeData.reduce((s, t) => s + t.count, 0)}</span></span>
+                      </>
+                    )}
+                  </div>
+                  {/* Progress mini-bar */}
+                  <div className="relative h-0.5 bg-white/[0.03]">
+                    <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(hydraScopeGoalMet / 7 * 100, 100)}%` }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Empty State / Logged Entries */}
+      {hydration.length === 0 ? (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-cyan-500/15 bg-black/60 backdrop-blur-xl p-10 text-center overflow-hidden relative">
+          <Card className="py-12 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center mx-auto mb-4">
+              <Droplets className="w-8 h-8 text-violet-400/50" />
+            </div>
+            <p className="text-gray-400 mb-1">No drinks logged yet</p>
+            <p className="text-gray-500 text-sm mb-4">Start tracking your hydration</p>
+            <Button variant="primary" onClick={() => { resetForm(); setShowForm(true) }}>
+              Log Your First Water
+            </Button>
+          </Card>
+        </motion.div>
+      ) : (
+        <div className="space-y-3">
+          {todayLogs.length === 0 ? (
+            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
+              <Card className="py-12 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center mx-auto mb-4">
+                  <Droplets className="w-8 h-8 text-violet-400/50" />
+                </div>
+                <p className="text-gray-400 mb-1">No drinks logged today</p>
+                <p className="text-gray-500 text-sm mb-4">Check your HydraScope for this week's data</p>
+                <Button variant="primary" onClick={() => { resetForm(); setShowForm(true) }}>
+                  Log Water
+                </Button>
+              </Card>
+            </motion.div>
+          ) : (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+            <AnimatePresence mode="popLayout">
+              {[...todayLogs].reverse().map((entry, i) => (
+              <motion.div
+                key={entry.id}
+                layout
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
+                transition={{ delay: i * 0.02 }}
+                className="group relative rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 hover:border-white/10 transition-all"
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${entry.amount >= hydGoal * 0.25 ? 'bg-cyan-500/10' : 'bg-amber-500/10'}`}>
+                    {entry.drinkType === 'coffee' ? '☕' : entry.drinkType === 'tea' ? '🍵' : entry.drinkType === 'juice' ? '🧃' : entry.drinkType === 'sports' ? '⚡' : '💧'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-white">{hUnit(entry.amount)}{hLabel}</span>
+                      {entry.drinkType && entry.drinkType !== 'water' && (
+                        <span className="text-[10px] uppercase tracking-wider text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">{entry.drinkType}</span>
+                      )}
+                      {entry.withMeal && <span className="text-[9px] text-amber-400/70">🍽️ with meal</span>}
+                      {entry.caffeine && <span className="text-[9px] text-orange-400/70">☕ caffeine</span>}
+                      {entry.hotWeather && <span className="text-[9px] text-rose-400/70">🌡️ hot</span>}
+                      {entry.exercise && <span className="text-[9px] text-emerald-400/70">💪 exercise</span>}
+                      {entry.thirst && entry.thirst !== 'none' && (
+                        <span className={`text-[9px] ${entry.thirst === 'very' ? 'text-rose-400/70' : entry.thirst === 'thirsty' ? 'text-amber-400/70' : 'text-gray-500'}`}>
+                          {entry.thirst === 'very' ? '🔥 very thirsty' : entry.thirst === 'thirsty' ? '💧 thirsty' : '💧 slight thirst'}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-0.5">
+                      {new Date(entry.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      {entry.note && <span className="ml-2">— {entry.note}</span>}
+                    </p>
+                  </div>
+                  <button onClick={() => setDeletingEntry(entry)}
+                    className="opacity-0 group-hover:opacity-100 p-2 rounded-lg hover:bg-rose-500/10 text-gray-600 hover:text-rose-400 transition-all"
+                    title="Delete entry">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </div>
+    )}
+
+    {/* Log Water Modal */}
       <AnimatePresence>
         {showForm && (
           <motion.div

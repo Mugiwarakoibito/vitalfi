@@ -402,6 +402,12 @@ export function SleepLogger() {
       }
     }
 
+    // Padding tips when not enough data for rich insights
+    if (sleep.length < 2) {
+      tips.push({ icon: '📝', text: 'Log at least 3 nights to unlock personalized sleep patterns & trends.', color: 'text-gray-400', category: 'general' })
+      tips.push({ icon: '⏰', text: 'Consistent bedtimes train your circadian rhythm — try same time ±15min daily.', color: 'text-blue-400', category: 'timing' })
+    }
+
     if (sleep.length >= 2) {
       // Pattern: best day of the week
       const dayQualities: Record<number, number[]> = {}
@@ -1044,13 +1050,13 @@ export function SleepLogger() {
                 </div>
               </div>
 
-              {/* AI TIP */}
+              {/* AI TIPS */}
               <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
                 <div className="flex items-center gap-1.5 mb-2">
                   <SparklesIcon className="w-3 h-3 text-emerald-400" />
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/70">AI TIP</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/70">AI TIPS</span>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
                   {coachInsights.slice(0, 3).map((tip, i) => (
                     <motion.div
                       key={i}
