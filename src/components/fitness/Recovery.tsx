@@ -5,7 +5,7 @@ import {
   TrendingUp, Settings, Check,
   ArrowUp, ArrowDown, Award, Flame, Download, RefreshCw,
   Clock, Sparkles, Pill, Moon, Pencil, Upload,
-  BarChart3, Star, Gift, Medal, Trophy, Lock, Circle,
+  BarChart3, Star, Gift, Medal, Trophy, Lock, Brain,
 } from 'lucide-react'
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 import { generateId, cn } from '@/lib/utils'
@@ -168,69 +168,6 @@ function getSleepDebt(entries: RecoveryEntry[], sleepNeed: number): number {
   return Math.round(debt * 10) / 10
 }
 
-function DomsBodyMap({ domsSeverity, domsAreas, onToggle, readonly = false }: {
-  domsSeverity: Record<string, 'mild' | 'moderate' | 'severe'>
-  domsAreas: string[]
-  onToggle: (area: string) => void
-  readonly?: boolean
-}) {
-  const getColor = (area: string): string => {
-    if (!domsAreas.includes(area)) return '#1e293b'
-    const sev = domsSeverity[area]
-    if (sev === 'severe') return '#be123c'
-    if (sev === 'moderate') return '#d97706'
-    return '#047857'
-  }
-  const getGlow = (area: string) => domsAreas.includes(area) ? `drop-shadow(0 0 ${domsSeverity[area] === 'severe' ? '8px #be123c' : domsSeverity[area] === 'moderate' ? '6px #d97706' : '4px #047857'})` : undefined
-  const clickableProps = !readonly ? { className: 'cursor-pointer', whileHover: { scale: 1.08 }, whileTap: { scale: 0.92 }, onClick: (a: string) => onToggle(a) } as any : {}
-  return (
-    <svg viewBox="0 0 200 380" className="w-full max-w-[160px] mx-auto">
-      <defs><radialGradient id="headG"><stop offset="0%" stopColor="#475569" /><stop offset="100%" stopColor="#334155" /></radialGradient></defs>
-      <motion.g whileHover={!readonly ? { scale: 1.02 } : undefined}>
-        <ellipse cx="100" cy="40" rx="28" ry="32" fill="url(#headG)" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-        <ellipse cx="100" cy="42" rx="12" ry="6" fill="#1e293b" />
-        <ellipse cx="94" cy="38" rx="2" ry="2.5" fill="#0f172a" />
-        <ellipse cx="106" cy="38" rx="2" ry="2.5" fill="#0f172a" />
-        <path d="M95 46 Q100 49 105 46" fill="none" stroke="#475569" strokeWidth="1" strokeLinecap="round" />
-      </motion.g>
-      <motion.g whileHover={!readonly ? { scale: 1.02 } : undefined}>
-        <path d="M74 72 Q74 65 80 65 L120 65 Q126 65 126 72 L126 140 Q126 146 120 146 L80 146 Q74 146 74 140 Z" fill="#334155" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-      </motion.g>
-      {(['Chest', 'Shoulders', 'Core'] as const).map(area => {
-        const p: Record<string, { x: number; y: number; w: number; h: number }> = { Shoulders: { x: 74, y: 67, w: 52, h: 22 }, Chest: { x: 78, y: 89, w: 44, h: 28 }, Core: { x: 80, y: 118, w: 40, h: 28 } }
-        const pos = p[area]; if (!pos) return null
-        return <motion.rect key={area} x={pos.x} y={pos.y} width={pos.w} height={pos.h} rx={8} fill={getColor(area)} fillOpacity={domsAreas.includes(area) ? 0.6 : 0} stroke={domsAreas.includes(area) ? getColor(area) : 'transparent'} strokeWidth={1.5} style={{ filter: getGlow(area) }} {...clickableProps} />
-      })}
-      <motion.g whileHover={!readonly ? { scale: 1.02 } : undefined}>
-        <ellipse cx="100" cy="155" rx="24" ry="12" fill="#475569" fillOpacity={0.3} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-      </motion.g>
-      {(['Biceps', 'Triceps'] as const).map(area => {
-        const p: Record<string, { path: string }> = { Biceps: { path: 'M74 72 Q60 100 58 142 L70 142 Q72 100 80 72 Z' }, Triceps: { path: 'M126 72 Q140 100 142 142 L130 142 Q128 100 120 72 Z' } }
-        const pos = p[area]; if (!pos) return null
-        return <motion.path key={area} d={pos.path} fill={getColor(area)} fillOpacity={domsAreas.includes(area) ? 0.6 : 0} stroke={domsAreas.includes(area) ? getColor(area) : 'transparent'} strokeWidth={1.5} style={{ filter: getGlow(area) }} {...clickableProps} />
-      })}
-      {(['Quads', 'Hamstrings', 'Glutes', 'Calves'] as const).map(area => {
-        const p: Record<string, { path: string }> = { Quads: { path: 'M78 162 Q72 200 72 260 L88 260 Q88 200 90 162 Z' }, Hamstrings: { path: 'M122 162 Q128 200 128 260 L112 260 Q112 200 110 162 Z' }, Glutes: { path: 'M78 162 Q84 175 100 175 Q116 175 122 162 L118 155 L82 155 Z' }, Calves: { path: 'M76 265 Q74 300 76 330 L90 330 Q88 300 88 270 Z' } }
-        const pos = p[area]; if (!pos) return null
-        return <motion.path key={area} d={pos.path} fill={getColor(area)} fillOpacity={domsAreas.includes(area) ? 0.6 : 0} stroke={domsAreas.includes(area) ? getColor(area) : 'transparent'} strokeWidth={1.5} style={{ filter: getGlow(area) }} {...clickableProps} />
-      })}
-    </svg>
-  )
-}
-
-function BioSparkline({ data, color, height = 32 }: { data: number[]; color: string; height?: number }) {
-  if (data.length < 2) return null
-  const max = Math.max(...data); const min = Math.min(...data); const range = max - min || 1
-  const points = data.map((v, i) => { const x = (i / (data.length - 1)) * 100; const y = height - ((v - min) / range) * height; return `${x},${y}` }).join(' ')
-  return (
-    <svg width="100%" height={height} className="overflow-visible">
-      <defs><linearGradient id={`sg-${color.replace('#', '')}`} x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor={color} stopOpacity={0.3} /><stop offset="100%" stopColor={color} stopOpacity={1} /></linearGradient></defs>
-      <polyline points={points} fill="none" stroke={`url(#sg-${color.replace('#', '')})`} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-sm" style={{ filter: `drop-shadow(0 0 3px ${color}40)` }} />
-      {data.map((v, i) => <circle key={i} cx={(i / (data.length - 1)) * 100} cy={height - ((v - min) / range) * height} r={i === data.length - 1 ? 3 : 1.5} fill={i === data.length - 1 ? color : `${color}60`} />)}
-    </svg>
-  )
-}
-
   export function Recovery() {
   const [settings, setSettings] = useState<RecoverySettings>(loadSettings)
   const [showSettings, setShowSettings] = useState(false)
@@ -313,16 +250,6 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
     return { diff, arrow: diff > 3 ? 'up' : diff < -3 ? 'down' : 'flat' as const }
   }, [avgReadiness, priorAvgReadiness])
 
-  const bestReadinessDay = useMemo(() => {
-    const vals = recentWeek.filter(d => d.readiness > 0)
-    return vals.length > 0 ? vals.reduce((b, d) => d.readiness > b.readiness ? d : b, vals[0]) : null
-  }, [recentWeek])
-
-  const worstReadinessDay = useMemo(() => {
-    const vals = recentWeek.filter(d => d.readiness > 0)
-    return vals.length > 0 ? vals.reduce((w, d) => d.readiness < w.readiness ? d : w, vals[0]) : null
-  }, [recentWeek])
-
   const readinessPrediction = useMemo(() => {
     const vals = recentWeek.filter(d => d.readiness > 0).map(d => d.readiness)
     if (vals.length === 0) return null
@@ -336,14 +263,6 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
 
   const hrvTrend = useMemo(() => entries.filter(e => e.hrv).slice(0, 14).reverse().map(e => e.hrv!), [entries])
   const rhrTrend = useMemo(() => entries.filter(e => e.rhr).slice(0, 14).reverse().map(e => e.rhr!), [entries])
-  const bodyTempTrend = useMemo(() => entries.filter(e => e.bodyTemp).slice(0, 14).reverse().map(e => e.bodyTemp!), [entries])
-
-  const domsTrend = useMemo(() => {
-    return entries.slice(0, 14).reverse().map(e => {
-      const score = e.domsAreas.reduce((s, a) => { const sev = e.domsSeverity?.[a]; return s + (sev === 'severe' ? 3 : sev === 'moderate' ? 2 : 1) }, 0)
-      return { date: e.date, domsScore: score, areaCount: e.domsAreas.length }
-    })
-  }, [entries])
 
   const sleepReadinessData = useMemo(() => {
     return entries.slice(0, 14).reverse().map(e => {
@@ -402,6 +321,38 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
 
   const displayTemp = (temp: number) => settings.tempUnit === '°F' ? Math.round(temp * 9 / 5 + 32) : temp
   const displayWeight = (weight: number) => settings.weightUnit === 'lbs' ? Math.round(weight * 2.20462 * 10) / 10 : weight
+
+  const coachInsights = useMemo(() => {
+    const tips: { icon: string; text: string; color: string; category: string }[] = []
+    if (todayEntry && todayEntry.domsAreas.length > 0) {
+      tips.push({ icon: '\uD83D\uDCAA', text: `${todayEntry.domsAreas.length} sore area${todayEntry.domsAreas.length > 1 ? 's' : ''} detected. ${todayEntry.domsAreas.length >= 3 ? 'Consider light activity and extra stretching.' : 'Mild soreness — normal training should be OK.'}`, color: 'text-rose-300', category: 'body' })
+    }
+    if (todayReadiness) {
+      if (todayReadiness.score < 40) tips.push({ icon: '\u26A0\uFE0F', text: 'Low readiness detected. Prioritize rest, sleep, and active recovery today.', color: 'text-rose-300', category: 'readiness' })
+      else if (todayReadiness.score >= 80) tips.push({ icon: '\u26A1', text: 'High readiness! Great day for intense training and PR attempts.', color: 'text-emerald-300', category: 'readiness' })
+      else if (todayReadiness.score >= 60) tips.push({ icon: '\uD83D\uDCA1', text: 'Moderate readiness. Solid training day — stay mindful of recovery signals.', color: 'text-amber-300', category: 'readiness' })
+    }
+    if (todayEntry && todayEntry.sleepQuality > 0 && todayEntry.sleepQuality <= 2) {
+      tips.push({ icon: '\uD83D\uDE34', text: 'Poor sleep quality detected. Prioritize sleep hygiene and aim for 7\u20139 hours tonight.', color: 'text-indigo-300', category: 'sleep' })
+    }
+    if (protocolEffectiveness.length > 1) {
+      tips.push({ icon: '\uD83E\uDDEA', text: `Best protocol: ${protocolEffectiveness[0].protocol} (avg ${protocolEffectiveness[0].avgReadiness} readiness, ${protocolEffectiveness[0].count}x used).`, color: 'text-purple-300', category: 'protocol' })
+    }
+    if (hrvTrend.length >= 3) {
+      const last4 = hrvTrend.slice(-4); const improving = last4[last4.length - 1] > last4[0]
+      tips.push({ icon: '\u2764\uFE0F', text: `HRV trending ${improving ? 'up' : 'down'} over last ${Math.min(hrvTrend.length, 7)} days. ${improving ? 'Your recovery strategies are working!' : 'Consider reducing training load.'}`, color: improving ? 'text-emerald-300' : 'text-rose-300', category: 'hrv' })
+    }
+    if (loggingStreak >= 7) {
+      tips.push({ icon: '\uD83D\uDD25', text: `${loggingStreak}-day logging streak! Consistency unlocks deeper recovery insights over time.`, color: 'text-amber-300', category: 'streak' })
+    }
+    if (readinessPrediction && todayReadiness) {
+      const diff = readinessPrediction.value - todayReadiness.score
+      if (Math.abs(diff) >= 3) {
+        tips.push({ icon: '\uD83D\uDD2E', text: `Tomorrow predicted: ${readinessPrediction.value} (${diff > 0 ? '+' : ''}${diff} vs today, ${readinessPrediction.confidence}% confidence). ${diff > 0 ? 'Recovery trending up!' : 'Plan for a lighter session.'}`, color: diff > 0 ? 'text-cyan-300' : 'text-rose-300', category: 'prediction' })
+      }
+    }
+    return tips
+  }, [todayEntry, todayReadiness, protocolEffectiveness, hrvTrend, loggingStreak, readinessPrediction])
 
   const saveEntry = () => {
     const entry: RecoveryEntry = {
@@ -584,6 +535,16 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
                   {readinessTrend.arrow === 'up' ? `+${readinessTrend.diff}` : readinessTrend.diff}
                 </motion.div>
               )}
+              <div className="flex items-center gap-1 ml-auto">
+                <button onClick={() => setDomsView(v => v === 'map' ? 'list' : 'map')}
+                  className="px-1.5 py-0.5 rounded text-[7px] font-bold border transition-all capitalize bg-rose-500/15 border-rose-500/25 text-rose-300 hover:bg-rose-500/20">
+                  {domsView === 'map' ? '\uD83D\uDDFA\uFE0F Map' : '\uD83D\uDCCB List'}
+                </button>
+                {([7, 14, 30] as const).map(d => (
+                  <button key={d} onClick={() => setVitalDays(d)}
+                    className={cn("px-1.5 py-0.5 rounded text-[7px] font-bold border transition-all", vitalDays === d ? "bg-rose-500/15 border-rose-500/25 text-rose-300 shadow-sm shadow-rose-500/10" : "text-slate-600 border-transparent hover:text-slate-400 hover:bg-white/[0.03]")}>{d}d</button>
+                ))}
+              </div>
             </div>
             {/* Stats bar */}
             {(() => {
@@ -705,158 +666,239 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
         </motion.div>
       )}</AnimatePresence>
 
-      {/* Body Panel */}
+      {/* Body Panel — RECOVERYCOACH */}
       <AnimatePresence>{showBodyPanel && (
-        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-          <div className="rounded-2xl border border-rose-500/15 bg-black/60 backdrop-blur-xl p-4 overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-rose-500/5 via-transparent to-orange-500/5 pointer-events-none" />
+        <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}>
+          <div className="rounded-2xl border border-rose-500/15 bg-black/60 backdrop-blur-xl p-4 sm:p-5 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-rose-500/6 via-transparent to-orange-500/6 pointer-events-none" />
             <div className="relative">
-            <div className="flex items-center gap-2 mb-3">
-              <Activity size={14} className="text-rose-400" /><h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Body & Recovery</h3>
-              <div className="flex gap-1 ml-auto">
-                {(['map', 'list'] as const).map(v => (
-                  <button key={v} onClick={() => setDomsView(v)}
-                    className={cn("px-1.5 py-0.5 rounded text-[7px] font-bold border transition-all capitalize", domsView === v ? "bg-rose-500/15 border-rose-500/25 text-rose-300" : "text-slate-600 border-transparent hover:text-slate-400")}>{v}</button>
-                ))}
-              </div>
-              <div className="flex gap-1">
-                {([7, 14, 30] as const).map(d => (
-                  <button key={d} onClick={() => setVitalDays(d)}
-                    className={cn("px-1.5 py-0.5 rounded text-[7px] font-bold border transition-all", vitalDays === d ? "bg-rose-500/15 border-rose-500/25 text-rose-300" : "text-slate-600 border-transparent hover:text-slate-400")}>{d}d</button>
-                ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {/* DOMS */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Heart size={12} className="text-rose-400" /><h4 className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">DOMS</h4>
-                  {todayEntry && <span className="text-[7px] text-slate-500 ml-auto">{todayEntry.domsAreas.length} areas</span>}
+
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4 sm:mb-5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-rose-400/20 to-rose-500/20 border border-rose-500/20 flex items-center justify-center shadow-lg shadow-rose-500/10">
+                    <Activity className="w-4 h-4 text-rose-400" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] font-bold text-white/80 uppercase tracking-wider">RECOVERYCOACH</span>
+                      <span className="text-[7px] px-1.5 py-[1px] rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/20 font-semibold uppercase tracking-wider">AI</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {todayEntry ? (
+                        <span className="text-[8px] text-emerald-400/60 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
+                          Active
+                        </span>
+                      ) : (
+                        <span className="text-[8px] text-slate-600 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
+                          Waiting for data
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                {!todayEntry ? (
-                  <p className="text-[8px] text-slate-500 text-center py-2">Log today to track soreness</p>
-                ) : domsView === 'list' ? (
-                  <div className="space-y-1">
-                    {todayEntry.domsAreas.length === 0 ? <p className="text-[8px] text-slate-500 text-center py-2">No areas marked</p> : (
-                      MUSCLE_AREAS.filter(a => todayEntry.domsAreas.includes(a)).map(area => (
-                        <div key={area} className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.05] text-[8px]">
-                          <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", todayEntry.domsSeverity?.[area] === 'severe' ? "bg-rose-500 shadow-[0_0_4px_#ef4444]" : todayEntry.domsSeverity?.[area] === 'moderate' ? "bg-amber-500 shadow-[0_0_3px_#f59e0b]" : "bg-emerald-500")} />
-                          <span className="text-slate-300">{area}</span>
-                          <span className="text-[6px] text-slate-600 ml-auto uppercase">{todayEntry.domsSeverity?.[area] || 'mild'}</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center">
-                    <DomsBodyMap domsSeverity={todayEntry.domsSeverity || {}} domsAreas={todayEntry.domsAreas} onToggle={() => {}} readonly />
-                    <div className="flex gap-2 mt-1.5">{(['mild', 'moderate', 'severe'] as const).map(sev => (
-                      <div key={sev} className="flex items-center gap-1"><div className={cn("w-1.5 h-1.5 rounded-full", sev === 'severe' ? "bg-rose-500 shadow-[0_0_4px_#ef4444]" : sev === 'moderate' ? "bg-amber-500 shadow-[0_0_3px_#f59e0b]" : "bg-emerald-500 shadow-[0_0_3px_#10b981]")} /><span className="text-[7px] text-slate-600 capitalize">{sev}</span></div>
-                    ))}</div>
-                    {todayEntry.domsAreas.length > 0 && (
-                      <div className="flex items-center gap-2 mt-1 text-[7px] text-slate-500">
-                        {(['mild', 'moderate', 'severe'] as const).map(sev => (
-                          <span key={sev} className="flex items-center gap-0.5">
-                            <Circle size={5} className={sev === 'mild' ? 'text-emerald-500' : sev === 'moderate' ? 'text-amber-500' : 'text-rose-500'} fill={sev === 'mild' ? '#10b981' : sev === 'moderate' ? '#f59e0b' : '#ef4444'} />
-                            {todayEntry.domsAreas.filter(a => todayEntry.domsSeverity?.[a] === sev).length}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {domsTrend.length >= 3 && (
-                  <div className="mt-2 pt-2 border-t border-white/5">
-                    <p className="text-[7px] text-slate-600 mb-1">Trend ({domsTrend.length}d)</p>
-                    {domsTrend.slice(-vitalDays).reverse().map(d => (
-                      <div key={d.date} className="flex items-center gap-1.5 text-[7px]">
-                        <span className="text-slate-600 w-7">{new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' })}</span>
-                        <div className="flex-1 h-1 rounded-full bg-white/5 overflow-hidden">
-                          <motion.div className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500" initial={{ width: 0 }} animate={{ width: `${(d.domsScore / 15) * 100}%` }} transition={{ duration: 0.5 }} />
-                        </div>
-                        <span className="text-slate-500">{d.areaCount}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
-              {/* Bio Vitals */}
-              <div>
-                <div className="flex items-center gap-2 mb-2"><Activity size={12} className="text-sky-400" /><h4 className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">Bio Vitals</h4></div>
-                <div className="space-y-1.5">
-                  {hrvTrend.length >= 2 ? (
-                    <div className="rounded-xl bg-gradient-to-br from-cyan-500/[0.04] to-transparent border border-cyan-500/15 px-2.5 py-1.5">
-                      <div className="flex justify-between text-[8px] mb-0.5">
-                        <div className="flex items-center gap-1"><span className="text-slate-400">HRV</span>{(() => { const t = hrvTrend[hrvTrend.length - 1] - hrvTrend[Math.max(0, hrvTrend.length - 4)]; return t > 2 ? <ArrowUp size={6} className="text-emerald-400" /> : t < -2 ? <ArrowDown size={6} className="text-rose-400" /> : <span className="w-1 h-0.5 bg-slate-500 rounded inline-block" /> })()}</div>
-                        <span className="text-sky-400 font-bold">{hrvTrend[hrvTrend.length - 1]} ms</span>
+
+              {/* Stats bar */}
+              <div className="grid grid-cols-5 gap-2 mb-5">
+                {[
+                  { label: 'Readiness', value: todayReadiness ? todayReadiness.score : (avgReadiness || '--'), color: todayReadiness ? (todayReadiness.score >= 80 ? '#34d399' : todayReadiness.score >= 60 ? '#38bdf8' : todayReadiness.score >= 40 ? '#fbbf24' : '#fb7185') : '#64748b', glow: true },
+                  { label: 'Energy', value: todayEntry ? todayEntry.energy : '--', color: '#f59e0b', glow: true },
+                  { label: 'Sleep Q', value: todayEntry ? todayEntry.sleepQuality : (todaySleep ? todaySleep.quality : '--'), color: '#818cf8', glow: true },
+                  { label: 'DOMS', value: todayEntry ? todayEntry.domsAreas.length : '0', color: '#f43f5e' },
+                  { label: 'Streak', value: loggingStreak > 0 ? `${loggingStreak}d` : '--', color: loggingStreak >= 7 ? '#34d399' : loggingStreak >= 3 ? '#f59e0b' : '#64748b', glow: loggingStreak >= 3 },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-lg border border-white/[0.04] bg-white/[0.01] text-center p-2 hover:bg-white/[0.03] transition-all">
+                    <p className="text-[7px] text-slate-600 uppercase tracking-wider mb-0.5">{s.label}</p>
+                    <p className="text-base sm:text-lg font-black transition-all duration-300"
+                      style={{ color: s.color, textShadow: s.glow ? `0 0 20px ${s.color}40` : 'none' }}>
+                      {s.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Coach cards */}
+              <div className="grid grid-cols-1 gap-2 mb-4">
+
+                {/* Card 1: Readiness Overview */}
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.02 }}
+                  className="rounded-xl border border-violet-500/15 bg-gradient-to-br from-violet-500/[0.04] to-transparent p-3 border-t-2 border-t-violet-500/20 hover:border-violet-500/25 transition-all duration-300">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <div className="w-5 h-5 rounded-md bg-violet-500/10 border border-violet-500/15 flex items-center justify-center"><Brain className="w-2.5 h-2.5 text-violet-400" /></div>
+                    <span className="text-[10px] font-semibold text-slate-400">Readiness Overview</span>
+                  </div>
+                  {todayReadiness ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3 px-1.5 py-1 rounded-lg bg-white/[0.02]">
+                        <span className="text-xl font-black" style={{ color: todayReadiness.score >= 80 ? '#34d399' : todayReadiness.score >= 60 ? '#38bdf8' : todayReadiness.score >= 40 ? '#fbbf24' : '#fb7185', textShadow: `0 0 20px ${todayReadiness.score >= 80 ? '#34d39940' : todayReadiness.score >= 60 ? '#38bdf840' : todayReadiness.score >= 40 ? '#fbbf2440' : '#fb718540'}` }}>{todayReadiness.score}</span>
+                        <span className="text-[10px] text-slate-500 font-medium">{todayReadiness.score >= 80 ? 'Peak' : todayReadiness.score >= 60 ? 'Good' : todayReadiness.score >= 40 ? 'Fair' : 'Low'}</span>
+                        <div className="w-px h-5 bg-white/10" />
+                        <span className="text-[8px] text-slate-500">Sleep</span>
+                        <div className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map(q => (
+                            <div key={q} className={cn("w-1.5 h-3 rounded-sm", q <= (todayEntry?.sleepQuality || 0) ? "bg-indigo-400 shadow-[0_0_4px_#818cf8]" : "bg-white/10")} />
+                          ))}
+                        </div>
+                        {(todayEntry?.sleepQuality ?? 0) > 0 && (
+                          <span className="text-[8px] text-slate-600">{(todayEntry?.sleepQuality ?? 0) >= 4 ? '\u2705' : (todayEntry?.sleepQuality ?? 0) >= 3 ? '\uD83D\uDC4D' : '\u26A0\uFE0F'}</span>
+                        )}
                       </div>
-                      <BioSparkline data={hrvTrend} color="#06b6d4" height={24} />
-                      <div className="flex justify-between text-[6px] text-slate-600 mt-0.5"><span>Lo {Math.min(...hrvTrend)}</span><span>Hi {Math.max(...hrvTrend)}</span></div>
+                      <div className="flex items-center gap-3 px-1.5 py-1 rounded-lg bg-white/[0.02]">
+                        {hrvTrend.length >= 3 ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[7px] text-slate-600 uppercase">HRV</span>
+                            <span className={cn("text-[11px] font-black", hrvTrend[hrvTrend.length - 1] >= hrvTrend[0] ? 'text-emerald-400' : 'text-rose-400')}>{hrvTrend[hrvTrend.length - 1]}</span>
+                            <span className="text-[7px] text-slate-500">ms</span>
+                            <span className={cn("text-[7px]", hrvTrend[hrvTrend.length - 1] >= hrvTrend[0] ? 'text-emerald-400' : 'text-rose-400')}>{hrvTrend[hrvTrend.length - 1] >= hrvTrend[0] ? '\u2191' : '\u2193'}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1"><span className="text-[7px] text-slate-600 uppercase">HRV</span><span className="text-[11px] font-bold text-slate-600">—</span></div>
+                        )}
+                        <div className="w-px h-4 bg-white/10" />
+                        {rhrTrend.length >= 3 ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[7px] text-slate-600 uppercase">RHR</span>
+                            <span className={cn("text-[11px] font-black", rhrTrend[rhrTrend.length - 1] <= rhrTrend[0] ? 'text-emerald-400' : 'text-rose-400')}>{rhrTrend[rhrTrend.length - 1]}</span>
+                            <span className="text-[7px] text-slate-500">bpm</span>
+                            <span className={cn("text-[7px]", rhrTrend[rhrTrend.length - 1] <= rhrTrend[0] ? 'text-emerald-400' : 'text-rose-400')}>{rhrTrend[rhrTrend.length - 1] <= rhrTrend[0] ? '\u2193' : '\u2191'}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1"><span className="text-[7px] text-slate-600 uppercase">RHR</span><span className="text-[11px] font-bold text-slate-600">—</span></div>
+                        )}
+                        {readinessPrediction && (
+                          <>
+                            <div className="w-px h-4 bg-white/10" />
+                            <div className="flex items-center gap-1">
+                              <span className="text-[7px] text-slate-600 uppercase">Conf</span>
+                              <div className="w-10 h-1 rounded-full bg-white/5 overflow-hidden">
+                                <motion.div initial={{ width: 0 }} animate={{ width: `${readinessPrediction.confidence}%` }} transition={{ duration: 0.5 }} className="h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-400" />
+                              </div>
+                              <span className="text-[7px] text-slate-500">{readinessPrediction.confidence}%</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 px-1.5 py-1 rounded-lg bg-cyan-500/[0.03] border border-cyan-500/10">
+                        <span className="text-[9px] text-cyan-300/80">{todayReadiness.score >= 80 ? 'Optimal for training' : todayReadiness.score >= 60 ? 'Ready for moderate work' : todayReadiness.score >= 40 ? 'Prioritize recovery' : 'Rest recommended'}</span>
+                      </div>
                     </div>
-                  ) : <p className="text-[7px] text-slate-600 text-center py-1">Enable HRV in settings</p>}
-                  {rhrTrend.length >= 2 ? (
-                    <div className="rounded-xl bg-gradient-to-br from-rose-500/[0.04] to-transparent border border-rose-500/15 px-2.5 py-1.5">
-                      <div className="flex justify-between text-[8px] mb-0.5">
-                        <div className="flex items-center gap-1"><span className="text-slate-400">RHR</span>{(() => { const t = rhrTrend[Math.max(0, rhrTrend.length - 4)] - rhrTrend[rhrTrend.length - 1]; return t > 2 ? <ArrowDown size={6} className="text-emerald-400" /> : t < -2 ? <ArrowUp size={6} className="text-rose-400" /> : <span className="w-1 h-0.5 bg-slate-500 rounded inline-block" /> })()}</div>
-                        <span className="text-rose-400 font-bold">{rhrTrend[rhrTrend.length - 1]} bpm</span>
-                      </div>
-                      <BioSparkline data={rhrTrend} color="#f43f5e" height={24} />
-                      <div className="flex justify-between text-[6px] text-slate-600 mt-0.5"><span>Lo {Math.min(...rhrTrend)}</span><span>Hi {Math.max(...rhrTrend)}</span></div>
+                  ) : (
+                    <p className="text-xs font-bold text-slate-500">No data today</p>
+                  )}
+                </motion.div>
+
+                {/* Card 2: Body Status */}
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
+                  className="rounded-xl border border-rose-500/15 bg-gradient-to-br from-rose-500/[0.04] to-transparent p-3 border-t-2 border-t-rose-500/20 hover:border-rose-500/25 transition-all duration-300">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <div className="w-5 h-5 rounded-md bg-rose-500/10 border border-rose-500/15 flex items-center justify-center"><Heart className="w-2.5 h-2.5 text-rose-400" /></div>
+                    <span className="text-[10px] font-semibold text-slate-400">Body Status</span>
+                  </div>
+                  {todayEntry ? (
+                    <div className="space-y-1">
+                      {todayEntry.domsAreas.length > 0 ? (
+                        <div className="flex items-center gap-3 px-1.5 py-1 rounded-lg bg-white/[0.02]">
+                          {(['severe', 'moderate', 'mild'] as const).map(sev => {
+                            const count = todayEntry.domsAreas.filter(a => (todayEntry.domsSeverity?.[a] || 'mild') === sev).length
+                            if (count === 0) return null
+                            return (
+                              <div key={sev} className="flex items-center gap-1">
+                                <div className={cn("w-1.5 h-1.5 rounded-full", sev === 'severe' ? "bg-rose-500 shadow-[0_0_4px_#ef4444]" : sev === 'moderate' ? "bg-amber-500 shadow-[0_0_3px_#f59e0b]" : "bg-emerald-500 shadow-[0_0_3px_#10b981]")} />
+                                <span className="text-[9px] text-slate-500 capitalize">{sev}</span>
+                                <span className="text-[10px] font-bold text-slate-300">{count}</span>
+                              </div>
+                            )
+                          })}
+                          <span className="text-[8px] text-slate-600 ml-auto">{todayEntry.domsAreas.length} area{todayEntry.domsAreas.length > 1 ? 's' : ''}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 px-1.5 py-1 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
+                          <Check className="w-3 h-3 text-emerald-400" />
+                          <span className="text-[10px] font-bold text-emerald-400">No soreness</span>
+                        </div>
+                      )}
+                      {protocolEffectiveness.length > 1 && (
+                        <div className="px-1.5 py-1 rounded-lg bg-white/[0.02]">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[7px] text-slate-600 uppercase font-semibold">Best protocol</span>
+                            <span className="text-[9px] text-slate-300 ml-auto">{protocolEffectiveness[0].protocol}</span>
+                            <span className="text-[9px] font-bold text-emerald-400">{protocolEffectiveness[0].avgReadiness}</span>
+                            <span className="text-[7px] text-slate-600">{protocolEffectiveness[0].count}x</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ) : <p className="text-[7px] text-slate-600 text-center py-1">Enable RHR in settings</p>}
-                  {settings.enableBodyTemp && bodyTempTrend.length >= 2 && (
-                    <div className="rounded-xl bg-gradient-to-br from-orange-500/[0.04] to-transparent border border-orange-500/15 px-2.5 py-1.5">
-                      <div className="flex justify-between text-[8px] mb-0.5">
-                        <div className="flex items-center gap-1"><span className="text-slate-400">Temp</span>{(() => { const t = bodyTempTrend[bodyTempTrend.length - 1] - bodyTempTrend[Math.max(0, bodyTempTrend.length - 4)]; return Math.abs(t) > 0.3 ? (t > 0 ? <ArrowUp size={6} className="text-orange-400" /> : <ArrowDown size={6} className="text-cyan-400" />) : <span className="w-1 h-0.5 bg-slate-500 rounded inline-block" /> })()}</div>
-                        <span className="text-orange-400 font-bold">{displayTemp(bodyTempTrend[bodyTempTrend.length - 1])}{settings.tempUnit}</span>
+                  ) : (
+                    <p className="text-xs font-bold text-slate-500">Log today to track</p>
+                  )}
+                </motion.div>
+
+                {/* Card 3: Recovery Forecast */}
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                  className="rounded-xl border border-amber-500/15 bg-gradient-to-br from-amber-500/[0.04] to-transparent p-3 border-t-2 border-t-amber-500/20 hover:border-amber-500/25 transition-all duration-300">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <div className="w-5 h-5 rounded-md bg-amber-500/10 border border-amber-500/15 flex items-center justify-center"><TrendingUp className="w-2.5 h-2.5 text-amber-400" /></div>
+                    <span className="text-[10px] font-semibold text-slate-400">Recovery Forecast</span>
+                  </div>
+                  {readinessPrediction && todayReadiness ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3 px-1.5 py-1 rounded-lg bg-white/[0.02]">
+                        <div className="flex items-center gap-1"><span className="text-[7px] text-slate-600 uppercase">Today</span><span className="text-sm font-black" style={{ color: todayReadiness.score >= 80 ? '#34d399' : todayReadiness.score >= 60 ? '#38bdf8' : todayReadiness.score >= 40 ? '#fbbf24' : '#fb7185' }}>{todayReadiness.score}</span></div>
+                        <div className="flex-1 h-px bg-gradient-to-r from-amber-500/50 to-emerald-500/50" />
+                        <div className="flex items-center gap-1"><span className="text-[7px] text-slate-600 uppercase">Next</span><span className="text-sm font-black" style={{ color: readinessPrediction.value >= 80 ? '#34d399' : readinessPrediction.value >= 60 ? '#38bdf8' : readinessPrediction.value >= 40 ? '#fbbf24' : '#fb7185' }}>{readinessPrediction.value}</span></div>
+                        <span className="text-[7px] text-slate-600">{readinessPrediction.confidence}%</span>
                       </div>
-                      <BioSparkline data={bodyTempTrend} color="#f97316" height={24} />
-                      <div className="flex justify-between text-[6px] text-slate-600 mt-0.5"><span>Lo {displayTemp(Math.min(...bodyTempTrend))}{settings.tempUnit}</span><span>Hi {displayTemp(Math.max(...bodyTempTrend))}{settings.tempUnit}</span></div>
+                      <div className="flex items-center gap-2 px-1.5 py-1 rounded-lg bg-amber-500/[0.03] border border-amber-500/10">
+                        <span className={cn("text-[9px] font-medium", readinessPrediction.value >= todayReadiness.score ? 'text-emerald-400' : 'text-amber-400')}>
+                          {readinessPrediction.value >= todayReadiness.score ? 'Recovery trending upward \u2197' : 'Slight decline expected \u2198'}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 px-1.5 py-1 rounded-lg bg-white/[0.02]">
+                      <span className="text-xs font-bold text-slate-500">Not enough data</span>
+                      <span className="text-[8px] text-slate-600 ml-auto">Log 7+ days</span>
                     </div>
                   )}
-                </div>
+                </motion.div>
+
               </div>
-              {/* Protocols + Week Summary */}
-              <div className="space-y-2">
-                {protocolEffectiveness.length > 1 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-1.5"><Pill size={12} className="text-purple-400" /><h4 className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">Protocols</h4><span className="text-[7px] text-slate-600 ml-auto">{protocolEffectiveness.length} types</span></div>
-                    <div className="space-y-1">
-                      {protocolEffectiveness.slice(0, 5).map(p => (
-                        <div key={p.protocol} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.02] border border-white/5 text-[7px]">
-                          <span className="text-slate-300 min-w-0 truncate">{p.protocol}</span>
-                          <div className="flex-1 h-1 rounded-full bg-white/5 overflow-hidden mx-1">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${p.avgReadiness}%` }} transition={{ duration: 0.5 }}
-                              className={cn("h-full rounded-full", p.avgReadiness >= 70 ? "bg-gradient-to-r from-emerald-500 to-emerald-300" : p.avgReadiness >= 50 ? "bg-gradient-to-r from-amber-500 to-amber-300" : "bg-gradient-to-r from-rose-500 to-rose-300")}
-                              style={{ boxShadow: p.avgReadiness >= 70 ? '0 0 6px rgba(16,185,129,0.3)' : p.avgReadiness >= 50 ? '0 0 4px rgba(245,158,11,0.3)' : '0 0 4px rgba(239,68,68,0.3)' }} />
-                          </div>
-                          <span className={cn("font-bold shrink-0", p.avgReadiness >= 70 ? "text-emerald-400" : p.avgReadiness >= 50 ? "text-amber-400" : "text-rose-400")}>{p.avgReadiness}</span>
-                          <span className="text-slate-600 shrink-0">({p.count}x)</span>
-                        </div>
-                      ))}
-                    </div>
+
+              {/* AI Insights */}
+              {coachInsights.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                  className="rounded-xl border border-rose-500/10 bg-gradient-to-br from-rose-500/[0.03] to-transparent p-3.5">
+                  <div className="flex items-center gap-1.5 mb-2.5">
+                    <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400/70">AI INSIGHTS</span>
+                    <span className="ml-auto text-[7px] text-slate-600">{coachInsights.length} insight{coachInsights.length > 1 ? 's' : ''}</span>
                   </div>
-                )}
-                {/* Weekly summary */}
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5"><Award size={12} className="text-amber-400" /><h4 className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">Week Summary</h4></div>
-                  {recentWeek.some(d => d.readiness > 0) ? (
-                    <div className="grid grid-cols-3 gap-1">
-                      {[
-                        { label: 'Average', value: avgReadiness, color: 'text-white', bg: 'from-purple-500/10 to-transparent', border: 'border-purple-500/15' },
-                        { label: 'Best', value: bestReadinessDay ? `${bestReadinessDay.readiness}` : '--', color: 'text-emerald-400', bg: 'from-emerald-500/10 to-transparent', border: 'border-emerald-500/15' },
-                        { label: 'Worst', value: worstReadinessDay ? `${worstReadinessDay.readiness}` : '--', color: 'text-rose-400', bg: 'from-rose-500/10 to-transparent', border: 'border-rose-500/15' },
-                      ].map(s => (
-                        <div key={s.label} className={`rounded-xl bg-gradient-to-b ${s.bg} border ${s.border} px-2 py-1.5 text-center`}>
-                          <p className="text-[6px] text-slate-600 uppercase tracking-wider">{s.label}</p>
-                          <p className={`text-xs font-black ${s.color} mt-0.5`}>{s.value}</p>
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {coachInsights.slice(0, 4).map((tip, i) => (
+                      <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 + 0.3 }}
+                        className="flex items-start gap-2 px-2 py-1.5 rounded-lg bg-white/[0.01] text-[11px]">
+                        <span className="flex-shrink-0 mt-0.5">{tip.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className={tip.color}>{tip.text}</p>
+                          <span className={cn("text-[7px] inline-block mt-0.5 px-1.5 py-[1px] rounded-full font-semibold uppercase tracking-wider",
+                            tip.category === 'readiness' ? 'bg-violet-500/10 text-violet-400' :
+                            tip.category === 'body' ? 'bg-rose-500/10 text-rose-400' :
+                            tip.category === 'sleep' ? 'bg-indigo-500/10 text-indigo-400' :
+                            tip.category === 'protocol' ? 'bg-purple-500/10 text-purple-400' :
+                            tip.category === 'hrv' ? 'bg-emerald-500/10 text-emerald-400' :
+                            tip.category === 'prediction' ? 'bg-cyan-500/10 text-cyan-400' :
+                            tip.category === 'streak' ? 'bg-amber-500/10 text-amber-400' :
+                            'bg-gray-500/10 text-gray-500')}>{tip.category}</span>
                         </div>
-                      ))}
-                    </div>
-                  ) : <p className="text-[7px] text-slate-500 text-center py-2">No data this week</p>}
-                </div>
-              </div>
-            </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
             </div>
           </div>
         </motion.div>
@@ -1118,9 +1160,9 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
                   </div>
                 </div>
               </div>
-              <div className="rounded-xl border border-indigo-500/15 bg-gradient-to-r from-indigo-500/[0.06] to-violet-500/[0.06] p-4 shadow-[inset_0_0_20px_rgba(99,102,241,0.03)]">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-5 h-5 rounded-lg bg-indigo-500/15 flex items-center justify-center"><Moon size={10} className="text-indigo-400" /></div>
+              <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Moon size={12} className="text-indigo-400" />
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Last Night's Sleep</span>
                   {todaySleep && (
                     <span className="text-[7px] text-indigo-400/60 ml-auto px-1.5 py-0.5 rounded-md bg-indigo-500/10">from Sleep log</span>
