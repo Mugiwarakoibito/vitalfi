@@ -478,18 +478,29 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
     <svg className={className} width={size || 24} height={size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M5 12h14" /></svg>
   )
 
-  const Slider = ({ label, value, onChange, min = 1, max = 10, color, hint }: { label: string; value: number; onChange: (v: number) => void; min?: number; max?: number; color?: string; hint?: string }) => (
-    <div className="space-y-1.5">
-      <div className="flex justify-between text-xs">
-        <span className="text-slate-400 font-medium">{label}</span>
-        <span className={`font-bold ${color || 'text-white'}`}>{value}/{max}</span>
+  const Slider = ({ label, value, onChange, min = 1, max = 10, color, hint }: { label: string; value: number; onChange: (v: number) => void; min?: number; max?: number; color?: string; hint?: string }) => {
+    const pct = ((value - min) / (max - min)) * 100
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color || '#a855f7' }} />
+            <span className="text-slate-400 font-medium">{label}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md" style={{ backgroundColor: `${color}20`, color: color || '#a855f7' }}>{value}</span>
+            <span className="text-slate-600 text-[10px]">/ {max}</span>
+          </div>
+        </div>
+        {hint && <p className="text-[9px] text-slate-600 -mt-0.5">{hint}</p>}
+        <div className="relative h-2 rounded-full bg-white/[0.06] overflow-hidden">
+          <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-200" style={{ width: `${pct}%`, backgroundColor: color || '#a855f7', opacity: 0.5 }} />
+          <input type="range" min={min} max={max} value={value} onChange={e => onChange(Number(e.target.value))}
+            className="absolute inset-0 w-full h-full appearance-none bg-transparent cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-black/20 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-solid" />
+        </div>
       </div>
-      {hint && <p className="text-[9px] text-slate-600 -mt-1">{hint}</p>}
-      <input type="range" min={min} max={max} value={value} onChange={e => onChange(Number(e.target.value))}
-        className="w-full h-2 rounded-full appearance-none bg-white/10 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-purple-500/30 accent-purple-500"
-        style={{ accentColor: color || '#a855f7' }} />
-    </div>
-  )
+    )
+  }
 
   const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: () => void }) => (
     <button onClick={onChange} className={cn("w-10 h-5 rounded-full transition-all relative shrink-0", enabled ? 'bg-emerald-500' : 'bg-slate-600')}>
@@ -1091,13 +1102,19 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
                   <Activity size={12} className="text-emerald-400" />
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Recovery Metrics</span>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <Slider label="Energy Level" value={formData.energy} onChange={v => setFormData(prev => ({ ...prev, energy: v }))} color="#f59e0b" hint="Physical & mental energy" />
-                  <Slider label="Muscle Soreness" value={formData.soreness} onChange={v => setFormData(prev => ({ ...prev, soreness: v }))} color="#ef4444" hint="How sore are your muscles" />
-                </div>
-                <div className="grid grid-cols-2 gap-4 mt-3">
-                  <Slider label="Stress Level" value={formData.stress} onChange={v => setFormData(prev => ({ ...prev, stress: v }))} color="#a855f7" hint="Mental & emotional stress" />
-                  <Slider label="Mood" value={formData.mood} onChange={v => setFormData(prev => ({ ...prev, mood: v }))} min={1} max={5} color="#10b981" hint="Overall emotional state" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-amber-500/10 bg-gradient-to-b from-amber-500/[0.03] to-transparent p-3">
+                    <Slider label="Energy Level" value={formData.energy} onChange={v => setFormData(prev => ({ ...prev, energy: v }))} color="#f59e0b" hint="Physical & mental energy" />
+                  </div>
+                  <div className="rounded-xl border border-rose-500/10 bg-gradient-to-b from-rose-500/[0.03] to-transparent p-3">
+                    <Slider label="Muscle Soreness" value={formData.soreness} onChange={v => setFormData(prev => ({ ...prev, soreness: v }))} color="#ef4444" hint="How sore are your muscles" />
+                  </div>
+                  <div className="rounded-xl border border-violet-500/10 bg-gradient-to-b from-violet-500/[0.03] to-transparent p-3">
+                    <Slider label="Stress Level" value={formData.stress} onChange={v => setFormData(prev => ({ ...prev, stress: v }))} color="#a855f7" hint="Mental & emotional stress" />
+                  </div>
+                  <div className="rounded-xl border border-emerald-500/10 bg-gradient-to-b from-emerald-500/[0.03] to-transparent p-3">
+                    <Slider label="Mood" value={formData.mood} onChange={v => setFormData(prev => ({ ...prev, mood: v }))} min={1} max={5} color="#10b981" hint="Overall emotional state" />
+                  </div>
                 </div>
               </div>
               <div className="rounded-xl border border-indigo-500/15 bg-gradient-to-r from-indigo-500/[0.06] to-violet-500/[0.06] p-4 shadow-[inset_0_0_20px_rgba(99,102,241,0.03)]">
