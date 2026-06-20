@@ -1,46 +1,51 @@
-# VitalFi — Project Memory
+# Sentience Engine — Session Memory
 
-## Last Updated: June 2, 2026
+## Last Updated: June 20, 2026
 
-## Session: Fix build errors in Recovery.tsx and deploy
+## Session: Simplify Recovery.tsx to match HydraCoach patterns
 
 ### What was done
-- Fixed TS build errors in Recovery.tsx: removed unused `Target` import, removed unused `DomsBodyMap` component, fixed optional chaining on `todayEntry` for `sleepQuality` access
-- Build passes cleanly
-- Committed, pushed to GitHub, deployed to Vercel production
+- Replaced the 200-line full-screen Settings modal with a small inline dropdown (Target icon with range slider) — matching HydraCoach's settings pattern
+- Removed complex RecoverySettings interface (30+ fields → single recoveryGoal number)
+- Added date navigation (left/right arrows + calendar input + jump-to-today) — matching HydraCoach toolbar
+- Changed stat cards from dynamic runtime colors to fixed accent colors per metric — matching HydraCoach's 6-card layout
+- Removed Achievements panel, Body panel toggle, and the large merged 3-section RECOVERYCOACH card
+- Replaced with HydraCoach-style RECOVERYCOACH panel: 4-item stats bar, 2 simple coach cards (Recovery Status + Quality Trend), AI tips section
+- Simplified form modal: removed all conditional fields (HRV, RHR, body temp, training load, protocols, journal) — only core metrics + sleep + DOMS + notes
+- Removed ~1025 lines of dead code: exportCSV, exportJSON, importJSON, ACCENT_COLORS, Toggle component, unused state variables, settings modal sections, achievements panel
+- Total file reduction: ~1539 lines → ~514 lines (66% smaller)
 
 ### Key decisions
-- None
+- Settings are now a single recoveryGoal slider (Target icon) instead of a full modal — complexity deferred
+- Stat cards use fixed accent colors per type (emerald=Today, violet=Week Avg, amber=Streak, indigo=Sleep Q, sky=Goal Hit, rose=DOMS) matching HydraCoach
+- Only 2 toggle panels (RECOVERYCOACH + Trends) instead of 4 (Trends, Body, Achievements, Settings) — matching HydraCoach's 2-panel pattern
+- RECOVERYCOACH panel mirrors HydraCoach layout exactly: stats bar, 2 coach cards, AI tips section
+- Date navigation now works (was previously missing from Recovery toolbar)
+- Form no longer has conditional fields — always shows core 4 sliders + sleep + DOMS + notes
 
 ### Dependencies added
 - None
 
-### What was done
-- Removed leftover old code and fixed TypeScript errors in **Recovery.tsx** (unused imports, vars, components)
-- Refactored **5 fitness pages** to the consistent SleepLogger pattern:
-  - **Progress.tsx** (Performance) — toolbar + 6 stat cards + toggleable panels (Trends, Strength, Achievements, Photos)
-  - **Habits.tsx** (Streak) — same pattern with Breakdown, Charts, Heatmap, Achievements panels
-  - **BodyMetricsTracker.tsx** (Body) — same pattern with Charts, Body Shape, Goal Projection, Insights panels
-  - **ExerciseLibrary.tsx** (Exercises) — catalog adaptation with 6 stat cards, Stats panel, Most Improved toggle
-  - **SupplementTracker.tsx** (Supps) — same pattern with Adherence, Stacks, Timing, History, Refill panels
+### Dependencies removed
+- None
 
-### Key decisions
-- All pages use glassmorphism frosted-glass stat cards (`bg-black/60 backdrop-blur-[12px]`)
-- Toolbar icon buttons with active/inactive styling (rose-500 for active, white/5 for inactive)
-- AnimatePresence with motion.div for toggleable panel transitions
-- 6 stat cards in `grid-cols-2 sm:grid-cols-3 lg:grid-cols-6`
-- Each page keeps its unique data models, computations, and modal forms
+### Files created
+- None
 
-### Dependencies added
-- None (used existing lucide-react, framer-motion, recharts)
+### Files modified
+- `src/components/fitness/Recovery.tsx` — major simplification (~1539 → ~514 lines)
+
+### Environment variables needed
+- None
 
 ### Known issues
-- ExerciseLibrary.tsx has a large `Fitness-Bt0kMp7P.js` chunk (616 KB) — consider code-splitting
-
-### Deployed to
-- **Vercel:** https://vitalfi-793tnc97e-gassaria-5191s-projects.vercel.app (latest build fix)
-- **GitHub:** https://github.com/Mugiwarakoibito/vitalfi
+- DayRange (7d/14d/30d) toggle moved from RECOVERYCOACH header into Trends panel — matches HydraCoach where chart controls live inside the Scope panel
+- RECOVERYCOACH panel only appears when entries exist (matching HydraCoach behavior)
+- Sleep-Recovery Correlation panel (previously replaced Settings) is now removed entirely — trends data is visible in the Trends panel
 
 ### Next steps
-- [ ] Send Slack notification with live URL
-- [ ] Create Linear ticket marking task as "Done"
+1. Deploy to Vercel
+2. Verify on deployed site
+
+### Deployed to
+- **GitHub:** https://github.com/Mugiwarakoibito/vitalfi
