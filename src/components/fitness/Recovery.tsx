@@ -72,6 +72,8 @@ export function Recovery() {
   const [trendDays, setTrendDays] = useState<7 | 14 | 30>(7)
   const [trendMetric, setTrendMetric] = useState<'readiness' | 'energy' | 'sleep' | 'soreness' | 'stress' | 'mood'>('readiness')
   const [showSettings, setShowSettings] = useState(false)
+  const [showCoachPref, setShowCoachPref] = useState(false)
+  const [coachPref, setCoachPref] = useState<'performance' | 'recovery' | 'balanced'>('balanced')
   const [targetDate, setTargetDate] = useState(new Date().toISOString().split('T')[0])
   const [recoveryGoal, setRecoveryGoal] = useState(() => {
     const saved = localStorage.getItem(SETTINGS_KEY)
@@ -165,6 +167,13 @@ export function Recovery() {
 
   const coachInsights = useMemo(() => {
     const tips: { icon: string; text: string; color: string; category: string }[] = []
+    if (coachPref === 'performance') {
+      tips.push({ icon: '\u26A1', text: 'Performance focus active. Emphasize training readiness, peak energy days, and pushing your limits.', color: 'text-amber-400', category: 'focus' })
+    } else if (coachPref === 'recovery') {
+      tips.push({ icon: '\uD83E\uDDD8', text: 'Recovery focus active. Prioritize rest, stress management, and allowing full recovery between sessions.', color: 'text-emerald-400', category: 'focus' })
+    } else {
+      tips.push({ icon: '\u2696\uFE0F', text: 'Balanced focus active. Optimize both training and recovery for steady, sustainable progress.', color: 'text-cyan-400', category: 'focus' })
+    }
     if (todayEntry && todayEntry.domsAreas.length > 0) {
       tips.push({ icon: '\uD83D\uDCAA', text: `${todayEntry.domsAreas.length} sore area${todayEntry.domsAreas.length > 1 ? 's' : ''} detected. ${todayEntry.domsAreas.length >= 3 ? 'Consider light activity and extra stretching.' : 'Mild soreness — normal training should be OK.'}`, color: 'text-rose-300', category: 'body' })
     }
@@ -185,12 +194,16 @@ export function Recovery() {
         tips.push({ icon: '\uD83D\uDD2E', text: `Tomorrow predicted: ${readinessPrediction.value} (${diff > 0 ? '+' : ''}${diff} vs today, ${readinessPrediction.confidence}% confidence). ${diff > 0 ? 'Recovery trending up!' : 'Plan for a lighter session.'}`, color: diff > 0 ? 'text-cyan-300' : 'text-rose-300', category: 'prediction' })
       }
     }
-    if (tips.length === 0) {
-      if (entries.length === 0) tips.push({ icon: '\uD83E\uDDD8', text: 'Log your first recovery entry to get personalized AI insights.', color: 'text-gray-400', category: 'general' })
-      else tips.push({ icon: '\uD83D\uDCA1', text: 'Keep logging daily to unlock deeper recovery coaching and trend analysis.', color: 'text-gray-400', category: 'general' })
+    while (tips.length < 3) {
+      const fallbacks = [
+        { icon: '\uD83E\uDDD8', text: entries.length === 0 ? 'Log your first recovery entry to get personalized AI insights.' : 'Keep logging daily to unlock deeper recovery coaching and trend analysis.', color: 'text-gray-400', category: 'general' },
+        { icon: '\uD83D\uDCA1', text: 'Consistency is key to understanding your recovery patterns over time.', color: 'text-gray-400', category: 'general' },
+        { icon: '\u2B50', text: 'Track your energy, sleep, and soreness daily to spot what works best for you.', color: 'text-gray-400', category: 'general' },
+      ]
+      tips.push(fallbacks[tips.length])
     }
     return tips
-  }, [todayEntry, todayReadiness, loggingStreak, readinessPrediction, entries.length])
+  }, [todayEntry, todayReadiness, loggingStreak, readinessPrediction, entries.length, coachPref])
 
   const trendMetricData = useMemo(() => {
     return recentDays.map(d => {
@@ -447,6 +460,43 @@ export function Recovery() {
                 </div>
                 <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">RECOVERYCOACH</span>
               </div>
+              <div className="flex items-center gap-1.5">
+                <div className="relative">
+                  <button onClick={() => setShowCoachPref(p => !p)}
+                    className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${showCoachPref
+                      ? coachPref === 'performance' ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                        : coachPref === 'recovery' ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                        : 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400'
+                      : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:bg-white/10'}`}
+                    title="Recovery focus">
+                    <span className="text-[11px] leading-none">{coachPref === 'performance' ? '\u26A1' : coachPref === 'recovery' ? '\uD83E\uDDD8' : '\u2696\uFE0F'}</span>
+                  </button>
+                  {showCoachPref && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setShowCoachPref(false)} />
+                      <div className="absolute right-0 top-8 z-20 w-48 rounded-xl bg-gray-900 border border-white/10 shadow-2xl p-3">
+                        <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Recovery Focus</p>
+                        <div className="flex flex-col gap-1">
+                          {([
+                            { key: 'balanced' as const, label: '\u2696\uFE0F Balanced' },
+                            { key: 'performance' as const, label: '\u26A1 Performance' },
+                            { key: 'recovery' as const, label: '\uD83E\uDDD8 Recovery' },
+                          ]).map(opt => (
+                            <button key={opt.key} onClick={() => { setCoachPref(opt.key); setShowCoachPref(false) }}
+                              className={`text-left px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${coachPref === opt.key
+                                ? opt.key === 'performance' ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                                  : opt.key === 'recovery' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                  : 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Stats summary bar */}
@@ -516,7 +566,7 @@ export function Recovery() {
                   const last = sortedEntries.slice(half)
                   const firstAvg = first.reduce((s, e) => s + getReadiness(e.energy, e.soreness, e.stress, e.mood).score, 0) / first.length
                   const lastAvg = last.reduce((s, e) => s + getReadiness(e.energy, e.soreness, e.stress, e.mood).score, 0) / last.length
-                  const diff = Math.round((lastAvg - firstAvg) * 10) / 10
+                  const diff = Math.round((firstAvg - lastAvg) * 10) / 10
                   if (Math.abs(diff) < 3) return (
                     <>
                       <p className="text-sm font-bold text-gray-400 drop-shadow-lg">Stable —</p>
