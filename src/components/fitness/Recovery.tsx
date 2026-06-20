@@ -6,7 +6,7 @@ import {
   Calendar, RotateCcw, Clock, Sparkles, Moon, Pencil,
   BarChart3, Brain, Droplets,
 } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, CartesianGrid, ReferenceLine, PieChart, Pie } from 'recharts'
 import { generateId, cn } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 
@@ -69,8 +69,8 @@ export function Recovery() {
   const [deleteTarget, setDeleteTarget] = useState<RecoveryEntry | null>(null)
   const [showTrendsPanel, setShowTrendsPanel] = useState(false)
   const [showRecoveryCoach, setShowRecoveryCoach] = useState(false)
-  const [trendDays, setTrendDays] = useState<7 | 14 | 30>(7)
-  const [trendMetric, setTrendMetric] = useState<'readiness' | 'energy' | 'sleep' | 'soreness' | 'stress' | 'mood'>('readiness')
+  const [scopeOffset, setScopeOffset] = useState(0)
+  const [trendChartMode, setTrendChartMode] = useState<'volume' | 'timeline' | 'types'>('volume')
   const [showSettings, setShowSettings] = useState(false)
   const [showCoachPref, setShowCoachPref] = useState(false)
   const [coachPref, setCoachPref] = useState<'performance' | 'recovery' | 'balanced'>('balanced')
@@ -108,7 +108,34 @@ export function Recovery() {
   }
 
   const recentWeek = useMemo(() => getWeekDays(7, entries), [entries, targetDate, today])
-  const recentDays = useMemo(() => getWeekDays(trendDays, entries), [trendDays, entries, targetDate, today])
+
+  const scopeWeek = useMemo(() => {
+    const days: { date: string; label: string; readiness: number; sleepQuality: number; hasData: boolean; fullDate: string }[] = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i + scopeOffset * 7)
+      const ds = d.toISOString().split('T')[0]
+      const entry = entries.find(e => e.date === ds)
+      const readiness = entry ? getReadiness(entry.energy, entry.soreness, entry.stress, entry.mood).score : 0
+      days.push({
+        date: ds, label: i === 0 && scopeOffset === 0 ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' }),
+        readiness, sleepQuality: entry?.sleepQuality || 0, hasData: !!entry, fullDate: ds,
+      })
+    }
+    return days
+  }, [entries, scopeOffset])
+
+  const isScopeCurrentWeek = scopeOffset === 0
+
+  const scopeAvg = useMemo(() => {
+    const withData = scopeWeek.filter(d => d.hasData)
+    return withData.length > 0 ? Math.round(withData.reduce((s, d) => s + d.readiness, 0) / withData.length) : 0
+  }, [scopeWeek])
+  const scopeGoalMet = useMemo(() => scopeWeek.filter(d => d.hasData && d.readiness >= recoveryGoal).length, [scopeWeek, recoveryGoal])
+  const scopeBestDay = useMemo(() => {
+    const withData = scopeWeek.filter(d => d.hasData)
+    if (!withData.length) return { label: '--', readiness: 0 }
+    return withData.reduce((best, d) => d.readiness > best.readiness ? d : best, withData[0])
+  }, [scopeWeek])
 
   const avgReadiness = useMemo(() => {
     const vals = recentWeek.filter(d => d.readiness > 0)
@@ -146,13 +173,6 @@ export function Recovery() {
     const recent = sortedEntries.slice(0, 14)
     return recent.length > 0 ? Math.round((entriesOnTarget / recent.length) * 100) : 0
   }, [entriesOnTarget, sortedEntries])
-
-  const sleepReadinessData = useMemo(() => {
-    return entries.slice(0, 14).reverse().map(e => {
-      const r = getReadiness(e.energy, e.soreness, e.stress, e.mood)
-      return { date: e.date, sleepQuality: e.sleepQuality, readiness: r.score, sleepLabel: `Q${e.sleepQuality}` }
-    })
-  }, [entries])
 
   const readinessPrediction = useMemo(() => {
     const vals = recentWeek.filter(d => d.readiness > 0).map(d => d.readiness)
@@ -205,36 +225,19 @@ export function Recovery() {
     return tips
   }, [todayEntry, todayReadiness, loggingStreak, readinessPrediction, entries.length, coachPref])
 
-  const trendMetricData = useMemo(() => {
-    return recentDays.map(d => {
-      const val = trendMetric === 'readiness' ? d.readiness :
-                  trendMetric === 'energy' ? d.energy * 10 :
-                  trendMetric === 'sleep' ? d.sleepQuality * 20 :
-                  trendMetric === 'soreness' ? (10 - d.soreness) * 10 :
-                  trendMetric === 'stress' ? (10 - d.stress) * 10 :
-                  d.mood * 20
-      return { ...d, value: Math.round(val) }
+  const scopeFeelingData = useMemo(() => {
+    const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+    scopeWeek.filter(d => d.hasData).forEach(d => {
+      const entry = entries.find(e => e.date === d.date)
+      if (entry?.recoveryFeeling) counts[entry.recoveryFeeling] = (counts[entry.recoveryFeeling] || 0) + 1
     })
-  }, [recentDays, trendMetric])
+    const labels: Record<number, string> = { 1: 'Poor', 2: 'Fair', 3: 'Good', 4: 'Great', 5: 'Peak' }
+    const colors: Record<number, string> = { 1: '#ef4444', 2: '#f59e0b', 3: '#38bdf8', 4: '#a855f7', 5: '#10b981' }
+    return Object.entries(counts).filter(([_, c]) => c > 0).map(([k, c]) => ({
+      feeling: labels[Number(k)], count: c, color: colors[Number(k)],
+    }))
+  }, [scopeWeek, entries])
 
-  const trendMetricLabel = trendMetric === 'readiness' ? 'Readiness' :
-    trendMetric === 'energy' ? 'Energy' : trendMetric === 'sleep' ? 'Sleep Q' :
-    trendMetric === 'soreness' ? 'Soreness (inv)' : trendMetric === 'stress' ? 'Stress (inv)' : 'Mood'
-
-  const weeklyComparison = useMemo(() => {
-    const thisWeekEntries = entries.filter(e => { const d = new Date(e.date); const wa = new Date(); wa.setDate(wa.getDate() - 7); return d >= wa })
-    const lastWeekEntries = entries.filter(e => { const d = new Date(e.date); const wa = new Date(); wa.setDate(wa.getDate() - 14); const wb = new Date(); wb.setDate(wb.getDate() - 7); return d >= wb && d < wa })
-    const avg = (arr: RecoveryEntry[], key: 'energy' | 'soreness' | 'stress' | 'mood') => {
-      const vals = arr.filter(e => e[key] > 0).map(e => e[key])
-      return vals.length > 0 ? Math.round(vals.reduce((s, v) => s + v, 0) / vals.length * 10) / 10 : null
-    }
-    return {
-      energy: { this: avg(thisWeekEntries, 'energy'), last: avg(lastWeekEntries, 'energy') },
-      soreness: { this: avg(thisWeekEntries, 'soreness'), last: avg(lastWeekEntries, 'soreness') },
-      stress: { this: avg(thisWeekEntries, 'stress'), last: avg(lastWeekEntries, 'stress') },
-      mood: { this: avg(thisWeekEntries, 'mood'), last: avg(lastWeekEntries, 'mood') },
-    }
-  }, [entries])
 
   const saveEntry = () => {
     const entry: RecoveryEntry = {
@@ -617,111 +620,214 @@ export function Recovery() {
         </motion.div>
       )}</AnimatePresence>
 
-      {/* Trends Panel */}
-      <AnimatePresence>{entries.length > 0 && showTrendsPanel && (
-        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-          <div className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-xl p-4 overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-violet-500/5 pointer-events-none" />
-            <div className="relative">
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp size={14} className="text-violet-400" /><h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Trends & Insights</h3>
-              <div className="flex gap-1 ml-auto">
-                {(['readiness', 'energy', 'sleep'] as const).map(m => (
-                  <button key={m} onClick={() => setTrendMetric(m)}
-                    className={cn("px-1.5 py-0.5 rounded text-[7px] font-bold border transition-all capitalize", trendMetric === m ? "bg-violet-500/15 border-violet-500/25 text-violet-300" : "text-slate-600 border-transparent hover:text-slate-400")}>{m}</button>
-                ))}
+      {/* Trends Panel — HydraScope style */}
+      <AnimatePresence>
+        {entries.length > 0 && showTrendsPanel && (
+          <motion.div key="trendsscope" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+            className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
+            {!scopeWeek.some(d => d.hasData) ? (
+              <div className="relative flex flex-col items-center justify-center h-48 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-violet-500/5 border border-violet-500/10 flex items-center justify-center mb-4">
+                  <BarChart3 className="w-7 h-7 text-violet-400/30" />
+                </div>
+                <p className="text-gray-400 text-sm font-medium mb-1">No entries this week</p>
+                <p className="text-gray-500 text-xs">Log recovery data to unlock your Trends</p>
               </div>
-              {readinessTrend && (
-                <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-                  className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[7px] font-bold border", readinessTrend.arrow === 'up' ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" : readinessTrend.arrow === 'down' ? "text-rose-400 bg-rose-500/10 border-rose-500/20" : "text-slate-400 bg-white/5 border-white/10")}>
-                  {readinessTrend.arrow === 'up' ? <><span className="inline-block text-[8px]">↑</span> +{readinessTrend.diff}</> : readinessTrend.arrow === 'down' ? <><span className="inline-block text-[8px]">↓</span> {readinessTrend.diff}</> : <><span className="inline-block w-1.5 h-0.5 bg-slate-400 rounded" /> 0</>}
-                </motion.div>
-              )}
-              <div className="flex gap-1 ml-2">
-                {([7, 14, 30] as const).map(d => (
-                  <button key={d} onClick={() => setTrendDays(d)}
-                    className={cn("px-1.5 py-0.5 rounded text-[7px] font-bold transition-all", trendDays === d ? "bg-violet-500/15 text-violet-300 border border-violet-500/25" : "text-slate-600 hover:text-slate-400")}>{d}d</button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-3">
-              {/* Sleep-Readiness */}
-              {sleepReadinessData.length >= 3 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <Moon size={12} className="text-indigo-400" /><h4 className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">Sleep vs Readiness</h4>
-                    <span className="text-[7px] text-slate-600 ml-auto">{sleepReadinessData.length} entries</span>
+            ) : (
+              <div className="relative">
+                {/* Header with title + week nav + mode toggle */}
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-400/20 to-violet-500/20 border border-violet-500/20 flex items-center justify-center">
+                    <BarChart3 className="w-3 h-3 text-violet-400" />
                   </div>
-                  <div className="h-16">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={sleepReadinessData}>
-                        <XAxis dataKey="sleepLabel" tick={{ fill: '#64748b', fontSize: 7 }} axisLine={false} tickLine={false} />
-                        <YAxis hide domain={[0, 100]} />
-                        <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '9px' }} />
-                        <defs><linearGradient id="sleepLineGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#6366f1" stopOpacity={0.4} /><stop offset="100%" stopColor="#818cf8" stopOpacity={1} /></linearGradient><linearGradient id="readLineGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#a855f7" stopOpacity={0.6} /><stop offset="100%" stopColor="#c084fc" stopOpacity={1} /></linearGradient></defs>
-                        <Line type="monotone" dataKey="readiness" stroke="url(#readLineGrad)" strokeWidth={2} dot={{ fill: '#c084fc', r: 1.5, strokeWidth: 0 }} name="Readiness" />
-                        <Line type="monotone" dataKey="sleepQuality" stroke="url(#sleepLineGrad)" strokeWidth={1.5} strokeDasharray="3 2" dot={{ fill: '#818cf8', r: 1.5, strokeWidth: 0 }} name="Sleep Q" />
-                      </LineChart>
-                    </ResponsiveContainer>
+                  <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">Trends & Insights</span>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setScopeOffset(o => o + 1)} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">
+                      {new Date(scopeWeek[0].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(scopeWeek[6].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                    <button onClick={() => setScopeOffset(o => o - 1)} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                    {!isScopeCurrentWeek && (
+                      <button onClick={() => setScopeOffset(0)} className="p-1.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
+                    {(['volume', 'timeline', 'types'] as const).map(mode => (
+                      <button key={mode} onClick={() => setTrendChartMode(mode)}
+                        className={`relative px-3.5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
+                          trendChartMode === mode
+                            ? mode === 'volume'
+                              ? 'text-violet-300 bg-gradient-to-b from-violet-500/20 to-violet-500/5 border border-violet-500/25 shadow-lg shadow-violet-500/8'
+                              : mode === 'timeline'
+                                ? 'text-cyan-300 bg-gradient-to-b from-cyan-500/20 to-cyan-500/5 border border-cyan-500/25 shadow-lg shadow-cyan-500/8'
+                                : 'text-emerald-300 bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border border-emerald-500/25 shadow-lg shadow-emerald-500/8'
+                            : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'
+                        }`}>
+                        <span className="relative z-10 flex items-center gap-1.5">
+                          <span className={trendChartMode === mode ? '' : 'opacity-50'}>{mode === 'volume' ? '📊' : mode === 'timeline' ? '⏱' : '🧃'}</span>
+                          {mode === 'volume' ? 'Readiness' : mode === 'timeline' ? 'Sleep' : 'Feeling'}
+                        </span>
+                        {trendChartMode === mode && <span className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/[0.06]" />}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              )}
-              {/* Metric Trend */}
-              <div>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <TrendingUp size={12} className="text-violet-400" /><h4 className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">{trendMetricLabel} Trend</h4>
+
+                {/* Charts */}
+                <div className="h-56 rounded-xl bg-gradient-to-b from-white/[0.03] to-transparent border border-white/[0.04] p-3" style={{ minHeight: '220px' }}>
+                  {trendChartMode === 'volume' ? (
+                    scopeWeek.some(d => d.hasData) ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={scopeWeek.filter(d => d.hasData)} barGap={8} barCategoryGap="30%">
+                          <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
+                          <XAxis dataKey="label" tick={{ fill: '#e5e7eb', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} dy={6} />
+                          <YAxis tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} domain={[0, 100]} tickFormatter={v => `${v}`} width={32} />
+                          <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '11px' }} cursor={{ fill: 'rgba(139,92,246,0.15)', radius: 10 }} />
+                          <defs>
+                            <linearGradient id="volGradGoal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#34d399" stopOpacity={1} /><stop offset="50%" stopColor="#10b981" stopOpacity={0.85} /><stop offset="100%" stopColor="#059669" stopOpacity={0.2} /></linearGradient>
+                            <linearGradient id="volGradMiss" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a5b4fc" stopOpacity={0.85} /><stop offset="100%" stopColor="#4f46e5" stopOpacity={0.15} /></linearGradient>
+                            <linearGradient id="volLineGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#c084fc" stopOpacity={0} /><stop offset="50%" stopColor="#c084fc" stopOpacity={1} /><stop offset="100%" stopColor="#c084fc" stopOpacity={0} /></linearGradient>
+                            <filter id="glowGoal"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                          </defs>
+                          <ReferenceLine y={recoveryGoal} stroke="url(#volLineGrad)" strokeWidth={2.5} strokeDasharray="6 4" label={{ value: `🎯 ${recoveryGoal}`, fill: '#d8b4fe', fontSize: 11, fontWeight: 800, position: 'right' }} />
+                          <Bar dataKey="readiness" radius={[12, 12, 0, 0]} maxBarSize={40} animationDuration={800} animationEasing="ease-out">
+                            {scopeWeek.filter(d => d.hasData).map((entry, idx) => (
+                              <Cell key={idx} fill={entry.readiness >= recoveryGoal ? 'url(#volGradGoal)' : 'url(#volGradMiss)'} filter={entry.readiness >= recoveryGoal ? 'url(#glowGoal)' : undefined} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">No recovery data this week</div>
+                    )
+                  ) : trendChartMode === 'timeline' ? (
+                    scopeWeek.some(d => d.hasData) ? (
+                      <div className="flex flex-col h-full justify-center px-2">
+                        <div className="grid grid-cols-7 gap-2 w-full">
+                          {scopeWeek.map((d) => {
+                            const maxReadiness = scopeWeek.reduce((m, x) => Math.max(m, x.readiness), 0)
+                            const pct = maxReadiness > 0 ? d.readiness / maxReadiness : 0
+                            const size = 20 + pct * 32
+                            const isPeak = d.readiness === maxReadiness && maxReadiness > 0
+                            const [r, g, b] = isPeak ? [251, 191, 36] : d.readiness >= 70 ? [52, 211, 153] : d.readiness >= 50 ? [34, 211, 238] : [244, 63, 94]
+                            return (
+                              <div key={d.date} className="flex flex-col items-center gap-0.5">
+                                <div className="relative flex items-center justify-center transition-all duration-300 rounded-full"
+                                  style={{
+                                    width: d.hasData ? `${size}px` : '14px',
+                                    height: d.hasData ? `${size}px` : '14px',
+                                    background: d.hasData
+                                      ? `radial-gradient(circle at 35% 30%, rgba(${r},${g},${b},${0.3 + pct * 0.5}), rgba(${r},${g},${b},${0.1 + pct * 0.3}))`
+                                      : 'rgba(255,255,255,0.03)',
+                                    border: isPeak ? `1.5px solid rgba(${r},${g},${b},0.7)` : d.hasData ? `1px solid rgba(${r},${g},${b},0.2)` : '1px solid rgba(255,255,255,0.03)',
+                                    boxShadow: d.hasData ? `0 0 ${isPeak ? 16 : 8}px rgba(${r},${g},${b},0.25)` : 'none',
+                                  }}
+                                >
+                                  {d.hasData && (
+                                    <span className="text-[7px] font-bold leading-none text-white/80">{d.readiness}</span>
+                                  )}
+                                </div>
+                                <span className={`text-[7px] font-semibold ${d.hasData ? 'text-gray-400' : 'text-gray-600'}`}>{d.label}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                        <div className="flex items-center justify-center gap-4 mt-2 text-[8px] text-gray-500">
+                          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-400/70" /> Low</span>
+                          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-cyan-400/70" /> Med</span>
+                          <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded-full bg-emerald-400/80" /> High</span>
+                          {scopeWeek.some(d => d.readiness >= recoveryGoal) && <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded-full bg-amber-400 shadow-lg shadow-amber-400/40" /> Goal</span>}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">No timing data available</div>
+                    )
+                  ) : (
+                    scopeFeelingData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <defs>
+                            {scopeFeelingData.map((entry, idx) => (
+                              <linearGradient key={idx} id={`typeDonutGrad${idx}`} x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor={entry.color} stopOpacity={0.9} />
+                                <stop offset="100%" stopColor={entry.color} stopOpacity={0.4} />
+                              </linearGradient>
+                            ))}
+                            <filter id="glowDonut"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                          </defs>
+                          <Pie data={scopeFeelingData} cx="50%" cy="50%" innerRadius={52} outerRadius={78} paddingAngle={4} dataKey="count" nameKey="feeling" animationDuration={800} animationEasing="ease-out" stroke="rgba(255,255,255,0.06)" strokeWidth={1.5}>
+                            {scopeFeelingData.map((_, idx) => (
+                              <Cell key={idx} fill={`url(#typeDonutGrad${idx})`} filter="url(#glowDonut)" />
+                            ))}
+                          </Pie>
+                          <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '11px' }} />
+                          <text x="50%" y="47%" textAnchor="middle" fill="#d1d5db" fontSize={11} fontWeight={700}>
+                            {scopeFeelingData.length}
+                          </text>
+                          <text x="50%" y="56%" textAnchor="middle" fill="#6b7280" fontSize={9} fontWeight={600}>
+                            feelings
+                          </text>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log recovery feeling to see breakdown</div>
+                    )
+                  )}
                 </div>
-                <div className="h-20">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={trendMetricData}>
-                      <XAxis dataKey="label" tick={{ fill: '#64748b', fontSize: 7 }} axisLine={false} tickLine={false} interval={trendDays > 14 ? 1 : 0} />
-                      <YAxis hide domain={[0, 100]} />
-                      <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '9px' }} />
-                      <defs><linearGradient id="trendAreaGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#a855f7" stopOpacity={0.35} /><stop offset="40%" stopColor="#a855f7" stopOpacity={0.15} /><stop offset="95%" stopColor="#a855f7" stopOpacity={0} /></linearGradient></defs>
-                      <Area type="monotone" dataKey="value" stroke="#c084fc" fill="url(#trendAreaGrad)" strokeWidth={2} dot={{ fill: '#c084fc', r: 1.5, strokeWidth: 0 }} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-                {readinessPrediction !== null && trendMetric === 'readiness' && (
-                  <div className="mt-1.5 flex items-center gap-2 text-[8px] flex-wrap">
-                    <Clock size={7} className="text-slate-500" /><span className="text-slate-500">Tomorrow:</span>
-                    <span className={cn("font-bold", readinessPrediction.value >= 70 ? "text-emerald-400" : readinessPrediction.value >= 50 ? "text-amber-400" : "text-rose-400")}>{readinessPrediction.value}</span>
-                    <span className="text-slate-600">/100 · {readinessPrediction.confidence}% confidence</span>
+
+                {/* Stats strip - Premium Glass */}
+                {scopeWeek.some(d => d.hasData) && (
+                  <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
+                    <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
+                      {trendChartMode === 'volume' && (
+                        <>
+                          <span>📊 Avg <span className={`font-semibold ${scopeAvg >= recoveryGoal ? 'text-emerald-400' : scopeAvg >= recoveryGoal * 0.7 ? 'text-amber-400' : 'text-rose-400'}`}>{scopeAvg}</span> / {recoveryGoal}</span>
+                          <span>🏆 Best <span className="text-emerald-400 font-semibold">{scopeBestDay.label}</span> <span className="text-gray-600">({scopeBestDay.readiness})</span></span>
+                          <span>🎯 Hit <span className={`font-semibold ${scopeGoalMet >= 5 ? 'text-emerald-400' : scopeGoalMet >= 3 ? 'text-amber-400' : 'text-rose-400'}`}>{scopeGoalMet}/7</span></span>
+                          {readinessPrediction && (
+                            <span>🔮 Next <span className={`font-semibold ${readinessPrediction.value >= 70 ? 'text-emerald-400' : readinessPrediction.value >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>{readinessPrediction.value}</span></span>
+                          )}
+                        </>
+                      )}
+                      {trendChartMode === 'timeline' && (
+                        <>
+                          {(() => {
+                            const peak = scopeWeek.filter(d => d.hasData).reduce((best, d) => d.readiness > best.readiness ? d : best, scopeWeek.find(d => d.hasData) || scopeWeek[0])
+                            return <span>⭐ Peak <span className="font-semibold text-cyan-400">{peak.label}</span> <span className="text-gray-600">({peak.readiness})</span></span>
+                          })()}
+                          <span>🕐 Active <span className="font-semibold text-cyan-400">{scopeWeek.filter(d => d.hasData).length}d</span> / 7d</span>
+                          <span>📈 Avg <span className="font-semibold text-gray-300">{scopeAvg}</span></span>
+                        </>
+                      )}
+                      {trendChartMode === 'types' && (
+                        <>
+                          <span>🧃 Types <span className="font-semibold text-emerald-400">{scopeFeelingData.length}</span></span>
+                          <span>⭐ Top <span className="font-semibold text-emerald-400">{scopeFeelingData.sort((a, b) => b.count - a.count)[0]?.feeling || '--'}</span> <span className="text-gray-600">({scopeFeelingData.length > 0 ? `${Math.round(scopeFeelingData.sort((a, b) => b.count - a.count)[0].count / scopeFeelingData.reduce((s, f) => s + f.count, 0) * 100)}%` : '--'})</span></span>
+                          <span>📋 Entries <span className="font-semibold text-gray-300">{scopeFeelingData.reduce((s, f) => s + f.count, 0)}</span></span>
+                        </>
+                      )}
+                    </div>
+                    {/* Progress mini-bar */}
+                    <div className="relative h-0.5 bg-white/[0.03]">
+                      <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(scopeGoalMet / 7 * 100, 100)}%` }} />
+                    </div>
                   </div>
                 )}
               </div>
-              {/* Weekly Comparison */}
-              {weeklyComparison.energy.this !== null && (
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5"><BarChart3 size={12} className="text-violet-400" /><h4 className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">This vs Last Week</h4></div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                    {(['energy', 'soreness', 'stress', 'mood'] as const).map(key => {
-                      const t = weeklyComparison[key].this; const l = weeklyComparison[key].last
-                      if (t === null || l === null) return null
-                      const diff = Math.round((t - l) * 10) / 10
-                      const improved = key === 'soreness' || key === 'stress' ? diff < 0 : diff > 0
-                      return (
-                        <div key={key} className={`rounded-xl bg-gradient-to-b ${improved ? 'from-emerald-500/[0.04]' : 'from-rose-500/[0.04]'} to-transparent border ${improved ? 'border-emerald-500/10' : 'border-rose-500/10'} px-2.5 py-1.5`}>
-                          <p className="text-[7px] text-slate-600 uppercase tracking-wider mb-0.5">{key}</p>
-                          <div className="flex items-center justify-between">
-                            <span className="text-[8px] text-slate-600">{l}</span>
-                            <span className="text-[10px] font-bold text-white">→ {t}</span>
-                          </div>
-                          <div className={cn("text-[7px] font-bold flex items-center gap-0.5 mt-0.5", improved ? "text-emerald-400" : diff === 0 ? "text-slate-500" : "text-rose-400")}>
-                            {diff > 0 ? <span className="inline-block text-[8px]">↑</span> : diff < 0 ? <span className="inline-block text-[8px]">↓</span> : <span className="w-1 h-0.5 bg-slate-500 rounded inline-block" />}
-                            {Math.abs(diff)}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-            </div>
-          </div>
-        </motion.div>
-      )}</AnimatePresence>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* History */}
       {sortedEntries.length > 0 && (
