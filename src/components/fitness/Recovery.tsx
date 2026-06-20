@@ -541,7 +541,7 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
       </motion.div>
 
       {/* Stat Cards */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {[
           { label: 'Readiness', value: todayReadiness ? `${todayReadiness.score}` : '--', sub: todayReadiness?.label || 'No data', color: todayReadiness?.color || '#6b7280', icon: Heart },
           { label: 'Week Avg', value: avgReadiness ? `${avgReadiness}` : '--', sub: readinessTrend ? `${readinessTrend.diff > 0 ? '+' : ''}${readinessTrend.diff} vs prior` : '', color: '#a855f7', icon: BarChart3 },
@@ -549,12 +549,12 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
           { label: 'Sleep Debt', value: settings.enableSleepDebt ? `${sleepDebt}h` : '--', sub: settings.enableSleepDebt ? `need ${settings.sleepNeed}h` : 'off', color: '#6366f1', icon: Moon },
           { label: 'Balance', value: (() => { const w = recentWeek.filter(d => d.trainingLoad > 0 && d.readiness > 0); if (!w.length) return '--'; const r = Math.round(w.reduce((s, d) => s + d.readiness, 0) / w.length); const l = w.reduce((s, d) => s + d.trainingLoad, 0) / w.length; const sc = Math.round((r / 100) * 10 - l); return sc > 0 ? `+${sc}` : `${sc}` })(), sub: (() => { const w = recentWeek.filter(d => d.trainingLoad > 0 && d.readiness > 0); if (!w.length) return 'No data'; const r = Math.round(w.reduce((s, d) => s + d.readiness, 0) / w.length); const l = w.reduce((s, d) => s + d.trainingLoad, 0) / w.length; const sc = Math.round((r / 100) * 10 - l); const labels = ['Overreaching', 'Strained', 'Strained', 'Neutral', 'Neutral', 'Well balanced']; return labels[Math.min(5, Math.max(0, sc + 3))] })(), color: (() => { const w = recentWeek.filter(d => d.trainingLoad > 0 && d.readiness > 0); if (!w.length) return '#6b7280'; const r = Math.round(w.reduce((s, d) => s + d.readiness, 0) / w.length); const l = w.reduce((s, d) => s + d.trainingLoad, 0) / w.length; const sc = Math.round((r / 100) * 10 - l); return sc >= 2 ? '#10b981' : sc >= 0 ? '#f59e0b' : sc >= -3 ? '#f97316' : '#ef4444' })(), icon: Sparkles },
       ].map((stat) => (
-        <div key={stat.label} className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg min-h-[7.5rem]">
-          <div className="absolute top-0 right-0 w-16 h-16 rounded-full -mr-8 -mt-8 blur-xl" style={{ background: `${stat.color}20` }} />
+        <div key={stat.label} className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-black/60 backdrop-blur-[12px] p-5 shadow-lg min-h-[7.5rem]">
+          <div className="absolute top-0 right-0 w-20 h-20 rounded-full -mr-10 -mt-10 blur-xl" style={{ background: `${stat.color}20` }} />
           <div className="relative h-full flex flex-col justify-center">
-            <div className="flex items-center gap-2 mb-1" style={{ color: stat.color }}><stat.icon size={14} /><span className="text-[9px] font-semibold uppercase tracking-wider opacity-80">{stat.label}</span></div>
-            <p className="text-2xl font-black text-white">{stat.value}</p>
-            <p className="text-[9px] text-slate-500 mt-0.5">{stat.sub}</p>
+            <div className="flex items-center gap-2 text-sm mb-1" style={{ color: `${stat.color}cc` }}><stat.icon size={16} /><span>{stat.label}</span></div>
+            <p className="text-3xl font-bold drop-shadow-lg" style={{ color: stat.color }}>{stat.value}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{stat.sub}</p>
           </div>
         </div>
       ))}
