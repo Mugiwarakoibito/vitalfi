@@ -2,31 +2,18 @@
 
 ## Last Updated: June 2, 2026
 
-## Session: Enhance HydrationHub with SleepLogger-style cards and settings improvements
+## Session: Fix build errors in Recovery.tsx and deploy
 
 ### What was done
-- **Enhanced HydrationHub.tsx** with comprehensive UI improvements:
-  - **Stats cards**: Rewrote 6 stat cards with SleepLogger-style per-card accent colors (cyan, violet, amber, sky, emerald, rose each have their own border color, glow blob, shadow, and text color)
-  - **Settings popover**: Cleaned up layout with organized sections (Goal slider, Unit toggle, Quick Amounts with add/remove/reorder, Reset to defaults button). Added backdrop blur, animations, and better spacing.
-  - **Log Water button**: Added a popover with quick-amount grid (sorted by usage frequency), custom amount input, and repeat-last button for fast logging from the toolbar
-  - **Panel theming**: Consistent per-panel color identities (cyan for Intake, violet for History, emerald for Insights)
-  - **Calendar icon**: Changed from cyan to violet to match app identity
-  - **Jump-to-today button**: Changed from cyan to violet for consistency
+- Fixed TS build errors in Recovery.tsx: removed unused `Target` import, removed unused `DomsBodyMap` component, fixed optional chaining on `todayEntry` for `sleepQuality` access
+- Build passes cleanly
+- Committed, pushed to GitHub, deployed to Vercel production
 
 ### Key decisions
-- Used inline styles (`style={{ borderColor, boxShadow, background }}`) for dynamic per-card accent colors to avoid Tailwind class purging issues
-- Each stats card has: `rounded-2xl border bg-black/60 backdrop-blur-[12px] p-5 min-h-[7.5rem]` with colored glow blob, icon, value, and subtext
-- Settings popover uses `AnimatePresence` with scale/fade animation matching SleepLogger's approach
-- Log Water popover has its own `logCustomAmount` state to avoid conflicts with the panel's custom amount input
-
-### Dependencies added
-- None (used existing lucide-react, framer-motion, recharts)
-
-### Known issues
 - None
 
-### Next steps
-- [ ] Deploy to Vercel
+### Dependencies added
+- None
 
 ### What was done
 - Removed leftover old code and fixed TypeScript errors in **Recovery.tsx** (unused imports, vars, components)
@@ -51,7 +38,7 @@
 - ExerciseLibrary.tsx has a large `Fitness-Bt0kMp7P.js` chunk (616 KB) — consider code-splitting
 
 ### Deployed to
-- **Vercel:** https://vitalfi.vercel.app
+- **Vercel:** https://vitalfi-793tnc97e-gassaria-5191s-projects.vercel.app (latest build fix)
 - **GitHub:** https://github.com/Mugiwarakoibito/vitalfi
 
 ### Next steps

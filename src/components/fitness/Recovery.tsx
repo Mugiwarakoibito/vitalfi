@@ -720,152 +720,148 @@ function getSleepDebt(entries: RecoveryEntry[], sleepNeed: number): number {
                 ))}
               </div>
 
-              {/* Coach cards */}
-              <div className="grid grid-cols-1 gap-2 mb-4">
-
-                {/* Card 1: Readiness Overview */}
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.02 }}
-                  className="rounded-xl border border-violet-500/15 bg-gradient-to-br from-violet-500/[0.04] to-transparent p-3 border-t-2 border-t-violet-500/20 hover:border-violet-500/25 transition-all duration-300">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <div className="w-5 h-5 rounded-md bg-violet-500/10 border border-violet-500/15 flex items-center justify-center"><Brain className="w-2.5 h-2.5 text-violet-400" /></div>
-                    <span className="text-[10px] font-semibold text-slate-400">Readiness Overview</span>
-                  </div>
-                  {todayReadiness ? (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-3 px-1.5 py-1 rounded-lg bg-white/[0.02]">
-                        <span className="text-xl font-black" style={{ color: todayReadiness.score >= 80 ? '#34d399' : todayReadiness.score >= 60 ? '#38bdf8' : todayReadiness.score >= 40 ? '#fbbf24' : '#fb7185', textShadow: `0 0 20px ${todayReadiness.score >= 80 ? '#34d39940' : todayReadiness.score >= 60 ? '#38bdf840' : todayReadiness.score >= 40 ? '#fbbf2440' : '#fb718540'}` }}>{todayReadiness.score}</span>
-                        <span className="text-[10px] text-slate-500 font-medium">{todayReadiness.score >= 80 ? 'Peak' : todayReadiness.score >= 60 ? 'Good' : todayReadiness.score >= 40 ? 'Fair' : 'Low'}</span>
-                        <div className="w-px h-5 bg-white/10" />
-                        <span className="text-[8px] text-slate-500">Sleep</span>
-                        <div className="flex items-center gap-0.5">
-                          {[1, 2, 3, 4, 5].map(q => (
-                            <div key={q} className={cn("w-1.5 h-3 rounded-sm", q <= (todayEntry?.sleepQuality || 0) ? "bg-indigo-400 shadow-[0_0_4px_#818cf8]" : "bg-white/10")} />
-                          ))}
-                        </div>
-                        {(todayEntry?.sleepQuality ?? 0) > 0 && (
-                          <span className="text-[8px] text-slate-600">{(todayEntry?.sleepQuality ?? 0) >= 4 ? '\u2705' : (todayEntry?.sleepQuality ?? 0) >= 3 ? '\uD83D\uDC4D' : '\u26A0\uFE0F'}</span>
-                        )}
+              {/* Merged coach card */}
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.02 }}
+                className="rounded-xl border border-rose-500/15 bg-gradient-to-br from-rose-500/[0.04] to-transparent p-3 border-t-2 border-t-rose-500/20 hover:border-rose-500/25 transition-all duration-300">
+                {/* Section 1: Readiness Overview */}
+                <div className="flex items-center gap-1.5 mb-2">
+                  <div className="w-5 h-5 rounded-md bg-violet-500/10 border border-violet-500/15 flex items-center justify-center"><Brain className="w-2.5 h-2.5 text-violet-400" /></div>
+                  <span className="text-[10px] font-semibold text-slate-400">Readiness Overview</span>
+                </div>
+                {todayReadiness ? (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3 px-1.5 py-1 rounded-lg bg-white/[0.02]">
+                      <span className="text-xl font-black" style={{ color: todayReadiness.score >= 80 ? '#34d399' : todayReadiness.score >= 60 ? '#38bdf8' : todayReadiness.score >= 40 ? '#fbbf24' : '#fb7185', textShadow: `0 0 20px ${todayReadiness.score >= 80 ? '#34d39940' : todayReadiness.score >= 60 ? '#38bdf840' : todayReadiness.score >= 40 ? '#fbbf2440' : '#fb718540'}` }}>{todayReadiness.score}</span>
+                      <span className="text-[10px] text-slate-500 font-medium">{todayReadiness.score >= 80 ? 'Peak' : todayReadiness.score >= 60 ? 'Good' : todayReadiness.score >= 40 ? 'Fair' : 'Low'}</span>
+                      <div className="w-px h-5 bg-white/10" />
+                      <span className="text-[8px] text-slate-500">Sleep</span>
+                      <div className="flex items-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map(q => (
+                          <div key={q} className={cn("w-1.5 h-3 rounded-sm", q <= (todayEntry?.sleepQuality || 0) ? "bg-indigo-400 shadow-[0_0_4px_#818cf8]" : "bg-white/10")} />
+                        ))}
                       </div>
-                      <div className="flex items-center gap-3 px-1.5 py-1 rounded-lg bg-white/[0.02]">
-                        {hrvTrend.length >= 3 ? (
-                          <div className="flex items-center gap-1">
-                            <span className="text-[7px] text-slate-600 uppercase">HRV</span>
-                            <span className={cn("text-[11px] font-black", hrvTrend[hrvTrend.length - 1] >= hrvTrend[0] ? 'text-emerald-400' : 'text-rose-400')}>{hrvTrend[hrvTrend.length - 1]}</span>
-                            <span className="text-[7px] text-slate-500">ms</span>
-                            <span className={cn("text-[7px]", hrvTrend[hrvTrend.length - 1] >= hrvTrend[0] ? 'text-emerald-400' : 'text-rose-400')}>{hrvTrend[hrvTrend.length - 1] >= hrvTrend[0] ? '\u2191' : '\u2193'}</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1"><span className="text-[7px] text-slate-600 uppercase">HRV</span><span className="text-[11px] font-bold text-slate-600">—</span></div>
-                        )}
-                        <div className="w-px h-4 bg-white/10" />
-                        {rhrTrend.length >= 3 ? (
-                          <div className="flex items-center gap-1">
-                            <span className="text-[7px] text-slate-600 uppercase">RHR</span>
-                            <span className={cn("text-[11px] font-black", rhrTrend[rhrTrend.length - 1] <= rhrTrend[0] ? 'text-emerald-400' : 'text-rose-400')}>{rhrTrend[rhrTrend.length - 1]}</span>
-                            <span className="text-[7px] text-slate-500">bpm</span>
-                            <span className={cn("text-[7px]", rhrTrend[rhrTrend.length - 1] <= rhrTrend[0] ? 'text-emerald-400' : 'text-rose-400')}>{rhrTrend[rhrTrend.length - 1] <= rhrTrend[0] ? '\u2193' : '\u2191'}</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1"><span className="text-[7px] text-slate-600 uppercase">RHR</span><span className="text-[11px] font-bold text-slate-600">—</span></div>
-                        )}
-                        {readinessPrediction && (
-                          <>
-                            <div className="w-px h-4 bg-white/10" />
-                            <div className="flex items-center gap-1">
-                              <span className="text-[7px] text-slate-600 uppercase">Conf</span>
-                              <div className="w-10 h-1 rounded-full bg-white/5 overflow-hidden">
-                                <motion.div initial={{ width: 0 }} animate={{ width: `${readinessPrediction.confidence}%` }} transition={{ duration: 0.5 }} className="h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-400" />
-                              </div>
-                              <span className="text-[7px] text-slate-500">{readinessPrediction.confidence}%</span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 px-1.5 py-1 rounded-lg bg-cyan-500/[0.03] border border-cyan-500/10">
-                        <span className="text-[9px] text-cyan-300/80">{todayReadiness.score >= 80 ? 'Optimal for training' : todayReadiness.score >= 60 ? 'Ready for moderate work' : todayReadiness.score >= 40 ? 'Prioritize recovery' : 'Rest recommended'}</span>
-                      </div>
+                      {(todayEntry?.sleepQuality ?? 0) > 0 && (
+                        <span className="text-[8px] text-slate-600">{(todayEntry?.sleepQuality ?? 0) >= 4 ? '\u2705' : (todayEntry?.sleepQuality ?? 0) >= 3 ? '\uD83D\uDC4D' : '\u26A0\uFE0F'}</span>
+                      )}
                     </div>
-                  ) : (
-                    <p className="text-xs font-bold text-slate-500">No data today</p>
-                  )}
-                </motion.div>
-
-                {/* Card 2: Body Status */}
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
-                  className="rounded-xl border border-rose-500/15 bg-gradient-to-br from-rose-500/[0.04] to-transparent p-3 border-t-2 border-t-rose-500/20 hover:border-rose-500/25 transition-all duration-300">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <div className="w-5 h-5 rounded-md bg-rose-500/10 border border-rose-500/15 flex items-center justify-center"><Heart className="w-2.5 h-2.5 text-rose-400" /></div>
-                    <span className="text-[10px] font-semibold text-slate-400">Body Status</span>
-                  </div>
-                  {todayEntry ? (
-                    <div className="space-y-1">
-                      {todayEntry.domsAreas.length > 0 ? (
-                        <div className="flex items-center gap-3 px-1.5 py-1 rounded-lg bg-white/[0.02]">
-                          {(['severe', 'moderate', 'mild'] as const).map(sev => {
-                            const count = todayEntry.domsAreas.filter(a => (todayEntry.domsSeverity?.[a] || 'mild') === sev).length
-                            if (count === 0) return null
-                            return (
-                              <div key={sev} className="flex items-center gap-1">
-                                <div className={cn("w-1.5 h-1.5 rounded-full", sev === 'severe' ? "bg-rose-500 shadow-[0_0_4px_#ef4444]" : sev === 'moderate' ? "bg-amber-500 shadow-[0_0_3px_#f59e0b]" : "bg-emerald-500 shadow-[0_0_3px_#10b981]")} />
-                                <span className="text-[9px] text-slate-500 capitalize">{sev}</span>
-                                <span className="text-[10px] font-bold text-slate-300">{count}</span>
-                              </div>
-                            )
-                          })}
-                          <span className="text-[8px] text-slate-600 ml-auto">{todayEntry.domsAreas.length} area{todayEntry.domsAreas.length > 1 ? 's' : ''}</span>
+                    <div className="flex items-center gap-3 px-1.5 py-1 rounded-lg bg-white/[0.02]">
+                      {hrvTrend.length >= 3 ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-[7px] text-slate-600 uppercase">HRV</span>
+                          <span className={cn("text-[11px] font-black", hrvTrend[hrvTrend.length - 1] >= hrvTrend[0] ? 'text-emerald-400' : 'text-rose-400')}>{hrvTrend[hrvTrend.length - 1]}</span>
+                          <span className="text-[7px] text-slate-500">ms</span>
+                          <span className={cn("text-[7px]", hrvTrend[hrvTrend.length - 1] >= hrvTrend[0] ? 'text-emerald-400' : 'text-rose-400')}>{hrvTrend[hrvTrend.length - 1] >= hrvTrend[0] ? '\u2191' : '\u2193'}</span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 px-1.5 py-1 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
-                          <Check className="w-3 h-3 text-emerald-400" />
-                          <span className="text-[10px] font-bold text-emerald-400">No soreness</span>
-                        </div>
+                        <div className="flex items-center gap-1"><span className="text-[7px] text-slate-600 uppercase">HRV</span><span className="text-[11px] font-bold text-slate-600">—</span></div>
                       )}
-                      {protocolEffectiveness.length > 1 && (
-                        <div className="px-1.5 py-1 rounded-lg bg-white/[0.02]">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[7px] text-slate-600 uppercase font-semibold">Best protocol</span>
-                            <span className="text-[9px] text-slate-300 ml-auto">{protocolEffectiveness[0].protocol}</span>
-                            <span className="text-[9px] font-bold text-emerald-400">{protocolEffectiveness[0].avgReadiness}</span>
-                            <span className="text-[7px] text-slate-600">{protocolEffectiveness[0].count}x</span>
+                      <div className="w-px h-4 bg-white/10" />
+                      {rhrTrend.length >= 3 ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-[7px] text-slate-600 uppercase">RHR</span>
+                          <span className={cn("text-[11px] font-black", rhrTrend[rhrTrend.length - 1] <= rhrTrend[0] ? 'text-emerald-400' : 'text-rose-400')}>{rhrTrend[rhrTrend.length - 1]}</span>
+                          <span className="text-[7px] text-slate-500">bpm</span>
+                          <span className={cn("text-[7px]", rhrTrend[rhrTrend.length - 1] <= rhrTrend[0] ? 'text-emerald-400' : 'text-rose-400')}>{rhrTrend[rhrTrend.length - 1] <= rhrTrend[0] ? '\u2193' : '\u2191'}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1"><span className="text-[7px] text-slate-600 uppercase">RHR</span><span className="text-[11px] font-bold text-slate-600">—</span></div>
+                      )}
+                      {readinessPrediction && (
+                        <>
+                          <div className="w-px h-4 bg-white/10" />
+                          <div className="flex items-center gap-1">
+                            <span className="text-[7px] text-slate-600 uppercase">Conf</span>
+                            <div className="w-10 h-1 rounded-full bg-white/5 overflow-hidden">
+                              <motion.div initial={{ width: 0 }} animate={{ width: `${readinessPrediction.confidence}%` }} transition={{ duration: 0.5 }} className="h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-400" />
+                            </div>
+                            <span className="text-[7px] text-slate-500">{readinessPrediction.confidence}%</span>
                           </div>
-                        </div>
+                        </>
                       )}
                     </div>
-                  ) : (
-                    <p className="text-xs font-bold text-slate-500">Log today to track</p>
-                  )}
-                </motion.div>
-
-                {/* Card 3: Recovery Forecast */}
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-                  className="rounded-xl border border-amber-500/15 bg-gradient-to-br from-amber-500/[0.04] to-transparent p-3 border-t-2 border-t-amber-500/20 hover:border-amber-500/25 transition-all duration-300">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <div className="w-5 h-5 rounded-md bg-amber-500/10 border border-amber-500/15 flex items-center justify-center"><TrendingUp className="w-2.5 h-2.5 text-amber-400" /></div>
-                    <span className="text-[10px] font-semibold text-slate-400">Recovery Forecast</span>
+                    <div className="flex items-center gap-2 px-1.5 py-1 rounded-lg bg-cyan-500/[0.03] border border-cyan-500/10">
+                      <span className="text-[9px] text-cyan-300/80">{todayReadiness.score >= 80 ? 'Optimal for training' : todayReadiness.score >= 60 ? 'Ready for moderate work' : todayReadiness.score >= 40 ? 'Prioritize recovery' : 'Rest recommended'}</span>
+                    </div>
                   </div>
-                  {readinessPrediction && todayReadiness ? (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-3 px-1.5 py-1 rounded-lg bg-white/[0.02]">
-                        <div className="flex items-center gap-1"><span className="text-[7px] text-slate-600 uppercase">Today</span><span className="text-sm font-black" style={{ color: todayReadiness.score >= 80 ? '#34d399' : todayReadiness.score >= 60 ? '#38bdf8' : todayReadiness.score >= 40 ? '#fbbf24' : '#fb7185' }}>{todayReadiness.score}</span></div>
-                        <div className="flex-1 h-px bg-gradient-to-r from-amber-500/50 to-emerald-500/50" />
-                        <div className="flex items-center gap-1"><span className="text-[7px] text-slate-600 uppercase">Next</span><span className="text-sm font-black" style={{ color: readinessPrediction.value >= 80 ? '#34d399' : readinessPrediction.value >= 60 ? '#38bdf8' : readinessPrediction.value >= 40 ? '#fbbf24' : '#fb7185' }}>{readinessPrediction.value}</span></div>
-                        <span className="text-[7px] text-slate-600">{readinessPrediction.confidence}%</span>
-                      </div>
-                      <div className="flex items-center gap-2 px-1.5 py-1 rounded-lg bg-amber-500/[0.03] border border-amber-500/10">
-                        <span className={cn("text-[9px] font-medium", readinessPrediction.value >= todayReadiness.score ? 'text-emerald-400' : 'text-amber-400')}>
-                          {readinessPrediction.value >= todayReadiness.score ? 'Recovery trending upward \u2197' : 'Slight decline expected \u2198'}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 px-1.5 py-1 rounded-lg bg-white/[0.02]">
-                      <span className="text-xs font-bold text-slate-500">Not enough data</span>
-                      <span className="text-[8px] text-slate-600 ml-auto">Log 7+ days</span>
-                    </div>
-                  )}
-                </motion.div>
+                ) : (
+                  <p className="text-xs font-bold text-slate-500 mb-3">No data today</p>
+                )}
 
-              </div>
+                {/* Divider */}
+                <div className="my-3 h-px bg-gradient-to-r from-rose-500/20 via-white/5 to-transparent" />
+
+                {/* Section 2: Body Status */}
+                <div className="flex items-center gap-1.5 mb-2">
+                  <div className="w-5 h-5 rounded-md bg-rose-500/10 border border-rose-500/15 flex items-center justify-center"><Heart className="w-2.5 h-2.5 text-rose-400" /></div>
+                  <span className="text-[10px] font-semibold text-slate-400">Body Status</span>
+                </div>
+                {todayEntry ? (
+                  <div className="space-y-1">
+                    {todayEntry.domsAreas.length > 0 ? (
+                      <div className="flex items-center gap-3 px-1.5 py-1 rounded-lg bg-white/[0.02]">
+                        {(['severe', 'moderate', 'mild'] as const).map(sev => {
+                          const count = todayEntry.domsAreas.filter(a => (todayEntry.domsSeverity?.[a] || 'mild') === sev).length
+                          if (count === 0) return null
+                          return (
+                            <div key={sev} className="flex items-center gap-1">
+                              <div className={cn("w-1.5 h-1.5 rounded-full", sev === 'severe' ? "bg-rose-500 shadow-[0_0_4px_#ef4444]" : sev === 'moderate' ? "bg-amber-500 shadow-[0_0_3px_#f59e0b]" : "bg-emerald-500 shadow-[0_0_3px_#10b981]")} />
+                              <span className="text-[9px] text-slate-500 capitalize">{sev}</span>
+                              <span className="text-[10px] font-bold text-slate-300">{count}</span>
+                            </div>
+                          )
+                        })}
+                        <span className="text-[8px] text-slate-600 ml-auto">{todayEntry.domsAreas.length} area{todayEntry.domsAreas.length > 1 ? 's' : ''}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 px-1.5 py-1 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
+                        <Check className="w-3 h-3 text-emerald-400" />
+                        <span className="text-[10px] font-bold text-emerald-400">No soreness</span>
+                      </div>
+                    )}
+                    {protocolEffectiveness.length > 1 && (
+                      <div className="px-1.5 py-1 rounded-lg bg-white/[0.02]">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[7px] text-slate-600 uppercase font-semibold">Best protocol</span>
+                          <span className="text-[9px] text-slate-300 ml-auto">{protocolEffectiveness[0].protocol}</span>
+                          <span className="text-[9px] font-bold text-emerald-400">{protocolEffectiveness[0].avgReadiness}</span>
+                          <span className="text-[7px] text-slate-600">{protocolEffectiveness[0].count}x</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs font-bold text-slate-500">Log today to track</p>
+                )}
+
+                {/* Divider */}
+                <div className="my-3 h-px bg-gradient-to-r from-amber-500/20 via-white/5 to-transparent" />
+
+                {/* Section 3: Recovery Forecast */}
+                <div className="flex items-center gap-1.5 mb-2">
+                  <div className="w-5 h-5 rounded-md bg-amber-500/10 border border-amber-500/15 flex items-center justify-center"><TrendingUp className="w-2.5 h-2.5 text-amber-400" /></div>
+                  <span className="text-[10px] font-semibold text-slate-400">Recovery Forecast</span>
+                </div>
+                {readinessPrediction && todayReadiness ? (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3 px-1.5 py-1 rounded-lg bg-white/[0.02]">
+                      <div className="flex items-center gap-1"><span className="text-[7px] text-slate-600 uppercase">Today</span><span className="text-sm font-black" style={{ color: todayReadiness.score >= 80 ? '#34d399' : todayReadiness.score >= 60 ? '#38bdf8' : todayReadiness.score >= 40 ? '#fbbf24' : '#fb7185' }}>{todayReadiness.score}</span></div>
+                      <div className="flex-1 h-px bg-gradient-to-r from-amber-500/50 to-emerald-500/50" />
+                      <div className="flex items-center gap-1"><span className="text-[7px] text-slate-600 uppercase">Next</span><span className="text-sm font-black" style={{ color: readinessPrediction.value >= 80 ? '#34d399' : readinessPrediction.value >= 60 ? '#38bdf8' : readinessPrediction.value >= 40 ? '#fbbf24' : '#fb7185' }}>{readinessPrediction.value}</span></div>
+                      <span className="text-[7px] text-slate-600">{readinessPrediction.confidence}%</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-1.5 py-1 rounded-lg bg-amber-500/[0.03] border border-amber-500/10">
+                      <span className={cn("text-[9px] font-medium", readinessPrediction.value >= todayReadiness.score ? 'text-emerald-400' : 'text-amber-400')}>
+                        {readinessPrediction.value >= todayReadiness.score ? 'Recovery trending upward \u2197' : 'Slight decline expected \u2198'}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 px-1.5 py-1 rounded-lg bg-white/[0.02]">
+                    <span className="text-xs font-bold text-slate-500">Not enough data</span>
+                    <span className="text-[8px] text-slate-600 ml-auto">Log 7+ days</span>
+                  </div>
+                )}
+              </motion.div>
 
               {/* AI Insights */}
               {coachInsights.length > 0 && (
