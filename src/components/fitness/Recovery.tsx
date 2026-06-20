@@ -944,15 +944,15 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
       </div>
       {entries.length === 0 ? (
         <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
-          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent py-12 text-center">
+          <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent py-12 text-center">
             <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
               <Heart className="w-8 h-8 text-emerald-400/50" />
             </div>
             <p className="text-gray-400 mb-1">No recovery entries yet</p>
             <p className="text-gray-500 text-sm mb-4">Start tracking your readiness and recovery</p>
-          <button onClick={() => { setFormData(prev => ({ ...prev, energy: todayEntry?.energy ?? settings.defaultEnergy, soreness: todayEntry?.soreness ?? settings.defaultSoreness, stress: todayEntry?.stress ?? settings.defaultStress, mood: todayEntry?.mood ?? settings.defaultMood, sleepQuality: todaySleep?.quality ?? settings.defaultSleepQuality, sleepHours: todaySleep?.duration?.toString() ?? '', recoveryFeeling: 3, domsAreas: [], domsSeverity: {}, hrv: '', rhr: '', bodyTemp: '', trainingLoad: 5, recoveryProtocol: '', bodyWeight: '', notes: '', journal: '' })); setShowForm(true) }}
-              className="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/25 transition-all text-xs font-bold flex items-center gap-1.5">
-              <Plus className="w-3.5 h-3.5" /> Log Your First Recovery
+            <button onClick={() => { setFormData(prev => ({ ...prev, energy: todayEntry?.energy ?? settings.defaultEnergy, soreness: todayEntry?.soreness ?? settings.defaultSoreness, stress: todayEntry?.stress ?? settings.defaultStress, mood: todayEntry?.mood ?? settings.defaultMood, sleepQuality: todaySleep?.quality ?? settings.defaultSleepQuality, sleepHours: todaySleep?.duration?.toString() ?? '', recoveryFeeling: 3, domsAreas: [], domsSeverity: {}, hrv: '', rhr: '', bodyTemp: '', trainingLoad: 5, recoveryProtocol: '', bodyWeight: '', notes: '', journal: '' })); setShowForm(true) }}
+              className="px-5 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/25 transition-all text-xs font-bold flex items-center gap-1.5 mx-auto">
+              <Plus className="w-3.5 h-3.5" /> Log Recovery
             </button>
           </div>
         </motion.div>
@@ -1161,7 +1161,7 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Body Response</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
+                  <div className="rounded-xl border border-emerald-500/10 bg-gradient-to-b from-emerald-500/[0.03] to-transparent p-3">
                     <label className="text-[10px] text-slate-400 font-medium mb-2 block">Recovery Feeling</label>
                     <div className="flex items-center gap-2">
                       {[1, 2, 3, 4, 5].map(n => (
@@ -1175,14 +1175,14 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
                     </div>
                   </div>
                   {settings.enableTrainingLoad && (
-                    <div>
+                    <div className="rounded-xl border border-orange-500/10 bg-gradient-to-b from-orange-500/[0.03] to-transparent p-3">
                       <label className="text-[10px] text-slate-400 font-medium mb-2 block">Training Load (RPE)</label>
                       <input type="number" min={1} max={10} value={formData.trainingLoad} onChange={e => setFormData(prev => ({ ...prev, trainingLoad: parseInt(e.target.value) || 5 }))}
                         className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-orange-500/50 focus:outline-none transition-all" />
                     </div>
                   )}
                 </div>
-                <div className="mt-3">
+                <div className="mt-3 rounded-xl border border-rose-500/10 bg-gradient-to-b from-rose-500/[0.03] to-transparent p-3">
                   <p className="text-[10px] text-slate-400 font-medium mb-2">DOMS Areas <span className="text-slate-600 font-normal">— tap to cycle</span></p>
                   <div className="flex flex-wrap gap-1.5">
                     {MUSCLE_AREAS.map(area => {
