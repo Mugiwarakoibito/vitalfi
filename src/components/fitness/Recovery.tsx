@@ -549,10 +549,11 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
           { label: 'Sleep Debt', value: settings.enableSleepDebt ? `${sleepDebt}h` : '--', sub: settings.enableSleepDebt ? `need ${settings.sleepNeed}h` : 'off', color: '#6366f1', icon: Moon },
           { label: 'Balance', value: (() => { const w = recentWeek.filter(d => d.trainingLoad > 0 && d.readiness > 0); if (!w.length) return '--'; const r = Math.round(w.reduce((s, d) => s + d.readiness, 0) / w.length); const l = w.reduce((s, d) => s + d.trainingLoad, 0) / w.length; const sc = Math.round((r / 100) * 10 - l); return sc > 0 ? `+${sc}` : `${sc}` })(), sub: (() => { const w = recentWeek.filter(d => d.trainingLoad > 0 && d.readiness > 0); if (!w.length) return 'No data'; const r = Math.round(w.reduce((s, d) => s + d.readiness, 0) / w.length); const l = w.reduce((s, d) => s + d.trainingLoad, 0) / w.length; const sc = Math.round((r / 100) * 10 - l); const labels = ['Overreaching', 'Strained', 'Strained', 'Neutral', 'Neutral', 'Well balanced']; return labels[Math.min(5, Math.max(0, sc + 3))] })(), color: (() => { const w = recentWeek.filter(d => d.trainingLoad > 0 && d.readiness > 0); if (!w.length) return '#6b7280'; const r = Math.round(w.reduce((s, d) => s + d.readiness, 0) / w.length); const l = w.reduce((s, d) => s + d.trainingLoad, 0) / w.length; const sc = Math.round((r / 100) * 10 - l); return sc >= 2 ? '#10b981' : sc >= 0 ? '#f59e0b' : sc >= -3 ? '#f97316' : '#ef4444' })(), icon: Sparkles },
       ].map((stat) => (
-        <div key={stat.label} className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-black/60 backdrop-blur-[12px] p-5 shadow-lg min-h-[7.5rem]">
-          <div className="absolute top-0 right-0 w-20 h-20 rounded-full -mr-10 -mt-10 blur-xl" style={{ background: `${stat.color}20` }} />
+        <div key={stat.label} className="relative overflow-hidden rounded-2xl border bg-black/60 backdrop-blur-[12px] p-5 shadow-lg min-h-[7.5rem]"
+          style={{ borderColor: `${stat.color}4d`, boxShadow: `0 10px 15px -3px ${stat.color}0d, 0 4px 6px -4px ${stat.color}0d` }}>
+          <div className="absolute top-0 right-0 w-20 h-20 rounded-full -mr-10 -mt-10 blur-xl" style={{ backgroundColor: `${stat.color}26` }} />
           <div className="relative h-full flex flex-col justify-center">
-            <div className="flex items-center gap-2 text-sm mb-1" style={{ color: `${stat.color}cc` }}><stat.icon size={16} /><span>{stat.label}</span></div>
+            <div className="flex items-center gap-2 text-sm mb-1" style={{ color: `${stat.color}cc` }}><stat.icon className="w-4 h-4" /><span>{stat.label}</span></div>
             <p className="text-3xl font-bold drop-shadow-lg" style={{ color: stat.color }}>{stat.value}</p>
             <p className="text-xs text-gray-500 mt-0.5">{stat.sub}</p>
           </div>
@@ -1126,8 +1127,8 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
                   )}
                 </div>
                 {todaySleep ? (
-                  <div className="flex items-center gap-2">
-                    <div className="rounded-xl border border-indigo-500/10 bg-gradient-to-b from-indigo-500/[0.04] to-transparent p-2.5 flex items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="rounded-xl border border-indigo-500/10 bg-gradient-to-b from-indigo-500/[0.04] to-transparent p-2.5 flex items-center gap-1">
                       {[1,2,3,4,5].map(n => (
                         <div key={n} className={`w-2.5 h-2.5 rounded-full transition-all ${n <= todaySleep.quality ? 'bg-indigo-400 shadow-[0_0_6px_rgba(129,140,248,0.6)]' : 'bg-white/[0.06] border border-white/[0.04]'}`} />
                       ))}
@@ -1155,20 +1156,33 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
               </div>
               <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
                 <div className="flex items-center gap-2 mb-4">
-                  <Activity size={12} className="text-emerald-400" />
+                  <Sparkles size={12} className="text-emerald-400" />
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Body Response</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-emerald-500/10 bg-gradient-to-b from-emerald-500/[0.03] to-transparent p-3">
                     <label className="text-[10px] text-slate-400 font-medium mb-2 block">Recovery Feeling</label>
-                    <div className="flex items-center gap-2">
-                      {[1, 2, 3, 4, 5].map(n => (
+                    <div className="flex items-center justify-between gap-1">
+                      {[
+                        { n: 1, label: 'Poor' },
+                        { n: 2, label: 'Fair' },
+                        { n: 3, label: 'Good' },
+                        { n: 4, label: 'Great' },
+                        { n: 5, label: 'Peak' },
+                      ].map(({ n, label }) => (
                         <button key={n} type="button" onClick={() => setFormData(prev => ({ ...prev, recoveryFeeling: n }))}
-                          className={`w-10 h-10 rounded-xl text-xs font-bold border transition-all ${
+                          className={`flex flex-col items-center gap-0.5 transition-all ${
                             formData.recoveryFeeling === n
-                              ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-lg shadow-emerald-500/10 scale-110'
+                              ? 'scale-110'
+                              : 'opacity-60 hover:opacity-100'
+                          }`}>
+                          <div className={`w-8 h-8 rounded-xl text-xs font-bold border transition-all flex items-center justify-center ${
+                            formData.recoveryFeeling === n
+                              ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-lg shadow-emerald-500/10'
                               : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:bg-white/10'
-                          }`}>{n}</button>
+                          }`}>{n}</div>
+                          <span className={`text-[7px] font-medium ${formData.recoveryFeeling === n ? 'text-emerald-400/80' : 'text-slate-600'}`}>{label}</span>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -1200,7 +1214,7 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
             {settings.enableProtocols && (
               <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
                 <div className="flex items-center gap-2 mb-4">
-                  <Activity size={12} className="text-purple-400" />
+                  <Pencil size={12} className="text-purple-400" />
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Protocol & Notes</span>
                 </div>
                 <div className="rounded-xl border border-purple-500/10 bg-gradient-to-b from-purple-500/[0.03] to-transparent p-3">
@@ -1230,7 +1244,7 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
             {!settings.enableProtocols && (
               <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
                 <div className="flex items-center gap-2 mb-4">
-                  <Activity size={12} className="text-purple-400" />
+                  <Pencil size={12} className="text-purple-400" />
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Notes</span>
                 </div>
                 <div className="rounded-xl border border-purple-500/10 bg-gradient-to-b from-purple-500/[0.03] to-transparent p-3">
