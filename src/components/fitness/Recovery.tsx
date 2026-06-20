@@ -673,7 +673,7 @@ export function Recovery() {
                             : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'
                         }`}>
                         <span className="relative z-10 flex items-center gap-1.5">
-                          <span className={trendChartMode === mode ? '' : 'opacity-50'}>{mode === 'volume' ? '📊' : mode === 'timeline' ? '⏱' : '🧃'}</span>
+                          <span className={trendChartMode === mode ? '' : 'opacity-50'}>{mode === 'volume' ? '📈' : mode === 'timeline' ? '🌙' : '💚'}</span>
                           {mode === 'volume' ? 'Readiness' : mode === 'timeline' ? 'Sleep' : 'Feeling'}
                         </span>
                         {trendChartMode === mode && <span className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/[0.06]" />}
@@ -691,7 +691,23 @@ export function Recovery() {
                           <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
                           <XAxis dataKey="label" tick={{ fill: '#e5e7eb', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} dy={6} />
                           <YAxis tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} domain={[0, 100]} tickFormatter={v => `${v}`} width={32} />
-                          <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '11px' }} cursor={{ fill: 'rgba(139,92,246,0.15)', radius: 10 }} />
+                          <Tooltip content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null
+                            const d = payload[0].payload
+                            const r = getReadiness(d.energy, d.soreness, d.stress, d.mood)
+                            return (
+                              <div className="bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-xl px-3 py-2.5 text-[11px] shadow-2xl leading-relaxed">
+                                <p className="text-white font-bold mb-1">{d.label === 'Today' ? 'Today' : d.label}</p>
+                                <p className="font-bold mb-1.5" style={{ color: r.color }}>{r.score} — {r.label}</p>
+                                <div className="text-gray-400 space-y-0.5">
+                                  <span>⚡ Energy <span className="text-white font-semibold">{d.energy}</span>/10</span><br />
+                                  <span>🔥 Soreness <span className="text-white font-semibold">{d.soreness}</span>/10</span><br />
+                                  <span>🧠 Stress <span className="text-white font-semibold">{d.stress}</span>/10</span><br />
+                                  <span>😊 Mood <span className="text-white font-semibold">{d.mood}</span>/5</span>
+                                </div>
+                              </div>
+                            )
+                          }} cursor={{ fill: 'rgba(139,92,246,0.15)', radius: 10 }} />
                           <defs>
                             <linearGradient id="volGradGoal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#34d399" stopOpacity={1} /><stop offset="50%" stopColor="#10b981" stopOpacity={0.85} /><stop offset="100%" stopColor="#059669" stopOpacity={0.2} /></linearGradient>
                             <linearGradient id="volGradMiss" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a5b4fc" stopOpacity={0.85} /><stop offset="100%" stopColor="#4f46e5" stopOpacity={0.15} /></linearGradient>
@@ -710,46 +726,62 @@ export function Recovery() {
                       <div className="h-full flex items-center justify-center text-gray-500 text-sm">No recovery data this week</div>
                     )
                   ) : trendChartMode === 'timeline' ? (
-                    scopeWeek.some(d => d.hasData) ? (
+                    scopeWeek.some(d => d.hasData || sleep.some(s => s.date === d.date)) ? (
                       <div className="flex flex-col h-full justify-center px-2">
                         <div className="grid grid-cols-7 gap-2 w-full">
                           {scopeWeek.map((d) => {
-                            const maxReadiness = scopeWeek.reduce((m, x) => Math.max(m, x.readiness), 0)
-                            const pct = maxReadiness > 0 ? d.readiness / maxReadiness : 0
-                            const size = 20 + pct * 32
-                            const isPeak = d.readiness === maxReadiness && maxReadiness > 0
-                            const [r, g, b] = isPeak ? [251, 191, 36] : d.readiness >= 70 ? [52, 211, 153] : d.readiness >= 50 ? [34, 211, 238] : [244, 63, 94]
+                            const se = sleep.find(s => s.date === d.date)
+                            const hasSleep = !!se
+                            const sleepQ = se?.quality ?? 0
+                            const duration = se?.duration ?? 0
+                            const size = hasSleep ? 16 + sleepQ * 8 : d.hasData ? 16 : 14
+                            const getSleepColor = (q: number): [number, number, number] => {
+                              if (q >= 5) return [16, 185, 129]
+                              if (q >= 4) return [168, 85, 247]
+                              if (q >= 3) return [34, 211, 238]
+                              if (q >= 2) return [251, 191, 36]
+                              return [244, 63, 94]
+                            }
+                            const [r, g, b] = hasSleep ? getSleepColor(sleepQ) : [255, 255, 255]
+                            const isPeak = sleepQ >= 5
                             return (
                               <div key={d.date} className="flex flex-col items-center gap-0.5">
                                 <div className="relative flex items-center justify-center transition-all duration-300 rounded-full"
                                   style={{
-                                    width: d.hasData ? `${size}px` : '14px',
-                                    height: d.hasData ? `${size}px` : '14px',
-                                    background: d.hasData
-                                      ? `radial-gradient(circle at 35% 30%, rgba(${r},${g},${b},${0.3 + pct * 0.5}), rgba(${r},${g},${b},${0.1 + pct * 0.3}))`
-                                      : 'rgba(255,255,255,0.03)',
-                                    border: isPeak ? `1.5px solid rgba(${r},${g},${b},0.7)` : d.hasData ? `1px solid rgba(${r},${g},${b},0.2)` : '1px solid rgba(255,255,255,0.03)',
-                                    boxShadow: d.hasData ? `0 0 ${isPeak ? 16 : 8}px rgba(${r},${g},${b},0.25)` : 'none',
+                                    width: `${size}px`,
+                                    height: `${size}px`,
+                                    background: hasSleep
+                                      ? `radial-gradient(circle at 35% 30%, rgba(${r},${g},${b},${0.3 + sleepQ * 0.1}), rgba(${r},${g},${b},${0.1 + sleepQ * 0.05}))`
+                                      : d.hasData ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
+                                    border: isPeak ? `1.5px solid rgba(${r},${g},${b},0.7)` : hasSleep ? `1px solid rgba(${r},${g},${b},0.25)` : d.hasData ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.03)',
+                                    boxShadow: hasSleep ? `0 0 ${isPeak ? 16 : 8}px rgba(${r},${g},${b},0.25)` : 'none',
                                   }}
                                 >
-                                  {d.hasData && (
-                                    <span className="text-[7px] font-bold leading-none text-white/80">{d.readiness}</span>
+                                  {hasSleep && (
+                                    <span className="text-[7px] font-bold leading-none text-white/80">{sleepQ}</span>
+                                  )}
+                                  {!hasSleep && d.hasData && (
+                                    <span className="text-[6px] text-gray-600">—</span>
                                   )}
                                 </div>
-                                <span className={`text-[7px] font-semibold ${d.hasData ? 'text-gray-400' : 'text-gray-600'}`}>{d.label}</span>
+                                {hasSleep && duration > 0 && (
+                                  <span className="text-[6px] text-gray-500">{duration}h</span>
+                                )}
+                                <span className={`text-[7px] font-semibold ${hasSleep || d.hasData ? 'text-gray-400' : 'text-gray-600'}`}>{d.label}</span>
                               </div>
                             )
                           })}
                         </div>
-                        <div className="flex items-center justify-center gap-4 mt-2 text-[8px] text-gray-500">
-                          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-400/70" /> Low</span>
-                          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-cyan-400/70" /> Med</span>
-                          <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded-full bg-emerald-400/80" /> High</span>
-                          {scopeWeek.some(d => d.readiness >= recoveryGoal) && <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded-full bg-amber-400 shadow-lg shadow-amber-400/40" /> Goal</span>}
+                        <div className="flex items-center justify-center gap-3 mt-2 text-[8px] text-gray-500">
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400/70" /> Poor</span>
+                          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-400/70" /> Fair</span>
+                          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-cyan-400/70" /> Good</span>
+                          <span className="flex items-center gap-1"><span className="w-3.5 h-3.5 rounded-full bg-violet-400/80" /> Great</span>
+                          <span className="flex items-center gap-1"><span className="w-4 h-4 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" /> Peak</span>
                         </div>
                       </div>
                     ) : (
-                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">No timing data available</div>
+                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log sleep to see timing data</div>
                     )
                   ) : (
                     scopeFeelingData.length > 0 ? (
@@ -769,12 +801,23 @@ export function Recovery() {
                               <Cell key={idx} fill={`url(#typeDonutGrad${idx})`} filter="url(#glowDonut)" />
                             ))}
                           </Pie>
-                          <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '11px' }} />
-                          <text x="50%" y="47%" textAnchor="middle" fill="#d1d5db" fontSize={11} fontWeight={700}>
-                            {scopeFeelingData.length}
+                          <Tooltip content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null
+                            const data = payload[0].payload
+                            const total = scopeFeelingData.reduce((s, d) => s + d.count, 0)
+                            const pct = total > 0 ? Math.round((data.count / total) * 100) : 0
+                            return (
+                              <div className="bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-xl px-3 py-2 shadow-2xl">
+                                <p className="text-white font-bold text-[11px]">{data.feeling}</p>
+                                <p className="text-gray-400 text-[10px]">{data.count} entries · {pct}%</p>
+                              </div>
+                            )
+                          }} />
+                          <text x="50%" y="45%" textAnchor="middle" fill="#d1d5db" fontSize={13} fontWeight={700}>
+                            {scopeFeelingData.reduce((s, d) => s + d.count, 0)}
                           </text>
-                          <text x="50%" y="56%" textAnchor="middle" fill="#6b7280" fontSize={9} fontWeight={600}>
-                            feelings
+                          <text x="50%" y="55%" textAnchor="middle" fill="#6b7280" fontSize={8} fontWeight={600}>
+                            entries
                           </text>
                         </PieChart>
                       </ResponsiveContainer>
@@ -785,13 +828,13 @@ export function Recovery() {
                 </div>
 
                 {/* Stats strip - Premium Glass */}
-                {scopeWeek.some(d => d.hasData) && (
+                {(trendChartMode === 'timeline' ? scopeWeek.some(d => d.hasData || sleep.some(s => s.date === d.date)) : trendChartMode === 'types' ? scopeFeelingData.length > 0 : scopeWeek.some(d => d.hasData)) && (
                   <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
                     <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
                       {trendChartMode === 'volume' && (
                         <>
-                          <span>📊 Avg <span className={`font-semibold ${scopeAvg >= recoveryGoal ? 'text-emerald-400' : scopeAvg >= recoveryGoal * 0.7 ? 'text-amber-400' : 'text-rose-400'}`}>{scopeAvg}</span> / {recoveryGoal}</span>
+                          <span>📈 Avg <span className={`font-semibold ${scopeAvg >= recoveryGoal ? 'text-emerald-400' : scopeAvg >= recoveryGoal * 0.7 ? 'text-amber-400' : 'text-rose-400'}`}>{scopeAvg}</span> / {recoveryGoal}</span>
                           <span>🏆 Best <span className="text-emerald-400 font-semibold">{scopeBestDay.label}</span> <span className="text-gray-600">({scopeBestDay.readiness})</span></span>
                           <span>🎯 Hit <span className={`font-semibold ${scopeGoalMet >= 5 ? 'text-emerald-400' : scopeGoalMet >= 3 ? 'text-amber-400' : 'text-rose-400'}`}>{scopeGoalMet}/7</span></span>
                           {readinessPrediction && (
@@ -802,16 +845,23 @@ export function Recovery() {
                       {trendChartMode === 'timeline' && (
                         <>
                           {(() => {
-                            const peak = scopeWeek.filter(d => d.hasData).reduce((best, d) => d.readiness > best.readiness ? d : best, scopeWeek.find(d => d.hasData) || scopeWeek[0])
-                            return <span>⭐ Peak <span className="font-semibold text-cyan-400">{peak.label}</span> <span className="text-gray-600">({peak.readiness})</span></span>
+                            const scopeSleep = scopeWeek.map(d => ({ date: d.date, label: d.label, sleep: sleep.find(s => s.date === d.date) }))
+                            const withSleep = scopeSleep.filter(d => d.sleep)
+                            const avgQ = withSleep.length > 0 ? Math.round(withSleep.reduce((s, d) => s + d.sleep!.quality, 0) / withSleep.length * 10) / 10 : 0
+                            const best = withSleep.length > 0 ? withSleep.reduce((b, d) => d.sleep!.quality > (b.sleep?.quality ?? 0) ? d : b, withSleep[0]) : null
+                            return (
+                              <>
+                                <span>🌙 Avg Q <span className="font-semibold text-cyan-400">{avgQ > 0 ? avgQ : '--'}</span></span>
+                                {best && <span>⭐ Best <span className="font-semibold text-emerald-400">{best.label}</span> <span className="text-gray-600">(Q{best.sleep!.quality})</span></span>}
+                                <span>🕐 Nights <span className="font-semibold text-indigo-400">{withSleep.length}d</span> / 7d</span>
+                              </>
+                            )
                           })()}
-                          <span>🕐 Active <span className="font-semibold text-cyan-400">{scopeWeek.filter(d => d.hasData).length}d</span> / 7d</span>
-                          <span>📈 Avg <span className="font-semibold text-gray-300">{scopeAvg}</span></span>
                         </>
                       )}
                       {trendChartMode === 'types' && (
                         <>
-                          <span>🧃 Types <span className="font-semibold text-emerald-400">{scopeFeelingData.length}</span></span>
+                          <span>💚 Feelings <span className="font-semibold text-emerald-400">{scopeFeelingData.length}</span></span>
                           <span>⭐ Top <span className="font-semibold text-emerald-400">{scopeFeelingData.sort((a, b) => b.count - a.count)[0]?.feeling || '--'}</span> <span className="text-gray-600">({scopeFeelingData.length > 0 ? `${Math.round(scopeFeelingData.sort((a, b) => b.count - a.count)[0].count / scopeFeelingData.reduce((s, f) => s + f.count, 0) * 100)}%` : '--'})</span></span>
                           <span>📋 Entries <span className="font-semibold text-gray-300">{scopeFeelingData.reduce((s, f) => s + f.count, 0)}</span></span>
                         </>
