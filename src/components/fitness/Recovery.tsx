@@ -1126,26 +1126,24 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
                   )}
                 </div>
                 {todaySleep ? (
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-0.5">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-xl border border-indigo-500/10 bg-gradient-to-b from-indigo-500/[0.04] to-transparent p-2.5 flex items-center gap-1.5">
                       {[1,2,3,4,5].map(n => (
-                        <div key={n} className={`w-3 h-3 rounded-full transition-all ${n <= todaySleep.quality ? 'bg-indigo-400 shadow-[0_0_6px_rgba(129,140,248,0.6)]' : 'bg-white/[0.06] border border-white/[0.04]'}`} />
+                        <div key={n} className={`w-2.5 h-2.5 rounded-full transition-all ${n <= todaySleep.quality ? 'bg-indigo-400 shadow-[0_0_6px_rgba(129,140,248,0.6)]' : 'bg-white/[0.06] border border-white/[0.04]'}`} />
                       ))}
                     </div>
-                    <div className="h-6 w-px bg-white/[0.06]" />
-                    <div className="flex items-center gap-1 text-xs text-white font-bold">
-                      <span className="text-indigo-200">{todaySleep.duration}h</span>
-                      <span className="text-slate-600 font-normal">·</span>
-                      <span className="text-indigo-300">Q{todaySleep.quality}/5</span>
+                    <div className="rounded-xl border border-indigo-500/10 bg-gradient-to-b from-indigo-500/[0.04] to-transparent p-2.5 flex items-center gap-2">
+                      <div className="flex items-center gap-1 text-xs text-white font-bold">
+                        <span className="text-indigo-200">{todaySleep.duration}h</span>
+                        <span className="text-slate-600 font-normal">·</span>
+                        <span className="text-indigo-300">Q{todaySleep.quality}/5</span>
+                      </div>
                     </div>
                     {(todaySleep.bedTime && todaySleep.wakeTime) && (
-                      <>
-                        <div className="h-6 w-px bg-white/[0.06]" />
-                        <span className="text-[9px] text-slate-500 flex items-center gap-1">
-                          <Clock size={9} className="text-slate-600" />
-                          {todaySleep.bedTime} – {todaySleep.wakeTime}
-                        </span>
-                      </>
+                      <div className="rounded-xl border border-indigo-500/10 bg-gradient-to-b from-indigo-500/[0.04] to-transparent p-2.5 flex items-center gap-1.5">
+                        <Clock size={9} className="text-slate-500" />
+                        <span className="text-[9px] text-slate-500">{todaySleep.bedTime} – {todaySleep.wakeTime}</span>
+                      </div>
                     )}
                   </div>
                 ) : (
@@ -1201,62 +1199,64 @@ function BioSparkline({ data, color, height = 32 }: { data: number[]; color: str
               </div>
             {settings.enableProtocols && (
               <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-4">
                   <Activity size={12} className="text-purple-400" />
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Protocol & Notes</span>
                 </div>
-                <div>
+                <div className="rounded-xl border border-purple-500/10 bg-gradient-to-b from-purple-500/[0.03] to-transparent p-3">
                   <label className="text-[10px] text-slate-400 font-medium">Recovery Protocol</label>
                   <select value={formData.recoveryProtocol} onChange={e => setFormData(prev => ({ ...prev, recoveryProtocol: e.target.value }))}
-                    className="w-full mt-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:border-purple-500/50 focus:outline-none transition-all appearance-none">
+                    className="w-full mt-1.5 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:border-purple-500/50 focus:outline-none transition-all appearance-none">
                     <option value="" className="bg-slate-900">None</option>
                     {RECOVERY_PROTOCOLS.map(p => <option key={p} value={p} className="bg-slate-900">{p}</option>)}
                   </select>
                 </div>
-                <div className="mt-3">
+                <div className="mt-3 rounded-xl border border-purple-500/10 bg-gradient-to-b from-purple-500/[0.03] to-transparent p-3">
                   <label className="text-[10px] text-slate-400 font-medium">Quick Notes</label>
                   <input value={formData.notes} onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                     placeholder="Brief notes (e.g., 'Leg day was brutal')"
-                    className="w-full mt-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-purple-500/50 focus:outline-none transition-all" />
+                    className="w-full mt-1.5 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-purple-500/50 focus:outline-none transition-all" />
                 </div>
                 {settings.showJournal && (
-                  <div className="mt-3">
+                  <div className="mt-3 rounded-xl border border-purple-500/10 bg-gradient-to-b from-purple-500/[0.03] to-transparent p-3">
                     <label className="text-[10px] text-slate-400 font-medium">Recovery Journal</label>
                     <textarea value={formData.journal} onChange={e => setFormData(prev => ({ ...prev, journal: e.target.value }))}
                       placeholder="Write a longer reflection on your recovery today..."
-                      rows={3} className="w-full mt-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-purple-500/50 focus:outline-none transition-all resize-none" />
+                      rows={3} className="w-full mt-1.5 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-purple-500/50 focus:outline-none transition-all resize-none" />
                   </div>
                 )}
               </div>
             )}
             {!settings.enableProtocols && (
               <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-4">
                   <Activity size={12} className="text-purple-400" />
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Notes</span>
                 </div>
-                <div>
+                <div className="rounded-xl border border-purple-500/10 bg-gradient-to-b from-purple-500/[0.03] to-transparent p-3">
                   <label className="text-[10px] text-slate-400 font-medium">Quick Notes</label>
                   <input value={formData.notes} onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                     placeholder="Brief notes (e.g., 'Leg day was brutal')"
-                    className="w-full mt-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-purple-500/50 focus:outline-none transition-all" />
+                    className="w-full mt-1.5 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-purple-500/50 focus:outline-none transition-all" />
                 </div>
                 {settings.showJournal && (
-                  <div className="mt-3">
+                  <div className="mt-3 rounded-xl border border-purple-500/10 bg-gradient-to-b from-purple-500/[0.03] to-transparent p-3">
                     <label className="text-[10px] text-slate-400 font-medium">Recovery Journal</label>
                     <textarea value={formData.journal} onChange={e => setFormData(prev => ({ ...prev, journal: e.target.value }))}
                       placeholder="Write a longer reflection on your recovery today..."
-                      rows={3} className="w-full mt-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-purple-500/50 focus:outline-none transition-all resize-none" />
+                      rows={3} className="w-full mt-1.5 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 text-sm focus:border-purple-500/50 focus:outline-none transition-all resize-none" />
                   </div>
                 )}
               </div>
             )}
-            <div className="flex gap-3 pt-2">
-              <motion.button onClick={() => setShowForm(false)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all text-sm font-bold">Cancel</motion.button>
-              <motion.button onClick={saveEntry} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500/20 to-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:from-emerald-500/30 hover:to-emerald-500/20 transition-all text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/5"><Heart size={16} /> Save Entry</motion.button>
+            <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-3">
+              <div className="flex gap-3">
+                <motion.button onClick={() => setShowForm(false)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all text-sm font-bold">Cancel</motion.button>
+                <motion.button onClick={saveEntry} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500/20 to-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:from-emerald-500/30 hover:to-emerald-500/20 transition-all text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/5"><Heart size={16} /> Save Entry</motion.button>
               </div>
+            </div>
             </div>
           </motion.div>
         </motion.div>
