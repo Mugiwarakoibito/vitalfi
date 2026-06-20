@@ -165,7 +165,7 @@ export function Recovery() {
     return { value: Math.max(0, Math.min(100, predicted + adjustment)), confidence }
   }, [recentWeek, todayEntry])
 
-  const coachInsights = useMemo(() => {
+  const coachTips = useMemo(() => {
     const tips: { icon: string; text: string; color: string; category: string }[] = []
     if (coachPref === 'performance') {
       tips.push({ icon: '\u26A1', text: 'Performance focus active. Emphasize training readiness, peak energy days, and pushing your limits.', color: 'text-amber-400', category: 'focus' })
@@ -555,7 +555,7 @@ export function Recovery() {
                   <TrendingUp className="w-3 h-3 text-violet-400" />
                   <span className="text-[10px] text-gray-400">Quality Trend</span>
                 </div>
-                {sortedEntries.length < 2 ? (
+                {sortedEntries.length === 0 ? (
                   <>
                     <p className="text-sm font-bold text-gray-500 drop-shadow-lg">Log to begin</p>
                     <p className="text-[10px] text-gray-500 mt-0.5">Track recovery to see trends</p>
@@ -565,12 +565,12 @@ export function Recovery() {
                   const first = sortedEntries.slice(0, half)
                   const last = sortedEntries.slice(half)
                   const firstAvg = first.reduce((s, e) => s + getReadiness(e.energy, e.soreness, e.stress, e.mood).score, 0) / first.length
-                  const lastAvg = last.reduce((s, e) => s + getReadiness(e.energy, e.soreness, e.stress, e.mood).score, 0) / last.length
+                  const lastAvg = last.length > 0 ? last.reduce((s, e) => s + getReadiness(e.energy, e.soreness, e.stress, e.mood).score, 0) / last.length : 50
                   const diff = Math.round((firstAvg - lastAvg) * 10) / 10
                   if (Math.abs(diff) < 3) return (
                     <>
                       <p className="text-sm font-bold text-gray-400 drop-shadow-lg">Stable —</p>
-                      <p className="text-[10px] text-gray-500 mt-0.5">Avg {Math.round(lastAvg)} readiness</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Avg {Math.round(firstAvg)} readiness</p>
                     </>
                   )
                   return (
@@ -591,10 +591,10 @@ export function Recovery() {
             <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
               <div className="flex items-center gap-1.5 mb-2">
                 <Sparkles className="w-3 h-3 text-emerald-400" />
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/70">AI INSIGHTS</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/70">AI TIPS</span>
               </div>
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                {coachInsights.slice(0, 3).map((tip, i) => (
+                {coachTips.slice(0, 3).map((tip, i) => (
                   <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
                     className="flex items-start gap-2 text-xs">
                     <span className="flex-shrink-0">{tip.icon}</span>
