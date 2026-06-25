@@ -322,16 +322,12 @@ export function SleepLogger() {
       d.setDate(d.getDate() - (i + trendWeekOffset * 7))
       const dateStr = _toLocalDate(d)
       const dateStrUTC = d.toISOString().split('T')[0]
-      const dateNext = new Date(d); dateNext.setDate(dateNext.getDate() + 1)
-      const dateStrNextUTC = dateNext.toISOString().split('T')[0]
-      const entry = sleep.find(e => e.date === dateStr || e.date === dateStrUTC || e.date === dateStrNextUTC)
+      const entry = sleep.find(e => e.date === dateStr || e.date === dateStrUTC)
       const prev = new Date(today)
       prev.setDate(prev.getDate() - (i + 7 + trendWeekOffset * 7))
       const prevStr = _toLocalDate(prev)
       const prevStrUTC = prev.toISOString().split('T')[0]
-      const prevNext = new Date(prev); prevNext.setDate(prevNext.getDate() + 1)
-      const prevStrNextUTC = prevNext.toISOString().split('T')[0]
-      const prevEntry = sleep.find(e => e.date === prevStr || e.date === prevStrUTC || e.date === prevStrNextUTC)
+      const prevEntry = sleep.find(e => e.date === prevStr || e.date === prevStrUTC)
       days.push({
         date: d.toLocaleDateString('en-US', { weekday: 'short' }),
         fullDate: dateStr,

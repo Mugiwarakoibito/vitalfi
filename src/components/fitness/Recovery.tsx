@@ -59,8 +59,6 @@ function findSleep<T extends {date: string}>(sleep: T[], dateStr: string, dateOb
   const d = dateObj || new Date(dateStr + 'T12:00:00')
   if (d && !isNaN(d.getTime())) {
     candidates.add(d.toISOString().split('T')[0])
-    const next = new Date(d); next.setDate(next.getDate() + 1)
-    candidates.add(next.toISOString().split('T')[0])
   }
   return sleep.find(s => candidates.has(s.date))
 }
@@ -699,77 +697,96 @@ export function Recovery() {
                   <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
                   <div className="relative z-10 h-full">
                     {trendChartMode === 'volume' ? (
-                      scopeWeek.some(d => d.hasData) ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={scopeWeek.filter(d => d.hasData).map((d, i, arr) => ({ ...d, delta: i > 0 ? d.readiness - arr[i - 1].readiness : null }))} barGap={8} barCategoryGap="35%">
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
-                            <XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} dy={5} />
-                            <YAxis tick={{ fill: '#4b5563', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} domain={[0, 100]} tickFormatter={v => `${v}`} width={24} />
-                            <Tooltip content={({ active, payload }) => {
-                              if (!active || !payload?.length) return null
-                              const d = payload[0].payload
-                              const r = getReadiness(d.energy, d.soreness, d.stress, d.mood)
-                              return (
-                                <motion.div initial={{ opacity: 0, y: 4, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                  className="bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 text-[11px] shadow-2xl leading-relaxed min-w-[180px]">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-2.5 h-2.5 rounded-full shadow-lg" style={{ backgroundColor: r.color, boxShadow: `0 0 8px ${r.color}` }} />
-                                      <span className="text-white font-bold text-xs">{d.label === 'Today' ? 'Today' : d.label}</span>
+                      (() => {
+                        const hasData = scopeWeek.some(d => d.hasData)
+                        if (!hasData) {
+                          return (
+                            <div className="h-full flex items-center justify-center text-gray-500 text-sm">No recovery data this week</div>
+                          )
+                        }
+                        const volumeData = scopeWeek.filter(d => d.hasData).map((d, i, arr) => ({ ...d, delta: i > 0 ? d.readiness - arr[i - 1].readiness : null }))
+                        return (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={volumeData} barGap={6} barCategoryGap="30%">
+                              <defs>
+                                {volumeData.map((entry, idx) => {
+                                  const isGoal = entry.readiness >= recoveryGoal
+                                  return (
+                                    <linearGradient key={idx} id={`readinessBarGrad${idx}`} x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor={isGoal ? '#34d399' : '#818cf8'} stopOpacity={isGoal ? 0.95 : 0.9} />
+                                      <stop offset="50%" stopColor={isGoal ? '#10b981' : '#6366f1'} stopOpacity={isGoal ? 0.85 : 0.75} />
+                                      <stop offset="100%" stopColor={isGoal ? '#059669' : '#4f46e5'} stopOpacity={0.1} />
+                                    </linearGradient>
+                                  )
+                                })}
+                                <linearGradient id="readinessRefLine" x1="0" y1="0" x2="1" y2="0">
+                                  <stop offset="0%" stopColor="#c084fc" stopOpacity={0} />
+                                  <stop offset="50%" stopColor="#c084fc" stopOpacity={0.8} />
+                                  <stop offset="100%" stopColor="#c084fc" stopOpacity={0} />
+                                </linearGradient>
+                                <filter id="readinessGlow"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
+                              <XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} dy={5} />
+                              <YAxis tick={{ fill: '#4b5563', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} domain={[0, 100]} tickFormatter={v => `${v}`} width={24} />
+                              <Tooltip content={({ active, payload }) => {
+                                if (!active || !payload?.length) return null
+                                const d = payload[0].payload
+                                const r = getReadiness(d.energy, d.soreness, d.stress, d.mood)
+                                return (
+                                  <motion.div initial={{ opacity: 0, y: 4, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    className="bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 text-[11px] shadow-2xl leading-relaxed min-w-[180px]">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-2.5 h-2.5 rounded-full shadow-lg" style={{ backgroundColor: r.color, boxShadow: `0 0 8px ${r.color}` }} />
+                                        <span className="text-white font-bold text-xs">{d.label === 'Today' ? 'Today' : d.label}</span>
+                                      </div>
+                                      <span className="font-bold text-sm" style={{ color: r.color }}>{r.score}</span>
                                     </div>
-                                    <span className="font-bold text-sm" style={{ color: r.color }}>{r.score}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2 mb-2.5">
-                                    <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border" style={{ backgroundColor: `${r.color}20`, color: r.color, borderColor: `${r.color}30` }}>{r.label}</span>
-                                    {d.delta !== null && (
-                                      <span className={`text-[9px] ${d.delta > 0 ? 'text-emerald-400' : d.delta < 0 ? 'text-rose-400' : 'text-gray-500'}`}>
-                                        {d.delta > 0 ? '↑' : d.delta < 0 ? '↓' : '→'} {d.delta > 0 ? '+' : ''}{d.delta} yesterday
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    {[
-                                      { label: 'Energy', value: d.energy, max: 10, color: '#f59e0b' },
-                                      { label: 'Soreness', value: d.soreness, max: 10, color: '#ef4444', invert: true },
-                                      { label: 'Stress', value: d.stress, max: 10, color: '#a855f7', invert: true },
-                                      { label: 'Mood', value: d.mood, max: 5, color: '#10b981' },
-                                    ].map(m => {
-                                      const pct = m.invert ? (1 - m.value / m.max) * 100 : (m.value / m.max) * 100
-                                      return (
-                                        <div key={m.label} className="flex items-center gap-2">
-                                          <span className="text-gray-500 w-11 text-[9px]">{m.label}</span>
-                                          <div className="flex-1 h-1 rounded-full bg-white/5 overflow-hidden">
-                                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: m.color, opacity: 0.7 }} />
+                                    <div className="flex items-center gap-2 mb-2.5">
+                                      <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border" style={{ backgroundColor: `${r.color}20`, color: r.color, borderColor: `${r.color}30` }}>{r.label}</span>
+                                      {d.delta !== null && (
+                                        <span className={`text-[9px] ${d.delta > 0 ? 'text-emerald-400' : d.delta < 0 ? 'text-rose-400' : 'text-gray-500'}`}>
+                                          {d.delta > 0 ? '↑' : d.delta < 0 ? '↓' : '→'} {d.delta > 0 ? '+' : ''}{d.delta} yesterday
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      {[
+                                        { label: 'Energy', value: d.energy, max: 10, color: '#f59e0b' },
+                                        { label: 'Soreness', value: d.soreness, max: 10, color: '#ef4444', invert: true },
+                                        { label: 'Stress', value: d.stress, max: 10, color: '#a855f7', invert: true },
+                                        { label: 'Mood', value: d.mood, max: 5, color: '#10b981' },
+                                      ].map(m => {
+                                        const pct = m.invert ? (1 - m.value / m.max) * 100 : (m.value / m.max) * 100
+                                        return (
+                                          <div key={m.label} className="flex items-center gap-2">
+                                            <span className="text-gray-500 w-11 text-[9px]">{m.label}</span>
+                                            <div className="flex-1 h-1 rounded-full bg-white/5 overflow-hidden">
+                                              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: m.color, opacity: 0.7 }} />
+                                            </div>
+                                            <span className="text-white font-semibold w-4 text-right text-[10px]">{m.value}</span>
                                           </div>
-                                          <span className="text-white font-semibold w-4 text-right text-[10px]">{m.value}</span>
-                                        </div>
-                                      )
-                                    })}
-                                  </div>
-                                  <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[9px] text-gray-500">
-                                    <span>Goal: {recoveryGoal}</span>
-                                    {d.delta !== null && <span>{d.delta > 0 ? 'Improving ↗' : d.delta < 0 ? 'Declining ↘' : 'Stable →'}</span>}
-                                  </div>
-                                </motion.div>
-                              )
-                            }} cursor={{ fill: 'rgba(139,92,246,0.08)', radius: 6 }} />
-                            <defs>
-                              <linearGradient id="barGoal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#34d399" stopOpacity={1} /><stop offset="50%" stopColor="#10b981" stopOpacity={0.85} /><stop offset="100%" stopColor="#059669" stopOpacity={0.1} /></linearGradient>
-                              <linearGradient id="barMiss" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#818cf8" stopOpacity={0.9} /><stop offset="50%" stopColor="#6366f1" stopOpacity={0.75} /><stop offset="100%" stopColor="#4f46e5" stopOpacity={0.08} /></linearGradient>
-                              <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#c084fc" stopOpacity={0} /><stop offset="50%" stopColor="#c084fc" stopOpacity={1} /><stop offset="100%" stopColor="#c084fc" stopOpacity={0} /></linearGradient>
-                              <filter id="glow"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                            </defs>
-                            <ReferenceLine y={recoveryGoal} stroke="url(#lineGrad)" strokeWidth={2} strokeDasharray="6 4" label={{ value: `🎯 ${recoveryGoal}`, fill: '#c084fc', fontSize: 10, fontWeight: 800, position: 'right' }} />
-                            <Bar dataKey="readiness" radius={[8, 8, 0, 0]} maxBarSize={32} animationDuration={800} animationEasing="ease-out">
-                              {scopeWeek.filter(d => d.hasData).map((entry, idx) => (
-                                <Cell key={idx} fill={entry.readiness >= recoveryGoal ? 'url(#barGoal)' : 'url(#barMiss)'} filter={entry.readiness >= recoveryGoal ? 'url(#glow)' : undefined} />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="h-full flex items-center justify-center text-gray-500 text-sm">No recovery data this week</div>
-                      )
+                                        )
+                                      })}
+                                    </div>
+                                    <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[9px] text-gray-500">
+                                      <span>Goal: {recoveryGoal}</span>
+                                      {d.delta !== null && <span>{d.delta > 0 ? 'Improving ↗' : d.delta < 0 ? 'Declining ↘' : 'Stable →'}</span>}
+                                    </div>
+                                  </motion.div>
+                                )
+                              }} cursor={{ fill: 'rgba(139,92,246,0.08)', radius: 6 }} />
+                              <ReferenceLine y={recoveryGoal} stroke="url(#readinessRefLine)" strokeWidth={2} strokeDasharray="6 4" label={{ value: `🎯 ${recoveryGoal}`, fill: '#c084fc', fontSize: 10, fontWeight: 800, position: 'right' }} />
+                              <Bar dataKey="readiness" radius={[8, 8, 0, 0]} maxBarSize={36} animationDuration={800} animationEasing="ease-out">
+                                {volumeData.map((entry, idx) => (
+                                  <Cell key={idx} fill={`url(#readinessBarGrad${idx})`} filter={entry.readiness >= recoveryGoal ? 'url(#readinessGlow)' : undefined} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        )
+                      })()
                     ) : trendChartMode === 'timeline' ? (
                       (() => {
                         const hasAnySleep = scopeWeek.some(d => d.sleepEntry)
