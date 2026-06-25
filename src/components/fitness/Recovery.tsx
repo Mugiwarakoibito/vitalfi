@@ -122,7 +122,7 @@ export function Recovery() {
   const recentWeek = useMemo(() => getWeekDays(7, entries), [entries, targetDate, today])
 
   const scopeWeek = useMemo(() => {
-    const days: { date: string; label: string; readiness: number; sleepQuality: number; hasData: boolean; fullDate: string; sleepEntry: typeof sleep[0] | undefined }[] = []
+    const days: { date: string; label: string; readiness: number; energy: number; soreness: number; stress: number; mood: number; sleepQuality: number; hasData: boolean; fullDate: string; sleepEntry: typeof sleep[0] | undefined }[] = []
     for (let i = 6; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i + scopeOffset * 7)
       const ds = toLocalDate(d)
@@ -130,7 +130,9 @@ export function Recovery() {
       const readiness = entry ? getReadiness(entry.energy, entry.soreness, entry.stress, entry.mood).score : 0
       days.push({
         date: ds, label: i === 0 && scopeOffset === 0 ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' }),
-        readiness, sleepQuality: entry?.sleepQuality || 0, hasData: !!entry, fullDate: ds,
+        readiness,
+        energy: entry?.energy ?? 0, soreness: entry?.soreness ?? 0, stress: entry?.stress ?? 0, mood: entry?.mood ?? 0,
+        sleepQuality: entry?.sleepQuality || 0, hasData: !!entry, fullDate: ds,
         sleepEntry: findSleep(sleep, ds, d),
       })
     }
