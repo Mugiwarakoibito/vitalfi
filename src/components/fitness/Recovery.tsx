@@ -927,12 +927,14 @@ export function Recovery() {
                                     </motion.div>
                                   )
                                 }} />
-                                <text x="50%" y="46%" textAnchor="middle" fill="#e5e7eb" fontSize={18} fontWeight={800}>
-                                  {scopeFeelingData.reduce((s, d) => s + d.count, 0)}
-                                </text>
-                                <text x="50%" y="55%" textAnchor="middle" fill="#6b7280" fontSize={9} fontWeight={600}>
-                                  entries
-                                </text>
+                                {(() => {
+                                  const feelings = scopeWeek.filter(d => d.hasData).map(d => entries.find(e => e.date === d.date)?.recoveryFeeling).filter(Boolean) as number[]
+                                  const avg = feelings.length > 0 ? (feelings.reduce((a, b) => a + b, 0) / feelings.length) : 0
+                                  return (<>
+                                    <text x="50%" y="44%" textAnchor="middle" fill="#e5e7eb" fontSize={22} fontWeight={800}>{avg.toFixed(1)}</text>
+                                    <text x="50%" y="55%" textAnchor="middle" fill="#6b7280" fontSize={9} fontWeight={600}>/ 5 · {Math.round(avg / 5 * 100)}%</text>
+                                  </>)
+                                })()}
                               </PieChart>
                             </ResponsiveContainer>
                           </div>
@@ -990,8 +992,14 @@ export function Recovery() {
                       )}
                       {trendChartMode === 'types' && (
                         <>
-                          <span>💚 Feelings <span className="font-semibold text-emerald-400">{scopeFeelingData.length}</span></span>
-                          <span>⭐ Top <span className="font-semibold text-emerald-400">{scopeFeelingData.sort((a, b) => b.count - a.count)[0]?.feeling || '--'}</span> <span className="text-gray-600">({scopeFeelingData.length > 0 ? `${Math.round(scopeFeelingData.sort((a, b) => b.count - a.count)[0].count / scopeFeelingData.reduce((s, f) => s + f.count, 0) * 100)}%` : '--'})</span></span>
+                          {(() => {
+                            const feelings = scopeWeek.filter(d => d.hasData).map(d => entries.find(e => e.date === d.date)?.recoveryFeeling).filter(Boolean) as number[]
+                            const avg = feelings.length > 0 ? (feelings.reduce((a, b) => a + b, 0) / feelings.length) : 0
+                            return (<>
+                              <span>💚 Avg <span className="font-semibold text-emerald-400">{avg.toFixed(1)}</span> <span className="text-gray-600">/ 5 ({Math.round(avg / 5 * 100)}%)</span></span>
+                            </>)
+                          })()}
+                          <span>⭐ Top <span className="font-semibold text-emerald-400">{scopeFeelingData.sort((a, b) => b.count - a.count)[0]?.feeling || '--'}</span></span>
                           <span>📋 Entries <span className="font-semibold text-gray-300">{scopeFeelingData.reduce((s, f) => s + f.count, 0)}</span></span>
                         </>
                       )}
