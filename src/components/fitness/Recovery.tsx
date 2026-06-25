@@ -54,6 +54,17 @@ function getReadiness(energy: number, soreness: number, stress: number, mood: nu
 const STORAGE_KEY = 'vitalfi_recovery_entries'
 const SETTINGS_KEY = 'vitalfi_recovery_settings'
 
+function findSleep<T extends {date: string}>(sleep: T[], dateStr: string, dateObj?: Date): T | undefined {
+  const candidates = new Set([dateStr])
+  const d = dateObj || new Date(dateStr + 'T12:00:00')
+  if (d && !isNaN(d.getTime())) {
+    candidates.add(d.toISOString().split('T')[0])
+    const next = new Date(d); next.setDate(next.getDate() + 1)
+    candidates.add(next.toISOString().split('T')[0])
+  }
+  return sleep.find(s => candidates.has(s.date))
+}
+
 function loadEntries(): RecoveryEntry[] {
   try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : [] } catch { return [] }
 }
@@ -88,7 +99,7 @@ export function Recovery() {
 
   const today = toLocalDate(new Date())
   const todayEntry = useMemo(() => entries.find(e => e.date === targetDate), [entries, targetDate])
-  const todaySleep = useMemo(() => sleep.find(s => s.date === targetDate), [sleep, targetDate])
+  const todaySleep = useMemo(() => findSleep(sleep, targetDate), [sleep, targetDate])
   const todayReadiness = useMemo(() => {
     if (!todayEntry) return null
     return getReadiness(todayEntry.energy, todayEntry.soreness, todayEntry.stress, todayEntry.mood)
@@ -122,7 +133,7 @@ export function Recovery() {
       days.push({
         date: ds, label: i === 0 && scopeOffset === 0 ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' }),
         readiness, sleepQuality: entry?.sleepQuality || 0, hasData: !!entry, fullDate: ds,
-        sleepEntry: sleep.find(s => s.date === ds),
+        sleepEntry: findSleep(sleep, ds, d),
       })
     }
     return days
@@ -1035,7 +1046,7 @@ export function Recovery() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
-                        <motion.button onClick={(e) => { e.stopPropagation(); const s = sleep.find(s => s.date === entry.date); setFormData({ energy: entry.energy, soreness: entry.soreness, stress: entry.stress, mood: entry.mood, sleepQuality: entry.sleepQuality, sleepHours: entry.sleepHours?.toString() || s?.duration?.toString() || '', recoveryFeeling: entry.recoveryFeeling || 3, domsAreas: entry.domsAreas, domsSeverity: entry.domsSeverity || {}, notes: entry.notes || '' }); setShowForm(true) }}
+                        <motion.button onClick={(e) => { e.stopPropagation(); const s = findSleep(sleep, entry.date); setFormData({ energy: entry.energy, soreness: entry.soreness, stress: entry.stress, mood: entry.mood, sleepQuality: entry.sleepQuality, sleepHours: entry.sleepHours?.toString() || s?.duration?.toString() || '', recoveryFeeling: entry.recoveryFeeling || 3, domsAreas: entry.domsAreas, domsSeverity: entry.domsSeverity || {}, notes: entry.notes || '' }); setShowForm(true) }}
                           className="p-2 rounded-lg text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all opacity-0 group-hover:opacity-100">
                           <Pencil className="w-4 h-4" />
                         </motion.button>

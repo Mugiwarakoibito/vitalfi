@@ -321,11 +321,13 @@ export function SleepLogger() {
       const d = new Date(today)
       d.setDate(d.getDate() - (i + trendWeekOffset * 7))
       const dateStr = _toLocalDate(d)
-      const entry = sleep.find(e => e.date === dateStr)
+      const dateStrUTC = d.toISOString().split('T')[0]
+      const entry = sleep.find(e => e.date === dateStr || e.date === dateStrUTC)
       const prev = new Date(today)
       prev.setDate(prev.getDate() - (i + 7 + trendWeekOffset * 7))
       const prevStr = _toLocalDate(prev)
-      const prevEntry = sleep.find(e => e.date === prevStr)
+      const prevStrUTC = prev.toISOString().split('T')[0]
+      const prevEntry = sleep.find(e => e.date === prevStr || e.date === prevStrUTC)
       days.push({
         date: d.toLocaleDateString('en-US', { weekday: 'short' }),
         fullDate: dateStr,
