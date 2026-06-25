@@ -14,7 +14,8 @@ interface SleepFormProps {
 export function SleepForm({ isOpen, onClose, onSave }: SleepFormProps) {
   const [duration, setDuration] = useState('8')
   const [quality, setQuality] = useState('3')
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const _toLocalDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const [date, setDate] = useState(_toLocalDate(new Date()))
 
   const handleSave = async () => {
     const entry: SleepEntry = {

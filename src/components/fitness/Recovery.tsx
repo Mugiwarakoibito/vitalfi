@@ -25,10 +25,13 @@ const MUSCLE_AREAS = [
   'Core', 'Quads', 'Hamstrings', 'Glutes', 'Calves',
 ]
 
+const toLocalDate = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
 function getStreak(entries: RecoveryEntry[]): number {
   let streak = 0; const d = new Date()
   while (streak < 365) {
-    const ds = d.toISOString().split('T')[0]
+    const ds = toLocalDate(d)
     if (!entries.find(e => e.date === ds)) break
     streak++; d.setDate(d.getDate() - 1)
   }
@@ -74,7 +77,7 @@ export function Recovery() {
   const [showSettings, setShowSettings] = useState(false)
   const [showCoachPref, setShowCoachPref] = useState(false)
   const [coachPref, setCoachPref] = useState<'performance' | 'recovery' | 'balanced'>('balanced')
-  const [targetDate, setTargetDate] = useState(new Date().toISOString().split('T')[0])
+  const [targetDate, setTargetDate] = useState(toLocalDate(new Date()))
   const [recoveryGoal, setRecoveryGoal] = useState(() => {
     const saved = localStorage.getItem(SETTINGS_KEY)
     return saved ? parseInt(saved) : 70
@@ -83,7 +86,7 @@ export function Recovery() {
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)) }, [entries])
   useEffect(() => { localStorage.setItem(SETTINGS_KEY, recoveryGoal.toString()) }, [recoveryGoal])
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = toLocalDate(new Date())
   const todayEntry = useMemo(() => entries.find(e => e.date === targetDate), [entries, targetDate])
   const todaySleep = useMemo(() => sleep.find(s => s.date === targetDate), [sleep, targetDate])
   const todayReadiness = useMemo(() => {
@@ -95,7 +98,7 @@ export function Recovery() {
     const days: { date: string; label: string; readiness: number; energy: number; soreness: number; stress: number; mood: number; sleepQuality: number }[] = []
     for (let i = daysBack - 1; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i)
-      const ds = d.toISOString().split('T')[0]
+      const ds = toLocalDate(d)
       const entry = entriesList.find(e => e.date === ds)
       days.push({
         date: ds, label: i === 0 && targetDate === today ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' }),
@@ -113,7 +116,7 @@ export function Recovery() {
     const days: { date: string; label: string; readiness: number; sleepQuality: number; hasData: boolean; fullDate: string; sleepEntry: typeof sleep[0] | undefined }[] = []
     for (let i = 6; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i + scopeOffset * 7)
-      const ds = d.toISOString().split('T')[0]
+      const ds = toLocalDate(d)
       const entry = entries.find(e => e.date === ds)
       const readiness = entry ? getReadiness(entry.energy, entry.soreness, entry.stress, entry.mood).score : 0
       days.push({
@@ -147,7 +150,7 @@ export function Recovery() {
     const days: number[] = []
     for (let i = 13; i >= 7; i--) {
       const d = new Date(); d.setDate(d.getDate() - i)
-      const ds = d.toISOString().split('T')[0]
+      const ds = toLocalDate(d)
       const entry = entries.find(e => e.date === ds)
       if (entry) days.push(getReadiness(entry.energy, entry.soreness, entry.stress, entry.mood).score)
     }
@@ -270,13 +273,10 @@ export function Recovery() {
     })
   }
 
-  const formatDate = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-
   const navigateDate = (dir: number) => {
     const d = new Date(targetDate)
     d.setDate(d.getDate() + dir)
-    setTargetDate(formatDate(d))
+    setTargetDate(toLocalDate(d))
   }
 
   const isToday = targetDate === today
@@ -323,7 +323,7 @@ export function Recovery() {
             <ChevronRight className="w-5 h-5" />
           </button>
           {!isToday && (
-            <button onClick={() => setTargetDate(formatDate(new Date()))} className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all" title="Jump to today">
+            <button onClick={() => setTargetDate(toLocalDate(new Date()))} className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all" title="Jump to today">
               <RotateCcw className="w-4 h-4" />
             </button>
           )}
@@ -760,59 +760,76 @@ export function Recovery() {
                         <div className="h-full flex items-center justify-center text-gray-500 text-sm">No recovery data this week</div>
                       )
                     ) : trendChartMode === 'timeline' ? (
-                      scopeWeek.some(d => d.hasData || d.sleepEntry) ? (
-                        <div className="flex flex-col gap-1.5 h-full">
-                          {scopeWeek.map((d) => {
-                            const se = d.sleepEntry
-                            const hasSleep = !!se
-                            const q = se?.quality ?? 0
-                            const dur = se?.duration ?? 0
-                            const qColors = ['#ef4444', '#f59e0b', '#38bdf8', '#a855f7', '#10b981']
-                            const feelMap: Record<string, string> = { refreshed: '😊', tired: '😴', groggy: '😵', foggy: '🌫️' }
-                            return (
-                              <div key={d.date}
-                                className={`flex items-center gap-2.5 text-[10px] px-2.5 py-1.5 rounded-xl transition-all duration-200 ${
-                                  hasSleep
-                                    ? 'bg-white/[0.03] border border-white/[0.04] hover:bg-white/[0.05] hover:border-white/[0.08]'
-                                    : d.hasData
-                                      ? 'bg-white/[0.01] border border-white/[0.02]'
-                                      : 'opacity-40'
-                                }`}
-                                style={hasSleep ? { borderLeftColor: qColors[q - 1], borderLeftWidth: '2px' } : {}}>
-                                <span className={`w-7 font-bold ${hasSleep ? 'text-gray-300' : d.hasData ? 'text-gray-600' : 'text-gray-700'}`}>
-                                  {d.label === 'Today' && scopeOffset === 0 ? 'Now' : d.label.slice(0, 3)}
-                                </span>
-                                {hasSleep ? (
-                                  <div className="flex items-center gap-2.5 flex-1">
-                                    <div className="w-7 h-7 rounded-xl flex items-center justify-center text-[11px] font-extrabold text-white shadow-lg" style={{ backgroundColor: qColors[q - 1], boxShadow: `0 0 12px ${qColors[q - 1]}40` }}>
-                                      {q}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                                        <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(dur / 12 * 100, 100)}%` }}
-                                          className="h-full rounded-full" style={{ backgroundColor: qColors[q - 1], opacity: 0.7 }} />
+                      (() => {
+                        const hasAnySleep = scopeWeek.some(d => d.sleepEntry)
+                        if (!hasAnySleep) {
+                          return (
+                            <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log sleep to see timing data</div>
+                          )
+                        }
+                        const qColors = ['#ef4444', '#f59e0b', '#38bdf8', '#a855f7', '#10b981']
+                        const feelMap: Record<string, string> = { refreshed: '😊', tired: '😴', groggy: '😵', foggy: '🌫️' }
+                        return (
+                          <div className="flex flex-col gap-1 overflow-y-auto h-full pr-0.5 custom-scrollbar">
+                            {scopeWeek.map((d, idx) => {
+                              const se = d.sleepEntry
+                              const hasSleep = !!se
+                              const q = se?.quality ?? 0
+                              const dur = se?.duration ?? 0
+                              const hitGoal = dur >= 7
+                              return (
+                                <motion.div key={d.date}
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: idx * 0.04, duration: 0.25 }}
+                                  className={`flex items-center gap-2 text-[10px] px-2.5 py-1 rounded-xl transition-all duration-200 ${
+                                    hasSleep
+                                      ? 'bg-white/[0.03] border border-white/[0.04] hover:bg-white/[0.06] hover:border-white/[0.08] hover:scale-[1.005] cursor-default'
+                                      : d.hasData
+                                        ? 'bg-white/[0.01] border border-white/[0.02]'
+                                        : 'opacity-35'
+                                  }`}
+                                  style={hasSleep ? { borderLeft: `2.5px solid ${qColors[q - 1]}`, boxShadow: `inset 0 0 20px ${qColors[q - 1]}06` } : {}}>
+                                  <span className={`w-8 font-semibold ${hasSleep ? 'text-gray-300' : d.hasData ? 'text-gray-600' : 'text-gray-700'}`}>
+                                    {d.label === 'Today' && scopeOffset === 0 ? 'Now' : d.label.slice(0, 3)}
+                                  </span>
+                                  {hasSleep ? (
+                                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                      <div className="w-6 h-6 shrink-0 rounded-xl flex items-center justify-center text-[10px] font-extrabold text-white transition-all duration-300 hover:scale-110"
+                                        style={{ backgroundColor: qColors[q - 1], boxShadow: `0 0 16px ${qColors[q - 1]}50` }}>
+                                        {q}
                                       </div>
+                                      <div className="flex-1 min-w-0 relative">
+                                        <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                                          <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(dur / 12 * 100, 100)}%` }}
+                                            className="h-full rounded-full" style={{ backgroundColor: qColors[q - 1], opacity: 0.65 }} />
+                                        </div>
+                                        <div className="absolute left-0 right-0 top-0 bottom-0 pointer-events-none">
+                                          <div className="absolute h-full w-px bg-emerald-500/30" style={{ left: `${(7 / 12) * 100}%` }} />
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        <span className="text-gray-300 font-semibold w-6 text-right">{dur.toFixed(1)}</span>
+                                        {hitGoal && <span className="text-emerald-400/70 text-[9px]">✓</span>}
+                                      </div>
+                                      {se?.bedTime && se?.wakeTime ? (
+                                        <span className="text-gray-500 bg-white/[0.04] rounded-lg px-1.5 py-0.5 text-[7px] font-medium tracking-wide border border-white/[0.04] shrink-0">{se.bedTime}–{se.wakeTime}</span>
+                                      ) : (
+                                        <span className="w-12 shrink-0" />
+                                      )}
+                                      {se?.morningFeel && <span className="text-[11px] shrink-0">{feelMap[se.morningFeel] || ''}</span>}
                                     </div>
-                                    <span className="text-gray-400 font-semibold w-7 text-right">{dur}h</span>
-                                    {se?.bedTime && se?.wakeTime ? (
-                                      <span className="text-gray-600 bg-white/[0.04] rounded-lg px-1.5 py-0.5 text-[8px] font-medium tracking-wide">{se.bedTime}–{se.wakeTime}</span>
-                                    ) : (
-                                      <span className="w-14" />
-                                    )}
-                                    {se?.morningFeel && <span className="text-[13px]">{feelMap[se.morningFeel] || ''}</span>}
-                                  </div>
-                                ) : d.hasData ? (
-                                  <span className="text-gray-600 flex-1 italic text-[9px]">no sleep logged</span>
-                                ) : (
-                                  <span className="text-gray-700 flex-1 text-[9px]">—</span>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      ) : (
-                        <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log sleep to see timing data</div>
-                      )
+                                  ) : d.hasData ? (
+                                    <span className="text-gray-600 flex-1 italic text-[9px]">no sleep logged</span>
+                                  ) : (
+                                    <span className="text-gray-700 flex-1 text-[9px]">—</span>
+                                  )}
+                                </motion.div>
+                              )
+                            })}
+                          </div>
+                        )
+                      })()
                     ) : (
                       scopeFeelingData.length > 0 ? (
                         <div className="flex flex-col h-full">

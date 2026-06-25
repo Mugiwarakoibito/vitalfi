@@ -56,10 +56,12 @@ function stripEnvFromNotes(notes?: string): string {
   return notes.split('|__ENV__|')[0].trim()
 }
 
+const _toLocalDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
 export function SleepLogger() {
   const { sleep, addSleep, deleteSleep, clearSleep } = useAppStore()
   const [showForm, setShowForm] = useState(false)
-  const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0])
+  const [formDate, setFormDate] = useState(_toLocalDate(new Date()))
   const [formDuration, setFormDuration] = useState('')
   const [formQuality, setFormQuality] = useState<1 | 2 | 3 | 4 | 5>(3)
   const [formBedTime, setFormBedTime] = useState('')
@@ -90,14 +92,13 @@ export function SleepLogger() {
     return saved ? parseFloat(saved) : 8
   })
 
-  const formatDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  const [selectedDate, setSelectedDate] = useState(formatDate(new Date()))
+  const [selectedDate, setSelectedDate] = useState(_toLocalDate(new Date()))
   const navigateDate = (dir: number) => {
     const d = new Date(selectedDate)
     d.setDate(d.getDate() + dir)
-    setSelectedDate(formatDate(d))
+    setSelectedDate(_toLocalDate(d))
   }
-  const jumpToToday = () => setSelectedDate(formatDate(new Date()))
+  const jumpToToday = () => setSelectedDate(_toLocalDate(new Date()))
 
   useEffect(() => {
     localStorage.setItem('vitalfi_sleep_target', targetHours.toString())
@@ -159,7 +160,7 @@ export function SleepLogger() {
   const last7GoalPct = recentWeek.length > 0 ? Math.round((last7GoalHit / recentWeek.length) * 100) : 0
 
   const resetForm = () => {
-    setFormDate(new Date().toISOString().split('T')[0])
+    setFormDate(_toLocalDate(new Date()))
     setFormDuration('')
     setFormQuality(3)
     setFormBedTime('')
@@ -319,11 +320,11 @@ export function SleepLogger() {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today)
       d.setDate(d.getDate() - (i + trendWeekOffset * 7))
-      const dateStr = d.toISOString().split('T')[0]
+      const dateStr = _toLocalDate(d)
       const entry = sleep.find(e => e.date === dateStr)
       const prev = new Date(today)
       prev.setDate(prev.getDate() - (i + 7 + trendWeekOffset * 7))
-      const prevStr = prev.toISOString().split('T')[0]
+      const prevStr = _toLocalDate(prev)
       const prevEntry = sleep.find(e => e.date === prevStr)
       days.push({
         date: d.toLocaleDateString('en-US', { weekday: 'short' }),
@@ -514,7 +515,7 @@ export function SleepLogger() {
           <button onClick={() => navigateDate(1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
             <ChevronRight className="w-5 h-5" />
           </button>
-          {selectedDate !== formatDate(new Date()) && (
+          {selectedDate !== _toLocalDate(new Date()) && (
             <button onClick={jumpToToday} className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="Jump to today">
               <RotateCcw className="w-4 h-4" />
             </button>
