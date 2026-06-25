@@ -638,65 +638,65 @@ export function Recovery() {
           <motion.div key="trendsscope" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
             className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
-            {!scopeWeek.some(d => d.hasData) ? (
-              <div className="relative flex flex-col items-center justify-center h-48 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-violet-500/5 border border-violet-500/10 flex items-center justify-center mb-4">
-                  <BarChart3 className="w-7 h-7 text-violet-400/30" />
+            <div className="relative">
+              {/* Header with title + week nav + mode toggle — ALWAYS VISIBLE */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-400/20 to-violet-500/20 border border-violet-500/20 flex items-center justify-center">
+                  <BarChart3 className="w-3 h-3 text-violet-400" />
                 </div>
-                <p className="text-gray-400 text-sm font-medium mb-1">No entries this week</p>
-                <p className="text-gray-500 text-xs">Log recovery data to unlock your RecoveryScope</p>
+                <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">RecoveryScope</span>
               </div>
-            ) : (
-              <div className="relative">
-                {/* Header with title + week nav + mode toggle */}
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-400/20 to-violet-500/20 border border-violet-500/20 flex items-center justify-center">
-                    <BarChart3 className="w-3 h-3 text-violet-400" />
-                  </div>
-                  <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">RecoveryScope</span>
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setScopeOffset(o => o + 1)} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">
+                    {new Date(scopeWeek[0].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(scopeWeek[6].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                  <button onClick={() => setScopeOffset(o => Math.max(0, o - 1))} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setScopeOffset(0)} className={`p-1.5 rounded-xl border transition-all ${
+                    isScopeCurrentWeek
+                      ? 'bg-white/[0.02] border-white/[0.04] text-gray-600'
+                      : 'bg-violet-500/10 border-violet-500/20 text-violet-400 hover:bg-violet-500/20'
+                  }`} title={isScopeCurrentWeek ? 'Current week' : 'This week'}>
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => setScopeOffset(o => o + 1)} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
-                      <ChevronLeft className="w-4 h-4" />
+                <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
+                  {(['volume', 'timeline', 'types'] as const).map(mode => (
+                    <button key={mode} onClick={() => setTrendChartMode(mode)}
+                      className={`relative px-3.5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
+                        trendChartMode === mode
+                          ? mode === 'volume'
+                            ? 'text-violet-300 bg-gradient-to-b from-violet-500/20 to-violet-500/5 border border-violet-500/25 shadow-lg shadow-violet-500/8'
+                            : mode === 'timeline'
+                              ? 'text-cyan-300 bg-gradient-to-b from-cyan-500/20 to-cyan-500/5 border border-cyan-500/25 shadow-lg shadow-cyan-500/8'
+                              : 'text-emerald-300 bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border border-emerald-500/25 shadow-lg shadow-emerald-500/8'
+                          : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'
+                      }`}>
+                      <span className="relative z-10 flex items-center gap-1.5">
+                        <span className={trendChartMode === mode ? '' : 'opacity-50'}>{mode === 'volume' ? '📈' : mode === 'timeline' ? '🌙' : '💚'}</span>
+                        {mode === 'volume' ? 'Readiness' : mode === 'timeline' ? 'Sleep' : 'Feeling'}
+                      </span>
+                      {trendChartMode === mode && <span className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/[0.06]" />}
                     </button>
-                    <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">
-                      {new Date(scopeWeek[0].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(scopeWeek[6].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </span>
-                    <button onClick={() => setScopeOffset(o => Math.max(0, o - 1))} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setScopeOffset(0)} className={`p-1.5 rounded-xl border transition-all ${
-                      isScopeCurrentWeek
-                        ? 'bg-white/[0.02] border-white/[0.04] text-gray-600'
-                        : 'bg-violet-500/10 border-violet-500/20 text-violet-400 hover:bg-violet-500/20'
-                    }`} title={isScopeCurrentWeek ? 'Current week' : 'This week'}>
-                      <RotateCcw className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
-                    {(['volume', 'timeline', 'types'] as const).map(mode => (
-                      <button key={mode} onClick={() => setTrendChartMode(mode)}
-                        className={`relative px-3.5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
-                          trendChartMode === mode
-                            ? mode === 'volume'
-                              ? 'text-violet-300 bg-gradient-to-b from-violet-500/20 to-violet-500/5 border border-violet-500/25 shadow-lg shadow-violet-500/8'
-                              : mode === 'timeline'
-                                ? 'text-cyan-300 bg-gradient-to-b from-cyan-500/20 to-cyan-500/5 border border-cyan-500/25 shadow-lg shadow-cyan-500/8'
-                                : 'text-emerald-300 bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border border-emerald-500/25 shadow-lg shadow-emerald-500/8'
-                            : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'
-                        }`}>
-                        <span className="relative z-10 flex items-center gap-1.5">
-                          <span className={trendChartMode === mode ? '' : 'opacity-50'}>{mode === 'volume' ? '📈' : mode === 'timeline' ? '🌙' : '💚'}</span>
-                          {mode === 'volume' ? 'Readiness' : mode === 'timeline' ? 'Sleep' : 'Feeling'}
-                        </span>
-                        {trendChartMode === mode && <span className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/[0.06]" />}
-                      </button>
-                    ))}
-                  </div>
+                  ))}
                 </div>
+              </div>
 
-                {/* Charts */}
+              {/* Charts or empty state */}
+              {!scopeWeek.some(d => d.hasData) ? (
+                <div className="h-60 rounded-2xl bg-gradient-to-br from-black/50 via-white/[0.02] to-transparent border border-white/[0.06] flex flex-col items-center justify-center text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-violet-500/5 border border-violet-500/10 flex items-center justify-center mb-4">
+                    <BarChart3 className="w-7 h-7 text-violet-400/30" />
+                  </div>
+                  <p className="text-gray-400 text-sm font-medium mb-1">No entries this week</p>
+                  <p className="text-gray-500 text-xs">Log recovery data to unlock your RecoveryScope</p>
+                </div>
+              ) : (<>
                 <div className="h-60 rounded-2xl bg-gradient-to-br from-black/50 via-white/[0.02] to-transparent border border-white/[0.06] p-4 shadow-inner shadow-white/5 relative overflow-hidden" style={{ minHeight: '240px' }}>
                   <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
                   <div className="relative z-10 h-full">
@@ -998,8 +998,9 @@ export function Recovery() {
                     </div>
                   </div>
                 )}
-              </div>
+              </>
             )}
+          </div>
           </motion.div>
         )}
       </AnimatePresence>
