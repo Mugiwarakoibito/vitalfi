@@ -110,7 +110,7 @@ export function Recovery() {
   const recentWeek = useMemo(() => getWeekDays(7, entries), [entries, targetDate, today])
 
   const scopeWeek = useMemo(() => {
-    const days: { date: string; label: string; readiness: number; sleepQuality: number; hasData: boolean; fullDate: string }[] = []
+    const days: { date: string; label: string; readiness: number; sleepQuality: number; hasData: boolean; fullDate: string; sleepEntry: typeof sleep[0] | undefined }[] = []
     for (let i = 6; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i + scopeOffset * 7)
       const ds = d.toISOString().split('T')[0]
@@ -119,10 +119,11 @@ export function Recovery() {
       days.push({
         date: ds, label: i === 0 && scopeOffset === 0 ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' }),
         readiness, sleepQuality: entry?.sleepQuality || 0, hasData: !!entry, fullDate: ds,
+        sleepEntry: sleep.find(s => s.date === ds),
       })
     }
     return days
-  }, [entries, scopeOffset])
+  }, [entries, scopeOffset, sleep])
 
   const isScopeCurrentWeek = scopeOffset === 0
 
@@ -759,10 +760,10 @@ export function Recovery() {
                         <div className="h-full flex items-center justify-center text-gray-500 text-sm">No recovery data this week</div>
                       )
                     ) : trendChartMode === 'timeline' ? (
-                      scopeWeek.some(d => d.hasData || sleep.some(s => s.date === d.date)) ? (
+                      scopeWeek.some(d => d.hasData || d.sleepEntry) ? (
                         <div className="flex flex-col gap-1.5 h-full">
                           {scopeWeek.map((d) => {
-                            const se = sleep.find(s => s.date === d.date)
+                            const se = d.sleepEntry
                             const hasSleep = !!se
                             const q = se?.quality ?? 0
                             const dur = se?.duration ?? 0
@@ -879,7 +880,7 @@ export function Recovery() {
                 </div>
 
                 {/* Stats strip - Premium Glass */}
-                {(trendChartMode === 'timeline' ? scopeWeek.some(d => d.hasData || sleep.some(s => s.date === d.date)) : trendChartMode === 'types' ? scopeFeelingData.length > 0 : scopeWeek.some(d => d.hasData)) && (
+                {(trendChartMode === 'timeline' ? scopeWeek.some(d => d.hasData || d.sleepEntry) : trendChartMode === 'types' ? scopeFeelingData.length > 0 : scopeWeek.some(d => d.hasData)) && (
                   <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
                     <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
@@ -896,7 +897,7 @@ export function Recovery() {
                       {trendChartMode === 'timeline' && (
                         <>
                           {(() => {
-                            const scopeSleep = scopeWeek.map(d => ({ date: d.date, label: d.label, sleep: sleep.find(s => s.date === d.date) }))
+                            const scopeSleep = scopeWeek.map(d => ({ date: d.date, label: d.label, sleep: d.sleepEntry }))
                             const withSleep = scopeSleep.filter(d => d.sleep)
                             const avgQ = withSleep.length > 0 ? Math.round(withSleep.reduce((s, d) => s + d.sleep!.quality, 0) / withSleep.length * 10) / 10 : 0
                             const best = withSleep.length > 0 ? withSleep.reduce((b, d) => d.sleep!.quality > (b.sleep?.quality ?? 0) ? d : b, withSleep[0]) : null
