@@ -666,11 +666,13 @@ export function Recovery() {
                     <button onClick={() => setScopeOffset(o => Math.max(0, o - 1))} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
                       <ChevronRight className="w-4 h-4" />
                     </button>
-                    {!isScopeCurrentWeek && (
-                      <button onClick={() => setScopeOffset(0)} className="p-1.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
-                        <RotateCcw className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                    <button onClick={() => setScopeOffset(0)} className={`p-1.5 rounded-xl border transition-all ${
+                      isScopeCurrentWeek
+                        ? 'bg-white/[0.02] border-white/[0.04] text-gray-600'
+                        : 'bg-violet-500/10 border-violet-500/20 text-violet-400 hover:bg-violet-500/20'
+                    }`} title={isScopeCurrentWeek ? 'Current week' : 'This week'}>
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                   <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
                     {(['volume', 'timeline', 'types'] as const).map(mode => (
