@@ -769,65 +769,87 @@ export function Recovery() {
                         }
                         const qColors = ['#ef4444', '#f59e0b', '#38bdf8', '#a855f7', '#10b981']
                         const feelMap: Record<string, string> = { refreshed: '😊', tired: '😴', groggy: '😵', foggy: '🌫️' }
+                        const chartData = scopeWeek.filter(d => d.sleepEntry).map(d => ({
+                          ...d,
+                          q: d.sleepEntry!.quality,
+                          dur: d.sleepEntry!.duration,
+                          bed: d.sleepEntry!.bedTime,
+                          wake: d.sleepEntry!.wakeTime,
+                          feel: d.sleepEntry!.morningFeel,
+                          labelShort: d.label === 'Today' && scopeOffset === 0 ? 'Now' : d.label.slice(0, 3),
+                        }))
                         return (
-                          <div className="flex flex-col gap-1 overflow-y-auto h-full pr-0.5 custom-scrollbar">
-                            {scopeWeek.map((d, idx) => {
-                              const se = d.sleepEntry
-                              const hasSleep = !!se
-                              const q = se?.quality ?? 0
-                              const dur = se?.duration ?? 0
-                              const hitGoal = dur >= 7
-                              return (
-                                <motion.div key={d.date}
-                                  initial={{ opacity: 0, x: -10 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  transition={{ delay: idx * 0.04, duration: 0.25 }}
-                                  className={`flex items-center gap-2 text-[10px] px-2.5 py-1 rounded-xl transition-all duration-200 ${
-                                    hasSleep
-                                      ? 'bg-white/[0.03] border border-white/[0.04] hover:bg-white/[0.06] hover:border-white/[0.08] hover:scale-[1.005] cursor-default'
-                                      : d.hasData
-                                        ? 'bg-white/[0.01] border border-white/[0.02]'
-                                        : 'opacity-35'
-                                  }`}
-                                  style={hasSleep ? { borderLeft: `2.5px solid ${qColors[q - 1]}`, boxShadow: `inset 0 0 20px ${qColors[q - 1]}06` } : {}}>
-                                  <span className={`w-8 font-semibold ${hasSleep ? 'text-gray-300' : d.hasData ? 'text-gray-600' : 'text-gray-700'}`}>
-                                    {d.label === 'Today' && scopeOffset === 0 ? 'Now' : d.label.slice(0, 3)}
-                                  </span>
-                                  {hasSleep ? (
-                                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                                      <div className="w-6 h-6 shrink-0 rounded-xl flex items-center justify-center text-[10px] font-extrabold text-white transition-all duration-300 hover:scale-110"
-                                        style={{ backgroundColor: qColors[q - 1], boxShadow: `0 0 16px ${qColors[q - 1]}50` }}>
-                                        {q}
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={chartData} barGap={6} barCategoryGap="30%">
+                              <defs>
+                                {[1,2,3,4,5].map(q => {
+                                  const c = qColors[q - 1]
+                                  return (
+                                    <linearGradient key={q} id={`sleepBarGrad${q}`} x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor={c} stopOpacity={0.95} />
+                                      <stop offset="50%" stopColor={c} stopOpacity={0.8} />
+                                      <stop offset="100%" stopColor={c} stopOpacity={0.15} />
+                                    </linearGradient>
+                                  )
+                                })}
+                                <linearGradient id="sleepRefLine" x1="0" y1="0" x2="1" y2="0">
+                                  <stop offset="0%" stopColor="#34d399" stopOpacity={0} />
+                                  <stop offset="50%" stopColor="#34d399" stopOpacity={0.8} />
+                                  <stop offset="100%" stopColor="#34d399" stopOpacity={0} />
+                                </linearGradient>
+                                <filter id="sleepGlow"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
+                              <XAxis dataKey="labelShort" tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} dy={5} />
+                              <YAxis tick={{ fill: '#4b5563', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} domain={[0, 12]} tickFormatter={v => `${v}h`} width={28} />
+                              <Tooltip content={({ active, payload }) => {
+                                if (!active || !payload?.length) return null
+                                const d = payload[0].payload
+                                const q = d.q
+                                const c = qColors[q - 1]
+                                const feelEmoji = d.feel ? feelMap[d.feel] : ''
+                                return (
+                                  <motion.div initial={{ opacity: 0, y: 4, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    className="bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 text-[11px] shadow-2xl leading-relaxed min-w-[160px]">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-2.5 h-2.5 rounded-full shadow-lg" style={{ backgroundColor: c, boxShadow: `0 0 8px ${c}` }} />
+                                        <span className="text-white font-bold text-xs">{d.label === 'Today' && scopeOffset === 0 ? 'Today' : d.label}</span>
                                       </div>
-                                      <div className="flex-1 min-w-0 relative">
-                                        <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                                          <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(dur / 12 * 100, 100)}%` }}
-                                            className="h-full rounded-full" style={{ backgroundColor: qColors[q - 1], opacity: 0.65 }} />
-                                        </div>
-                                        <div className="absolute left-0 right-0 top-0 bottom-0 pointer-events-none">
-                                          <div className="absolute h-full w-px bg-emerald-500/30" style={{ left: `${(7 / 12) * 100}%` }} />
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-1 shrink-0">
-                                        <span className="text-gray-300 font-semibold w-6 text-right">{dur.toFixed(1)}</span>
-                                        {hitGoal && <span className="text-emerald-400/70 text-[9px]">✓</span>}
-                                      </div>
-                                      {se?.bedTime && se?.wakeTime ? (
-                                        <span className="text-gray-500 bg-white/[0.04] rounded-lg px-1.5 py-0.5 text-[7px] font-medium tracking-wide border border-white/[0.04] shrink-0">{se.bedTime}–{se.wakeTime}</span>
-                                      ) : (
-                                        <span className="w-12 shrink-0" />
-                                      )}
-                                      {se?.morningFeel && <span className="text-[11px] shrink-0">{feelMap[se.morningFeel] || ''}</span>}
+                                      <span className="font-bold text-sm" style={{ color: c }}>{d.dur.toFixed(1)}h</span>
                                     </div>
-                                  ) : d.hasData ? (
-                                    <span className="text-gray-600 flex-1 italic text-[9px]">no sleep logged</span>
-                                  ) : (
-                                    <span className="text-gray-700 flex-1 text-[9px]">—</span>
-                                  )}
-                                </motion.div>
-                              )
-                            })}
-                          </div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 border" style={{ backgroundColor: `${c}20`, color: c, borderColor: `${c}30` }}>
+                                        Q{d.q}
+                                      </span>
+                                      {d.bed && d.wake && (
+                                        <span className="text-gray-500 text-[9px]">{d.bed} – {d.wake}</span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[10px]">
+                                      <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                                        <div className="h-full rounded-full" style={{ width: `${(d.dur / 12) * 100}%`, backgroundColor: c, opacity: 0.6 }} />
+                                      </div>
+                                      <span className={`text-[9px] font-semibold ${d.dur >= 7 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                        {d.dur >= 7 ? '✓ Goal met' : `${(7 - d.dur).toFixed(1)}h short`}
+                                      </span>
+                                    </div>
+                                    {feelEmoji && (
+                                      <div className="mt-2 pt-2 border-t border-white/5 flex items-center gap-1.5 text-[9px] text-gray-500">
+                                        <span>Morning: {feelEmoji}</span>
+                                      </div>
+                                    )}
+                                  </motion.div>
+                                )
+                              }} cursor={{ fill: 'rgba(139,92,246,0.08)', radius: 6 }} />
+                              <ReferenceLine y={7} stroke="url(#sleepRefLine)" strokeWidth={2} strokeDasharray="6 4" label={{ value: '🎯 7h', fill: '#34d399', fontSize: 10, fontWeight: 800, position: 'right' }} />
+                              <Bar dataKey="dur" radius={[8, 8, 0, 0]} maxBarSize={36} animationDuration={800} animationEasing="ease-out">
+                                {chartData.map((entry, idx) => (
+                                  <Cell key={idx} fill={`url(#sleepBarGrad${entry.q})`} filter={entry.dur >= 7 ? 'url(#sleepGlow)' : undefined} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
                         )
                       })()
                     ) : (
@@ -897,7 +919,7 @@ export function Recovery() {
                 </div>
 
                 {/* Stats strip - Premium Glass */}
-                {(trendChartMode === 'timeline' ? scopeWeek.some(d => d.hasData || d.sleepEntry) : trendChartMode === 'types' ? scopeFeelingData.length > 0 : scopeWeek.some(d => d.hasData)) && (
+                {(trendChartMode === 'timeline' ? scopeWeek.some(d => d.sleepEntry) : trendChartMode === 'types' ? scopeFeelingData.length > 0 : scopeWeek.some(d => d.hasData)) && (
                   <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
                     <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
