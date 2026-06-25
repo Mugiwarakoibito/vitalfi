@@ -350,7 +350,7 @@ export function Recovery() {
           {entries.length > 0 && (
             <button onClick={() => setShowTrendsPanel(p => !p)}
               className={`p-2 rounded-xl border transition-all ${showTrendsPanel ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
-              title="Trends & Insights">
+              title="RecoveryScope">
               <BarChart3 className="w-5 h-5" />
             </button>
           )}
@@ -644,7 +644,7 @@ export function Recovery() {
                   <BarChart3 className="w-7 h-7 text-violet-400/30" />
                 </div>
                 <p className="text-gray-400 text-sm font-medium mb-1">No entries this week</p>
-                <p className="text-gray-500 text-xs">Log recovery data to unlock your Trends</p>
+                <p className="text-gray-500 text-xs">Log recovery data to unlock your RecoveryScope</p>
               </div>
             ) : (
               <div className="relative">
@@ -653,7 +653,7 @@ export function Recovery() {
                   <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-400/20 to-violet-500/20 border border-violet-500/20 flex items-center justify-center">
                     <BarChart3 className="w-3 h-3 text-violet-400" />
                   </div>
-                  <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">Trends & Insights</span>
+                  <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">RecoveryScope</span>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <div className="flex items-center gap-1">
@@ -663,7 +663,7 @@ export function Recovery() {
                     <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">
                       {new Date(scopeWeek[0].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(scopeWeek[6].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
-                    <button onClick={() => setScopeOffset(o => Math.max(0, o - 1))} className={`p-1.5 rounded-xl border transition-all ${isScopeCurrentWeek ? 'bg-white/[0.02] border-white/[0.04] text-gray-600 cursor-not-allowed' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20'}`} disabled={isScopeCurrentWeek}>
+                    <button onClick={() => setScopeOffset(o => Math.max(0, o - 1))} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
                       <ChevronRight className="w-4 h-4" />
                     </button>
                     {!isScopeCurrentWeek && (
