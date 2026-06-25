@@ -683,165 +683,199 @@ export function Recovery() {
                 </div>
 
                 {/* Charts */}
-                <div className="h-56 rounded-xl bg-gradient-to-b from-white/[0.03] to-transparent border border-white/[0.04] p-3" style={{ minHeight: '220px' }}>
-                  {trendChartMode === 'volume' ? (
-                    scopeWeek.some(d => d.hasData) ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={scopeWeek.filter(d => d.hasData).map((d, i, arr) => ({ ...d, delta: i > 0 ? d.readiness - arr[i - 1].readiness : null }))} barGap={8} barCategoryGap="35%">
-                          <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.02)" vertical={false} />
-                          <XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} dy={5} />
-                          <YAxis tick={{ fill: '#4b5563', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} domain={[0, 100]} tickFormatter={v => `${v}`} width={26} />
-                          <Tooltip content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null
-                            const d = payload[0].payload
-                            const r = getReadiness(d.energy, d.soreness, d.stress, d.mood)
-                            return (
-                              <div className="bg-gray-900/90 backdrop-blur-lg border border-white/10 rounded-2xl px-3.5 py-2.5 text-[11px] shadow-2xl leading-relaxed">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: r.color }} />
-                                  <span className="text-white font-bold">{d.label === 'Today' ? 'Today' : d.label}</span>
-                                </div>
-                                <p className="font-bold mb-1.5 text-sm" style={{ color: r.color }}>{r.score} <span className="text-[10px] font-medium opacity-70">{r.label}</span></p>
-                                {d.delta !== null && (
-                                  <p className={`text-[10px] mb-2 ${d.delta > 0 ? 'text-emerald-400' : d.delta < 0 ? 'text-rose-400' : 'text-gray-500'}`}>
-                                    {d.delta > 0 ? '↑' : d.delta < 0 ? '↓' : '→'} {d.delta > 0 ? '+' : ''}{d.delta} vs yesterday
-                                  </p>
-                                )}
-                                <div className="space-y-1">
-                                  {[
-                                    { label: 'Energy', value: d.energy, max: 10, color: '#f59e0b' },
-                                    { label: 'Soreness', value: d.soreness, max: 10, color: '#ef4444' },
-                                    { label: 'Stress', value: d.stress, max: 10, color: '#a855f7' },
-                                    { label: 'Mood', value: d.mood, max: 5, color: '#10b981' },
-                                  ].map(m => (
-                                    <div key={m.label} className="flex items-center gap-2">
-                                      <span className="text-gray-500 w-12">{m.label}</span>
-                                      <div className="flex-1 h-1 rounded-full bg-white/5 overflow-hidden">
-                                        <div className="h-full rounded-full transition-all" style={{ width: `${(m.value / m.max) * 100}%`, backgroundColor: m.color }} />
-                                      </div>
-                                      <span className="text-white font-semibold w-5 text-right text-[10px]">{m.value}</span>
+                <div className="h-60 rounded-2xl bg-gradient-to-br from-black/50 via-white/[0.02] to-transparent border border-white/[0.06] p-4 shadow-inner shadow-white/5 relative overflow-hidden" style={{ minHeight: '240px' }}>
+                  <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
+                  <div className="relative z-10 h-full">
+                    {trendChartMode === 'volume' ? (
+                      scopeWeek.some(d => d.hasData) ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={scopeWeek.filter(d => d.hasData).map((d, i, arr) => ({ ...d, delta: i > 0 ? d.readiness - arr[i - 1].readiness : null }))} barGap={8} barCategoryGap="35%">
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
+                            <XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} dy={5} />
+                            <YAxis tick={{ fill: '#4b5563', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} domain={[0, 100]} tickFormatter={v => `${v}`} width={24} />
+                            <Tooltip content={({ active, payload }) => {
+                              if (!active || !payload?.length) return null
+                              const d = payload[0].payload
+                              const r = getReadiness(d.energy, d.soreness, d.stress, d.mood)
+                              return (
+                                <motion.div initial={{ opacity: 0, y: 4, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  className="bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 text-[11px] shadow-2xl leading-relaxed min-w-[180px]">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2.5 h-2.5 rounded-full shadow-lg" style={{ backgroundColor: r.color, boxShadow: `0 0 8px ${r.color}` }} />
+                                      <span className="text-white font-bold text-xs">{d.label === 'Today' ? 'Today' : d.label}</span>
                                     </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )
-                          }} cursor={{ fill: 'rgba(139,92,246,0.1)', radius: 8 }} />
-                          <defs>
-                            <linearGradient id="barGoal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#34d399" stopOpacity={1} /><stop offset="60%" stopColor="#10b981" stopOpacity={0.8} /><stop offset="100%" stopColor="#059669" stopOpacity={0.15} /></linearGradient>
-                            <linearGradient id="barMiss" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#818cf8" stopOpacity={0.9} /><stop offset="60%" stopColor="#6366f1" stopOpacity={0.7} /><stop offset="100%" stopColor="#4f46e5" stopOpacity={0.1} /></linearGradient>
-                            <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#c084fc" stopOpacity={0} /><stop offset="50%" stopColor="#c084fc" stopOpacity={1} /><stop offset="100%" stopColor="#c084fc" stopOpacity={0} /></linearGradient>
-                            <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                          </defs>
-                          <ReferenceLine y={recoveryGoal} stroke="url(#lineGrad)" strokeWidth={2} strokeDasharray="6 4" label={{ value: `🎯 ${recoveryGoal}`, fill: '#c084fc', fontSize: 10, fontWeight: 800, position: 'right' }} />
-                          <Bar dataKey="readiness" radius={[10, 10, 0, 0]} maxBarSize={36} animationDuration={800} animationEasing="ease-out">
-                            {scopeWeek.filter(d => d.hasData).map((entry, idx) => (
-                              <Cell key={idx} fill={entry.readiness >= recoveryGoal ? 'url(#barGoal)' : 'url(#barMiss)'} filter={entry.readiness >= recoveryGoal ? 'url(#glow)' : undefined} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">No recovery data this week</div>
-                    )
-                  ) : trendChartMode === 'timeline' ? (
-                    scopeWeek.some(d => d.hasData || sleep.some(s => s.date === d.date)) ? (
-                      <div className="flex flex-col justify-center gap-1.5 h-full">
-                        {scopeWeek.map(d => {
-                          const se = sleep.find(s => s.date === d.date)
-                          const hasSleep = !!se
-                          const q = se?.quality ?? 0
-                          const dur = se?.duration ?? 0
-                          const qColors = ['#ef4444', '#f59e0b', '#38bdf8', '#a855f7', '#10b981']
-                          const feelMap: Record<string, string> = { refreshed: '😊', tired: '😴', groggy: '😵', foggy: '🌫️' }
-                          return (
-                            <div key={d.date} className="flex items-center gap-2 text-[10px]">
-                              <span className={`w-6 font-semibold ${hasSleep || d.hasData ? 'text-gray-400' : 'text-gray-600'}`}>{d.label === 'Today' ? 'Tdy' : d.label}</span>
-                              {hasSleep ? (
-                                <div className="flex items-center gap-2 flex-1">
-                                  <div className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold text-white shadow-lg" style={{ backgroundColor: qColors[q - 1] || '#6b7280' }}>
-                                    {q}
+                                    <span className="font-bold text-sm" style={{ color: r.color }}>{r.score}</span>
                                   </div>
-                                  <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
-                                    <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(dur / 12 * 100, 100)}%`, backgroundColor: qColors[q - 1] || '#6b7280', opacity: 0.7 }} />
+                                  <div className="flex items-center gap-2 mb-2.5">
+                                    <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border" style={{ backgroundColor: `${r.color}20`, color: r.color, borderColor: `${r.color}30` }}>{r.label}</span>
+                                    {d.delta !== null && (
+                                      <span className={`text-[9px] ${d.delta > 0 ? 'text-emerald-400' : d.delta < 0 ? 'text-rose-400' : 'text-gray-500'}`}>
+                                        {d.delta > 0 ? '↑' : d.delta < 0 ? '↓' : '→'} {d.delta > 0 ? '+' : ''}{d.delta} yesterday
+                                      </span>
+                                    )}
                                   </div>
-                                  <span className="text-gray-500 w-8 text-right">{dur}h</span>
-                                  {se?.bedTime && se?.wakeTime ? (
-                                    <span className="text-gray-600 w-12 text-center text-[9px] bg-white/[0.03] rounded-md px-1 py-0.5">{se.bedTime}–{se.wakeTime}</span>
-                                  ) : (
-                                    <span className="w-12" />
-                                  )}
-                                  {se?.morningFeel && <span className="text-[11px]">{feelMap[se.morningFeel] || ''}</span>}
-                                </div>
-                              ) : d.hasData ? (
-                                <span className="text-gray-600 flex-1 italic">no sleep</span>
-                              ) : (
-                                <span className="text-gray-700 flex-1">—</span>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log sleep to see timing data</div>
-                    )
-                  ) : (
-                    scopeFeelingData.length > 0 ? (
-                      <div className="flex flex-col h-full">
-                        <div className="flex-1">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <defs>
-                                {scopeFeelingData.map((entry, idx) => (
-                                  <radialGradient key={idx} id={`donutGrad${idx}`} cx="50%" cy="50%" r="50%">
-                                    <stop offset="0%" stopColor={entry.color} stopOpacity={1} />
-                                    <stop offset="100%" stopColor={entry.color} stopOpacity={0.3} />
-                                  </radialGradient>
-                                ))}
-                                <filter id="segGlow"><feGaussianBlur stdDeviation="2" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                              </defs>
-                              <Pie data={scopeFeelingData} cx="50%" cy="50%" innerRadius={44} outerRadius={82} paddingAngle={3} dataKey="count" nameKey="feeling" animationDuration={800} animationEasing="ease-out" stroke="rgba(255,255,255,0.04)" strokeWidth={1}>
-                                {scopeFeelingData.map((_, idx) => (
-                                  <Cell key={idx} fill={`url(#donutGrad${idx})`} filter="url(#segGlow)" />
-                                ))}
-                              </Pie>
-                              <Tooltip content={({ active, payload }) => {
-                                if (!active || !payload?.length) return null
-                                const data = payload[0].payload
-                                const total = scopeFeelingData.reduce((s, d) => s + d.count, 0)
-                                const pct = total > 0 ? Math.round((data.count / total) * 100) : 0
-                                return (
-                                  <div className="bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-xl px-3 py-2 shadow-2xl">
-                                    <p className="text-white font-bold text-[11px]">{data.feeling}</p>
-                                    <p className="text-gray-400 text-[10px]">{data.count} entries · {pct}%</p>
+                                  <div className="space-y-1.5">
+                                    {[
+                                      { label: 'Energy', value: d.energy, max: 10, color: '#f59e0b' },
+                                      { label: 'Soreness', value: d.soreness, max: 10, color: '#ef4444', invert: true },
+                                      { label: 'Stress', value: d.stress, max: 10, color: '#a855f7', invert: true },
+                                      { label: 'Mood', value: d.mood, max: 5, color: '#10b981' },
+                                    ].map(m => {
+                                      const pct = m.invert ? (1 - m.value / m.max) * 100 : (m.value / m.max) * 100
+                                      return (
+                                        <div key={m.label} className="flex items-center gap-2">
+                                          <span className="text-gray-500 w-11 text-[9px]">{m.label}</span>
+                                          <div className="flex-1 h-1 rounded-full bg-white/5 overflow-hidden">
+                                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: m.color, opacity: 0.7 }} />
+                                          </div>
+                                          <span className="text-white font-semibold w-4 text-right text-[10px]">{m.value}</span>
+                                        </div>
+                                      )
+                                    })}
                                   </div>
-                                )
-                              }} />
-                              <text x="50%" y="46%" textAnchor="middle" fill="#e5e7eb" fontSize={16} fontWeight={800}>
-                                {scopeFeelingData.reduce((s, d) => s + d.count, 0)}
-                              </text>
-                              <text x="50%" y="55%" textAnchor="middle" fill="#6b7280" fontSize={9} fontWeight={600}>
-                                entries
-                              </text>
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                        <div className="flex items-center justify-center gap-3 pb-1 flex-wrap">
-                          {scopeFeelingData.map(f => {
-                            const total = scopeFeelingData.reduce((s, d) => s + d.count, 0)
-                            const pct = total > 0 ? Math.round((f.count / total) * 100) : 0
+                                  <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[9px] text-gray-500">
+                                    <span>Goal: {recoveryGoal}</span>
+                                    {d.delta !== null && <span>{d.delta > 0 ? 'Improving ↗' : d.delta < 0 ? 'Declining ↘' : 'Stable →'}</span>}
+                                  </div>
+                                </motion.div>
+                              )
+                            }} cursor={{ fill: 'rgba(139,92,246,0.08)', radius: 6 }} />
+                            <defs>
+                              <linearGradient id="barGoal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#34d399" stopOpacity={1} /><stop offset="50%" stopColor="#10b981" stopOpacity={0.85} /><stop offset="100%" stopColor="#059669" stopOpacity={0.1} /></linearGradient>
+                              <linearGradient id="barMiss" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#818cf8" stopOpacity={0.9} /><stop offset="50%" stopColor="#6366f1" stopOpacity={0.75} /><stop offset="100%" stopColor="#4f46e5" stopOpacity={0.08} /></linearGradient>
+                              <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#c084fc" stopOpacity={0} /><stop offset="50%" stopColor="#c084fc" stopOpacity={1} /><stop offset="100%" stopColor="#c084fc" stopOpacity={0} /></linearGradient>
+                              <filter id="glow"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                            </defs>
+                            <ReferenceLine y={recoveryGoal} stroke="url(#lineGrad)" strokeWidth={2} strokeDasharray="6 4" label={{ value: `🎯 ${recoveryGoal}`, fill: '#c084fc', fontSize: 10, fontWeight: 800, position: 'right' }} />
+                            <Bar dataKey="readiness" radius={[8, 8, 0, 0]} maxBarSize={32} animationDuration={800} animationEasing="ease-out">
+                              {scopeWeek.filter(d => d.hasData).map((entry, idx) => (
+                                <Cell key={idx} fill={entry.readiness >= recoveryGoal ? 'url(#barGoal)' : 'url(#barMiss)'} filter={entry.readiness >= recoveryGoal ? 'url(#glow)' : undefined} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-gray-500 text-sm">No recovery data this week</div>
+                      )
+                    ) : trendChartMode === 'timeline' ? (
+                      scopeWeek.some(d => d.hasData || sleep.some(s => s.date === d.date)) ? (
+                        <div className="flex flex-col gap-1.5 h-full">
+                          {scopeWeek.map((d) => {
+                            const se = sleep.find(s => s.date === d.date)
+                            const hasSleep = !!se
+                            const q = se?.quality ?? 0
+                            const dur = se?.duration ?? 0
+                            const qColors = ['#ef4444', '#f59e0b', '#38bdf8', '#a855f7', '#10b981']
+                            const feelMap: Record<string, string> = { refreshed: '😊', tired: '😴', groggy: '😵', foggy: '🌫️' }
                             return (
-                              <span key={f.feeling} className="flex items-center gap-1.5 text-[10px] text-gray-400 font-medium">
-                                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: f.color, boxShadow: `0 0 6px ${f.color}60` }} />
-                                {f.feeling} <span className="text-gray-500">{pct}%</span>
-                              </span>
+                              <div key={d.date}
+                                className={`flex items-center gap-2.5 text-[10px] px-2.5 py-1.5 rounded-xl transition-all duration-200 ${
+                                  hasSleep
+                                    ? 'bg-white/[0.03] border border-white/[0.04] hover:bg-white/[0.05] hover:border-white/[0.08]'
+                                    : d.hasData
+                                      ? 'bg-white/[0.01] border border-white/[0.02]'
+                                      : 'opacity-40'
+                                }`}
+                                style={hasSleep ? { borderLeftColor: qColors[q - 1], borderLeftWidth: '2px' } : {}}>
+                                <span className={`w-7 font-bold ${hasSleep ? 'text-gray-300' : d.hasData ? 'text-gray-600' : 'text-gray-700'}`}>
+                                  {d.label === 'Today' && scopeOffset === 0 ? 'Now' : d.label.slice(0, 3)}
+                                </span>
+                                {hasSleep ? (
+                                  <div className="flex items-center gap-2.5 flex-1">
+                                    <div className="w-7 h-7 rounded-xl flex items-center justify-center text-[11px] font-extrabold text-white shadow-lg" style={{ backgroundColor: qColors[q - 1], boxShadow: `0 0 12px ${qColors[q - 1]}40` }}>
+                                      {q}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                                        <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(dur / 12 * 100, 100)}%` }}
+                                          className="h-full rounded-full" style={{ backgroundColor: qColors[q - 1], opacity: 0.7 }} />
+                                      </div>
+                                    </div>
+                                    <span className="text-gray-400 font-semibold w-7 text-right">{dur}h</span>
+                                    {se?.bedTime && se?.wakeTime ? (
+                                      <span className="text-gray-600 bg-white/[0.04] rounded-lg px-1.5 py-0.5 text-[8px] font-medium tracking-wide">{se.bedTime}–{se.wakeTime}</span>
+                                    ) : (
+                                      <span className="w-14" />
+                                    )}
+                                    {se?.morningFeel && <span className="text-[13px]">{feelMap[se.morningFeel] || ''}</span>}
+                                  </div>
+                                ) : d.hasData ? (
+                                  <span className="text-gray-600 flex-1 italic text-[9px]">no sleep logged</span>
+                                ) : (
+                                  <span className="text-gray-700 flex-1 text-[9px]">—</span>
+                                )}
+                              </div>
                             )
                           })}
                         </div>
-                      </div>
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log sleep to see timing data</div>
+                      )
                     ) : (
-                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log recovery feeling to see breakdown</div>
-                    )
-                  )}
+                      scopeFeelingData.length > 0 ? (
+                        <div className="flex flex-col h-full">
+                          <div className="flex-1">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <defs>
+                                  {scopeFeelingData.map((entry, idx) => (
+                                    <radialGradient key={idx} id={`donutGrad${idx}`} cx="50%" cy="50%" r="50%">
+                                      <stop offset="0%" stopColor={entry.color} stopOpacity={1} />
+                                      <stop offset="60%" stopColor={entry.color} stopOpacity={0.7} />
+                                      <stop offset="100%" stopColor={entry.color} stopOpacity={0.15} />
+                                    </radialGradient>
+                                  ))}
+                                  <filter id="segGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                                </defs>
+                                <Pie data={scopeFeelingData} cx="50%" cy="50%" innerRadius={40} outerRadius={80} paddingAngle={3} dataKey="count" nameKey="feeling" animationDuration={1000} animationEasing="ease-out" stroke="rgba(255,255,255,0.03)" strokeWidth={1}>
+                                  {scopeFeelingData.map((_, idx) => (
+                                    <Cell key={idx} fill={`url(#donutGrad${idx})`} filter="url(#segGlow)" />
+                                  ))}
+                                </Pie>
+                                <Tooltip content={({ active, payload }) => {
+                                  if (!active || !payload?.length) return null
+                                  const data = payload[0].payload
+                                  const total = scopeFeelingData.reduce((s, d) => s + d.count, 0)
+                                  const pct = total > 0 ? Math.round((data.count / total) * 100) : 0
+                                  return (
+                                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                                      className="bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl px-3.5 py-2.5 shadow-2xl min-w-[120px]">
+                                      <div className="flex items-center gap-2 mb-0.5">
+                                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.color }} />
+                                        <p className="text-white font-bold text-xs">{data.feeling}</p>
+                                      </div>
+                                      <p className="text-gray-400 text-[10px]"><span className="text-white font-semibold">{data.count}</span> entries · <span className="text-white font-semibold">{pct}%</span></p>
+                                    </motion.div>
+                                  )
+                                }} />
+                                <text x="50%" y="46%" textAnchor="middle" fill="#e5e7eb" fontSize={18} fontWeight={800}>
+                                  {scopeFeelingData.reduce((s, d) => s + d.count, 0)}
+                                </text>
+                                <text x="50%" y="55%" textAnchor="middle" fill="#6b7280" fontSize={9} fontWeight={600}>
+                                  entries
+                                </text>
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="flex items-center justify-center gap-2.5 pb-0.5 flex-wrap">
+                            {scopeFeelingData.map(f => {
+                              const total = scopeFeelingData.reduce((s, d) => s + d.count, 0)
+                              const pct = total > 0 ? Math.round((f.count / total) * 100) : 0
+                              return (
+                                <span key={f.feeling} className="flex items-center gap-1.5 text-[9px] font-semibold px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.04]">
+                                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: f.color, boxShadow: `0 0 6px ${f.color}` }} />
+                                  {f.feeling} <span className="text-gray-500 font-normal">{pct}%</span>
+                                </span>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log recovery feeling to see breakdown</div>
+                      )
+                    )}
+                  </div>
                 </div>
 
                 {/* Stats strip - Premium Glass */}
