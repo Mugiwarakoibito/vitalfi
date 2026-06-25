@@ -6,7 +6,7 @@ import {
   Calendar, RotateCcw, Clock, Sparkles, Moon, Pencil,
   BarChart3, Brain, Droplets,
 } from 'lucide-react'
-import { XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, CartesianGrid, ReferenceLine, PieChart, Pie } from 'recharts'
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, Bar, Cell, CartesianGrid, ReferenceLine, PieChart, Pie, ComposedChart, Line, LabelList } from 'recharts'
 import { generateId, cn } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 
@@ -686,42 +686,66 @@ export function Recovery() {
                 <div className="h-56 rounded-xl bg-gradient-to-b from-white/[0.03] to-transparent border border-white/[0.04] p-3" style={{ minHeight: '220px' }}>
                   {trendChartMode === 'volume' ? (
                     scopeWeek.some(d => d.hasData) ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={scopeWeek.filter(d => d.hasData)} barGap={8} barCategoryGap="30%">
-                          <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
-                          <XAxis dataKey="label" tick={{ fill: '#e5e7eb', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} dy={6} />
-                          <YAxis tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} domain={[0, 100]} tickFormatter={v => `${v}`} width={32} />
-                          <Tooltip content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null
-                            const d = payload[0].payload
-                            const r = getReadiness(d.energy, d.soreness, d.stress, d.mood)
-                            return (
-                              <div className="bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-xl px-3 py-2.5 text-[11px] shadow-2xl leading-relaxed">
-                                <p className="text-white font-bold mb-1">{d.label === 'Today' ? 'Today' : d.label}</p>
-                                <p className="font-bold mb-1.5" style={{ color: r.color }}>{r.score} — {r.label}</p>
-                                <div className="text-gray-400 space-y-0.5">
-                                  <span>⚡ Energy <span className="text-white font-semibold">{d.energy}</span>/10</span><br />
-                                  <span>🔥 Soreness <span className="text-white font-semibold">{d.soreness}</span>/10</span><br />
-                                  <span>🧠 Stress <span className="text-white font-semibold">{d.stress}</span>/10</span><br />
-                                  <span>😊 Mood <span className="text-white font-semibold">{d.mood}</span>/5</span>
-                                </div>
-                              </div>
-                            )
-                          }} cursor={{ fill: 'rgba(139,92,246,0.15)', radius: 10 }} />
-                          <defs>
-                            <linearGradient id="volGradGoal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#34d399" stopOpacity={1} /><stop offset="50%" stopColor="#10b981" stopOpacity={0.85} /><stop offset="100%" stopColor="#059669" stopOpacity={0.2} /></linearGradient>
-                            <linearGradient id="volGradMiss" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a5b4fc" stopOpacity={0.85} /><stop offset="100%" stopColor="#4f46e5" stopOpacity={0.15} /></linearGradient>
-                            <linearGradient id="volLineGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#c084fc" stopOpacity={0} /><stop offset="50%" stopColor="#c084fc" stopOpacity={1} /><stop offset="100%" stopColor="#c084fc" stopOpacity={0} /></linearGradient>
-                            <filter id="glowGoal"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                          </defs>
-                          <ReferenceLine y={recoveryGoal} stroke="url(#volLineGrad)" strokeWidth={2.5} strokeDasharray="6 4" label={{ value: `🎯 ${recoveryGoal}`, fill: '#d8b4fe', fontSize: 11, fontWeight: 800, position: 'right' }} />
-                          <Bar dataKey="readiness" radius={[12, 12, 0, 0]} maxBarSize={40} animationDuration={800} animationEasing="ease-out">
-                            {scopeWeek.filter(d => d.hasData).map((entry, idx) => (
-                              <Cell key={idx} fill={entry.readiness >= recoveryGoal ? 'url(#volGradGoal)' : 'url(#volGradMiss)'} filter={entry.readiness >= recoveryGoal ? 'url(#glowGoal)' : undefined} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
+                      (() => {
+                        const chartData = scopeWeek.filter(d => d.hasData).map((d, i, arr) => {
+                          const window = arr.slice(Math.max(0, i - 2), i + 1)
+                          const trend = Math.round(window.reduce((s, w) => s + w.readiness, 0) / window.length * 10) / 10
+                          const prev = i > 0 ? arr[i - 1].readiness : null
+                          const delta = prev !== null ? d.readiness - prev : null
+                          return { ...d, trend, delta }
+                        })
+                        return (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart data={chartData} barGap={8} barCategoryGap="30%">
+                              <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
+                              <XAxis dataKey="label" tick={{ fill: '#e5e7eb', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} dy={6} />
+                              <YAxis tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} domain={[0, 100]} tickFormatter={v => `${v}`} width={32} />
+                              <Tooltip content={({ active, payload }) => {
+                                if (!active || !payload?.length) return null
+                                const d = payload[0].payload
+                                const r = getReadiness(d.energy, d.soreness, d.stress, d.mood)
+                                return (
+                                  <div className="bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-xl px-3 py-2.5 text-[11px] shadow-2xl leading-relaxed">
+                                    <p className="text-white font-bold mb-1">{d.label === 'Today' ? 'Today' : d.label}</p>
+                                    <p className="font-bold mb-1.5" style={{ color: r.color }}>{r.score} — {r.label}</p>
+                                    {d.delta !== null && (
+                                      <p className={`text-[10px] mb-1.5 ${d.delta > 0 ? 'text-emerald-400' : d.delta < 0 ? 'text-rose-400' : 'text-gray-400'}`}>
+                                        {d.delta > 0 ? '↑' : d.delta < 0 ? '↓' : '→'} {d.delta > 0 ? '+' : ''}{d.delta} vs prior day
+                                      </p>
+                                    )}
+                                    <div className="text-gray-400 space-y-0.5">
+                                      <span>⚡ Energy <span className="text-white font-semibold">{d.energy}</span>/10</span><br />
+                                      <span>🔥 Soreness <span className="text-white font-semibold">{d.soreness}</span>/10</span><br />
+                                      <span>🧠 Stress <span className="text-white font-semibold">{d.stress}</span>/10</span><br />
+                                      <span>😊 Mood <span className="text-white font-semibold">{d.mood}</span>/5</span>
+                                    </div>
+                                    {d.trend > 0 && (
+                                      <p className="text-[9px] text-gray-500 mt-1.5 pt-1.5 border-t border-white/5">
+                                        3-day avg: <span className="text-gray-300 font-semibold">{d.trend}</span>
+                                      </p>
+                                    )}
+                                  </div>
+                                )
+                              }} cursor={{ fill: 'rgba(139,92,246,0.15)', radius: 10 }} />
+                              <defs>
+                                <linearGradient id="volGradGoal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#34d399" stopOpacity={1} /><stop offset="50%" stopColor="#10b981" stopOpacity={0.85} /><stop offset="100%" stopColor="#059669" stopOpacity={0.2} /></linearGradient>
+                                <linearGradient id="volGradMiss" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a5b4fc" stopOpacity={0.85} /><stop offset="100%" stopColor="#4f46e5" stopOpacity={0.15} /></linearGradient>
+                                <linearGradient id="volLineGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#c084fc" stopOpacity={0} /><stop offset="50%" stopColor="#c084fc" stopOpacity={1} /><stop offset="100%" stopColor="#c084fc" stopOpacity={0} /></linearGradient>
+                                <linearGradient id="trendGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#f472b6" stopOpacity={0.8} /><stop offset="100%" stopColor="#a855f7" stopOpacity={0.8} /></linearGradient>
+                                <filter id="glowGoal"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              </defs>
+                              <ReferenceLine y={recoveryGoal} stroke="url(#volLineGrad)" strokeWidth={2.5} strokeDasharray="6 4" label={{ value: `🎯 ${recoveryGoal}`, fill: '#d8b4fe', fontSize: 11, fontWeight: 800, position: 'right' }} />
+                              <Bar dataKey="readiness" radius={[12, 12, 0, 0]} maxBarSize={40} animationDuration={800} animationEasing="ease-out">
+                                {chartData.map((entry, idx) => (
+                                  <Cell key={idx} fill={entry.readiness >= recoveryGoal ? 'url(#volGradGoal)' : 'url(#volGradMiss)'} filter={entry.readiness >= recoveryGoal ? 'url(#glowGoal)' : undefined} />
+                                ))}
+                                <LabelList dataKey="readiness" position="top" fill="#9ca3af" fontSize={9} fontWeight={700} offset={4} />
+                              </Bar>
+                              <Line type="monotone" dataKey="trend" stroke="url(#trendGrad)" strokeWidth={2} dot={false} strokeDasharray="4 2" />
+                            </ComposedChart>
+                          </ResponsiveContainer>
+                        )
+                      })()
                     ) : (
                       <div className="h-full flex items-center justify-center text-gray-500 text-sm">No recovery data this week</div>
                     )
@@ -765,7 +789,25 @@ export function Recovery() {
                                   )}
                                 </div>
                                 {hasSleep && duration > 0 && (
-                                  <span className="text-[6px] text-gray-500">{duration}h</span>
+                                  <div className="flex flex-col items-center gap-0.5">
+                                    <div className="w-5 h-0.5 rounded-full bg-white/10 overflow-hidden">
+                                      <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(duration / 12 * 100, 100)}%`, backgroundColor: `rgba(${r},${g},${b},0.6)` }} />
+                                    </div>
+                                    <span className="text-[6px] text-gray-500">{duration}h</span>
+                                  </div>
+                                )}
+                                {hasSleep && se?.bedTime && se?.wakeTime && (
+                                  <span className="text-[5px] text-gray-600 leading-none">{se.bedTime}–{se.wakeTime}</span>
+                                )}
+                                {hasSleep && se?.morningFeel && (
+                                  <span className={`text-[6px] leading-none ${
+                                    se.morningFeel === 'refreshed' ? 'text-emerald-500' :
+                                    se.morningFeel === 'tired' ? 'text-amber-500' :
+                                    se.morningFeel === 'groggy' ? 'text-orange-500' :
+                                    'text-rose-500'
+                                  }`}>
+                                    {se.morningFeel === 'refreshed' ? '😊' : se.morningFeel === 'tired' ? '😴' : se.morningFeel === 'groggy' ? '😵' : '🌫️'}
+                                  </span>
                                 )}
                                 <span className={`text-[7px] font-semibold ${hasSleep || d.hasData ? 'text-gray-400' : 'text-gray-600'}`}>{d.label}</span>
                               </div>
@@ -785,42 +827,58 @@ export function Recovery() {
                     )
                   ) : (
                     scopeFeelingData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <defs>
-                            {scopeFeelingData.map((entry, idx) => (
-                              <linearGradient key={idx} id={`typeDonutGrad${idx}`} x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stopColor={entry.color} stopOpacity={0.9} />
-                                <stop offset="100%" stopColor={entry.color} stopOpacity={0.4} />
-                              </linearGradient>
-                            ))}
-                            <filter id="glowDonut"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                          </defs>
-                          <Pie data={scopeFeelingData} cx="50%" cy="50%" innerRadius={52} outerRadius={78} paddingAngle={4} dataKey="count" nameKey="feeling" animationDuration={800} animationEasing="ease-out" stroke="rgba(255,255,255,0.06)" strokeWidth={1.5}>
-                            {scopeFeelingData.map((_, idx) => (
-                              <Cell key={idx} fill={`url(#typeDonutGrad${idx})`} filter="url(#glowDonut)" />
-                            ))}
-                          </Pie>
-                          <Tooltip content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null
-                            const data = payload[0].payload
+                      <div className="flex flex-col h-full">
+                        <div className="flex-1">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <defs>
+                                {scopeFeelingData.map((entry, idx) => (
+                                  <linearGradient key={idx} id={`typeDonutGrad${idx}`} x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0%" stopColor={entry.color} stopOpacity={0.9} />
+                                    <stop offset="100%" stopColor={entry.color} stopOpacity={0.4} />
+                                  </linearGradient>
+                                ))}
+                                <filter id="glowDonut"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              </defs>
+                              <Pie data={scopeFeelingData} cx="50%" cy="50%" innerRadius={52} outerRadius={78} paddingAngle={4} dataKey="count" nameKey="feeling" animationDuration={800} animationEasing="ease-out" stroke="rgba(255,255,255,0.06)" strokeWidth={1.5}>
+                                {scopeFeelingData.map((_, idx) => (
+                                  <Cell key={idx} fill={`url(#typeDonutGrad${idx})`} filter="url(#glowDonut)" />
+                                ))}
+                              </Pie>
+                              <Tooltip content={({ active, payload }) => {
+                                if (!active || !payload?.length) return null
+                                const data = payload[0].payload
+                                const total = scopeFeelingData.reduce((s, d) => s + d.count, 0)
+                                const pct = total > 0 ? Math.round((data.count / total) * 100) : 0
+                                return (
+                                  <div className="bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-xl px-3 py-2 shadow-2xl">
+                                    <p className="text-white font-bold text-[11px]">{data.feeling}</p>
+                                    <p className="text-gray-400 text-[10px]">{data.count} entries · {pct}%</p>
+                                  </div>
+                                )
+                              }} />
+                              <text x="50%" y="45%" textAnchor="middle" fill="#d1d5db" fontSize={13} fontWeight={700}>
+                                {scopeFeelingData.reduce((s, d) => s + d.count, 0)}
+                              </text>
+                              <text x="50%" y="55%" textAnchor="middle" fill="#6b7280" fontSize={8} fontWeight={600}>
+                                entries
+                              </text>
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div className="flex items-center justify-center gap-2 pb-1 flex-wrap">
+                          {scopeFeelingData.map(f => {
                             const total = scopeFeelingData.reduce((s, d) => s + d.count, 0)
-                            const pct = total > 0 ? Math.round((data.count / total) * 100) : 0
+                            const pct = total > 0 ? Math.round((f.count / total) * 100) : 0
                             return (
-                              <div className="bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-xl px-3 py-2 shadow-2xl">
-                                <p className="text-white font-bold text-[11px]">{data.feeling}</p>
-                                <p className="text-gray-400 text-[10px]">{data.count} entries · {pct}%</p>
-                              </div>
+                              <span key={f.feeling} className="flex items-center gap-1 text-[9px] text-gray-400 font-medium">
+                                <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: f.color }} />
+                                {f.feeling} {pct}%
+                              </span>
                             )
-                          }} />
-                          <text x="50%" y="45%" textAnchor="middle" fill="#d1d5db" fontSize={13} fontWeight={700}>
-                            {scopeFeelingData.reduce((s, d) => s + d.count, 0)}
-                          </text>
-                          <text x="50%" y="55%" textAnchor="middle" fill="#6b7280" fontSize={8} fontWeight={600}>
-                            entries
-                          </text>
-                        </PieChart>
-                      </ResponsiveContainer>
+                          })}
+                        </div>
+                      </div>
                     ) : (
                       <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log recovery feeling to see breakdown</div>
                     )
