@@ -246,7 +246,7 @@ export function Recovery() {
       const entry = entries.find(e => e.date === d.date)
       if (entry?.recoveryFeeling) counts[entry.recoveryFeeling] = (counts[entry.recoveryFeeling] || 0) + 1
     })
-    const labels: Record<number, string> = { 1: 'Poor', 2: 'Fair', 3: 'Good', 4: 'Great', 5: 'Peak' }
+    const labels: Record<number, string> = { 1: 'Poor', 2: 'Fair', 3: 'Okay', 4: 'Great', 5: 'Peak' }
     const colors: Record<number, string> = { 1: '#ef4444', 2: '#f59e0b', 3: '#38bdf8', 4: '#a855f7', 5: '#10b981' }
     return Object.entries(counts).filter(([_, c]) => c > 0).map(([k, c]) => ({
       feeling: labels[Number(k)], count: c, color: colors[Number(k)],
