@@ -927,25 +927,21 @@ export function Recovery() {
                                     </motion.div>
                                   )
                                 }} />
-                                {(() => {
-                                  const feelings = scopeWeek.filter(d => d.hasData).map(d => entries.find(e => e.date === d.date)?.recoveryFeeling).filter(Boolean) as number[]
-                                  const avg = feelings.length > 0 ? (feelings.reduce((a, b) => a + b, 0) / feelings.length) : 0
-                                  return (<>
-                                    <text x="50%" y="44%" textAnchor="middle" fill="#e5e7eb" fontSize={22} fontWeight={800}>{avg.toFixed(1)}</text>
-                                    <text x="50%" y="55%" textAnchor="middle" fill="#6b7280" fontSize={9} fontWeight={600}>/ 5 · {Math.round(avg / 5 * 100)}%</text>
-                                  </>)
-                                })()}
+                                <text x="50%" y="46%" textAnchor="middle" fill="#e5e7eb" fontSize={18} fontWeight={800}>
+                                  {scopeFeelingData.reduce((s, d) => s + d.count, 0)}
+                                </text>
+                                <text x="50%" y="55%" textAnchor="middle" fill="#6b7280" fontSize={9} fontWeight={600}>
+                                  entries
+                                </text>
                               </PieChart>
                             </ResponsiveContainer>
                           </div>
                           <div className="flex items-center justify-center gap-2.5 pb-0.5 flex-wrap">
                             {scopeFeelingData.map(f => {
-                              const total = scopeFeelingData.reduce((s, d) => s + d.count, 0)
-                              const pct = total > 0 ? Math.round((f.count / total) * 100) : 0
                               return (
                                 <span key={f.feeling} className="flex items-center gap-1.5 text-[9px] font-semibold px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.04]">
                                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: f.color, boxShadow: `0 0 6px ${f.color}` }} />
-                                  {f.feeling} <span className="text-gray-500 font-normal">{pct}%</span>
+                                  {f.feeling} <span className="text-gray-500 font-normal">· {f.count}</span>
                                 </span>
                               )
                             })}
@@ -992,14 +988,8 @@ export function Recovery() {
                       )}
                       {trendChartMode === 'types' && (
                         <>
-                          {(() => {
-                            const feelings = scopeWeek.filter(d => d.hasData).map(d => entries.find(e => e.date === d.date)?.recoveryFeeling).filter(Boolean) as number[]
-                            const avg = feelings.length > 0 ? (feelings.reduce((a, b) => a + b, 0) / feelings.length) : 0
-                            return (<>
-                              <span>💚 Avg <span className="font-semibold text-emerald-400">{avg.toFixed(1)}</span> <span className="text-gray-600">/ 5 ({Math.round(avg / 5 * 100)}%)</span></span>
-                            </>)
-                          })()}
-                          <span>⭐ Top <span className="font-semibold text-emerald-400">{scopeFeelingData.sort((a, b) => b.count - a.count)[0]?.feeling || '--'}</span></span>
+                          <span>💚 Feelings <span className="font-semibold text-emerald-400">{scopeFeelingData.length}</span></span>
+                          <span>⭐ Top <span className="font-semibold text-emerald-400">{scopeFeelingData.sort((a, b) => b.count - a.count)[0]?.feeling || '--'}</span> <span className="text-gray-600">({scopeFeelingData.length > 0 ? `${Math.round(scopeFeelingData.sort((a, b) => b.count - a.count)[0].count / scopeFeelingData.reduce((s, f) => s + f.count, 0) * 100)}%` : '--'})</span></span>
                           <span>📋 Entries <span className="font-semibold text-gray-300">{scopeFeelingData.reduce((s, f) => s + f.count, 0)}</span></span>
                         </>
                       )}
