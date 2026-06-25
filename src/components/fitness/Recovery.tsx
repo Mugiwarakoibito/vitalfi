@@ -6,7 +6,7 @@ import {
   Calendar, RotateCcw, Clock, Sparkles, Moon, Pencil,
   BarChart3, Brain, Droplets,
 } from 'lucide-react'
-import { XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, CartesianGrid, ReferenceLine, PieChart, Pie } from 'recharts'
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, CartesianGrid, ReferenceLine, ReferenceArea, LabelList, PieChart, Pie } from 'recharts'
 import { generateId, cn } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 
@@ -726,9 +726,10 @@ export function Recovery() {
                                 </linearGradient>
                                 <filter id="readinessGlow"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                               </defs>
-                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
+                              <ReferenceArea y1={recoveryGoal} y2={100} fill="rgba(52,211,153,0.04)" />
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                               <XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} dy={5} />
-                              <YAxis tick={{ fill: '#4b5563', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} domain={[0, 100]} tickFormatter={v => `${v}`} width={24} />
+                              <YAxis tick={{ fill: '#4b5563', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} domain={[0, 100]} tickFormatter={v => `${v}`} width={24} ticks={[0, 25, 50, 75, 100]} />
                               <Tooltip content={({ active, payload }) => {
                                 if (!active || !payload?.length) return null
                                 const d = payload[0].payload
@@ -782,6 +783,7 @@ export function Recovery() {
                                 {volumeData.map((entry, idx) => (
                                   <Cell key={idx} fill={`url(#readinessBarGrad${idx})`} filter={entry.readiness >= recoveryGoal ? 'url(#readinessGlow)' : undefined} />
                                 ))}
+                                <LabelList dataKey="readiness" position="top" fill="#e5e7eb" fontSize={11} fontWeight={800} offset={6} formatter={(v: number) => v > 0 ? v : ''} />
                               </Bar>
                             </BarChart>
                           </ResponsiveContainer>
