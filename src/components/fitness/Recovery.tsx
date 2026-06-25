@@ -654,7 +654,11 @@ export function Recovery() {
                   <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">
                     {new Date(scopeWeek[0].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(scopeWeek[6].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </span>
-                  <button onClick={() => setScopeOffset(o => Math.max(0, o - 1))} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
+                  <button onClick={() => setScopeOffset(o => Math.max(0, o - 1))} disabled={isScopeCurrentWeek} className={`p-1.5 rounded-xl border transition-all ${
+                    isScopeCurrentWeek
+                      ? 'bg-white/[0.02] border-white/[0.04] text-gray-600 cursor-not-allowed'
+                      : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20'
+                  }`}>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                   <button onClick={() => setScopeOffset(0)} className={`p-1.5 rounded-xl border transition-all ${
