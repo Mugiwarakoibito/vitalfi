@@ -52,6 +52,7 @@ function generateInsights(
   sorted: BodyMetric[], chronological: BodyMetric[], latest: BodyMetric | undefined,
   goal: number | null, recentWeeklyChange: number | null, projectedWeeks: number | null,
   estimatedBfResult: BodyFatResult | null, useEstimatedBf: boolean,
+  bodyFocus: string,
 ): string[] {
   const insights: string[] = []
   if (sorted.length === 0) return insights
@@ -73,6 +74,42 @@ function generateInsights(
     const bfCat = latest.bodyFat <= 10 ? 'lean' : latest.bodyFat <= 18 ? 'fit' : latest.bodyFat <= 25 ? 'moderate' : 'higher'
     insights.push(`Body fat level is in the ${bfCat} range (${latest.bodyFat.toFixed(1)}%)`)
   }
+
+  // Focus-specific tips
+  const focusTips: Record<string, string[]> = {
+    'fat-loss': [
+      'Prioritize a moderate calorie deficit of 300–500 kcal/day',
+      'Track protein intake to preserve lean mass during fat loss',
+      'Incorporate 3–4 resistance sessions per week',
+      'Focus on whole foods — fiber-rich veggies keep you full',
+    ],
+    'muscle-gain': [
+      'Aim for a modest calorie surplus of 200–400 kcal/day',
+      'Target 1.6–2.0 g protein per kg of body weight',
+      'Focus on progressive overload in compound lifts',
+      'Ensure 7–9 hours of sleep for optimal recovery',
+    ],
+    'maintain': [
+      'Balance calories to match your TDEE consistently',
+      'Maintain protein intake at ~1.2–1.6 g per kg of body weight',
+      'Mix resistance and cardio for overall health',
+      'Track weight weekly to catch drift early',
+    ],
+    'recomposition': [
+      'Eat at maintenance or a very small deficit (~200 kcal)',
+      'Prioritize protein — 1.6–2.2 g per kg of body weight',
+      'Follow a structured progressive resistance program',
+      'Patience is key — recomposition takes 8–12 weeks to show',
+    ],
+  }
+  const defaultTips = [
+    'Log consistently to unlock personalized insights',
+    'Track measurements alongside weight for better context',
+    'Set a goal weight using the Target icon above',
+  ]
+  const tips = focusTips[bodyFocus] ?? defaultTips
+  insights.push(tips[Math.floor(Math.random() * tips.length)])
+
   return insights.slice(0, 6)
 }
 
@@ -153,8 +190,8 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
 
   const useEstimatedBf = latest?.bodyFat == null && estimatedBfResult != null && estimatedBfResult.bodyFatPercent > 0
 
-  const insights = useMemo(() => generateInsights(sorted, chronological, latest, goal, recentWeeklyChange, projectedWeeks, estimatedBfResult, useEstimatedBf),
-    [sorted, chronological, latest, goal, recentWeeklyChange, projectedWeeks, estimatedBfResult, useEstimatedBf])
+  const insights = useMemo(() => generateInsights(sorted, chronological, latest, goal, recentWeeklyChange, projectedWeeks, estimatedBfResult, useEstimatedBf, bodyFocus),
+    [sorted, chronological, latest, goal, recentWeeklyChange, projectedWeeks, estimatedBfResult, useEstimatedBf, bodyFocus])
 
   const filteredChartData = useMemo(() => {
     if (trendPeriod === 'all') return chartData
