@@ -4,7 +4,7 @@ import {
   Plus, Trash2, TrendingDown, TrendingUp, Activity, Target, Flame,
   LineChart as LineChartIcon,
   Zap, ChevronUp, ChevronDown,
-  Minus, BarChart3, Download,
+  Minus, BarChart3,
   Brain, Sparkles, Heart, AlertTriangle,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
@@ -46,21 +46,6 @@ function computeBodyScore(latest: BodyMetric | undefined, bmi: number | null, bo
   const label = score >= 85 ? 'Excellent' : score >= 70 ? 'Great' : score >= 55 ? 'Good' : score >= 40 ? 'Fair' : 'Needs Work'
   const color = score >= 85 ? '#10b981' : score >= 70 ? '#06b6d4' : score >= 55 ? '#f59e0b' : score >= 40 ? '#f97316' : '#ef4444'
   return { score, label, color }
-}
-
-function exportCSV(bodyMetrics: BodyMetric[]) {
-  const fields = measurementFields.map(f => f.key)
-  const headers = `Date,Weight,BMI,BodyFat,${fields.join(',')}\n`
-  const rows = bodyMetrics.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(m => {
-    const bmi = m.weight && 175 ? calculateBMI(m.weight, 175).toFixed(1) : ''
-    const meas = fields.map(f => m.measurements?.[f] ?? '').join(',')
-    return `${m.date},${m.weight ?? ''},${bmi},${m.bodyFat ?? ''},${meas}`
-  }).join('\n')
-  const blob = new Blob([headers + rows], { type: 'text/csv' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url; a.download = `vitalfi_body_${new Date().toISOString().split('T')[0]}.csv`
-  a.click(); URL.revokeObjectURL(url)
 }
 
 function generateInsights(
@@ -242,9 +227,6 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                     </div>
                   </div>
                   <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5">
-                    <button onClick={() => exportCSV(bodyMetrics)} className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all text-[10px] font-medium flex items-center justify-center gap-1.5">
-                      <Download className="w-3 h-3" /> Export CSV
-                    </button>
                     {bodyMetrics.length > 0 && (
                       <button onClick={() => { if (window.confirm('Clear all body entries?')) { bodyMetrics.forEach(m => deleteBodyMetric(m.id)) }; setShowBodySettings(false) }}
                         className="w-full px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition-all text-[10px] font-medium flex items-center justify-center gap-1.5">
@@ -735,11 +717,6 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-white">Measurement History</h3>
         <div className="flex items-center gap-2">
-          {bodyMetrics.length > 0 && (
-            <button onClick={() => exportCSV(bodyMetrics)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-              <Download className="w-4 h-4" />
-            </button>
-          )}
         </div>
       </div>
 
