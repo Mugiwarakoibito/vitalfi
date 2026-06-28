@@ -195,7 +195,7 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
   const projectedWeeks = recentWeeklyChange && goal && latest?.weight != null && Math.abs(recentWeeklyChange) > 0
     ? Math.ceil(Math.abs(latest.weight - goal) / Math.abs(recentWeeklyChange)) : null
 
-  const chartData = useMemo(() => chronological.slice(-60).map(m => ({
+  const chartData = useMemo(() => chronological.map(m => ({
     date: new Date(m.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     weight: m.weight, bodyFat: m.bodyFat, fullDate: m.date,
   })), [chronological])
@@ -628,10 +628,13 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
               <div className="flex items-center justify-between mb-4">
                 <div />
                 <div className="flex items-center gap-2">
-                  <div className="flex gap-1 bg-white/5 rounded-lg p-0.5">
+                  <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
                     {PERIOD_OPTIONS.map(p => (
                       <button key={p.value} onClick={() => setTrendPeriod(p.value)}
-                        className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${trendPeriod === p.value ? 'bg-violet-500/20 text-violet-300' : 'text-gray-500 hover:text-white'}`}>{p.label}</button>
+                        className={`relative px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${trendPeriod === p.value ? 'bg-violet-500/20 text-violet-300 border border-violet-500/25 shadow-lg shadow-violet-500/8' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'}`}>
+                        <span className="relative z-10">{p.label}</span>
+                        {trendPeriod === p.value && <span className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/[0.06]" />}
+                      </button>
                     ))}
                   </div>
                   <div className="flex gap-1 bg-white/5 rounded-xl p-0.5">
