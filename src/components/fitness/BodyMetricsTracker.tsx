@@ -58,24 +58,8 @@ function generateInsights(
   if (sorted.length === 0) return insights
   const firstDate = new Date(sorted[sorted.length - 1]?.date ?? ''); const lastDate = new Date(sorted[0]?.date ?? '')
   const trackingDays = Math.round((lastDate.getTime() - firstDate.getTime()) / 86400000) + 1
-  if (trackingDays > 0) insights.push(`You've been tracking for ${trackingDays} day${trackingDays !== 1 ? 's' : ''}`)
-  const last30Count = chronological.filter(m => { const d = new Date(m.date); const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30); return d >= cutoff }).length
-  if (last30Count > 0) insights.push(`Averaging ${((last30Count / 30) * 7).toFixed(1)} entries per week (${last30Count} in last 30 days)`)
-  if (recentWeeklyChange != null && Math.abs(recentWeeklyChange) > 0) {
-    insights.push(`Currently ${recentWeeklyChange < 0 ? 'losing' : 'gaining'} ${Math.abs(recentWeeklyChange).toFixed(2)} kg per week`)
-  }
-  if (goal && projectedWeeks != null && latest?.weight != null) {
-    insights.push(`On track to ${latest.weight > goal ? 'reach' : 'hit'} your goal in ~${projectedWeeks} week${projectedWeeks !== 1 ? 's' : ''}`)
-  }
-  if (useEstimatedBf && estimatedBfResult != null && estimatedBfResult.bodyFatPercent > 0) {
-    insights.push(`Body fat estimated at ${estimatedBfResult.bodyFatPercent.toFixed(1)}% via circumference method`)
-  }
-  if (latest?.bodyFat != null) {
-    const bfCat = latest.bodyFat <= 10 ? 'lean' : latest.bodyFat <= 18 ? 'fit' : latest.bodyFat <= 25 ? 'moderate' : 'higher'
-    insights.push(`Body fat level is in the ${bfCat} range (${latest.bodyFat.toFixed(1)}%)`)
-  }
 
-  // Focus-specific tips
+  // Focus-specific tip first — always visible
   const focusTips: Record<string, string[]> = {
     'fat-loss': [
       'Prioritize a moderate calorie deficit of 300–500 kcal/day',
@@ -108,7 +92,24 @@ function generateInsights(
     'Set a goal weight using the Target icon above',
   ]
   const tips = focusTips[bodyFocus] ?? defaultTips
-  insights.push(tips[Math.floor(Math.random() * tips.length)])
+  insights.push(`🎯 ${tips[Math.floor(Math.random() * tips.length)]}`)
+
+  if (trackingDays > 0) insights.push(`You've been tracking for ${trackingDays} day${trackingDays !== 1 ? 's' : ''}`)
+  const last30Count = chronological.filter(m => { const d = new Date(m.date); const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30); return d >= cutoff }).length
+  if (last30Count > 0) insights.push(`Averaging ${((last30Count / 30) * 7).toFixed(1)} entries per week (${last30Count} in last 30 days)`)
+  if (recentWeeklyChange != null && Math.abs(recentWeeklyChange) > 0) {
+    insights.push(`Currently ${recentWeeklyChange < 0 ? 'losing' : 'gaining'} ${Math.abs(recentWeeklyChange).toFixed(2)} kg per week`)
+  }
+  if (goal && projectedWeeks != null && latest?.weight != null) {
+    insights.push(`On track to ${latest.weight > goal ? 'reach' : 'hit'} your goal in ~${projectedWeeks} week${projectedWeeks !== 1 ? 's' : ''}`)
+  }
+  if (useEstimatedBf && estimatedBfResult != null && estimatedBfResult.bodyFatPercent > 0) {
+    insights.push(`Body fat estimated at ${estimatedBfResult.bodyFatPercent.toFixed(1)}% via circumference method`)
+  }
+  if (latest?.bodyFat != null) {
+    const bfCat = latest.bodyFat <= 10 ? 'lean' : latest.bodyFat <= 18 ? 'fit' : latest.bodyFat <= 25 ? 'moderate' : 'higher'
+    insights.push(`Body fat level is in the ${bfCat} range (${latest.bodyFat.toFixed(1)}%)`)
+  }
 
   return insights.slice(0, 6)
 }
