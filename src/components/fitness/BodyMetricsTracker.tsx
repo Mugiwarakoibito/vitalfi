@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Plus, Trash2, TrendingDown, TrendingUp, Activity, Target, Flame,
+  Plus, Trash2, TrendingDown, TrendingUp, Activity, Target, Flame, Calendar,
   LineChart as LineChartIcon,
   Zap, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
   Minus, BarChart3,
@@ -132,6 +132,20 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
   const [bodyFocus, setBodyFocus] = useState<'balanced' | 'fat-loss' | 'muscle-gain' | 'maintain' | 'recomposition'>('balanced')
   const [showBodyFocusPref, setShowBodyFocusPref] = useState(false)
   const [scopeOffset, setScopeOffset] = useState(0)
+  const [targetDate, setTargetDate] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })
+
+  const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })()
+  const isToday = targetDate === today
+
+  const navigateDate = (dir: number) => {
+    const d = new Date(targetDate)
+    d.setDate(d.getDate() + dir)
+    const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    setTargetDate(ds)
+  }
 
   const scopeWeek = useMemo(() => {
     const days: { fullDate: string; label: string }[] = []
@@ -231,6 +245,9 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
     return data
   }, [chartData, trendPeriod, scopeOffset, scopeWeek])
 
+  const weightOrDefault = latest?.weight?.toString() ?? '70'
+  const bodyFatOrDefault = latest?.bodyFat?.toString() ?? '15'
+
   const reset = () => { setDate(new Date().toISOString().split('T')[0]); setWeight(''); setBodyFat(''); setMeasurements({}) }
 
   const handleSave = async () => {
@@ -248,62 +265,86 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
   return (
     <div className="space-y-6">
       {/* Toolbar */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">Body</h2>
-          <p className="text-sm text-gray-400 mt-0.5">Weight, measurements & body composition</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {bodyMetrics.length > 0 && (
-            <button className={`p-2 rounded-xl border transition-all ${showBodyCoach ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
-              onClick={() => setShowBodyCoach(p => !p)} title="BodyCoach">
-              <Brain className="w-5 h-5" />
-            </button>
-          )}
-          {bodyMetrics.length >= 2 && (
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h2 className="text-2xl font-bold text-white tracking-tight">Body</h2>
+            <p className="text-sm text-gray-400 mt-0.5">Weight, measurements & body composition</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {bodyMetrics.length > 0 && (
+              <button className={`p-2 rounded-xl border transition-all ${showBodyCoach ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+                onClick={() => setShowBodyCoach(p => !p)} title="BodyCoach">
+                <Brain className="w-5 h-5" />
+              </button>
+            )}
             <button className={`p-2 rounded-xl border transition-all ${showBodyScope ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
               onClick={() => setShowBodyScope(p => !p)} title="BodyScope">
               <BarChart3 className="w-5 h-5" />
             </button>
-          )}
-          <div className="relative">
-            <button onClick={() => setShowBodySettings(p => !p)}
-              className={`p-2 rounded-xl border transition-all ${showBodySettings ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
-              title="Body Goals">
-              <Target className="w-5 h-5" />
-            </button>
-            {showBodySettings && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowBodySettings(false)} />
-                <div className="absolute right-0 top-10 z-20 w-64 rounded-xl bg-gray-900 border border-white/10 shadow-2xl p-4">
-                  <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-3">GOAL WEIGHT</p>
-                  <input type="range" min={30} max={200} step={0.5} value={targetWeight || '75'}
-                    onChange={e => setTargetWeight(e.target.value)}
-                    className="w-full accent-emerald-500" />
-                  <div className="flex items-center justify-between mt-1.5">
-                    <span className="text-[11px] text-gray-500">30</span>
-                    <span className="text-sm font-bold text-emerald-400 drop-shadow-lg">{targetWeight || '--'} kg</span>
-                    <span className="text-[11px] text-gray-500">200</span>
-                  </div>
-                  {latest?.weight != null && <p className="text-[9px] text-gray-500 mt-1 text-center">{Math.abs(latest.weight - parseFloat(targetWeight || '75')).toFixed(1)} kg {latest.weight > parseFloat(targetWeight || '75') ? 'above' : 'below'} goal</p>}
-                  <div className="mt-3 pt-3 border-t border-white/5">
-                    <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-3">GOAL BODY FAT</p>
-                    <input type="range" min={3} max={50} step={0.5} value={goalBodyFat || '15'}
-                      onChange={e => setGoalBodyFat(e.target.value)}
-                      className="w-full accent-amber-500" />
-                    <div className="flex items-center justify-between mt-1.5">
-                      <span className="text-[11px] text-gray-500">3%</span>
-                      <span className="text-sm font-bold text-amber-400 drop-shadow-lg">{goalBodyFat || '--'}%</span>
-                      <span className="text-[11px] text-gray-500">50%</span>
+            <div className="relative">
+              <button onClick={() => setShowBodySettings(p => !p)}
+                className={`p-2 rounded-xl border transition-all ${showBodySettings ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+                title="Body Goals">
+                <Target className="w-5 h-5" />
+              </button>
+              {showBodySettings && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowBodySettings(false)} />
+                  <div className="absolute right-0 top-10 z-20 w-52 rounded-xl bg-gray-900 border border-white/10 shadow-2xl p-4">
+                    <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Body Targets</p>
+                    {/* Goal Weight */}
+                    <div className="mb-3">
+                      <label className="text-[10px] text-gray-400 flex items-center gap-1.5 mb-1.5"><Target className="w-3 h-3 text-emerald-400" /> Goal Weight (kg)</label>
+                      <div className="relative">
+                        <input type="range" min={30} max={250} step={0.1} value={targetWeight || weightOrDefault}
+                          onChange={e => setTargetWeight(e.target.value)}
+                          className="w-full h-1.5 rounded-full appearance-none bg-white/10 outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-400 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-emerald-400/30"
+                          style={{ background: `linear-gradient(to right, #10b981 ${((parseFloat(targetWeight || weightOrDefault) - 30) / 220) * 100}%, rgba(255,255,255,0.1) ${((parseFloat(targetWeight || weightOrDefault) - 30) / 220) * 100}%)` }} />
+                        <div className="absolute -top-7 left-0 right-0 flex justify-center pointer-events-none">
+                          <span className="text-sm font-bold text-emerald-400 drop-shadow-lg">{targetWeight || '--'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Goal Body Fat */}
+                    <div>
+                      <label className="text-[10px] text-gray-400 flex items-center gap-1.5 mb-1.5"><Flame className="w-3 h-3 text-amber-400" /> Goal Body Fat %</label>
+                      <div className="relative">
+                        <input type="range" min={5} max={50} step={0.1} value={goalBodyFat || bodyFatOrDefault}
+                          onChange={e => setGoalBodyFat(e.target.value)}
+                          className="w-full h-1.5 rounded-full appearance-none bg-white/10 outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-400 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-amber-400/30"
+                          style={{ background: `linear-gradient(to right, #f59e0b ${((parseFloat(goalBodyFat || bodyFatOrDefault) - 5) / 45) * 100}%, rgba(255,255,255,0.1) ${((parseFloat(goalBodyFat || bodyFatOrDefault) - 5) / 45) * 100}%)` }} />
+                        <div className="absolute -top-7 left-0 right-0 flex justify-center pointer-events-none">
+                          <span className="text-sm font-bold text-amber-400 drop-shadow-lg">{goalBodyFat || '--'}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
+            <button onClick={() => setShowForm(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/25 transition-all text-[10px] font-bold uppercase tracking-wider">
+              <Plus size={12} />Log Entry</button>
           </div>
-          <button onClick={() => setShowForm(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/25 transition-all text-[10px] font-bold uppercase tracking-wider">
-            <Plus size={12} />Log Entry</button>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigateDate(-1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+            <Calendar className="w-4 h-4 text-emerald-400 shrink-0" />
+            <input type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)}
+              className="bg-transparent border-none text-white font-medium text-sm outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:transition-opacity cursor-pointer" />
+          </div>
+          <button onClick={() => navigateDate(1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          {!isToday && (
+            <button onClick={() => setTargetDate(today)} className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all" title="Jump to today">
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </motion.div>
 
@@ -549,7 +590,7 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
 
       {/* BODYSCOPE Panel */}
       <AnimatePresence>
-        {bodyMetrics.length >= 2 && showBodyScope && (
+        {showBodyScope && (
           <motion.div key="bodyscope" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
             className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
