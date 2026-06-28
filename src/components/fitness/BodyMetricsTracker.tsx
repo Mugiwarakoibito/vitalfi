@@ -13,8 +13,9 @@ import { calculateBMI, bmiCategory, calculateBMR, calculateTDEE, calculateBodyFa
 import type { BodyMetric } from '@/types/fitness'
 import type { BodyFatResult } from '@/lib/calculations'
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, PieChart, Pie, Cell,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from 'recharts'
 
 const GOAL_STORAGE_KEY = 'vitalfi_body_goal_weight'
@@ -252,6 +253,17 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
   }
 
   const handleDelete = async () => { if (!deletingEntry) return; await deleteBodyMetric(deletingEntry.id); setDeletingEntry(null) }
+
+  const radarData = useMemo(() => {
+    if (!latest?.measurements) return []
+    const vals = Object.values(latest.measurements)
+    const maxVal = vals.length > 0 ? Math.max(...vals) * 1.3 : 150
+    return activeMeasureFields.map(f => ({
+      field: f.label,
+      value: latest.measurements?.[f.key] ?? 0,
+      maxValue: Math.ceil(maxVal / 10) * 10,
+    }))
+  }, [latest, activeMeasureFields])
 
   return (
     <div className="space-y-6">
@@ -706,52 +718,31 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                       </ResponsiveContainer>
                     )}
                     if (chartTab === 'measurements') return (
-                      activeMeasureFields.length > 0 ? (
+                      radarData.length >= 3 ? (
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={measureChartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                            <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.015)" vertical={false} strokeWidth={1} />
-                            <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
+                          <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="72%">
+                            <PolarGrid stroke="rgba(255,255,255,0.06)" gridType="polygon" />
+                            <PolarAngleAxis dataKey="field" tick={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} />
+                            <PolarRadiusAxis angle={90} domain={[0, 'dataMax']} tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickCount={4} />
                             <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
-                              const sorted = [...payload].sort((a, b) => Number(b.value) - Number(a.value))
+                              const d = payload[0]
                               return (
-                                <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                  className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-violet-500/5 min-w-[150px]">
+                                <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                                  className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-3.5 py-2.5 shadow-2xl shadow-violet-500/5 min-w-[120px]">
                                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none" />
                                   <div className="relative">
-                                    <p className="text-white font-bold text-xs mb-2.5 pb-2 border-b border-white/5">{payload[0].payload.date}</p>
-                                    <div className="space-y-1.5">
-                                      {sorted.map((p, i) => (
-                                        <div key={i} className="flex items-center gap-2">
-                                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.color }} />
-                                          <span className="text-gray-500 w-14 text-[10px] font-medium">{p.name}</span>
-                                          <span className="text-white font-semibold ml-auto text-xs">{Number(p.value).toFixed(1)} <span className="text-[9px] font-normal text-gray-600">cm</span></span>
-                                        </div>
-                                      ))}
-                                    </div>
+                                    <p className="text-white font-bold text-xs">{d.payload.field}</p>
+                                    <p className="text-gray-400 text-[11px] mt-0.5"><span className="text-white font-semibold">{Number(d.value).toFixed(1)}</span> cm</p>
                                   </div>
                                 </motion.div>
                               )
-                            }} cursor={{ fill: 'rgba(139,92,246,0.05)' }} />
-                            {(() => {
-                              const colors: Record<string, string> = {
-                                chest: '#f43f5e', waist: '#f97316', hips: '#8b5cf6',
-                                biceps: '#06b6d4', neck: '#10b981', shoulders: '#6366f1',
-                                thighs: '#f59e0b', calves: '#ec4899',
-                              }
-                              return activeMeasureFields.map(f => (
-                                <Line key={f.key} type="monotone" dataKey={f.key}
-                                  stroke={colors[f.key] || '#6b7280'}
-                                  strokeWidth={1.5} strokeOpacity={0.45}
-                                  dot={false} connectNulls={true}
-                                  activeDot={{ r: 3.5, fill: colors[f.key] || '#6b7280', strokeWidth: 1.5, stroke: '#1a1a2e' }}
-                                  name={f.label} animationDuration={600} animationEasing="ease-out" />
-                              ))
-                            })()}
-                          </LineChart>
+                            }} />
+                            <Radar name="Body" dataKey="value" stroke="#8b5cf6" strokeWidth={2} fill="#8b5cf6" fillOpacity={0.15} animationDuration={800} animationEasing="ease-out" activeDot={{ r: 4, fill: '#8b5cf6', strokeWidth: 2, stroke: '#1a1a2e' }} />
+                          </RadarChart>
                         </ResponsiveContainer>
                       ) : (
-                        <div className="h-full flex items-center justify-center text-gray-500 text-sm">No measurement data yet</div>
+                        <div className="h-full flex items-center justify-center text-gray-500 text-sm">{activeMeasureFields.length > 0 ? 'Need 3+ measurements for radar' : 'No measurement data yet'}</div>
                       )
                     )
                     if (chartTab === 'composition') return (
