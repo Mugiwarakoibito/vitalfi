@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, TrendingDown, TrendingUp, Activity, Target, Flame,
   LineChart as LineChartIcon,
-  Zap, ChevronUp, ChevronDown,
+  Zap, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
   Minus, BarChart3,
-  Brain, Sparkles, Heart, AlertTriangle,
+  Brain, Sparkles, Heart, AlertTriangle, RotateCcw,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { generateId } from '@/lib/utils'
@@ -131,6 +131,22 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
   const [showBodySettings, setShowBodySettings] = useState(false)
   const [bodyFocus, setBodyFocus] = useState<'balanced' | 'fat-loss' | 'muscle-gain' | 'maintain' | 'recomposition'>('balanced')
   const [showBodyFocusPref, setShowBodyFocusPref] = useState(false)
+  const [scopeOffset, setScopeOffset] = useState(0)
+
+  const scopeWeek = useMemo(() => {
+    const days: { fullDate: string; label: string }[] = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i + scopeOffset * 7)
+      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      days.push({
+        fullDate: ds,
+        label: i === 0 && scopeOffset === 0 ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' }),
+      })
+    }
+    return days
+  }, [scopeOffset])
+
+  const isScopeCurrentWeek = scopeOffset === 0
 
   useEffect(() => { localStorage.setItem(GOAL_STORAGE_KEY, targetWeight) }, [targetWeight])
   useEffect(() => { localStorage.setItem(GOAL_BF_KEY, goalBodyFat) }, [goalBodyFat])
@@ -172,12 +188,20 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
 
   const measureChartData = useMemo(() => {
     if (chronological.length < 2) return []
-    return chronological.slice(-30).map(m => {
+    let data = chronological
+    if (scopeOffset !== 0) {
+      const start = scopeWeek[0].fullDate
+      const end = scopeWeek[6].fullDate
+      data = data.filter(m => m.date >= start && m.date <= end)
+    } else {
+      data = data.slice(-30)
+    }
+    return data.map(m => {
       const entry: ChartEntry = { date: new Date(m.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }
       measurementFields.forEach(f => { if (m.measurements?.[f.key] != null) entry[f.key] = m.measurements[f.key] })
       return entry
     })
-  }, [chronological])
+  }, [chronological, scopeOffset, scopeWeek])
 
   const activeMeasureFields = useMemo(() => measurementFields.filter(f => measureChartData.some(d => d[f.key] != null)), [measureChartData])
 
@@ -195,10 +219,17 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
     [sorted, chronological, latest, goal, recentWeeklyChange, projectedWeeks, estimatedBfResult, useEstimatedBf, bodyFocus])
 
   const filteredChartData = useMemo(() => {
-    if (trendPeriod === 'all') return chartData
-    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - (trendPeriod === '7d' ? 7 : trendPeriod === '14d' ? 14 : 30))
-    return chartData.filter(d => new Date(d.fullDate) >= cutoff)
-  }, [chartData, trendPeriod])
+    let data = chartData
+    if (scopeOffset !== 0) {
+      const start = scopeWeek[0].fullDate
+      const end = scopeWeek[6].fullDate
+      data = data.filter(d => d.fullDate >= start && d.fullDate <= end)
+    } else if (trendPeriod !== 'all') {
+      const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - (trendPeriod === '7d' ? 7 : trendPeriod === '14d' ? 14 : 30))
+      data = data.filter(d => new Date(d.fullDate) >= cutoff)
+    }
+    return data
+  }, [chartData, trendPeriod, scopeOffset, scopeWeek])
 
   const reset = () => { setDate(new Date().toISOString().split('T')[0]); setWeight(''); setBodyFat(''); setMeasurements({}) }
 
@@ -523,13 +554,38 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
             className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
             <div className="relative">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-400/20 to-violet-500/20 border border-violet-500/20 flex items-center justify-center">
                     <BarChart3 className="w-3 h-3 text-violet-400" />
                   </div>
                   <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">BodyScope</span>
                 </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setScopeOffset(o => o + 1)}
+                    className="p-1.5 rounded-xl border border-white/10 bg-white/5 text-gray-400 hover:text-white hover:border-violet-500/20 hover:bg-violet-500/10 transition-all">
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[130px] text-center select-none">
+                    {new Date(scopeWeek[0].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(scopeWeek[6].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                  <button onClick={() => setScopeOffset(o => Math.max(0, o - 1))} disabled={isScopeCurrentWeek}
+                    className={`p-1.5 rounded-xl border transition-all ${isScopeCurrentWeek
+                      ? 'bg-white/[0.02] border-white/[0.04] text-gray-600 cursor-not-allowed'
+                      : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20'}`}>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => setScopeOffset(0)}
+                    className={`p-1.5 rounded-xl border transition-all ${isScopeCurrentWeek
+                      ? 'bg-white/[0.02] border-white/[0.04] text-gray-600'
+                      : 'bg-violet-500/10 border-violet-500/20 text-violet-400 hover:bg-violet-500/20'}`}
+                    title={isScopeCurrentWeek ? 'Current week' : 'This week'}>
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between mb-4">
+                <div />
                 <div className="flex items-center gap-2">
                   <div className="flex gap-1 bg-white/5 rounded-lg p-0.5">
                     {PERIOD_OPTIONS.map(p => (
@@ -690,6 +746,7 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
 
               {/* Stats strip */}
               {(() => {
+                if (filteredChartData.length === 0) return null
                 const avgWeight = filteredChartData.reduce((s, d) => s + (d.weight ?? 0), 0) / filteredChartData.length
                 const minW = Math.min(...filteredChartData.filter(d => d.weight != null).map(d => d.weight!))
                 const maxW = Math.max(...filteredChartData.filter(d => d.weight != null).map(d => d.weight!))
