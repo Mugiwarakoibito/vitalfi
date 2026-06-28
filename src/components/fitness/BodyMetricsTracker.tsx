@@ -255,15 +255,23 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
   const handleDelete = async () => { if (!deletingEntry) return; await deleteBodyMetric(deletingEntry.id); setDeletingEntry(null) }
 
   const radarData = useMemo(() => {
-    if (!latest?.measurements) return []
-    const vals = Object.values(latest.measurements)
-    const maxVal = vals.length > 0 ? Math.max(...vals) * 1.3 : 150
-    return activeMeasureFields.map(f => ({
+    const latestValues: Record<string, number> = {}
+    for (const entry of chronological) {
+      if (entry.measurements) {
+        for (const [key, val] of Object.entries(entry.measurements)) {
+          if (!(key in latestValues)) latestValues[key] = val
+        }
+      }
+    }
+    const vals = Object.values(latestValues)
+    if (vals.length < 3) return []
+    const maxVal = Math.max(...vals) * 1.3
+    return measurementFields.filter(f => f.key in latestValues).map(f => ({
       field: f.label,
-      value: latest.measurements?.[f.key] ?? 0,
+      value: latestValues[f.key],
       maxValue: Math.ceil(maxVal / 10) * 10,
     }))
-  }, [latest, activeMeasureFields])
+  }, [chronological])
 
   return (
     <div className="space-y-6">
