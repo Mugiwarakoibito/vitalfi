@@ -649,8 +649,8 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                 )
               })()}
             </div>
-          </motion.div>
-        )}
+        </motion.div>
+      )}
       </AnimatePresence>
 
       {/* Body Composition + BMR/TDEE */}
@@ -787,45 +787,70 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
         </div>
       )}
 
-      {/* Log Form Modal */}
+      {/* Log Form Modal — Supernatural */}
+      <AnimatePresence>
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowForm(false)}>
-          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-white mb-6">Log Body Metrics</h3>
-            <div className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Date</label>
-                  <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-rose-500/40" />
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowForm(false)}>
+          <motion.div initial={{ scale: 0.92, opacity: 0, y: 30 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0, y: 30 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-gray-900 via-gray-900/95 to-gray-950 p-6 shadow-2xl shadow-violet-500/5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full -mr-20 -mt-20 blur-2xl" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-violet-500/5 rounded-full -ml-12 -mb-12 blur-xl" />
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400/20 to-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shadow-lg shadow-emerald-500/10">
+                  <Activity className="w-5 h-5 text-emerald-400" />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Weight (kg) *</label>
-                  <input type="number" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-rose-500/40" placeholder="75.0" />
+                  <h3 className="text-lg font-semibold text-white">Log Body Metrics</h3>
+                  <p className="text-[10px] text-gray-500">Weight, body fat & measurements</p>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Body Fat %</label>
-                <input type="number" step="0.1" value={bodyFat} onChange={(e) => setBodyFat(e.target.value)} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-rose-500/40" placeholder="Optional" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-3">Measurements (cm)</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {measurementFields.map((field) => (
-                    <div key={field.key}>
-                      <label className="block text-xs text-gray-500 mb-1">{field.label}</label>
-                      <input type="number" step="0.1" value={measurements[field.key] ?? ''} onChange={(e) => setMeasurements({ ...measurements, [field.key]: e.target.value })} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-rose-500/40" placeholder="--" />
-                    </div>
-                  ))}
+              <div className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Date</label>
+                    <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-emerald-500/40 transition-all" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Weight <span className="text-emerald-400">*</span></label>
+                    <input type="number" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-emerald-500/40 transition-all" placeholder="75.0" />
+                  </div>
                 </div>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button onClick={() => { setShowForm(false); reset() }} className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-all text-sm font-medium">Cancel</button>
-                <button onClick={handleSave} disabled={!weight || isNaN(parseFloat(weight)) || parseFloat(weight) <= 0} className="flex-1 px-4 py-3 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-400 font-medium hover:bg-rose-500/30 transition-all disabled:opacity-50 text-sm">Save</button>
+                <div>
+                  <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Body Fat %</label>
+                  <input type="number" step="0.1" value={bodyFat} onChange={(e) => setBodyFat(e.target.value)} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/40 transition-all" placeholder="Optional" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Measurements</span>
+                    <span className="text-[9px] text-gray-600">(cm)</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {measurementFields.map((field, idx) => (
+                      <motion.div key={field.key} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }}
+                        className="group relative rounded-xl bg-white/[0.03] border border-white/[0.06] p-2.5 hover:border-white/20 transition-all">
+                        <label className="block text-[9px] text-gray-500 uppercase tracking-wider mb-1.5">{field.label}</label>
+                        <input type="number" step="0.1" value={measurements[field.key] ?? ''} onChange={(e) => setMeasurements({ ...measurements, [field.key]: e.target.value })} className="w-full bg-transparent text-white text-sm font-medium focus:outline-none placeholder-gray-600" placeholder="--" />
+                        <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-transparent group-focus-within:ring-emerald-500/20 transition-all pointer-events-none" />
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button onClick={() => { setShowForm(false); reset() }} className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all text-sm font-medium">Cancel</button>
+                  <motion.button whileTap={{ scale: 0.97 }} onClick={handleSave} disabled={!weight || isNaN(parseFloat(weight)) || parseFloat(weight) <= 0}
+                    className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500/20 to-emerald-600/10 border border-emerald-500/30 text-emerald-300 font-semibold hover:bg-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/10 transition-all disabled:opacity-40 text-sm">
+                    Save Entry
+                  </motion.button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Delete Confirmation */}
       {deletingEntry && (
