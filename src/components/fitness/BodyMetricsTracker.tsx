@@ -91,6 +91,8 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
   const [showBodyCoach, setShowBodyCoach] = useState(false)
   const [showBodyScope, setShowBodyScope] = useState(false)
   const [showBodySettings, setShowBodySettings] = useState(false)
+  const [bodyFocus, setBodyFocus] = useState<'balanced' | 'fat-loss' | 'muscle-gain' | 'maintain' | 'recomposition'>('balanced')
+  const [showBodyFocusPref, setShowBodyFocusPref] = useState(false)
 
   useEffect(() => { localStorage.setItem(GOAL_STORAGE_KEY, targetWeight) }, [targetWeight])
   useEffect(() => { localStorage.setItem(GOAL_BF_KEY, goalBodyFat) }, [goalBodyFat])
@@ -333,11 +335,56 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
           className="rounded-2xl border border-emerald-500/15 bg-black/60 backdrop-blur-xl p-4 overflow-hidden relative">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-violet-500/5 pointer-events-none" />
           <div className="relative">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400/20 to-emerald-500/20 border border-emerald-500/20 flex items-center justify-center">
-                <Brain className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400/20 to-emerald-500/20 border border-emerald-500/20 flex items-center justify-center">
+                  <Brain className="w-3.5 h-3.5 text-emerald-400" />
+                </div>
+                <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">BODYCOACH</span>
               </div>
-              <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">BODYCOACH</span>
+              <div className="flex items-center gap-1.5">
+                <div className="relative">
+                  <button onClick={() => setShowBodyFocusPref(p => !p)}
+                    className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${showBodyFocusPref
+                      ? bodyFocus === 'fat-loss' ? 'bg-rose-500/15 border-rose-500/30 text-rose-400'
+                        : bodyFocus === 'muscle-gain' ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                        : bodyFocus === 'maintain' ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400'
+                        : bodyFocus === 'recomposition' ? 'bg-violet-500/15 border-violet-500/30 text-violet-400'
+                        : 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                      : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:bg-white/10'}`}
+                    title="Body focus">
+                    <span className="text-[11px] leading-none">{bodyFocus === 'fat-loss' ? '🎯' : bodyFocus === 'muscle-gain' ? '💪' : bodyFocus === 'maintain' ? '⚖️' : bodyFocus === 'recomposition' ? '🔄' : '🏋️'}</span>
+                  </button>
+                  {showBodyFocusPref && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setShowBodyFocusPref(false)} />
+                      <div className="absolute right-0 top-8 z-20 w-44 rounded-xl bg-gray-900 border border-white/10 shadow-2xl p-3">
+                        <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Body Focus</p>
+                        <div className="flex flex-col gap-1">
+                          {([
+                            { key: 'balanced' as const, label: '🏋️ Balanced' },
+                            { key: 'fat-loss' as const, label: '🎯 Fat Loss' },
+                            { key: 'muscle-gain' as const, label: '💪 Muscle Gain' },
+                            { key: 'maintain' as const, label: '⚖️ Maintain' },
+                            { key: 'recomposition' as const, label: '🔄 Recomp' },
+                          ]).map(opt => (
+                            <button key={opt.key} onClick={() => { setBodyFocus(opt.key); setShowBodyFocusPref(false) }}
+                              className={`text-left px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${bodyFocus === opt.key
+                                ? opt.key === 'fat-loss' ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                                  : opt.key === 'muscle-gain' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                  : opt.key === 'maintain' ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
+                                  : opt.key === 'recomposition' ? 'bg-violet-500/15 text-violet-300 border border-violet-500/30'
+                                  : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Stats summary bar */}
