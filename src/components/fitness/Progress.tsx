@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Trophy, Plus, Star, TrendingUp, Award, X,
+  Trophy, Plus, Star, Award, X,
   Dumbbell, Flame, BarChart3, Activity,
   Sparkles, Camera, Target, CheckCircle2, Medal,
   Image, Calendar, Download, Settings, Trash2, Filter,
+  Brain, ChevronLeft, ChevronRight, RotateCcw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -59,13 +60,6 @@ const ACHIEVEMENT_DEFS: { id: string; name: string; icon: keyof typeof ACHIEVEME
 const ACHIEVEMENT_ICON_MAP = {
   star: Star, award: Award, medal: Medal, trophy: Trophy, flame: Flame,
 }
-
-const PERIOD_OPTIONS = [
-  { value: '7d', label: '7D' },
-  { value: '14d', label: '14D' },
-  { value: '30d', label: '30D' },
-  { value: 'all', label: 'All' },
-] as const
 
 function classifyStrength(exerciseName: string, weight: number, bodyWeight: number): { level: string; color: string } | null {
   if (!bodyWeight) return null
@@ -143,7 +137,6 @@ export function Progress() {
   const { workouts, bodyMetrics } = useAppStore()
   const [records, setRecords] = useState<PR[]>([])
   const [showModal, setShowModal] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [justAdded, setJustAdded] = useState('')
@@ -154,33 +147,43 @@ export function Progress() {
   })
   const [chartMetric, setChartMetric] = useState<'weight' | 'reps' | 'volume'>('weight')
   const [selectedExercise, setSelectedExercise] = useState<string>('')
-  const [trendPeriod, setTrendPeriod] = useState<'7d' | '14d' | '30d' | 'all'>('all')
   const [photos, setPhotos] = useState<ProgressPhoto[]>([])
   const [showPhotoModal, setShowPhotoModal] = useState(false)
   const [photoDate, setPhotoDate] = useState(new Date().toISOString().split('T')[0])
   const [earned, setEarned] = useState<Set<string>>(new Set())
-  const [showCharts, setShowCharts] = useState(false)
-  const [showStrength, setShowStrength] = useState(false)
   const [showAchievements, setShowAchievements] = useState(false)
   const [showPhotos, setShowPhotos] = useState(false)
+  const [showPerfCoach, setShowPerfCoach] = useState(false)
+  const [showPerfScope, setShowPerfScope] = useState(false)
+  const [showPerfSettings, setShowPerfSettings] = useState(false)
+  const [perfFocus, setPerfFocus] = useState<'strength' | 'hypertrophy' | 'endurance' | 'power' | 'overall'>('overall')
+  const [scopeOffset, setScopeOffset] = useState(0)
+  const [chartTab, setChartTab] = useState<'prs' | 'volume' | 'weight'>('prs')
+  const [targetDate, setTargetDate] = useState(new Date())
+  const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d }, [])
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) setRecords(JSON.parse(stored))
-      const photoStored = localStorage.getItem(PHOTOS_KEY)
-      if (photoStored) setPhotos(JSON.parse(photoStored))
-      const achStored = localStorage.getItem(ACHIEVEMENTS_KEY)
-      if (achStored) setEarned(new Set(JSON.parse(achStored)))
-    } catch {}
-  }, [])
+  const navigateDate = useMemo(() => ({
+    left: () => { const d = new Date(targetDate); d.setDate(d.getDate() - 1); setTargetDate(d) },
+    right: () => { const d = new Date(targetDate); d.setDate(d.getDate() + 1); setTargetDate(d) },
+    today: () => setTargetDate(new Date()),
+  }), [targetDate])
 
-  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)) }, [records])
-  useEffect(() => { localStorage.setItem(PHOTOS_KEY, JSON.stringify(photos)) }, [photos])
+  const isToday = useMemo(() =>
+    targetDate.toDateString() === today.toDateString(),
+    [targetDate, today]
+  )
+
+  const scopeWeek = useMemo(() => {
+    const end = new Date(today)
+    end.setDate(end.getDate() - scopeOffset * 7)
+    const start = new Date(end)
+    start.setDate(start.getDate() - 6)
+    return { start, end }
+  }, [scopeOffset, today])
+
+  const isScopeCurrentWeek = useMemo(() => scopeOffset === 0, [scopeOffset])
 
   const exercises = useMemo(() => [...new Set(records.map(r => r.exerciseName))].sort(), [records])
-
-  useEffect(() => { if (!selectedExercise && exercises.length > 0) setSelectedExercise(exercises[0]) }, [exercises])
 
   const latestWeight = useMemo(() => {
     const withWeight = bodyMetrics.filter((m: BodyMetric) => m.weight != null)
@@ -253,12 +256,8 @@ export function Progress() {
   }, [records])
 
   const filteredRecords = useMemo(() => {
-    if (trendPeriod === 'all') return records
-    const cutoff = new Date()
-    cutoff.setDate(cutoff.getDate() - (trendPeriod === '7d' ? 7 : trendPeriod === '14d' ? 14 : 30))
-    const cutoffStr = cutoff.toISOString().split('T')[0]
-    return records.filter(r => r.date >= cutoffStr)
-  }, [records, trendPeriod])
+    return records
+  }, [records])
 
   const chartData = useMemo(() => {
     const targetRecords = selectedExercise
@@ -345,6 +344,33 @@ export function Progress() {
     }
   }, [records.length, totalVolume, hasAdvancedTier])
 
+  const perfInsights = useMemo(() => {
+    const tips: { icon: string; text: string; color: string }[] = []
+    if (records.length === 0) {
+      tips.push({ icon: '💡', text: 'Log your first PR to unlock personalized performance insights.', color: 'text-amber-400' })
+      return tips
+    }
+    const focusTips: Record<string, string> = {
+      strength: 'Prioritize low-rep (3-6), high-weight sets. Track your 1RM progression on compound lifts.',
+      hypertrophy: 'Focus on moderate-rep (8-12) sets with controlled tempo. Volume is your primary driver.',
+      endurance: 'Aim for high-rep (15-20+) sets with shorter rest periods. Track muscular endurance gains.',
+      power: 'Incorporate explosive movements and speed work. Track velocity and rate of force development.',
+      overall: 'Keep a balanced approach across rep ranges. Track PRs in all categories for comprehensive growth.',
+    }
+    tips.push({ icon: '🎯', text: focusTips[perfFocus], color: 'text-amber-400' })
+    if (prStreak > 0) tips.push({ icon: '🔥', text: `You're on a ${prStreak}-day PR streak! Keep showing up.`, color: 'text-orange-400' })
+    if (latestWeight && strengthLevels.length > 0) {
+      const highest = strengthLevels.reduce((a, b) => a.ratio > b.ratio ? a : b)
+      if (highest.ratio > 2) tips.push({ icon: '💪', text: `${highest.exercise} ratio of ${highest.ratio}x BW is Elite level!`, color: 'text-amber-400' })
+    }
+    if (totalVolume > 1000000) tips.push({ icon: '🏆', text: 'Over 1M total volume — you\'re a Volume Master!', color: 'text-emerald-400' })
+    if (records.length >= 10) tips.push({ icon: '📊', text: `${records.length} PRs logged — review your progress weekly to spot trends.`, color: 'text-violet-400' })
+    if (latestWeight && records.some(r => r.exerciseName.toLowerCase().includes('bench') && (r.weight / latestWeight) < 1)) {
+      tips.push({ icon: '🎯', text: 'Aim for 1x BW bench as your next milestone.', color: 'text-amber-400' })
+    }
+    return tips
+  }, [records, perfFocus, prStreak, latestWeight, strengthLevels, totalVolume])
+
   const addPhoto = () => {
     const newPhoto: ProgressPhoto = {
       id: crypto.randomUUID?.() ?? Math.random().toString(36).substring(2, 15),
@@ -388,46 +414,63 @@ export function Progress() {
         </motion.div>
       )}
 
-      {/* Toolbar with icon buttons */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">Performance</h2>
-          <p className="text-sm text-gray-400 mt-0.5">PRs, strength levels & workout analytics</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {records.length > 0 && (
+      {/* Toolbar */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+        <div className="flex items-center justify-end flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            {records.length > 0 && (
+              <button
+                className={`p-2 rounded-xl border transition-all ${showPerfCoach ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+                onClick={() => setShowPerfCoach(p => !p)} title="PerfCoach">
+                <Brain className="w-5 h-5" />
+              </button>
+            )}
             <button
-              className={`p-2 rounded-xl border transition-all ${showCharts ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
-              onClick={() => setShowCharts(p => !p)} title="PR Charts">
+              className={`p-2 rounded-xl border transition-all ${showPerfScope ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              onClick={() => setShowPerfScope(p => !p)} title="PerfScope">
               <BarChart3 className="w-5 h-5" />
             </button>
-          )}
-          {strengthLevels.length > 0 && (
+            {records.length > 0 && (
+              <button
+                className={`p-2 rounded-xl border transition-all ${showAchievements ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+                onClick={() => setShowAchievements(p => !p)} title="Achievements">
+                <Trophy className="w-5 h-5" />
+              </button>
+            )}
             <button
-              className={`p-2 rounded-xl border transition-all ${showStrength ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
-              onClick={() => setShowStrength(p => !p)} title="Strength Levels">
-              <Dumbbell className="w-5 h-5" />
+              className={`p-2 rounded-xl border transition-all ${showPhotos ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              onClick={() => setShowPhotos(p => !p)} title="Progress Photos">
+              <Camera className="w-5 h-5" />
+            </button>
+            <button onClick={() => setShowPerfSettings(p => !p)}
+              className={`p-2 rounded-xl border transition-all ${showPerfSettings ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}>
+              <Settings className="w-5 h-5" />
+            </button>
+            <Button variant="primary" size="sm" onClick={() => setShowModal(true)}>
+              <Plus className="w-4 h-4 mr-1" />Add PR
+            </Button>
+          </div>
+        </div>
+        {/* Date Navigation Bar */}
+        <div className="flex items-center justify-center gap-3">
+          <button onClick={navigateDate.left} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30" disabled={isToday}>
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="relative">
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+            <input type="date" value={targetDate.toISOString().split('T')[0]}
+              onChange={e => setTargetDate(new Date(e.target.value + 'T00:00:00'))}
+              className="w-40 bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-sm text-white font-medium focus:outline-none focus:border-amber-500/40 [color-scheme:dark] cursor-pointer" />
+          </div>
+          <button onClick={navigateDate.right} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          {!isToday && (
+            <button onClick={navigateDate.today}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition-all text-[10px] font-bold uppercase tracking-wider">
+              <RotateCcw className="w-3.5 h-3.5" />Today
             </button>
           )}
-          {records.length > 0 && (
-            <button
-              className={`p-2 rounded-xl border transition-all ${showAchievements ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
-              onClick={() => setShowAchievements(p => !p)} title="Achievements">
-              <Trophy className="w-5 h-5" />
-            </button>
-          )}
-          <button
-            className={`p-2 rounded-xl border transition-all ${showPhotos ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
-            onClick={() => setShowPhotos(p => !p)} title="Progress Photos">
-            <Camera className="w-5 h-5" />
-          </button>
-          <button onClick={() => setShowSettings(true)}
-            className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-            <Settings className="w-5 h-5" />
-          </button>
-          <Button variant="primary" size="sm" onClick={() => setShowModal(true)}>
-            <Plus className="w-4 h-4 mr-1" />Add PR
-          </Button>
         </div>
       </motion.div>
 
@@ -495,148 +538,230 @@ export function Progress() {
         </div>
       </motion.div>
 
-      {/* Charts Panel (toggleable) */}
+      {/* PerfCoach Panel */}
       <AnimatePresence>
-        {showCharts && (
+        {showPerfCoach && (
           <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-            className="rounded-2xl border border-amber-500/15 bg-black/60 backdrop-blur-[12px] p-4 space-y-6">
-            {exercises.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-amber-400" />
-                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">PR Progress</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1 bg-white/5 rounded-lg p-0.5">
-                      {PERIOD_OPTIONS.map(p => (
-                        <button key={p.value} onClick={() => setTrendPeriod(p.value)}
-                          className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${trendPeriod === p.value ? 'bg-amber-500/20 text-amber-300' : 'text-gray-500 hover:text-white'}`}>{p.label}</button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Filter className="w-3 h-3 text-gray-500" />
-                  <select value={selectedExercise} onChange={e => setSelectedExercise(e.target.value)}
-                    className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white font-medium focus:outline-none focus:border-amber-500/40">
-                    {exercises.map(ex => <option key={ex} value={ex}>{ex}</option>)}
-                  </select>
-                  <div className="flex gap-1 ml-auto">
-                    {(['weight', 'reps', 'volume'] as const).map(m => (
-                      <button key={m} onClick={() => setChartMetric(m)}
-                        className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${chartMetric === m ? 'bg-amber-500/20 text-amber-300' : 'text-gray-400 hover:text-white'}`}>{m}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                      <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
-                      <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
-                      <Line type="monotone" dataKey={chartMetric} stroke="#F59E0B" strokeWidth={2.5} dot={{ fill: '#F59E0B', r: 4 }} activeDot={{ r: 6 }} />
-                      {chartMetric === 'weight' && (
-                        <Line type="monotone" dataKey="estimated1RM" stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="4 4" dot={false} opacity={0.5} />
-                      )}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-            {workouts.length >= 7 && (
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <BarChart3 className="w-4 h-4 text-emerald-400" />
-                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Weekly Volume</h4>
-                </div>
-                <div className="h-40">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={weeklyVolumeComparison}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                      <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
-                      <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
-                      <Bar dataKey="current" name="This Week" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={20} />
-                      <Bar dataKey="prior" name="Last Week" fill="#374151" radius={[4, 4, 0, 0]} maxBarSize={20} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex items-center gap-4 mt-2 text-[10px]">
-                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" /><span className="text-gray-400">This Week</span></div>
-                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-gray-600" /><span className="text-gray-400">Last Week</span></div>
-                </div>
-              </div>
-            )}
-            {volumeTrend.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <BarChart3 className="w-4 h-4 text-emerald-400" />
-                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Workout Volume</h4>
-                </div>
-                <div className="h-40">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={volumeTrend}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                      <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
-                      <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
-                      <Bar dataKey="volume" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={24} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-            {bodyWeightData.length > 1 && (
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp className="w-4 h-4 text-violet-400" />
-                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Body Weight</h4>
-                </div>
-                <div className="h-40">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={bodyWeightData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                      <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
-                      <YAxis domain={['auto', 'auto']} tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
-                      <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
-                      <Line type="monotone" dataKey="weight" stroke="#8b5cf6" strokeWidth={2.5} dot={{ fill: '#8b5cf6', r: 3 }} activeDot={{ r: 5 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Strength Levels Panel (toggleable) */}
-      <AnimatePresence>
-        {showStrength && strengthLevels.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-            className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Medal className="w-4 h-4 text-violet-400" />
-              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Strength Level Classification</h4>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {strengthLevels.map((sl) => (
-                <div key={sl.exercise} className="relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-semibold text-white">{sl.exercise}</p>
-                    <div className="px-2.5 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: `${sl.color}20`, color: sl.color, border: `1px solid ${sl.color}40` }}>
-                      {sl.level}
-                    </div>
-                  </div>
-                  <div className="flex items-baseline gap-2 text-xs text-gray-400">
-                    <span>{sl.weight} lbs</span>
-                    <span className="text-gray-600">@</span>
-                    <span>{sl.bodyWeight} lbs BW</span>
-                    <span className="text-gray-600">=</span>
-                    <span className="font-semibold" style={{ color: sl.color }}>{sl.ratio}x</span>
+            className="rounded-2xl border border-amber-500/15 bg-black/60 backdrop-blur-[12px] p-4 space-y-4">
+            {/* Stats Summary Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {[
+                { label: 'PRs', value: records.length, icon: <Trophy className="w-3.5 h-3.5" />, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+                { label: 'Best 1RM', value: `${best1RM}`, icon: <Award className="w-3.5 h-3.5" />, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+                { label: 'Volume', value: totalVolume > 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume, icon: <Flame className="w-3.5 h-3.5" />, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+                { label: 'Exercises', value: exercises.length, icon: <Activity className="w-3.5 h-3.5" />, color: 'text-sky-400', bg: 'bg-sky-500/10' },
+                { label: 'Streak', value: `${prStreak}d`, icon: <Flame className="w-3.5 h-3.5" />, color: 'text-rose-400', bg: 'bg-rose-500/10' },
+              ].map(s => (
+                <div key={s.label} className="flex items-center gap-2 rounded-xl bg-white/[0.02] border border-white/5 p-2.5">
+                  <div className={`p-1.5 rounded-lg ${s.bg}`}>{s.icon}</div>
+                  <div>
+                    <p className={`text-sm font-bold ${s.color}`}>{s.value}</p>
+                    <p className="text-[9px] text-gray-500 uppercase tracking-wider">{s.label}</p>
                   </div>
                 </div>
               ))}
             </div>
+            {/* Focus Selector */}
+            <div>
+              <div className="flex items-center gap-2 mb-2.5">
+                <Target className="w-4 h-4 text-amber-400" />
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Training Focus</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { key: 'strength' as const, label: 'Strength', icon: '🏋️' },
+                  { key: 'hypertrophy' as const, label: 'Hypertrophy', icon: '💪' },
+                  { key: 'endurance' as const, label: 'Endurance', icon: '🏃' },
+                  { key: 'power' as const, label: 'Power', icon: '⚡' },
+                  { key: 'overall' as const, label: 'Overall', icon: '🎯' },
+                ].map(f => (
+                  <button key={f.key} onClick={() => setPerfFocus(f.key)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all border ${
+                      perfFocus === f.key
+                        ? f.key === 'strength' ? 'bg-red-500/15 border-red-500/30 text-red-300'
+                        : f.key === 'hypertrophy' ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                        : f.key === 'endurance' ? 'bg-sky-500/15 border-sky-500/30 text-sky-300'
+                        : f.key === 'power' ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+                        : 'bg-violet-500/15 border-violet-500/30 text-violet-300'
+                        : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
+                    }`}>
+                    <span>{f.icon}</span> {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* AI Insights */}
+            <div>
+              <div className="flex items-center gap-2 mb-2.5">
+                <Brain className="w-4 h-4 text-amber-400" />
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">AI Performance Insights</span>
+              </div>
+              <div className="space-y-1.5">
+                {perfInsights.slice(0, 4).map((tip, i) => (
+                  <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                    className="flex items-start gap-2.5 rounded-xl bg-white/[0.02] border border-white/5 p-3">
+                    <span className="text-sm leading-none mt-0.5">{tip.icon}</span>
+                    <p className="text-xs text-gray-300 leading-relaxed">{tip.text}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* PerfScope Panel */}
+      <AnimatePresence>
+        {showPerfScope && (
+          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+            className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4 space-y-4">
+            {/* Title + Week Navigation */}
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-violet-400" />
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Performance Scope</h4>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setScopeOffset(p => p + 1)} disabled={!isScopeCurrentWeek && scopeOffset >= 100}
+                  className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-[11px] font-semibold text-white min-w-[100px] text-center">
+                  {scopeWeek.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {scopeWeek.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+                <button onClick={() => scopeOffset > 0 && setScopeOffset(p => Math.max(0, p - 1))}
+                  className={`p-1.5 rounded-lg transition-all ${scopeOffset === 0 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-500 hover:text-white hover:bg-white/10'}`}>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                {!isScopeCurrentWeek && (
+                  <button onClick={() => setScopeOffset(0)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all text-[10px] font-bold uppercase tracking-wider">
+                    <RotateCcw className="w-3 h-3" />Current
+                  </button>
+                )}
+              </div>
+            </div>
+            {/* Chart Mode Toggles */}
+            <div className="flex items-center gap-1.5">
+              {[
+                { key: 'prs' as const, label: 'PRs', icon: '📊' },
+                { key: 'volume' as const, label: 'Volume', icon: '📈' },
+                { key: 'weight' as const, label: 'Weight', icon: '⚖️' },
+              ].map(m => (
+                <button key={m.key} onClick={() => setChartTab(m.key)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${
+                    chartTab === m.key
+                      ? m.key === 'prs' ? 'bg-amber-500/15 border border-amber-500/30 text-amber-300'
+                      : m.key === 'volume' ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+                      : 'bg-violet-500/15 border border-violet-500/30 text-violet-300'
+                      : 'bg-white/5 border border-white/10 text-gray-400 hover:text-white'
+                  }`}>
+                  <span>{m.icon}</span> {m.label}
+                </button>
+              ))}
+            </div>
+            {/* Charts */}
+            {chartTab === 'prs' && (
+              <div>
+                {exercises.length > 0 && chartData.length > 0 ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Filter className="w-3 h-3 text-gray-500" />
+                      <select value={selectedExercise} onChange={e => setSelectedExercise(e.target.value)}
+                        className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white font-medium focus:outline-none focus:border-amber-500/40">
+                        {exercises.map(ex => <option key={ex} value={ex}>{ex}</option>)}
+                      </select>
+                      <div className="flex gap-1 ml-auto">
+                        {(['weight', 'reps', 'volume'] as const).map(m => (
+                          <button key={m} onClick={() => setChartMetric(m)}
+                            className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${chartMetric === m ? 'bg-amber-500/20 text-amber-300' : 'text-gray-400 hover:text-white'}`}>{m}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                          <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
+                          <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
+                          <Line type="monotone" dataKey={chartMetric} stroke="#F59E0B" strokeWidth={2.5} dot={{ fill: '#F59E0B', r: 4 }} activeDot={{ r: 6 }} />
+                          {chartMetric === 'weight' && (
+                            <Line type="monotone" dataKey="estimated1RM" stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="4 4" dot={false} opacity={0.5} />
+                          )}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-500 text-center py-6">No PR data for this period — log some PRs first!</p>
+                )}
+              </div>
+            )}
+            {chartTab === 'volume' && (
+              <div className="space-y-4">
+                {workouts.length >= 7 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Weekly Volume Comparison</h4>
+                    <div className="h-40">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={weeklyVolumeComparison}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                          <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
+                          <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
+                          <Bar dataKey="current" name="This Week" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                          <Bar dataKey="prior" name="Last Week" fill="#374151" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex items-center gap-4 mt-2 text-[10px]">
+                      <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" /><span className="text-gray-400">This Week</span></div>
+                      <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-gray-600" /><span className="text-gray-400">Last Week</span></div>
+                    </div>
+                  </div>
+                )}
+                {volumeTrend.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Workout Volume Trend</h4>
+                    <div className="h-40">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={volumeTrend}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                          <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
+                          <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
+                          <Bar dataKey="volume" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={24} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+                {workouts.length < 7 && volumeTrend.length === 0 && (
+                  <p className="text-sm text-gray-500 text-center py-6">Not enough workout data yet — keep training!</p>
+                )}
+              </div>
+            )}
+            {chartTab === 'weight' && (
+              <div>
+                {bodyWeightData.length > 1 ? (
+                  <>
+                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Body Weight Trend</h4>
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={bodyWeightData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                          <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
+                          <YAxis domain={['auto', 'auto']} tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
+                          <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
+                          <Line type="monotone" dataKey="weight" stroke="#8b5cf6" strokeWidth={2.5} dot={{ fill: '#8b5cf6', r: 3 }} activeDot={{ r: 5 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-500 text-center py-6">Log your body weight in the Body tab to see trends here.</p>
+                )}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -958,65 +1083,61 @@ export function Progress() {
         </div>
       </Modal>
 
-      {/* Settings Modal */}
-      {showSettings && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowSettings(false)}>
-          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-gray-900 to-gray-950 p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 rounded-full -mr-20 -mt-20 blur-2xl" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500/5 rounded-full -ml-12 -mb-12 blur-xl" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shadow-lg"><Settings className="w-5 h-5 text-amber-400" /></div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">Performance Settings</h3>
-                    <p className="text-xs text-gray-500">Data management & export</p>
-                  </div>
-                </div>
-                <button onClick={() => setShowSettings(false)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all"><X className="w-4 h-4" /></button>
+      {/* Inline Settings Panel */}
+      <AnimatePresence>
+        {showPerfSettings && (
+          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+            className="rounded-2xl border border-emerald-500/15 bg-black/60 backdrop-blur-[12px] p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4 text-emerald-400" />
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Performance Settings</h4>
               </div>
-              <div className="space-y-4">
-                <div className="rounded-xl bg-white/5 border border-white/10 p-4">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium mb-2">Export Data</p>
-                  <button onClick={() => exportCSV(records)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 transition-all text-sm font-medium flex items-center justify-center gap-2">
-                    <Download className="w-4 h-4" /> Export PRs as CSV
+              <button onClick={() => setShowPerfSettings(false)} className="p-1 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium mb-2">Export PR Data</p>
+                <button onClick={() => exportCSV(records)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 transition-all text-sm font-medium flex items-center justify-center gap-2">
+                  <Download className="w-4 h-4" /> Export as CSV
+                </button>
+              </div>
+              <div className="rounded-xl bg-red-500/5 border border-red-500/10 p-3">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium mb-2">Data Management</p>
+                {!confirmClear ? (
+                  <button onClick={() => setConfirmClear(true)}
+                    className="w-full px-3 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 transition-all text-sm font-medium flex items-center justify-center gap-2">
+                    <Trash2 className="w-4 h-4" /> Clear All Data
                   </button>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
-                    <p className="text-[9px] text-gray-500 uppercase tracking-wider">Total PRs</p>
-                    <p className="text-lg font-bold text-white mt-1">{records.length}</p>
-                  </div>
-                  <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
-                    <p className="text-[9px] text-gray-500 uppercase tracking-wider">Exercises</p>
-                    <p className="text-lg font-bold text-white mt-1">{exercises.length}</p>
-                  </div>
-                </div>
-                <div className="rounded-xl bg-red-500/5 border border-red-500/10 p-4">
-                  <h4 className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-3">Data Management</h4>
-                  {!confirmClear ? (
-                    <button onClick={() => setConfirmClear(true)}
-                      className="w-full px-3 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 transition-all text-sm font-medium flex items-center justify-center gap-2">
-                      <Trash2 className="w-4 h-4" /> Clear All PR Data
-                    </button>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-xs text-red-400/80 text-center">This permanently deletes all PR records and photos.</p>
-                      <div className="flex gap-2">
-                        <button onClick={() => setConfirmClear(false)}
-                          className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-all text-xs">Cancel</button>
-                        <button onClick={() => { setRecords([]); setPhotos([]); localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(PHOTOS_KEY); setConfirmClear(false) }}
-                          className="flex-1 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30 transition-all text-xs font-semibold">Delete All</button>
-                      </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-red-400/80 text-center">This permanently deletes all PR records and photos.</p>
+                    <div className="flex gap-2">
+                      <button onClick={() => setConfirmClear(false)}
+                        className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-all text-xs">Cancel</button>
+                      <button onClick={() => { setRecords([]); setPhotos([]); localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(PHOTOS_KEY); setConfirmClear(false) }}
+                        className="flex-1 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30 transition-all text-xs font-semibold">Delete All</button>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        </div>
-      )}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3 text-center">
+                <p className="text-[9px] text-gray-500 uppercase tracking-wider">Total PRs</p>
+                <p className="text-lg font-bold text-white mt-1">{records.length}</p>
+              </div>
+              <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3 text-center">
+                <p className="text-[9px] text-gray-500 uppercase tracking-wider">Exercises</p>
+                <p className="text-lg font-bold text-white mt-1">{exercises.length}</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
