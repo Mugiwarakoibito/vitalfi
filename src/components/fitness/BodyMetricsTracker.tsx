@@ -603,26 +603,20 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                   <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">BodyScope</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => setScopeOffset(o => o + 1)}
-                    className="p-1.5 rounded-xl border border-white/10 bg-white/5 text-gray-400 hover:text-white hover:border-violet-500/20 hover:bg-violet-500/10 transition-all">
-                    <ChevronLeft className="w-3.5 h-3.5" />
+                  <button onClick={() => setScopeOffset(o => o + 1)} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
+                    <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[130px] text-center select-none">
+                  <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">
                     {new Date(scopeWeek[0].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(scopeWeek[6].fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </span>
-                  <button onClick={() => setScopeOffset(o => Math.max(0, o - 1))} disabled={isScopeCurrentWeek}
-                    className={`p-1.5 rounded-xl border transition-all ${isScopeCurrentWeek
-                      ? 'bg-white/[0.02] border-white/[0.04] text-gray-600 cursor-not-allowed'
-                      : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20'}`}>
-                    <ChevronRight className="w-3.5 h-3.5" />
+                  <button onClick={() => setScopeOffset(o => o - 1)} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
+                    <ChevronRight className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setScopeOffset(0)}
-                    className={`p-1.5 rounded-xl border transition-all ${isScopeCurrentWeek
-                      ? 'bg-white/[0.02] border-white/[0.04] text-gray-600'
-                      : 'bg-violet-500/10 border-violet-500/20 text-violet-400 hover:bg-violet-500/20'}`}
-                    title={isScopeCurrentWeek ? 'Current week' : 'This week'}>
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </button>
+                  {!isScopeCurrentWeek && (
+                    <button onClick={() => setScopeOffset(0)} className="p-1.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
+                      <RotateCcw className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="flex items-center justify-between mb-4">
@@ -659,11 +653,11 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                 <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
                 <div className="relative z-10 h-full">
                   {(() => {
-                    const hasData = filteredChartData.length > 1
-                    if (!hasData) return <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log more entries to see trends</div>
-                    if (chartTab === 'weight') return (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={filteredChartData}>
+                    if (chartTab === 'weight') {
+                      if (filteredChartData.length <= 1) return <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log more entries to see trends</div>
+                      return (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={filteredChartData}>
                           <defs>
                             <linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} /><stop offset="95%" stopColor="#f43f5e" stopOpacity={0} /></linearGradient>
                             <linearGradient id="bfg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} /><stop offset="95%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
@@ -712,7 +706,7 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                           {goal && <Line yAxisId="left" type="monotone" dataKey={() => goal} stroke="#10b981" strokeWidth={1.5} strokeDasharray="6 3" dot={false} opacity={0.6} name="Goal" />}
                         </AreaChart>
                       </ResponsiveContainer>
-                    )
+                    )}
                     if (chartTab === 'measurements') return (
                       activeMeasureFields.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
