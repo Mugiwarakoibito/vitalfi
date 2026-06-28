@@ -226,14 +226,6 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                       <span className="text-[11px] text-gray-500">50%</span>
                     </div>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5">
-                    {bodyMetrics.length > 0 && (
-                      <button onClick={() => { if (window.confirm('Clear all body entries?')) { bodyMetrics.forEach(m => deleteBodyMetric(m.id)) }; setShowBodySettings(false) }}
-                        className="w-full px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition-all text-[10px] font-medium flex items-center justify-center gap-1.5">
-                        <Trash2 className="w-3 h-3" /> Clear All
-                      </button>
-                    )}
-                  </div>
                 </div>
               </>
             )}
