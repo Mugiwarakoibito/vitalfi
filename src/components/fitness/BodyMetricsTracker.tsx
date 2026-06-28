@@ -278,10 +278,7 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
       {/* Toolbar */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h2 className="text-2xl font-bold text-white tracking-tight">Body</h2>
-            <p className="text-sm text-gray-400 mt-0.5">Weight, measurements & body composition</p>
-          </div>
+          <div />
           <div className="flex items-center gap-2">
             {bodyMetrics.length > 0 && (
               <button className={`p-2 rounded-xl border transition-all ${showBodyCoach ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
