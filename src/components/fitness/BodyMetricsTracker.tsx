@@ -630,92 +630,116 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
               </div>
 
               {/* Charts */}
-              <div className="h-60 rounded-2xl bg-gradient-to-br from-black/50 via-white/[0.02] to-transparent border border-white/[0.06] p-4 shadow-inner shadow-white/5 relative overflow-hidden" style={{ minHeight: '240px' }}>
-                <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
+              <div className="h-64 rounded-2xl bg-gradient-to-br from-black/60 via-white/[0.02] to-transparent border border-white/[0.06] p-4 shadow-inner shadow-white/5 relative overflow-hidden" style={{ minHeight: '260px' }}>
+                <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
+                <div className="absolute -top-12 -right-12 w-36 h-36 bg-rose-500/5 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
                 <div className="relative z-10 h-full">
                   {(() => {
                     if (chartTab === 'weight') {
                       if (filteredChartData.length <= 1) return <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log more entries to see trends</div>
                       return (
                         <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={filteredChartData}>
+                          <AreaChart data={filteredChartData} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
                           <defs>
-                            <linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} /><stop offset="95%" stopColor="#f43f5e" stopOpacity={0} /></linearGradient>
-                            <linearGradient id="bfg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} /><stop offset="95%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
+                            <linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f43f5e" stopOpacity={0.45} /><stop offset="50%" stopColor="#f43f5e" stopOpacity={0.2} /><stop offset="100%" stopColor="#f43f5e" stopOpacity={0} /></linearGradient>
+                            <linearGradient id="bfg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f59e0b" stopOpacity={0.35} /><stop offset="60%" stopColor="#f59e0b" stopOpacity={0.12} /><stop offset="100%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
+                            <filter id="glowWeight"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                            <filter id="glowBf"><feGaussianBlur stdDeviation="2.5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                          <XAxis dataKey="date" stroke="#9ca3af" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={5} interval="preserveStartEnd" />
-                          <YAxis yAxisId="left" stroke="#f43f5e" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={['dataMin - 2', 'dataMax + 2']} width={28} />
-                          <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={['dataMin - 3', 'dataMax + 3']} width={28} />
+                          <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
+                          <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
+                          <YAxis yAxisId="left" stroke="#f43f5e" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={['dataMin - 2', 'dataMax + 2']} width={32} tickFormatter={v => `${v}`} />
+                          <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={['dataMin - 3', 'dataMax + 3']} width={32} tickFormatter={v => `${v}%`} />
                           <Tooltip content={({ active, payload }) => {
                             if (!active || !payload?.length) return null
                             const d = payload[0].payload
+                            const prev = filteredChartData[filteredChartData.indexOf(d) - 1]
+                            const delta = prev?.weight != null && d.weight != null ? (d.weight as number) - (prev.weight as number) : null
                             return (
-                              <motion.div initial={{ opacity: 0, y: 4, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                className="bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 text-[11px] shadow-2xl leading-relaxed min-w-[160px]">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-white font-bold text-xs">{d.date}</span>
-                                </div>
-                                <div className="space-y-1.5">
-                                  <div className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-rose-400 shadow-lg shadow-rose-400/30" />
-                                    <span className="text-gray-400">Weight</span>
-                                    <span className="text-white font-semibold ml-auto">{d.weight} kg</span>
+                              <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-violet-500/5 min-w-[170px]">
+                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none" />
+                                <div className="relative">
+                                  <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-white/5">
+                                    <span className="text-white font-bold text-xs">{d.date}</span>
+                                    {delta != null && (
+                                      <span className={`text-[10px] font-bold flex items-center gap-0.5 ${delta > 0 ? 'text-rose-400' : delta < 0 ? 'text-emerald-400' : 'text-gray-500'}`}>
+                                        {delta > 0 ? '▲' : delta < 0 ? '▼' : '–'} {Math.abs(delta).toFixed(2)} kg
+                                      </span>
+                                    )}
                                   </div>
-                                  {d.bodyFat != null && (
-                                    <div className="flex items-center gap-2">
-                                      <span className="w-2 h-2 rounded-full bg-amber-400 shadow-lg shadow-amber-400/30" />
-                                      <span className="text-gray-400">Body Fat</span>
-                                      <span className="text-white font-semibold ml-auto">{d.bodyFat}%</span>
+                                  <div className="space-y-2">
+                                    <div className="flex items-center gap-2.5">
+                                      <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shadow-lg shadow-rose-400/40" style={{ filter: 'url(#glowWeight)' }} />
+                                      <span className="text-gray-400 font-medium">Weight</span>
+                                      <span className="text-white font-bold ml-auto text-sm">{d.weight} <span className="text-[10px] font-normal text-gray-500">kg</span></span>
                                     </div>
-                                  )}
-                                  {goal && (
-                                    <div className="flex items-center gap-2">
-                                      <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/30" />
-                                      <span className="text-gray-400">Goal</span>
-                                      <span className="text-emerald-400 font-semibold ml-auto">{goal.toFixed(1)} kg</span>
-                                    </div>
-                                  )}
+                                    {d.bodyFat != null && (
+                                      <div className="flex items-center gap-2.5">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-lg shadow-amber-400/40" style={{ filter: 'url(#glowBf)' }} />
+                                        <span className="text-gray-400 font-medium">Body Fat</span>
+                                        <span className="text-white font-bold ml-auto text-sm">{d.bodyFat} <span className="text-[10px] font-normal text-gray-500">%</span></span>
+                                      </div>
+                                    )}
+                                    {goal && (
+                                      <div className="flex items-center gap-2.5 pt-1.5 border-t border-white/5">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" />
+                                        <span className="text-gray-400 font-medium">Goal</span>
+                                        <span className="text-emerald-400 font-bold ml-auto">{goal.toFixed(1)} kg</span>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </motion.div>
                             )
-                          }} cursor={{ fill: 'rgba(139,92,246,0.08)' }} />
-                          <Area yAxisId="left" type="monotone" dataKey="weight" stroke="#f43f5e" strokeWidth={2.5} fill="url(#wg)" dot={false} activeDot={{ r: 5, fill: '#f43f5e', strokeWidth: 2, stroke: '#1a1a2e' }} name="Weight (kg)" />
+                          }} cursor={{ fill: 'rgba(139,92,246,0.1)' }} />
+                          <Area yAxisId="left" type="monotone" dataKey="weight" stroke="#f43f5e" strokeWidth={2.5} fill="url(#wg)" dot={false} activeDot={{ r: 6, fill: '#f43f5e', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowWeight)' }} name="Weight (kg)" animationDuration={600} animationEasing="ease-out" />
                           {filteredChartData.some(d => d.bodyFat != null) && (
-                            <Line yAxisId="right" type="monotone" dataKey="bodyFat" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#f59e0b', strokeWidth: 2, stroke: '#1a1a2e' }} name="Body Fat %" />
+                            <Line yAxisId="right" type="monotone" dataKey="bodyFat" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#f59e0b', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowBf)' }} name="Body Fat %" animationDuration={600} animationEasing="ease-out" />
                           )}
-                          {goal && <Line yAxisId="left" type="monotone" dataKey={() => goal} stroke="#10b981" strokeWidth={1.5} strokeDasharray="6 3" dot={false} opacity={0.6} name="Goal" />}
+                          {goal && <Line yAxisId="left" type="monotone" dataKey={() => goal} stroke="#10b981" strokeWidth={1.5} strokeDasharray="5 4" dot={false} opacity={0.7} name="Goal" animationDuration={400} />}
                         </AreaChart>
                       </ResponsiveContainer>
                     )}
                     if (chartTab === 'measurements') return (
                       activeMeasureFields.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={measureChartData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                            <XAxis dataKey="date" stroke="#9ca3af" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={5} interval="preserveStartEnd" />
-                            <YAxis stroke="#9ca3af" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={28} />
+                          <LineChart data={measureChartData} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
+                            <defs>
+                              {activeMeasureFields.map((f, i) => {
+                                const colors = ['#f43f5e', '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#6366f1', '#ec4899', '#14b8a6']
+                                return <linearGradient key={f.key} id={`mg-${f.key}`} x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor={colors[i % colors.length]} stopOpacity={0.3} /><stop offset="100%" stopColor={colors[i % colors.length]} stopOpacity={0} /></linearGradient>
+                              })}
+                              <filter id="glowMeas"><feGaussianBlur stdDeviation="2.5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                            </defs>
+                            <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
+                            <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
+                            <YAxis stroke="#6b7280" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={32} tickFormatter={v => `${v}`} domain={['dataMin - 2', 'dataMax + 2']} />
                             <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
                               return (
-                                <motion.div initial={{ opacity: 0, y: 4, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                  className="bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 text-[11px] shadow-2xl leading-relaxed min-w-[160px]">
-                                  <p className="text-white font-bold text-xs mb-2">{payload[0].payload.date}</p>
-                                  <div className="space-y-1">
-                                    {payload.map((p, i) => (
-                                      <div key={i} className="flex items-center gap-2">
-                                        <span className="w-2 h-2 rounded-full shadow-lg" style={{ backgroundColor: p.color, boxShadow: `0 0 6px ${p.color}` }} />
-                                        <span className="text-gray-400 w-16">{p.name}</span>
-                                        <span className="text-white font-semibold ml-auto">{Number(p.value).toFixed(1)} cm</span>
-                                      </div>
-                                    ))}
+                                <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-violet-500/5 min-w-[160px]">
+                                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none" />
+                                  <div className="relative">
+                                    <p className="text-white font-bold text-xs mb-2.5 pb-2 border-b border-white/5">{payload[0].payload.date}</p>
+                                    <div className="space-y-2">
+                                      {payload.map((p, i) => (
+                                        <div key={i} className="flex items-center gap-2.5">
+                                          <span className="w-2.5 h-2.5 rounded-full shadow-lg" style={{ backgroundColor: p.color, boxShadow: `0 0 8px ${p.color}66` }} />
+                                          <span className="text-gray-400 font-medium w-16">{p.name}</span>
+                                          <span className="text-white font-bold ml-auto text-sm">{Number(p.value).toFixed(1)} <span className="text-[10px] font-normal text-gray-500">cm</span></span>
+                                        </div>
+                                      ))}
+                                    </div>
                                   </div>
                                 </motion.div>
                               )
                             }} cursor={{ fill: 'rgba(139,92,246,0.08)' }} />
                             {activeMeasureFields.map((f, i) => {
                               const colors = ['#f43f5e', '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#6366f1', '#ec4899', '#14b8a6']
-                              return <Line key={f.key} type="monotone" dataKey={f.key} stroke={colors[i % colors.length]} strokeWidth={2.5} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: '#1a1a2e' }} name={f.label} />
+                              return <Line key={f.key} type="monotone" dataKey={f.key} stroke={colors[i % colors.length]} strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: colors[i % colors.length], strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowMeas)' }} name={f.label} animationDuration={600} animationEasing="ease-out" />
                             })}
                           </LineChart>
                         </ResponsiveContainer>
@@ -727,31 +751,49 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                       leanMass != null && fatMass != null ? (
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
+                            <defs>
+                              <filter id="glowComp"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <radialGradient id="leanGrad" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#6ee7b7" /><stop offset="100%" stopColor="#10b981" /></radialGradient>
+                              <radialGradient id="fatGrad" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#fde68a" /><stop offset="100%" stopColor="#f59e0b" /></radialGradient>
+                            </defs>
                             <Pie data={[
-                              { name: 'Lean Mass', value: leanMass, color: '#10b981' },
-                              { name: 'Fat Mass', value: fatMass, color: '#f59e0b' },
-                            ]} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" animationDuration={800} animationEasing="ease-out" stroke="rgba(255,255,255,0.03)" strokeWidth={1}>
+                              { name: 'Lean Mass', value: leanMass, color: 'url(#leanGrad)' },
+                              { name: 'Fat Mass', value: fatMass, color: 'url(#fatGrad)' },
+                            ]} cx="50%" cy="50%" innerRadius={55} outerRadius={88} dataKey="value" animationDuration={1000} animationEasing="ease-out" stroke="rgba(255,255,255,0.06)" strokeWidth={1.5} paddingAngle={3}>
                               {[0, 1].map(idx => (
-                                <Cell key={idx} fill={idx === 0 ? '#10b981' : '#f59e0b'} />
+                                <Cell key={idx} fill={idx === 0 ? 'url(#leanGrad)' : 'url(#fatGrad)'} stroke={idx === 0 ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)'} />
                               ))}
                             </Pie>
                             <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
                               const d = payload[0]
                               const total = leanMass + fatMass
+                              const pct = (Number(d.value) / total) * 100
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                                  className="bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl px-3.5 py-2.5 shadow-2xl min-w-[120px]">
-                                  <div className="flex items-center gap-2 mb-0.5">
-                                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.payload.color }} />
-                                    <p className="text-white font-bold text-xs">{d.name}</p>
+                                  className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 shadow-2xl shadow-violet-500/5 min-w-[130px]">
+                                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none" />
+                                  <div className="relative">
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: d.name === 'Lean Mass' ? '#10b981' : '#f59e0b', boxShadow: `0 0 10px ${d.name === 'Lean Mass' ? '#10b981' : '#f59e0b'}66` }} />
+                                      <p className="text-white font-bold text-xs">{d.name}</p>
+                                    </div>
+                                    <p className="text-gray-400 text-[11px]">
+                                      <span className="text-white font-bold text-sm">{Number(d.value).toFixed(1)}</span> kg
+                                      <span className="mx-1.5 text-gray-600">·</span>
+                                      <span className="font-semibold" style={{ color: d.name === 'Lean Mass' ? '#6ee7b7' : '#fde68a' }}>{pct.toFixed(1)}%</span>
+                                    </p>
+                                    <div className="mt-2 pt-2 border-t border-white/5 flex justify-between text-[10px] text-gray-500">
+                                      <span>Total</span>
+                                      <span className="text-white font-semibold">{total.toFixed(1)} kg</span>
+                                    </div>
                                   </div>
-                                  <p className="text-gray-400 text-[10px]"><span className="text-white font-semibold">{Number(d.value).toFixed(1)} kg</span> · {((Number(d.value) / total) * 100).toFixed(1)}%</p>
                                 </motion.div>
                               )
                             }} />
-                            <text x="50%" y="46%" textAnchor="middle" fill="#e5e7eb" fontSize={18} fontWeight={800}>{leanMass.toFixed(0)}</text>
-                            <text x="50%" y="55%" textAnchor="middle" fill="#6b7280" fontSize={8} fontWeight={600}>lean kg</text>
+                            <text x="50%" y="44%" textAnchor="middle" fill="#e5e7eb" fontSize={20} fontWeight={800} filter="url(#glowComp)">{leanMass.toFixed(0)}</text>
+                            <text x="50%" y="52%" textAnchor="middle" fill="#6b7280" fontSize={9} fontWeight={600}>lean kg</text>
+                            <text x="50%" y="60%" textAnchor="middle" fill="#4b5563" fontSize={7} fontWeight={500}>{(leanMass / (leanMass + fatMass) * 100).toFixed(0)}%</text>
                           </PieChart>
                         </ResponsiveContainer>
                       ) : (
