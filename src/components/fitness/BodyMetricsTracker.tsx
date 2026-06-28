@@ -2,14 +2,13 @@ import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, TrendingDown, TrendingUp, Activity, Target, Flame,
-  LineChart as LineChartIcon, ArrowRight, X,
-  Settings, Zap, ChevronUp, ChevronDown,
+  LineChart as LineChartIcon, ArrowRight,
+  Zap, ChevronUp, ChevronDown,
   Minus, BarChart3, AlertTriangle, Info, Download,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { generateId } from '@/lib/utils'
 import { calculateBMI, bmiCategory, calculateBMR, calculateTDEE, calculateBodyFatNavy } from '@/lib/calculations'
-import { Button } from '@/components/ui/Button'
 import type { BodyMetric } from '@/types/fitness'
 import type { BodyFatResult } from '@/lib/calculations'
 import {
@@ -136,15 +135,14 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
   const [measurements, setMeasurements] = useState<Record<string, string>>({})
   const [deletingEntry, setDeletingEntry] = useState<BodyMetric | null>(null)
   const [targetWeight, setTargetWeight] = useState<string>(() => localStorage.getItem(GOAL_STORAGE_KEY) ?? '')
-  const [showSettings, setShowSettings] = useState(false)
   const [goalBodyFat, setGoalBodyFat] = useState<string>(() => localStorage.getItem(GOAL_BF_KEY) ?? '')
-  const [confirmClear, setConfirmClear] = useState(false)
   const [chartTab, setChartTab] = useState<'weight' | 'measurements' | 'rate'>('weight')
   const [trendPeriod, setTrendPeriod] = useState<'7d' | '14d' | '30d' | 'all'>('all')
   const [showCharts, setShowCharts] = useState(false)
   const [showBodyShape, setShowBodyShape] = useState(false)
   const [showInsights, setShowInsights] = useState(false)
   const [showGoalProjection, setShowGoalProjection] = useState(false)
+  const [showBodySettings, setShowBodySettings] = useState(false)
 
   useEffect(() => { localStorage.setItem(GOAL_STORAGE_KEY, targetWeight) }, [targetWeight])
   useEffect(() => { localStorage.setItem(GOAL_BF_KEY, goalBodyFat) }, [goalBodyFat])
@@ -293,15 +291,55 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
               <Info className="w-5 h-5" />
             </button>
           )}
-          {bodyMetrics.length > 0 && (
-            <button onClick={() => exportCSV(bodyMetrics)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-              <Download className="w-4 h-4" />
+          <div className="relative">
+            <button onClick={() => setShowBodySettings(p => !p)}
+              className={`p-2 rounded-xl border transition-all ${showBodySettings ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              title="Body Goals">
+              <Target className="w-5 h-5" />
             </button>
-          )}
-          <button onClick={() => setShowSettings(true)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-            <Settings className="w-4 h-4" />
-          </button>
-          <Button variant="primary" onClick={() => setShowForm(true)}><Plus className="w-4 h-4 mr-2" />Log Entry</Button>
+            {showBodySettings && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowBodySettings(false)} />
+                <div className="absolute right-0 top-10 z-20 w-64 rounded-xl bg-gray-900 border border-white/10 shadow-2xl p-4">
+                  <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-3">GOAL WEIGHT</p>
+                  <input type="range" min={30} max={200} step={0.5} value={targetWeight || '75'}
+                    onChange={e => setTargetWeight(e.target.value)}
+                    className="w-full accent-emerald-500" />
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-[11px] text-gray-500">30</span>
+                    <span className="text-sm font-bold text-emerald-400 drop-shadow-lg">{targetWeight || '--'} kg</span>
+                    <span className="text-[11px] text-gray-500">200</span>
+                  </div>
+                  {latest?.weight != null && <p className="text-[9px] text-gray-500 mt-1 text-center">{Math.abs(latest.weight - parseFloat(targetWeight || '75')).toFixed(1)} kg {latest.weight > parseFloat(targetWeight || '75') ? 'above' : 'below'} goal</p>}
+                  <div className="mt-3 pt-3 border-t border-white/5">
+                    <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-3">GOAL BODY FAT</p>
+                    <input type="range" min={3} max={50} step={0.5} value={goalBodyFat || '15'}
+                      onChange={e => setGoalBodyFat(e.target.value)}
+                      className="w-full accent-amber-500" />
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className="text-[11px] text-gray-500">3%</span>
+                      <span className="text-sm font-bold text-amber-400 drop-shadow-lg">{goalBodyFat || '--'}%</span>
+                      <span className="text-[11px] text-gray-500">50%</span>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5">
+                    <button onClick={() => exportCSV(bodyMetrics)} className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all text-[10px] font-medium flex items-center justify-center gap-1.5">
+                      <Download className="w-3 h-3" /> Export CSV
+                    </button>
+                    {bodyMetrics.length > 0 && (
+                      <button onClick={() => { if (window.confirm('Clear all body entries?')) { bodyMetrics.forEach(m => deleteBodyMetric(m.id)) }; setShowBodySettings(false) }}
+                        className="w-full px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition-all text-[10px] font-medium flex items-center justify-center gap-1.5">
+                        <Trash2 className="w-3 h-3" /> Clear All
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          <button onClick={() => setShowForm(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/25 transition-all text-[10px] font-bold uppercase tracking-wider">
+            <Plus size={12} />Log Entry</button>
         </div>
       </motion.div>
 
@@ -717,7 +755,9 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
           <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4"><Activity className="w-8 h-8 text-rose-400/50" /></div>
           <p className="text-gray-400 mb-1">No body metrics logged yet</p>
           <p className="text-gray-500 text-sm mb-4">Start tracking your progress</p>
-          <Button variant="primary" onClick={() => setShowForm(true)}>Log Your First Entry</Button>
+          <button onClick={() => setShowForm(true)}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/25 transition-all text-xs font-bold uppercase tracking-wider mx-auto">
+            <Plus size={14} />Log Your First Entry</button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -829,76 +869,6 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
           </div>
         </div>
       )}
-
-      {/* Settings Modal */}
-      <AnimatePresence>
-        {showSettings && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowSettings(false)}>
-            <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-gray-900 to-gray-950 p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="absolute top-0 right-0 w-40 h-40 bg-rose-500/10 rounded-full -mr-20 -mt-20 blur-2xl" />
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500/5 rounded-full -ml-12 -mb-12 blur-xl" />
-              <div className="relative">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center shadow-lg"><Settings className="w-5 h-5 text-rose-400" /></div>
-                    <div><h3 className="text-lg font-semibold text-white">Body Tracker Settings</h3><p className="text-xs text-gray-500">Goals, export & data management</p></div>
-                  </div>
-                  <button onClick={() => setShowSettings(false)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all"><X className="w-4 h-4" /></button>
-                </div>
-                <div className="space-y-4">
-                  <div className="rounded-xl bg-white/5 border border-white/10 p-4">
-                    <label className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Goal Weight (kg)</label>
-                    <input type="number" step="0.1" value={targetWeight} onChange={(e) => setTargetWeight(e.target.value)} className="mt-2 w-full px-3 py-2.5 rounded-xl bg-white/5 border border-emerald-500/30 text-white font-semibold focus:border-emerald-400/60 focus:outline-none transition-all" placeholder="e.g. 75" />
-                    {targetWeight && latest?.weight != null && <p className="mt-2 text-xs text-gray-500">{Math.abs(latest.weight - parseFloat(targetWeight)).toFixed(1)} kg {latest.weight > parseFloat(targetWeight) ? 'above' : 'below'} goal</p>}
-                  </div>
-                  <div className="rounded-xl bg-white/5 border border-white/10 p-4">
-                    <label className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Goal Body Fat (%)</label>
-                    <input type="number" step="0.1" min={3} max={50} value={goalBodyFat} onChange={(e) => setGoalBodyFat(e.target.value)} className="mt-2 w-full px-3 py-2.5 rounded-xl bg-white/5 border border-amber-500/30 text-white font-semibold focus:border-amber-400/60 focus:outline-none transition-all" placeholder="e.g. 15" />
-                    {goalBodyFat && latest?.bodyFat != null && <p className="mt-2 text-xs text-gray-500">{Math.abs(latest.bodyFat - parseFloat(goalBodyFat)).toFixed(1)}% {latest.bodyFat > parseFloat(goalBodyFat) ? 'above' : 'below'} goal</p>}
-                  </div>
-                  <div className="rounded-xl bg-white/5 border border-white/10 p-4">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium mb-2">Export Data</p>
-                    <button onClick={() => exportCSV(bodyMetrics)}
-                      className="w-full px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 transition-all text-sm font-medium flex items-center justify-center gap-2">
-                      <Download className="w-4 h-4" /> Export as CSV
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
-                      <p className="text-[9px] text-gray-500 uppercase tracking-wider">Total Entries</p>
-                      <p className="text-lg font-bold text-white mt-1">{bodyMetrics.length}</p>
-                    </div>
-                    <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
-                      <p className="text-[9px] text-gray-500 uppercase tracking-wider">Date Range</p>
-                      <p className="text-[10px] font-bold text-white mt-1">
-                        {bodyMetrics.length > 1 ? `${new Date(sorted[sorted.length - 1]?.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(sorted[0]?.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : bodyMetrics.length === 1 ? '1 entry' : 'No data'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-red-500/5 border border-red-500/10 p-4">
-                    <h4 className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-3">Data Management</h4>
-                    {!confirmClear ? (
-                      <button onClick={() => setConfirmClear(true)} className="w-full px-3 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 transition-all text-sm font-medium flex items-center justify-center gap-2">
-                        <Trash2 className="w-4 h-4" /> Clear All Body Data
-                      </button>
-                    ) : (
-                      <div className="space-y-2">
-                        <p className="text-xs text-red-400/80 text-center">This permanently deletes all body metric entries.</p>
-                        <div className="flex gap-2">
-                          <button onClick={() => setConfirmClear(false)} className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-all text-xs">Cancel</button>
-                          <button onClick={() => { bodyMetrics.forEach(m => deleteBodyMetric(m.id)); setConfirmClear(false) }} className="flex-1 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30 transition-all text-xs font-semibold">Delete All</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
