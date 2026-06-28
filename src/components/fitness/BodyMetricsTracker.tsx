@@ -276,9 +276,26 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
   return (
     <div className="space-y-6">
       {/* Toolbar */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center justify-end flex-wrap gap-3 pb-2">
-          <div className="flex items-center gap-2">
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigateDate(-1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+            <Calendar className="w-4 h-4 text-emerald-400 shrink-0" />
+            <input type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)}
+              className="bg-transparent border-none text-white font-medium text-sm outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:transition-opacity cursor-pointer" />
+          </div>
+          <button onClick={() => navigateDate(1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          {!isToday && (
+            <button onClick={() => setTargetDate(today)} className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all" title="Jump to today">
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
             {bodyMetrics.length > 0 && (
               <button className={`p-2 rounded-xl border transition-all ${showBodyCoach ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
                 onClick={() => setShowBodyCoach(p => !p)} title="BodyCoach">
@@ -332,27 +349,8 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
             </div>
             <button onClick={() => setShowForm(true)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/25 transition-all text-[10px] font-bold uppercase tracking-wider">
-              <Plus size={12} />Log Entry</button>
+              <Plus size={12} />Log Entry            </button>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => navigateDate(-1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-            <Calendar className="w-4 h-4 text-emerald-400 shrink-0" />
-            <input type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)}
-              className="bg-transparent border-none text-white font-medium text-sm outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:transition-opacity cursor-pointer" />
-          </div>
-          <button onClick={() => navigateDate(1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-            <ChevronRight className="w-5 h-5" />
-          </button>
-          {!isToday && (
-            <button onClick={() => setTargetDate(today)} className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all" title="Jump to today">
-              <RotateCcw className="w-4 h-4" />
-            </button>
-          )}
-        </div>
       </motion.div>
 
       {/* 6 Stat Cards */}

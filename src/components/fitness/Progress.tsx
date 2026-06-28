@@ -415,9 +415,27 @@ export function Progress() {
       )}
 
       {/* Toolbar */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-        <div className="flex items-center justify-end flex-wrap gap-3">
-          <div className="flex items-center gap-2">
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <button onClick={navigateDate.left} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30" disabled={isToday}>
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+            <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
+            <input type="date" value={targetDate.toISOString().split('T')[0]}
+              onChange={e => setTargetDate(new Date(e.target.value + 'T00:00:00'))}
+              className="bg-transparent border-none text-white font-medium text-sm outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:transition-opacity cursor-pointer" />
+          </div>
+          <button onClick={navigateDate.right} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          {!isToday && (
+            <button onClick={navigateDate.today} className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition-all" title="Jump to today">
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
             {records.length > 0 && (
               <button
                 className={`p-2 rounded-xl border transition-all ${showPerfCoach ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
@@ -450,28 +468,6 @@ export function Progress() {
               <Plus className="w-4 h-4 mr-1" />Add PR
             </Button>
           </div>
-        </div>
-        {/* Date Navigation Bar */}
-        <div className="flex items-center justify-center gap-3">
-          <button onClick={navigateDate.left} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30" disabled={isToday}>
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
-            <input type="date" value={targetDate.toISOString().split('T')[0]}
-              onChange={e => setTargetDate(new Date(e.target.value + 'T00:00:00'))}
-              className="w-40 bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-sm text-white font-medium focus:outline-none focus:border-amber-500/40 [color-scheme:dark] cursor-pointer" />
-          </div>
-          <button onClick={navigateDate.right} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all">
-            <ChevronRight className="w-5 h-5" />
-          </button>
-          {!isToday && (
-            <button onClick={navigateDate.today}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition-all text-[10px] font-bold uppercase tracking-wider">
-              <RotateCcw className="w-3.5 h-3.5" />Today
-            </button>
-          )}
-        </div>
       </motion.div>
 
       {/* 6 Stat Cards */}
