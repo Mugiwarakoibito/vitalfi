@@ -708,53 +708,43 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                     if (chartTab === 'measurements') return (
                       activeMeasureFields.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={measureChartData} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
-                            <defs>
-                              <filter id="glowMeas"><feGaussianBlur stdDeviation="2.5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                            </defs>
-                            <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.02)" vertical={false} strokeWidth={1} />
+                          <LineChart data={measureChartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                            <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.015)" vertical={false} strokeWidth={1} />
                             <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
-                            <YAxis stroke="#6b7280" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={32} tickFormatter={v => `${v}`} domain={['auto', 'auto']} />
                             <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
-                              const sorted = [...payload].sort((a, b) => Math.abs(Number(b.value) - Number(a.value)))
+                              const sorted = [...payload].sort((a, b) => Number(b.value) - Number(a.value))
                               return (
                                 <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                  className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-violet-500/5 min-w-[160px]">
+                                  className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-violet-500/5 min-w-[150px]">
                                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none" />
                                   <div className="relative">
                                     <p className="text-white font-bold text-xs mb-2.5 pb-2 border-b border-white/5">{payload[0].payload.date}</p>
                                     <div className="space-y-1.5">
                                       {sorted.map((p, i) => (
-                                        <div key={i} className="flex items-center gap-2.5">
-                                          <span className="w-2 h-2 rounded-full shadow-lg" style={{ backgroundColor: p.color, boxShadow: `0 0 8px ${p.color}66` }} />
-                                          <span className="text-gray-400 font-medium w-14 text-[10px]">{p.name}</span>
-                                          <span className="text-white font-semibold ml-auto text-xs">{Number(p.value).toFixed(1)} <span className="text-[9px] font-normal text-gray-500">cm</span></span>
+                                        <div key={i} className="flex items-center gap-2">
+                                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.color }} />
+                                          <span className="text-gray-500 w-14 text-[10px] font-medium">{p.name}</span>
+                                          <span className="text-white font-semibold ml-auto text-xs">{Number(p.value).toFixed(1)} <span className="text-[9px] font-normal text-gray-600">cm</span></span>
                                         </div>
                                       ))}
                                     </div>
                                   </div>
                                 </motion.div>
                               )
-                            }} cursor={{ fill: 'rgba(139,92,246,0.06)' }} />
+                            }} cursor={{ fill: 'rgba(139,92,246,0.05)' }} />
                             {(() => {
-                              const measColors: Record<string, string> = {
+                              const colors: Record<string, string> = {
                                 chest: '#f43f5e', waist: '#f97316', hips: '#8b5cf6',
                                 biceps: '#06b6d4', neck: '#10b981', shoulders: '#6366f1',
                                 thighs: '#f59e0b', calves: '#ec4899',
                               }
-                              const measOpacity: Record<string, number> = {
-                                chest: 1, waist: 1, hips: 1,
-                                biceps: 0.85, neck: 0.85, shoulders: 0.85,
-                                thighs: 0.75, calves: 0.75,
-                              }
-                              return activeMeasureFields.map((f, i) => (
-                                <Line key={f.key} type="natural" dataKey={f.key}
-                                  stroke={measColors[f.key] || ['#f43f5e', '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#6366f1', '#ec4899', '#14b8a6'][i % 8]}
-                                  strokeWidth={f.key === 'chest' || f.key === 'waist' || f.key === 'hips' ? 2.5 : 2}
-                                  strokeOpacity={measOpacity[f.key] ?? 0.8}
+                              return activeMeasureFields.map(f => (
+                                <Line key={f.key} type="monotone" dataKey={f.key}
+                                  stroke={colors[f.key] || '#6b7280'}
+                                  strokeWidth={1.5} strokeOpacity={0.45}
                                   dot={false} connectNulls={true}
-                                  activeDot={{ r: f.key === 'chest' || f.key === 'waist' ? 5 : 4, fill: measColors[f.key] || '#8b5cf6', strokeWidth: 2, stroke: '#1a1a2e', filter: 'url(#glowMeas)' }}
+                                  activeDot={{ r: 3.5, fill: colors[f.key] || '#6b7280', strokeWidth: 1.5, stroke: '#1a1a2e' }}
                                   name={f.label} animationDuration={600} animationEasing="ease-out" />
                               ))
                             })()}
