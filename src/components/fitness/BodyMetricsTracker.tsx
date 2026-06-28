@@ -32,10 +32,6 @@ const bmiRanges = [
   { max: 40, label: 'Obese II', color: '#ef4444' }, { max: Infinity, label: 'Obese III', color: '#dc2626' },
 ]
 
-const PERIOD_OPTIONS = [
-  { value: '7d', label: '7D' }, { value: '14d', label: '14D' }, { value: '30d', label: '30D' }, { value: 'all', label: 'All' },
-] as const
-
 type ChartEntry = Record<string, string | number | undefined>
 
 function computeBodyScore(latest: BodyMetric | undefined, bmi: number | null, bodyMetricsCount: number): { score: number; label: string; color: string } {
@@ -125,7 +121,6 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
   const [targetWeight, setTargetWeight] = useState<string>(() => localStorage.getItem(GOAL_STORAGE_KEY) ?? '')
   const [goalBodyFat, setGoalBodyFat] = useState<string>(() => localStorage.getItem(GOAL_BF_KEY) ?? '')
   const [chartTab, setChartTab] = useState<'weight' | 'measurements' | 'composition'>('weight')
-  const [trendPeriod, setTrendPeriod] = useState<'7d' | '14d' | '30d' | 'all'>('all')
   const [showBodyCoach, setShowBodyCoach] = useState(false)
   const [showBodyScope, setShowBodyScope] = useState(false)
   const [showBodySettings, setShowBodySettings] = useState(false)
@@ -233,17 +228,13 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
     [sorted, chronological, latest, goal, recentWeeklyChange, projectedWeeks, estimatedBfResult, useEstimatedBf, bodyFocus])
 
   const filteredChartData = useMemo(() => {
-    let data = chartData
     if (scopeOffset !== 0) {
       const start = scopeWeek[0].fullDate
       const end = scopeWeek[6].fullDate
-      data = data.filter(d => d.fullDate >= start && d.fullDate <= end)
-    } else if (trendPeriod !== 'all') {
-      const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - (trendPeriod === '7d' ? 7 : trendPeriod === '14d' ? 14 : 30))
-      data = data.filter(d => new Date(d.fullDate) >= cutoff)
+      return chartData.filter(d => d.fullDate >= start && d.fullDate <= end)
     }
-    return data
-  }, [chartData, trendPeriod, scopeOffset, scopeWeek])
+    return chartData
+  }, [chartData, scopeOffset, scopeWeek])
 
   const weightOrDefault = latest?.weight?.toString() ?? '70'
   const bodyFatOrDefault = latest?.bodyFat?.toString() ?? '15'
@@ -595,13 +586,13 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
             className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
             <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-400/20 to-violet-500/20 border border-violet-500/20 flex items-center justify-center">
-                    <BarChart3 className="w-3 h-3 text-violet-400" />
-                  </div>
-                  <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">BodyScope</span>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-400/20 to-violet-500/20 border border-violet-500/20 flex items-center justify-center">
+                  <BarChart3 className="w-3 h-3 text-violet-400" />
                 </div>
+                <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">BodyScope</span>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div className="flex items-center gap-1">
                   <button onClick={() => setScopeOffset(o => o + 1)} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
                     <ChevronLeft className="w-4 h-4" />
@@ -614,37 +605,27 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                   </button>
                   {!isScopeCurrentWeek && (
                     <button onClick={() => setScopeOffset(0)} className="p-1.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
-                      <RotateCcw className="w-4 h-4" />
+                      <RotateCcw className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
-              </div>
-              <div className="flex items-center justify-between mb-4">
-                <div />
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
-                    {PERIOD_OPTIONS.map(p => (
-                      <button key={p.value} onClick={() => setTrendPeriod(p.value)}
-                        className={`relative px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${trendPeriod === p.value ? 'bg-violet-500/20 text-violet-300 border border-violet-500/25 shadow-lg shadow-violet-500/8' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'}`}>
-                        <span className="relative z-10">{p.label}</span>
-                        {trendPeriod === p.value && <span className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/[0.06]" />}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex gap-1 bg-white/5 rounded-xl p-0.5">
-                    {(['weight', 'measurements', 'composition'] as const).map(mode => (
-                      <button key={mode} onClick={() => setChartTab(mode)}
-                        className={`relative px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
-                          chartTab === mode
-                            ? mode === 'weight' ? 'text-rose-300 bg-gradient-to-b from-rose-500/20 to-rose-500/5 border border-rose-500/25 shadow-lg shadow-rose-500/8'
-                            : mode === 'measurements' ? 'text-cyan-300 bg-gradient-to-b from-cyan-500/20 to-cyan-500/5 border border-cyan-500/25 shadow-lg shadow-cyan-500/8'
-                            : 'text-emerald-300 bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border border-emerald-500/25 shadow-lg shadow-emerald-500/8'
-                            : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'
-                        }`}>
-                        {mode === 'weight' ? '📊 Weight' : mode === 'measurements' ? '📏 Meas.' : '⚖️ Comp.'}
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
+                  {(['weight', 'measurements', 'composition'] as const).map(mode => (
+                    <button key={mode} onClick={() => setChartTab(mode)}
+                      className={`relative px-3.5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
+                        chartTab === mode
+                          ? mode === 'weight' ? 'text-rose-300 bg-gradient-to-b from-rose-500/20 to-rose-500/5 border border-rose-500/25 shadow-lg shadow-rose-500/8'
+                          : mode === 'measurements' ? 'text-cyan-300 bg-gradient-to-b from-cyan-500/20 to-cyan-500/5 border border-cyan-500/25 shadow-lg shadow-cyan-500/8'
+                          : 'text-emerald-300 bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border border-emerald-500/25 shadow-lg shadow-emerald-500/8'
+                          : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'
+                      }`}>
+                      <span className="relative z-10 flex items-center gap-1.5">
+                        <span className={chartTab === mode ? '' : 'opacity-50'}>{mode === 'weight' ? '📊' : mode === 'measurements' ? '📏' : '⚖️'}</span>
+                        {mode === 'weight' ? 'Weight' : mode === 'measurements' ? 'Meas.' : 'Comp.'}
+                      </span>
+                      {chartTab === mode && <span className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/[0.06]" />}
+                    </button>
+                  ))}
                 </div>
               </div>
 
