@@ -89,7 +89,8 @@ export function Recovery() {
   const [targetDate, setTargetDate] = useState(toLocalDate(new Date()))
   const [recoveryGoal, setRecoveryGoal] = useState(() => {
     const saved = localStorage.getItem(SETTINGS_KEY)
-    return saved ? parseInt(saved) : 70
+    const parsed = parseInt(saved ?? '', 10)
+    return !isNaN(parsed) ? parsed : 70
   })
 
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)) }, [entries])
