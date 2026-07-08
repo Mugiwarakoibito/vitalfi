@@ -1013,69 +1013,148 @@ export function Progress() {
       )}
 
       {/* Add PR Modal */}
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="">
-        <div className="relative space-y-5">
-          <div className="absolute -top-16 -right-16 w-32 h-32 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative flex items-center gap-4 pb-2 border-b border-white/5">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500/25 to-amber-500/5 flex items-center justify-center border border-amber-500/20 shadow-lg shadow-amber-500/10">
-              <Trophy className="w-5 h-5 text-amber-400" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-white tracking-tight">New Personal Record</h3>
-              <p className="text-[11px] text-gray-500">Log your latest achievement</p>
-            </div>
-          </div>
-          <div className="rounded-xl bg-gradient-to-br from-amber-500/[0.03] to-transparent border border-amber-500/10 p-3.5">
-            <Input label="Exercise" placeholder="e.g., Bench Press" value={formData.exerciseName}
-              onChange={e => setFormData({ ...formData, exerciseName: e.target.value })}
-              list="exercise-list" icon={<Dumbbell className="w-4 h-4 text-amber-400" />} />
-            <datalist id="exercise-list">{exercises.map(ex => <option key={ex} value={ex} />)}</datalist>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-gradient-to-br from-purple-500/[0.03] to-transparent border border-purple-500/10 p-3.5">
-              <Input label="Weight (lbs)" type="number" placeholder="0" value={formData.weight}
-                onChange={e => setFormData({ ...formData, weight: e.target.value })} />
-            </div>
-            <div className="rounded-xl bg-gradient-to-br from-emerald-500/[0.03] to-transparent border border-emerald-500/10 p-3.5">
-              <Input label="Reps" type="number" placeholder="0" value={formData.reps}
-                onChange={e => setFormData({ ...formData, reps: e.target.value })} />
-            </div>
-          </div>
-          <div className="rounded-xl bg-gradient-to-br from-violet-500/[0.03] to-transparent border border-violet-500/10 p-3.5">
-            <Input label="Date" type="date" value={formData.date}
-              onChange={e => setFormData({ ...formData, date: e.target.value })} />
-          </div>
-          <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3.5">
-            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-              <Award className="w-3.5 h-3.5 text-amber-400" />PR Category
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {([{ value: 'weight', label: 'Weight', icon: Award }, { value: 'reps', label: 'Reps', icon: Star }, { value: 'volume', label: 'Volume', icon: Flame }] as const).map(({ value, label, icon: Icon }) => (
-                <button key={value} type="button" onClick={() => setFormData({ ...formData, type: value })}
-                  className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border text-xs font-semibold transition-all ${
-                    formData.type === value
-                      ? value === 'weight' ? 'border-amber-500/50 bg-amber-500/20 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.15)]'
-                      : value === 'reps' ? 'border-purple-500/50 bg-purple-500/20 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.15)]'
-                      : 'border-emerald-500/50 bg-emerald-500/20 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.15)]'
-                      : 'border-white/10 bg-white/[0.02] text-gray-400 hover:text-white hover:bg-white/5 hover:border-white/20'
-                  }`}>
-                    {formData.type === value && (
-                      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.04] to-transparent rounded-xl pointer-events-none" />
-                    )}
-                    <Icon className={`w-5 h-5 ${formData.type === value ? (value === 'weight' ? 'drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]' : value === 'reps' ? 'drop-shadow-[0_0_6px_rgba(168,85,247,0.4)]' : 'drop-shadow-[0_0_6px_rgba(16,185,129,0.4)]') : ''}`} />
-                    <span className="relative z-10">{label} PR</span>
-                  </button>
-              ))}
-            </div>
-          </div>
-          <Button variant="primary" onClick={saveRecord} className="w-full relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-transparent to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-            <Trophy className="w-4 h-4 mr-1.5 relative z-10" />
-            <span className="relative z-10">Save Personal Record</span>
-          </Button>
-        </div>
-      </Modal>
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 overflow-y-auto"
+            onClick={() => { setFormData({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight', goalWeight: '', goalReps: '', goalVolume: '' }); setShowModal(false) }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 30 }}
+              transition={{ type: 'spring', damping: 22, stiffness: 280 }}
+              className="relative w-full max-w-lg my-8"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="relative rounded-2xl border border-white/[0.08] bg-gray-900/90 backdrop-blur-xl p-[1px] shadow-2xl shadow-amber-500/5">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-amber-500/5 via-transparent to-transparent pointer-events-none" />
+                <div className="relative rounded-2xl bg-gray-950/90 backdrop-blur-xl p-5 overflow-hidden">
+                  <div className="absolute -top-20 -right-20 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                  <div className="relative flex items-center gap-3 mb-5 pb-4 border-b border-white/[0.04]">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/25 to-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                      <Trophy className="w-4 h-4 text-amber-300" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-white tracking-tight">New Personal Record</h3>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Log your latest achievement</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 max-h-[62vh] overflow-y-auto pr-1 custom-scrollbar">
+                    {/* Exercise */}
+                    <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
+                      <div className="rounded-xl bg-gray-900/60 p-3">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-5 h-5 rounded-md bg-amber-500/15 flex items-center justify-center">
+                            <Dumbbell className="w-3 h-3 text-amber-300" />
+                          </div>
+                          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-amber-300/70">Exercise</span>
+                          <div className="flex-1 h-px bg-gradient-to-r from-amber-500/20 via-amber-500/5 to-transparent" />
+                        </div>
+                        <div>
+                          <input type="text" value={formData.exerciseName}
+                            onChange={e => setFormData({ ...formData, exerciseName: e.target.value })}
+                            placeholder="e.g., Bench Press"
+                            list="exercise-list"
+                            className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-amber-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-amber-500/25 hover:border-white/[0.15]" />
+                          <datalist id="exercise-list">{exercises.map(ex => <option key={ex} value={ex} />)}</datalist>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Weight & Reps */}
+                    <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
+                      <div className="rounded-xl bg-gray-900/60 p-3">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-5 h-5 rounded-md bg-purple-500/15 flex items-center justify-center">
+                            <Award className="w-3 h-3 text-purple-300" />
+                          </div>
+                          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-purple-300/70">Lift Details</span>
+                          <div className="flex-1 h-px bg-gradient-to-r from-purple-500/20 via-purple-500/5 to-transparent" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[10px] font-semibold text-gray-500 mb-1">Weight (lbs)</label>
+                            <input type="number" value={formData.weight} onChange={e => setFormData({ ...formData, weight: e.target.value })}
+                              placeholder="0"
+                              className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-purple-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-purple-500/25 hover:border-white/[0.15]" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-semibold text-gray-500 mb-1">Reps</label>
+                            <input type="number" value={formData.reps} onChange={e => setFormData({ ...formData, reps: e.target.value })}
+                              placeholder="0"
+                              className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-purple-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-purple-500/25 hover:border-white/[0.15]" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Date */}
+                    <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
+                      <div className="rounded-xl bg-gray-900/60 p-3">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-5 h-5 rounded-md bg-violet-500/15 flex items-center justify-center">
+                            <Calendar className="w-3 h-3 text-violet-300" />
+                          </div>
+                          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-violet-300/70">Date</span>
+                          <div className="flex-1 h-px bg-gradient-to-r from-violet-500/20 via-violet-500/5 to-transparent" />
+                        </div>
+                        <input type="date" value={formData.date}
+                          onChange={e => setFormData({ ...formData, date: e.target.value })}
+                          className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-violet-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-violet-500/25 hover:border-white/[0.15] [color-scheme:dark]" />
+                      </div>
+                    </div>
+
+                    {/* PR Category */}
+                    <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
+                      <div className="rounded-xl bg-gray-900/60 p-3">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-5 h-5 rounded-md bg-emerald-500/15 flex items-center justify-center">
+                            <Star className="w-3 h-3 text-emerald-300" />
+                          </div>
+                          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-emerald-300/70">PR Category</span>
+                          <div className="flex-1 h-px bg-gradient-to-r from-emerald-500/20 via-emerald-500/5 to-transparent" />
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {([{ value: 'weight', label: 'Weight', icon: Award }, { value: 'reps', label: 'Reps', icon: Star }, { value: 'volume', label: 'Volume', icon: Flame }] as const).map(({ value, label, icon: Icon }) => (
+                            <motion.button key={value} type="button"
+                              whileTap={{ scale: 0.93 }}
+                              onClick={() => setFormData({ ...formData, type: value })}
+                              className={`flex flex-col items-center gap-1 py-2.5 rounded-lg border transition-all ${
+                                formData.type === value
+                                  ? value === 'weight' ? 'bg-amber-500/15 border-amber-500/40' : value === 'reps' ? 'bg-purple-500/15 border-purple-500/40' : 'bg-emerald-500/15 border-emerald-500/40'
+                                  : 'bg-white/[0.03] border-white/[0.06] hover:border-white/[0.15]'
+                              }`}>
+                              <Icon className={`w-4 h-4 ${formData.type === value ? (value === 'weight' ? 'text-amber-300' : value === 'reps' ? 'text-purple-300' : 'text-emerald-300') : 'text-gray-500'}`} />
+                              <span className={`text-[8px] font-semibold ${formData.type === value ? (value === 'weight' ? 'text-amber-300' : value === 'reps' ? 'text-purple-300' : 'text-emerald-300') : 'text-gray-500'}`}>{label} PR</span>
+                            </motion.button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Save */}
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={saveRecord}
+                      className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-emerald-500/20 border border-amber-500/25 text-amber-300 font-bold text-xs uppercase tracking-widest hover:from-amber-500/25 hover:via-amber-500/15 hover:to-emerald-500/25 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Trophy className="w-4 h-4" />
+                      Save Personal Record
+                    </motion.button>
+                  </div>
+
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Add Photo Modal */}
       <Modal isOpen={showPhotoModal} onClose={() => setShowPhotoModal(false)} title="Log Progress Photo">
