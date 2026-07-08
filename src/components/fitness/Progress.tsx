@@ -1015,18 +1015,26 @@ export function Progress() {
       {/* Add PR Modal */}
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add Personal Record">
         <div className="space-y-4">
-          <Input label="Exercise" placeholder="e.g., Bench Press" value={formData.exerciseName}
-            onChange={e => setFormData({ ...formData, exerciseName: e.target.value })}
-            list="exercise-list" icon={<Dumbbell className="w-4 h-4" />} />
-          <datalist id="exercise-list">{exercises.map(ex => <option key={ex} value={ex} />)}</datalist>
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Weight (lbs)" type="number" placeholder="0" value={formData.weight}
-              onChange={e => setFormData({ ...formData, weight: e.target.value })} />
-            <Input label="Reps" type="number" placeholder="0" value={formData.reps}
-              onChange={e => setFormData({ ...formData, reps: e.target.value })} />
+          <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3.5">
+            <Input label="Exercise" placeholder="e.g., Bench Press" value={formData.exerciseName}
+              onChange={e => setFormData({ ...formData, exerciseName: e.target.value })}
+              list="exercise-list" icon={<Dumbbell className="w-4 h-4" />} />
+            <datalist id="exercise-list">{exercises.map(ex => <option key={ex} value={ex} />)}</datalist>
           </div>
-          <Input label="Date" type="date" value={formData.date}
-            onChange={e => setFormData({ ...formData, date: e.target.value })} />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3.5">
+              <Input label="Weight (lbs)" type="number" placeholder="0" value={formData.weight}
+                onChange={e => setFormData({ ...formData, weight: e.target.value })} />
+            </div>
+            <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3.5">
+              <Input label="Reps" type="number" placeholder="0" value={formData.reps}
+                onChange={e => setFormData({ ...formData, reps: e.target.value })} />
+            </div>
+          </div>
+          <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3.5">
+            <Input label="Date" type="date" value={formData.date}
+              onChange={e => setFormData({ ...formData, date: e.target.value })} />
+          </div>
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">Type</label>
             <div className="grid grid-cols-3 gap-2">
@@ -1041,19 +1049,6 @@ export function Progress() {
                   <span className="font-semibold">{label}</span>
                 </button>
               ))}
-            </div>
-          </div>
-          <div className="border-t border-white/10 pt-4">
-            <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider flex items-center gap-1.5">
-              <Target className="w-3.5 h-3.5 text-amber-400" />Goal Settings <span className="text-gray-600 font-normal normal-case">(optional)</span>
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              <Input label="Target Weight" type="number" placeholder="--" value={formData.goalWeight}
-                onChange={e => setFormData({ ...formData, goalWeight: e.target.value })} />
-              <Input label="Target Reps" type="number" placeholder="--" value={formData.goalReps}
-                onChange={e => setFormData({ ...formData, goalReps: e.target.value })} />
-              <Input label="Target Volume" type="number" placeholder="--" value={formData.goalVolume}
-                onChange={e => setFormData({ ...formData, goalVolume: e.target.value })} />
             </div>
           </div>
           <Button variant="primary" onClick={saveRecord} className="w-full">
