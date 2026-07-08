@@ -3,13 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Trophy, Plus, Star, Award, X,
   Dumbbell, Flame, BarChart3, Activity,
-  Sparkles, Camera, Target, CheckCircle2, Medal,
-  Image, Calendar, Download, Settings, Trash2, Filter,
+  Sparkles, Target, CheckCircle2, Medal,
+  Calendar, Download, Settings, Trash2, Filter,
   Brain, ChevronLeft, ChevronRight, RotateCcw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Modal } from '@/components/ui/Modal'
-import { Input } from '@/components/ui/Input'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar,
@@ -29,11 +27,6 @@ interface PR {
   goalVolume?: number
 }
 
-interface ProgressPhoto {
-  id: string
-  date: string
-}
-
 interface StrengthLevel {
   exercise: string
   level: string
@@ -44,7 +37,6 @@ interface StrengthLevel {
 }
 
 const STORAGE_KEY = 'vitalfi_progress_records'
-const PHOTOS_KEY = 'vitalfi_progress_photos'
 const ACHIEVEMENTS_KEY = 'vitalfi_progress_achievements'
 const CONFETTI_COLORS = ['#F59E0B', '#A78BFA', '#10B981', '#EF4444', '#3B82F6']
 
@@ -147,9 +139,6 @@ export function Progress() {
   })
   const [chartMetric, setChartMetric] = useState<'weight' | 'reps' | 'volume'>('weight')
   const [selectedExercise, setSelectedExercise] = useState<string>('')
-  const [photos, setPhotos] = useState<ProgressPhoto[]>([])
-  const [showPhotoModal, setShowPhotoModal] = useState(false)
-  const [photoDate, setPhotoDate] = useState(new Date().toISOString().split('T')[0])
   const [earned, setEarned] = useState<Set<string>>(new Set())
   const [showAchievements, setShowAchievements] = useState(false)
   const [showPhotos, setShowPhotos] = useState(false)
@@ -371,16 +360,6 @@ export function Progress() {
     return tips
   }, [records, perfFocus, prStreak, latestWeight, strengthLevels, totalVolume])
 
-  const addPhoto = () => {
-    const newPhoto: ProgressPhoto = {
-      id: crypto.randomUUID?.() ?? Math.random().toString(36).substring(2, 15),
-      date: photoDate,
-    }
-    setPhotos(prev => [...prev, newPhoto])
-    setShowPhotoModal(false)
-    setPhotoDate(new Date().toISOString().split('T')[0])
-  }
-
   const saveRecord = () => {
     const w = Number(formData.weight); const r = Number(formData.reps)
     if (!formData.exerciseName.trim() || w <= 0 || r <= 0) return
@@ -456,9 +435,9 @@ export function Progress() {
               </button>
             )}
             <button
-              className={`p-2 rounded-xl border transition-all ${showPhotos ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
-              onClick={() => setShowPhotos(p => !p)} title="Progress Photos">
-              <Camera className="w-5 h-5" />
+              className={`p-2 rounded-xl border transition-all ${showPhotos ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              onClick={() => setShowPhotos(p => !p)} title="Performance Coach">
+              <Sparkles className="w-5 h-5" />
             </button>
             <button onClick={() => setShowPerfSettings(p => !p)}
               className={`p-2 rounded-xl border transition-all ${showPerfSettings ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}>
@@ -886,41 +865,32 @@ export function Progress() {
         )}
       </AnimatePresence>
 
-      {/* Photos Panel (toggleable) */}
+      {/* Coach Panel (toggleable) */}
       <AnimatePresence>
         {showPhotos && (
           <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-            className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Camera className="w-4 h-4 text-violet-400" />
-                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Progress Photos</h4>
+            className="rounded-2xl border border-amber-500/15 bg-black/60 backdrop-blur-[12px] p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400/20 to-amber-500/20 border border-amber-500/20 flex items-center justify-center">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               </div>
-              <Button variant="primary" size="sm" onClick={() => setShowPhotoModal(true)}>
-                <Plus className="w-3.5 h-3.5 mr-1" />Add Photo
-              </Button>
+              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Performance Coach</h4>
             </div>
-            {photos.length > 0 ? (
+            {records.length > 0 ? (
               <div className="space-y-2">
-                {[...photos].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((photo) => (
-                  <div key={photo.id} className="flex items-center gap-3 rounded-lg bg-white/[0.02] p-3 border border-white/5">
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-500/20 to-violet-600/10 flex items-center justify-center shrink-0">
-                      <Image className="w-5 h-5 text-violet-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        Photo from <span className="text-violet-300">{new Date(photo.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                      </p>
-                    </div>
-                    <button onClick={() => setPhotos(prev => prev.filter(p => p.id !== photo.id))}
-                      className="ml-auto p-1 text-gray-500 hover:text-red-400 transition-colors">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                {perfInsights.map((tip, i) => (
+                  <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                    className="flex items-start gap-2.5 rounded-xl bg-white/[0.02] border border-white/5 p-3">
+                    <span className="text-sm leading-none mt-0.5">{tip.icon}</span>
+                    <p className="text-xs text-gray-300 leading-relaxed">{tip.text}</p>
+                  </motion.div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500 text-center py-6">No progress photos yet — add your first!</p>
+              <div className="flex flex-col items-center gap-3 py-8 text-center">
+                <Sparkles className="w-10 h-10 text-amber-400/50" />
+                <p className="text-sm text-gray-500">Log your first PR to get coaching insights.</p>
+              </div>
             )}
           </motion.div>
         )}
@@ -1230,23 +1200,6 @@ export function Progress() {
         )}
       </AnimatePresence>
 
-      {/* Add Photo Modal */}
-      <Modal isOpen={showPhotoModal} onClose={() => setShowPhotoModal(false)} title="Log Progress Photo">
-        <div className="space-y-4">
-          <div className="flex flex-col items-center gap-3 py-4">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500/20 to-violet-600/10 flex items-center justify-center border border-violet-500/30">
-              <Camera className="w-8 h-8 text-violet-400" />
-            </div>
-            <p className="text-sm text-gray-400 text-center">Enter the date for this progress photo</p>
-          </div>
-          <Input label="Photo Date" type="date" value={photoDate}
-            onChange={e => setPhotoDate(e.target.value)} icon={<Calendar className="w-4 h-4" />} />
-          <Button variant="primary" onClick={addPhoto} className="w-full">
-            <Image className="w-4 h-4 mr-1.5" />Log Photo
-          </Button>
-        </div>
-      </Modal>
-
       {/* Inline Settings Panel */}
       <AnimatePresence>
         {showPerfSettings && (
@@ -1278,11 +1231,11 @@ export function Progress() {
                   </button>
                 ) : (
                   <div className="space-y-2">
-                    <p className="text-xs text-red-400/80 text-center">This permanently deletes all PR records and photos.</p>
+                    <p className="text-xs text-red-400/80 text-center">This permanently deletes all PR records.</p>
                     <div className="flex gap-2">
                       <button onClick={() => setConfirmClear(false)}
                         className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-all text-xs">Cancel</button>
-                      <button onClick={() => { setRecords([]); setPhotos([]); localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(PHOTOS_KEY); setConfirmClear(false) }}
+                      <button onClick={() => { setRecords([]); localStorage.removeItem(STORAGE_KEY); setConfirmClear(false) }}
                         className="flex-1 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30 transition-all text-xs font-semibold">Delete All</button>
                     </div>
                   </div>
