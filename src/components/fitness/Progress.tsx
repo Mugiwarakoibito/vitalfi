@@ -609,155 +609,229 @@ export function Progress() {
       {/* PerfScope Panel */}
       <AnimatePresence>
         {showPerfScope && (
-          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-            className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4 space-y-4">
-            {/* Title + Week Navigation */}
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-violet-400" />
-                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Performance Scope</h4>
+          <motion.div key="perfscope" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+            className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-400/20 to-violet-500/20 border border-violet-500/20 flex items-center justify-center">
+                  <BarChart3 className="w-3 h-3 text-violet-400" />
+                </div>
+                <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">Performance Scope</span>
               </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setScopeOffset(p => p + 1)} disabled={!isScopeCurrentWeek && scopeOffset >= 100}
-                  className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30">
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="text-[11px] font-semibold text-white min-w-[100px] text-center">
-                  {scopeWeek.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {scopeWeek.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </span>
-                <button onClick={() => scopeOffset > 0 && setScopeOffset(p => Math.max(0, p - 1))}
-                  className={`p-1.5 rounded-lg transition-all ${scopeOffset === 0 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-500 hover:text-white hover:bg-white/10'}`}>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-                {!isScopeCurrentWeek && (
-                  <button onClick={() => setScopeOffset(0)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all text-[10px] font-bold uppercase tracking-wider">
-                    <RotateCcw className="w-3 h-3" />Current
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setScopeOffset(p => p + 1)} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
+                    <ChevronLeft className="w-4 h-4" />
                   </button>
-                )}
+                  <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">
+                    {scopeWeek.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {scopeWeek.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                  <button onClick={() => scopeOffset > 0 && setScopeOffset(p => Math.max(0, p - 1))} disabled={scopeOffset === 0}
+                    className={`p-1.5 rounded-xl transition-all ${scopeOffset === 0
+                      ? 'bg-white/[0.02] border border-white/[0.04] text-gray-600 cursor-not-allowed'
+                      : 'bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20'}`}>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  {!isScopeCurrentWeek && (
+                    <button onClick={() => setScopeOffset(0)} className="p-1.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
+                  {[
+                    { key: 'prs' as const, label: 'PRs', icon: '📊' },
+                    { key: 'volume' as const, label: 'Volume', icon: '📈' },
+                    { key: 'weight' as const, label: 'Weight', icon: '⚖️' },
+                  ].map(m => (
+                    <button key={m.key} onClick={() => setChartTab(m.key)}
+                      className={`relative px-3.5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
+                        chartTab === m.key
+                          ? m.key === 'prs' ? 'text-amber-300 bg-gradient-to-b from-amber-500/20 to-amber-500/5 border border-amber-500/25 shadow-lg shadow-amber-500/8'
+                          : m.key === 'volume' ? 'text-emerald-300 bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border border-emerald-500/25 shadow-lg shadow-emerald-500/8'
+                          : 'text-violet-300 bg-gradient-to-b from-violet-500/20 to-violet-500/5 border border-violet-500/25 shadow-lg shadow-violet-500/8'
+                          : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'
+                      }`}>
+                      <span className="relative z-10 flex items-center gap-1.5">
+                        <span>{m.icon}</span>{m.label}
+                      </span>
+                      {chartTab === m.key && <span className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/[0.06]" />}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-            {/* Chart Mode Toggles */}
-            <div className="flex items-center gap-1.5">
-              {[
-                { key: 'prs' as const, label: 'PRs', icon: '📊' },
-                { key: 'volume' as const, label: 'Volume', icon: '📈' },
-                { key: 'weight' as const, label: 'Weight', icon: '⚖️' },
-              ].map(m => (
-                <button key={m.key} onClick={() => setChartTab(m.key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${
-                    chartTab === m.key
-                      ? m.key === 'prs' ? 'bg-amber-500/15 border border-amber-500/30 text-amber-300'
-                      : m.key === 'volume' ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
-                      : 'bg-violet-500/15 border border-violet-500/30 text-violet-300'
-                      : 'bg-white/5 border border-white/10 text-gray-400 hover:text-white'
-                  }`}>
-                  <span>{m.icon}</span> {m.label}
-                </button>
-              ))}
-            </div>
-            {/* Charts */}
-            {chartTab === 'prs' && (
-              <div>
-                {exercises.length > 0 && chartData.length > 0 ? (
-                  <>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Filter className="w-3 h-3 text-gray-500" />
-                      <select value={selectedExercise} onChange={e => setSelectedExercise(e.target.value)}
-                        className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white font-medium focus:outline-none focus:border-amber-500/40">
-                        {exercises.map(ex => <option key={ex} value={ex}>{ex}</option>)}
-                      </select>
-                      <div className="flex gap-1 ml-auto">
-                        {(['weight', 'reps', 'volume'] as const).map(m => (
-                          <button key={m} onClick={() => setChartMetric(m)}
-                            className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${chartMetric === m ? 'bg-amber-500/20 text-amber-300' : 'text-gray-400 hover:text-white'}`}>{m}</button>
-                        ))}
+
+              {/* Charts */}
+              <div className="h-64 rounded-2xl bg-gradient-to-br from-black/60 via-white/[0.02] to-transparent border border-white/[0.06] p-4 shadow-inner shadow-white/5 relative overflow-hidden" style={{ minHeight: '260px' }}>
+                <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
+                <div className="absolute -top-12 -right-12 w-36 h-36 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+                <div className="relative z-10 h-full">
+                  {chartTab === 'prs' && (
+                    exercises.length > 0 && chartData.length > 0 ? (
+                      <>
+                        <div className="flex items-center gap-2 mb-3">
+                          <Filter className="w-3 h-3 text-gray-500" />
+                          <select value={selectedExercise} onChange={e => setSelectedExercise(e.target.value)}
+                            className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white font-medium focus:outline-none focus:border-amber-500/40">
+                            {exercises.map(ex => <option key={ex} value={ex}>{ex}</option>)}
+                          </select>
+                          <div className="flex gap-1 ml-auto">
+                            {(['weight', 'reps', 'volume'] as const).map(m => (
+                              <button key={m} onClick={() => setChartMetric(m)}
+                                className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${chartMetric === m ? 'bg-amber-500/20 text-amber-300' : 'text-gray-400 hover:text-white'}`}>{m}</button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="h-48">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                              <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
+                              <YAxis tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
+                              <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
+                              <Line type="monotone" dataKey={chartMetric} stroke="#F59E0B" strokeWidth={2.5} dot={{ fill: '#F59E0B', r: 4 }} activeDot={{ r: 6 }} />
+                              {chartMetric === 'weight' && (
+                                <Line type="monotone" dataKey="estimated1RM" stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="4 4" dot={false} opacity={0.5} />
+                              )}
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">No PR data for this period — log some PRs first!</div>
+                    )
+                  )}
+                  {chartTab === 'volume' && (
+                    workouts.length >= 7 || volumeTrend.length > 0 ? (
+                      <div className="space-y-4">
+                        {workouts.length >= 7 && (
+                          <div>
+                            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Weekly Volume Comparison</h4>
+                            <div className="h-40">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={weeklyVolumeComparison}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                                  <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
+                                  <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
+                                  <Bar dataKey="current" name="This Week" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                                  <Bar dataKey="prior" name="Last Week" fill="#374151" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                            <div className="flex items-center gap-4 mt-2 text-[10px]">
+                              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" /><span className="text-gray-400">This Week</span></div>
+                              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-gray-600" /><span className="text-gray-400">Last Week</span></div>
+                            </div>
+                          </div>
+                        )}
+                        {volumeTrend.length > 0 && (
+                          <div>
+                            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Workout Volume Trend</h4>
+                            <div className="h-40">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={volumeTrend}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                                  <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
+                                  <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
+                                  <Bar dataKey="volume" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={24} />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">Not enough workout data yet — keep training!</div>
+                    )
+                  )}
+                  {chartTab === 'weight' && (
+                    bodyWeightData.length > 1 ? (
+                      <>
+                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Body Weight Trend</h4>
+                        <div className="h-48">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={bodyWeightData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                              <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
+                              <YAxis domain={['auto', 'auto']} tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
+                              <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
+                              <Line type="monotone" dataKey="weight" stroke="#8b5cf6" strokeWidth={2.5} dot={{ fill: '#8b5cf6', r: 3 }} activeDot={{ r: 5 }} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your body weight in the Body tab to see trends here.</div>
+                    )
+                  )}
+                </div>
+              </div>
+
+              {/* Stats strip */}
+              {(() => {
+                if (chartTab === 'prs' && chartData.length > 0) {
+                  const vals = chartData.map(d => +(d as any)[chartMetric] || 0)
+                  const avg = vals.reduce((s, v) => s + v, 0) / vals.length
+                  const max = Math.max(...vals)
+                  const min = Math.min(...vals)
+                  return (
+                    <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
+                      <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
+                        <span>📊 Avg <span className="font-semibold text-amber-400">{avg.toFixed(1)}</span></span>
+                        <span>📈 High <span className="font-semibold text-gray-300">{max.toFixed(1)}</span></span>
+                        <span>📉 Low <span className="font-semibold text-gray-300">{min.toFixed(1)}</span></span>
+                        <span>📋 Entries <span className="font-semibold text-violet-400">{chartData.length}</span></span>
+                      </div>
+                      <div className="relative h-0.5 bg-white/[0.03]">
+                        <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(records.length / 30 * 100, 100)}%` }} />
                       </div>
                     </div>
-                    <div className="h-48">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                          <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
-                          <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
-                          <Line type="monotone" dataKey={chartMetric} stroke="#F59E0B" strokeWidth={2.5} dot={{ fill: '#F59E0B', r: 4 }} activeDot={{ r: 6 }} />
-                          {chartMetric === 'weight' && (
-                            <Line type="monotone" dataKey="estimated1RM" stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="4 4" dot={false} opacity={0.5} />
-                          )}
-                        </LineChart>
-                      </ResponsiveContainer>
+                  )
+                }
+                if (chartTab === 'volume' && volumeTrend.length > 0) {
+                  const totalV = volumeTrend.reduce((s, d) => s + d.volume, 0)
+                  const maxV = Math.max(...volumeTrend.map(d => d.volume))
+                  const avgV = totalV / volumeTrend.length
+                  return (
+                    <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
+                      <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
+                        <span>📊 Avg Vol <span className="font-semibold text-emerald-400">{avgV.toFixed(0)}</span></span>
+                        <span>📈 Peak <span className="font-semibold text-gray-300">{maxV.toFixed(0)}</span></span>
+                        <span>📋 Sessions <span className="font-semibold text-violet-400">{volumeTrend.length}</span></span>
+                      </div>
+                      <div className="relative h-0.5 bg-white/[0.03]">
+                        <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(workouts.length / 30 * 100, 100)}%` }} />
+                      </div>
                     </div>
-                  </>
-                ) : (
-                  <p className="text-sm text-gray-500 text-center py-6">No PR data for this period — log some PRs first!</p>
-                )}
-              </div>
-            )}
-            {chartTab === 'volume' && (
-              <div className="space-y-4">
-                {workouts.length >= 7 && (
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Weekly Volume Comparison</h4>
-                    <div className="h-40">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={weeklyVolumeComparison}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                          <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
-                          <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
-                          <Bar dataKey="current" name="This Week" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={20} />
-                          <Bar dataKey="prior" name="Last Week" fill="#374151" radius={[4, 4, 0, 0]} maxBarSize={20} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                  )
+                }
+                if (chartTab === 'weight' && bodyWeightData.length > 1) {
+                  const vals = bodyWeightData.map(d => d.weight)
+                  const avg = vals.reduce((s, v) => s + v, 0) / vals.length
+                  const max = Math.max(...vals)
+                  const min = Math.min(...vals)
+                  return (
+                    <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
+                      <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
+                        <span>📊 Avg <span className="font-semibold text-violet-400">{avg.toFixed(1)}</span> kg</span>
+                        <span>📈 High <span className="font-semibold text-gray-300">{max.toFixed(1)}</span> kg</span>
+                        <span>📉 Low <span className="font-semibold text-gray-300">{min.toFixed(1)}</span> kg</span>
+                        <span>📋 Entries <span className="font-semibold text-violet-400">{bodyWeightData.length}</span></span>
+                      </div>
+                      <div className="relative h-0.5 bg-white/[0.03]">
+                        <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(bodyWeightData.length / 30 * 100, 100)}%` }} />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 mt-2 text-[10px]">
-                      <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" /><span className="text-gray-400">This Week</span></div>
-                      <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-gray-600" /><span className="text-gray-400">Last Week</span></div>
-                    </div>
-                  </div>
-                )}
-                {volumeTrend.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Workout Volume Trend</h4>
-                    <div className="h-40">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={volumeTrend}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                          <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
-                          <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
-                          <Bar dataKey="volume" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={24} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                )}
-                {workouts.length < 7 && volumeTrend.length === 0 && (
-                  <p className="text-sm text-gray-500 text-center py-6">Not enough workout data yet — keep training!</p>
-                )}
-              </div>
-            )}
-            {chartTab === 'weight' && (
-              <div>
-                {bodyWeightData.length > 1 ? (
-                  <>
-                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Body Weight Trend</h4>
-                    <div className="h-48">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={bodyWeightData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                          <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
-                          <YAxis domain={['auto', 'auto']} tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
-                          <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
-                          <Line type="monotone" dataKey="weight" stroke="#8b5cf6" strokeWidth={2.5} dot={{ fill: '#8b5cf6', r: 3 }} activeDot={{ r: 5 }} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-sm text-gray-500 text-center py-6">Log your body weight in the Body tab to see trends here.</p>
-                )}
-              </div>
-            )}
+                  )
+                }
+                return null
+              })()}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
