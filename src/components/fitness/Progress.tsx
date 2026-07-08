@@ -1013,46 +1013,66 @@ export function Progress() {
       )}
 
       {/* Add PR Modal */}
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add Personal Record">
-        <div className="space-y-4">
-          <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3.5">
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="">
+        <div className="relative space-y-5">
+          <div className="absolute -top-16 -right-16 w-32 h-32 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative flex items-center gap-4 pb-2 border-b border-white/5">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500/25 to-amber-500/5 flex items-center justify-center border border-amber-500/20 shadow-lg shadow-amber-500/10">
+              <Trophy className="w-5 h-5 text-amber-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white tracking-tight">New Personal Record</h3>
+              <p className="text-[11px] text-gray-500">Log your latest achievement</p>
+            </div>
+          </div>
+          <div className="rounded-xl bg-gradient-to-br from-amber-500/[0.03] to-transparent border border-amber-500/10 p-3.5">
             <Input label="Exercise" placeholder="e.g., Bench Press" value={formData.exerciseName}
               onChange={e => setFormData({ ...formData, exerciseName: e.target.value })}
-              list="exercise-list" icon={<Dumbbell className="w-4 h-4" />} />
+              list="exercise-list" icon={<Dumbbell className="w-4 h-4 text-amber-400" />} />
             <datalist id="exercise-list">{exercises.map(ex => <option key={ex} value={ex} />)}</datalist>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3.5">
+            <div className="rounded-xl bg-gradient-to-br from-purple-500/[0.03] to-transparent border border-purple-500/10 p-3.5">
               <Input label="Weight (lbs)" type="number" placeholder="0" value={formData.weight}
                 onChange={e => setFormData({ ...formData, weight: e.target.value })} />
             </div>
-            <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3.5">
+            <div className="rounded-xl bg-gradient-to-br from-emerald-500/[0.03] to-transparent border border-emerald-500/10 p-3.5">
               <Input label="Reps" type="number" placeholder="0" value={formData.reps}
                 onChange={e => setFormData({ ...formData, reps: e.target.value })} />
             </div>
           </div>
-          <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3.5">
+          <div className="rounded-xl bg-gradient-to-br from-violet-500/[0.03] to-transparent border border-violet-500/10 p-3.5">
             <Input label="Date" type="date" value={formData.date}
               onChange={e => setFormData({ ...formData, date: e.target.value })} />
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">Type</label>
+          <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3.5">
+            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+              <Award className="w-3.5 h-3.5 text-amber-400" />PR Category
+            </label>
             <div className="grid grid-cols-3 gap-2">
-              {([{ value: 'weight', label: 'Weight PR', icon: Award }, { value: 'reps', label: 'Reps PR', icon: Star }, { value: 'volume', label: 'Volume PR', icon: Flame }] as const).map(({ value, label, icon: Icon }) => (
+              {([{ value: 'weight', label: 'Weight', icon: Award }, { value: 'reps', label: 'Reps', icon: Star }, { value: 'volume', label: 'Volume', icon: Flame }] as const).map(({ value, label, icon: Icon }) => (
                 <button key={value} type="button" onClick={() => setFormData({ ...formData, type: value })}
-                  className={`flex flex-col items-center gap-1 p-3 rounded-xl border text-xs transition-all ${
+                  className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border text-xs font-semibold transition-all ${
                     formData.type === value
-                      ? value === 'weight' ? 'border-amber-500/50 bg-amber-500/20' : value === 'reps' ? 'border-purple-500/50 bg-purple-500/20' : 'border-emerald-500/50 bg-emerald-500/20'
-                      : 'border-white/10 bg-white/5 hover:bg-white/10'
-                  } ${formData.type === value ? 'text-white' : 'text-gray-400'}`}>
-                  <Icon className={`w-5 h-5 ${formData.type === value ? 'text-inherit' : 'text-gray-500'}`} />
-                  <span className="font-semibold">{label}</span>
-                </button>
+                      ? value === 'weight' ? 'border-amber-500/50 bg-amber-500/20 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.15)]'
+                      : value === 'reps' ? 'border-purple-500/50 bg-purple-500/20 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.15)]'
+                      : 'border-emerald-500/50 bg-emerald-500/20 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.15)]'
+                      : 'border-white/10 bg-white/[0.02] text-gray-400 hover:text-white hover:bg-white/5 hover:border-white/20'
+                  }`}>
+                    {formData.type === value && (
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.04] to-transparent rounded-xl pointer-events-none" />
+                    )}
+                    <Icon className={`w-5 h-5 ${formData.type === value ? (value === 'weight' ? 'drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]' : value === 'reps' ? 'drop-shadow-[0_0_6px_rgba(168,85,247,0.4)]' : 'drop-shadow-[0_0_6px_rgba(16,185,129,0.4)]') : ''}`} />
+                    <span className="relative z-10">{label} PR</span>
+                  </button>
               ))}
             </div>
           </div>
-          <Button variant="primary" onClick={saveRecord} className="w-full">
-            <Trophy className="w-4 h-4 mr-1.5" />Save Record
+          <Button variant="primary" onClick={saveRecord} className="w-full relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-transparent to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+            <Trophy className="w-4 h-4 mr-1.5 relative z-10" />
+            <span className="relative z-10">Save Personal Record</span>
           </Button>
         </div>
       </Modal>
