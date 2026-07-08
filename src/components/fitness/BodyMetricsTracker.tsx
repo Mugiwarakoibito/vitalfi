@@ -315,33 +315,27 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
               {showBodySettings && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowBodySettings(false)} />
-                  <div className="absolute right-0 top-10 z-20 w-52 rounded-xl bg-gray-900 border border-white/10 shadow-2xl p-4">
-                    <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Body Targets</p>
-                    {/* Goal Weight */}
-                    <div className="mb-3">
-                      <label className="text-[10px] text-gray-400 flex items-center gap-1.5 mb-1.5"><Target className="w-3 h-3 text-emerald-400" /> Goal Weight (kg)</label>
-                      <div className="relative">
-                        <input type="range" min={30} max={250} step={0.1} value={targetWeight || weightOrDefault}
-                          onChange={e => setTargetWeight(e.target.value)}
-                          className="w-full h-1.5 rounded-full appearance-none bg-white/10 outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-400 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-emerald-400/30"
-                          style={{ background: `linear-gradient(to right, #10b981 ${((parseFloat(targetWeight || weightOrDefault) - 30) / 220) * 100}%, rgba(255,255,255,0.1) ${((parseFloat(targetWeight || weightOrDefault) - 30) / 220) * 100}%)` }} />
-                        <div className="absolute -top-7 left-0 right-0 flex justify-center pointer-events-none">
-                          <span className="text-sm font-bold text-emerald-400 drop-shadow-lg">{targetWeight || '--'}</span>
-                        </div>
+                  <div className="absolute right-0 top-10 z-20 w-64 rounded-xl bg-gray-900 border border-white/10 shadow-2xl p-4">
+                    <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-3">Body Targets</p>
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-[10px] text-gray-400 flex items-center gap-1.5"><Target className="w-3 h-3 text-emerald-400" /> Goal Weight</label>
+                        <span className="text-sm font-bold text-emerald-400">{targetWeight || weightOrDefault} <span className="text-[9px] text-gray-500 font-normal">kg</span></span>
                       </div>
+                      <input type="range" min={30} max={250} step={0.1} value={targetWeight || weightOrDefault}
+                        onChange={e => setTargetWeight(e.target.value)}
+                        className="w-full h-1.5 rounded-full appearance-none bg-white/10 outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-400 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-emerald-400/30"
+                        style={{ background: `linear-gradient(to right, #10b981 ${((parseFloat(targetWeight || String(weightOrDefault)) - 30) / 220) * 100}%, rgba(255,255,255,0.1) 50%)` }} />
                     </div>
-                    {/* Goal Body Fat */}
                     <div>
-                      <label className="text-[10px] text-gray-400 flex items-center gap-1.5 mb-1.5"><Flame className="w-3 h-3 text-amber-400" /> Goal Body Fat %</label>
-                      <div className="relative">
-                        <input type="range" min={5} max={50} step={0.1} value={goalBodyFat || bodyFatOrDefault}
-                          onChange={e => setGoalBodyFat(e.target.value)}
-                          className="w-full h-1.5 rounded-full appearance-none bg-white/10 outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-400 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-amber-400/30"
-                          style={{ background: `linear-gradient(to right, #f59e0b ${((parseFloat(goalBodyFat || bodyFatOrDefault) - 5) / 45) * 100}%, rgba(255,255,255,0.1) ${((parseFloat(goalBodyFat || bodyFatOrDefault) - 5) / 45) * 100}%)` }} />
-                        <div className="absolute -top-7 left-0 right-0 flex justify-center pointer-events-none">
-                          <span className="text-sm font-bold text-amber-400 drop-shadow-lg">{goalBodyFat || '--'}</span>
-                        </div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-[10px] text-gray-400 flex items-center gap-1.5"><Flame className="w-3 h-3 text-amber-400" /> Goal Body Fat</label>
+                        <span className="text-sm font-bold text-amber-400">{goalBodyFat || bodyFatOrDefault} <span className="text-[9px] text-gray-500 font-normal">%</span></span>
                       </div>
+                      <input type="range" min={5} max={50} step={0.1} value={goalBodyFat || bodyFatOrDefault}
+                        onChange={e => setGoalBodyFat(e.target.value)}
+                        className="w-full h-1.5 rounded-full appearance-none bg-white/10 outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-400 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-amber-400/30"
+                        style={{ background: `linear-gradient(to right, #f59e0b ${((parseFloat(goalBodyFat || String(bodyFatOrDefault)) - 5) / 45) * 100}%, rgba(255,255,255,0.1) 50%)` }} />
                     </div>
                   </div>
                 </>
