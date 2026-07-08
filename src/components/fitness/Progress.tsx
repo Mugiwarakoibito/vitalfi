@@ -1013,53 +1013,95 @@ export function Progress() {
       )}
 
       {/* Add PR Modal */}
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add Personal Record">
-        <div className="space-y-4">
-          <Input label="Exercise" placeholder="e.g., Bench Press" value={formData.exerciseName}
-            onChange={e => setFormData({ ...formData, exerciseName: e.target.value })}
-            list="exercise-list" icon={<Dumbbell className="w-4 h-4" />} />
-          <datalist id="exercise-list">{exercises.map(ex => <option key={ex} value={ex} />)}</datalist>
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Weight (lbs)" type="number" placeholder="0" value={formData.weight}
-              onChange={e => setFormData({ ...formData, weight: e.target.value })} />
-            <Input label="Reps" type="number" placeholder="0" value={formData.reps}
-              onChange={e => setFormData({ ...formData, reps: e.target.value })} />
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative">
+          <div className="absolute -top-20 -right-20 w-40 h-40 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative space-y-4">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 25 }}>
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/25 to-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-lg shadow-amber-500/10">
+                  <Trophy className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white tracking-tight">New Personal Record</h3>
+                  <p className="text-[11px] text-gray-500">Log your latest PR achievement</p>
+                </div>
+              </div>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.05 }}>
+              <div className="rounded-xl bg-gradient-to-br from-amber-500/[0.03] to-transparent border border-amber-500/10 p-3.5">
+                <Input label="Exercise" placeholder="e.g., Bench Press" value={formData.exerciseName}
+                  onChange={e => setFormData({ ...formData, exerciseName: e.target.value })}
+                  list="exercise-list" icon={<Dumbbell className="w-4 h-4 text-amber-400" />} />
+                <datalist id="exercise-list">{exercises.map(ex => <option key={ex} value={ex} />)}</datalist>
+              </div>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.1 }}
+              className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-gradient-to-br from-purple-500/[0.03] to-transparent border border-purple-500/10 p-3.5">
+                <Input label="Weight (lbs)" type="number" placeholder="0" value={formData.weight}
+                  onChange={e => setFormData({ ...formData, weight: e.target.value })} />
+              </div>
+              <div className="rounded-xl bg-gradient-to-br from-emerald-500/[0.03] to-transparent border border-emerald-500/10 p-3.5">
+                <Input label="Reps" type="number" placeholder="0" value={formData.reps}
+                  onChange={e => setFormData({ ...formData, reps: e.target.value })} />
+              </div>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.15 }}
+              className="rounded-xl bg-gradient-to-br from-violet-500/[0.03] to-transparent border border-violet-500/10 p-3.5">
+              <Input label="Date" type="date" value={formData.date}
+                onChange={e => setFormData({ ...formData, date: e.target.value })} icon={<Calendar className="w-4 h-4 text-violet-400" />} />
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.2 }}>
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
+                <Star className="w-3.5 h-3.5 text-amber-400" />PR Type
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {([{ value: 'weight' as const, label: 'Weight PR', icon: Award }, { value: 'reps' as const, label: 'Reps PR', icon: Star }, { value: 'volume' as const, label: 'Volume PR', icon: Flame }]).map(({ value, label, icon: Icon }) => (
+                  <motion.button key={value} type="button" onClick={() => setFormData({ ...formData, type: value })}
+                    whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                    className={`relative overflow-hidden flex flex-col items-center gap-1.5 p-3 rounded-xl border text-xs font-semibold transition-all ${
+                      formData.type === value
+                        ? value === 'weight' ? 'border-amber-500/50 bg-amber-500/20 text-amber-300 shadow-lg shadow-amber-500/10'
+                        : value === 'reps' ? 'border-purple-500/50 bg-purple-500/20 text-purple-300 shadow-lg shadow-purple-500/10'
+                        : 'border-emerald-500/50 bg-emerald-500/20 text-emerald-300 shadow-lg shadow-emerald-500/10'
+                        : 'border-white/10 bg-white/[0.02] text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}>
+                    {formData.type === value && (
+                      <motion.div layoutId="prTypeBg" className="absolute inset-0 bg-gradient-to-br from-white/[0.04] to-transparent pointer-events-none" transition={{ type: 'spring', stiffness: 500, damping: 40 }} />
+                    )}
+                    <Icon className={`w-5 h-5 ${formData.type === value ? 'drop-shadow-[0_0_6px_rgba(251,191,36,0.3)]' : ''}`} />
+                    <span className="relative z-10">{label}</span>
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.25 }}
+              className="rounded-xl bg-gradient-to-br from-amber-500/[0.02] to-transparent border border-white/5 p-3.5">
+              <div className="flex items-center gap-1.5 mb-2.5">
+                <Target className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Goal Targets</span>
+                <span className="text-[9px] text-gray-600 font-normal normal-case ml-1">optional</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <Input label="Target Weight" type="number" placeholder="--" value={formData.goalWeight}
+                  onChange={e => setFormData({ ...formData, goalWeight: e.target.value })} />
+                <Input label="Target Reps" type="number" placeholder="--" value={formData.goalReps}
+                  onChange={e => setFormData({ ...formData, goalReps: e.target.value })} />
+                <Input label="Target Volume" type="number" placeholder="--" value={formData.goalVolume}
+                  onChange={e => setFormData({ ...formData, goalVolume: e.target.value })} />
+              </div>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.3 }}>
+              <Button variant="primary" onClick={saveRecord} className="w-full relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-transparent to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                <Trophy className="w-4 h-4 mr-1.5 relative z-10" />
+                <span className="relative z-10">Save Personal Record</span>
+              </Button>
+            </motion.div>
           </div>
-          <Input label="Date" type="date" value={formData.date}
-            onChange={e => setFormData({ ...formData, date: e.target.value })} />
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">Type</label>
-            <div className="grid grid-cols-3 gap-2">
-              {([{ value: 'weight', label: 'Weight PR', icon: Award }, { value: 'reps', label: 'Reps PR', icon: Star }, { value: 'volume', label: 'Volume PR', icon: Flame }] as const).map(({ value, label, icon: Icon }) => (
-                <button key={value} type="button" onClick={() => setFormData({ ...formData, type: value })}
-                  className={`flex flex-col items-center gap-1 p-3 rounded-xl border text-xs transition-all ${
-                    formData.type === value
-                      ? value === 'weight' ? 'border-amber-500/50 bg-amber-500/20' : value === 'reps' ? 'border-purple-500/50 bg-purple-500/20' : 'border-emerald-500/50 bg-emerald-500/20'
-                      : 'border-white/10 bg-white/5 hover:bg-white/10'
-                  } ${formData.type === value ? 'text-white' : 'text-gray-400'}`}>
-                  <Icon className={`w-5 h-5 ${formData.type === value ? 'text-inherit' : 'text-gray-500'}`} />
-                  <span className="font-semibold">{label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="border-t border-white/10 pt-4">
-            <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider flex items-center gap-1.5">
-              <Target className="w-3.5 h-3.5 text-amber-400" />Goal Settings <span className="text-gray-600 font-normal normal-case">(optional)</span>
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              <Input label="Target Weight" type="number" placeholder="--" value={formData.goalWeight}
-                onChange={e => setFormData({ ...formData, goalWeight: e.target.value })} />
-              <Input label="Target Reps" type="number" placeholder="--" value={formData.goalReps}
-                onChange={e => setFormData({ ...formData, goalReps: e.target.value })} />
-              <Input label="Target Volume" type="number" placeholder="--" value={formData.goalVolume}
-                onChange={e => setFormData({ ...formData, goalVolume: e.target.value })} />
-            </div>
-          </div>
-          <Button variant="primary" onClick={saveRecord} className="w-full">
-            <Trophy className="w-4 h-4 mr-1.5" />Save Record
-          </Button>
-        </div>
+        </motion.div>
       </Modal>
 
       {/* Add Photo Modal */}
