@@ -374,9 +374,6 @@ export function Recovery() {
                     <span className="text-sm font-bold text-emerald-400 drop-shadow-lg">{recoveryGoal}/100</span>
                     <span className="text-[11px] text-gray-500">100</span>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-white/5 text-[9px] text-gray-500 text-center">
-                    Entries above {recoveryGoal} count toward goal hit rate
-                  </div>
                 </div>
               </>
             )}
