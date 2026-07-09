@@ -4,7 +4,7 @@ import {
   Trophy, Plus, Star, Award, X,
   Dumbbell, Flame, BarChart3, Activity,
   Sparkles, Target, CheckCircle2, Medal,
-  Calendar, Download, Settings, Trash2, Filter,
+  Calendar, Filter,
   Brain, ChevronLeft, ChevronRight, RotateCcw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -36,7 +36,6 @@ interface StrengthLevel {
   bodyWeight: number
 }
 
-const STORAGE_KEY = 'vitalfi_progress_records'
 const ACHIEVEMENTS_KEY = 'vitalfi_progress_achievements'
 const CONFETTI_COLORS = ['#F59E0B', '#A78BFA', '#10B981', '#EF4444', '#3B82F6']
 
@@ -112,24 +111,10 @@ function estimate1RM(weight: number, reps: number): number {
   return Math.round(weight * (1 + reps / 30))
 }
 
-function exportCSV(records: PR[]) {
-  const headers = 'Exercise,Weight,Reps,Volume,Date,Type,GoalWeight,GoalReps,GoalVolume\n'
-  const rows = records.map(r =>
-    `${r.exerciseName},${r.weight},${r.reps},${r.weight * r.reps},${r.date},${r.type},${r.goalWeight ?? ''},${r.goalReps ?? ''},${r.goalVolume ?? ''}`
-  ).join('\n')
-  const blob = new Blob([headers + rows], { type: 'text/csv' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url; a.download = `vitalfi_prs_${new Date().toISOString().split('T')[0]}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
 export function Progress() {
   const { workouts, bodyMetrics } = useAppStore()
   const [records, setRecords] = useState<PR[]>([])
   const [showModal, setShowModal] = useState(false)
-  const [confirmClear, setConfirmClear] = useState(false)
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [justAdded, setJustAdded] = useState('')
   const [formData, setFormData] = useState({
@@ -144,7 +129,6 @@ export function Progress() {
   const [showPhotos, setShowPhotos] = useState(false)
   const [showPerfCoach, setShowPerfCoach] = useState(false)
   const [showPerfScope, setShowPerfScope] = useState(false)
-  const [showPerfSettings, setShowPerfSettings] = useState(false)
   const [perfFocus, setPerfFocus] = useState<'strength' | 'hypertrophy' | 'endurance' | 'power' | 'overall'>('overall')
   const [scopeOffset, setScopeOffset] = useState(0)
   const [chartTab, setChartTab] = useState<'prs' | 'volume' | 'weight'>('prs')
@@ -438,10 +422,6 @@ export function Progress() {
               className={`p-2 rounded-xl border transition-all ${showPhotos ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
               onClick={() => setShowPhotos(p => !p)} title="Performance Coach">
               <Sparkles className="w-5 h-5" />
-            </button>
-            <button onClick={() => setShowPerfSettings(p => !p)}
-              className={`p-2 rounded-xl border transition-all ${showPerfSettings ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}>
-              <Settings className="w-5 h-5" />
             </button>
             <Button variant="primary" size="sm" onClick={() => setShowModal(true)}>
               <Plus className="w-4 h-4 mr-1" />Add PR
@@ -1200,61 +1180,6 @@ export function Progress() {
         )}
       </AnimatePresence>
 
-      {/* Inline Settings Panel */}
-      <AnimatePresence>
-        {showPerfSettings && (
-          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-            className="rounded-2xl border border-emerald-500/15 bg-black/60 backdrop-blur-[12px] p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Settings className="w-4 h-4 text-emerald-400" />
-                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Performance Settings</h4>
-              </div>
-              <button onClick={() => setShowPerfSettings(false)} className="p-1 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium mb-2">Export PR Data</p>
-                <button onClick={() => exportCSV(records)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 transition-all text-sm font-medium flex items-center justify-center gap-2">
-                  <Download className="w-4 h-4" /> Export as CSV
-                </button>
-              </div>
-              <div className="rounded-xl bg-red-500/5 border border-red-500/10 p-3">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium mb-2">Data Management</p>
-                {!confirmClear ? (
-                  <button onClick={() => setConfirmClear(true)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 transition-all text-sm font-medium flex items-center justify-center gap-2">
-                    <Trash2 className="w-4 h-4" /> Clear All Data
-                  </button>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-xs text-red-400/80 text-center">This permanently deletes all PR records.</p>
-                    <div className="flex gap-2">
-                      <button onClick={() => setConfirmClear(false)}
-                        className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-all text-xs">Cancel</button>
-                      <button onClick={() => { setRecords([]); localStorage.removeItem(STORAGE_KEY); setConfirmClear(false) }}
-                        className="flex-1 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30 transition-all text-xs font-semibold">Delete All</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3 text-center">
-                <p className="text-[9px] text-gray-500 uppercase tracking-wider">Total PRs</p>
-                <p className="text-lg font-bold text-white mt-1">{records.length}</p>
-              </div>
-              <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3 text-center">
-                <p className="text-[9px] text-gray-500 uppercase tracking-wider">Exercises</p>
-                <p className="text-lg font-bold text-white mt-1">{exercises.length}</p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
