@@ -190,24 +190,12 @@ export function Progress() {
       }))
   }, [bodyMetrics])
 
-  const weeklyVolumeComparison = useMemo(() => {
-    const now = new Date()
-    const weeks: { label: string; current: number; prior: number }[] = []
-    for (let i = 7; i >= 0; i--) {
-      const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate() - i * 7)
-      const weekStart = new Date(weekEnd); weekStart.setDate(weekStart.getDate() - 6)
-      const weekLabel = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      const priorWeekEnd = new Date(weekStart); priorWeekEnd.setDate(priorWeekEnd.getDate() - 1)
-      const priorWeekStart = new Date(priorWeekEnd); priorWeekStart.setDate(priorWeekStart.getDate() - 6)
-      const currentVol = workouts
-        .filter((w: Workout) => w.date >= weekStart.toISOString().split('T')[0] && w.date <= weekEnd.toISOString().split('T')[0])
-        .reduce((s: number, w: Workout) => s + (w.exercises?.reduce((se: number, ex: WorkoutExercise) => se + ex.sets.reduce((st: number, set: ExerciseSet) => st + ((set.weight || 0) * (set.reps || 0)), 0), 0) || 0), 0)
-      const priorVol = workouts
-        .filter((w: Workout) => w.date >= priorWeekStart.toISOString().split('T')[0] && w.date <= priorWeekEnd.toISOString().split('T')[0])
-        .reduce((s: number, w: Workout) => s + (w.exercises?.reduce((se: number, ex: WorkoutExercise) => se + ex.sets.reduce((st: number, set: ExerciseSet) => st + ((set.weight || 0) * (set.reps || 0)), 0), 0) || 0), 0)
-      weeks.unshift({ label: weekLabel, current: currentVol, prior: priorVol })
-    }
-    return weeks.slice(-8)
+  const volumeTrend = useMemo(() => {
+    const sorted = [...workouts].sort((a: Workout, b: Workout) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    return sorted.slice(-20).map((w: Workout) => ({
+      date: new Date(w.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      volume: w.exercises?.reduce((s: number, ex: WorkoutExercise) => s + ex.sets.reduce((st: number, set: ExerciseSet) => st + ((set.weight || 0) * (set.reps || 0)), 0), 0) || 0,
+    }))
   }, [workouts])
 
   const totalVolume = useMemo(() =>
@@ -767,38 +755,32 @@ export function Progress() {
                     )
                   )}
                   {chartTab === 'volume' && (
-                    weeklyVolumeComparison.length > 0 ? (
+                    volumeTrend.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={weeklyVolumeComparison.map(d => ({ ...d, label: d.label.replace(/^\w+\s/, '') }))} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
+                        <BarChart data={volumeTrend} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
                           <defs>
                             <linearGradient id="volBarGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={1} /><stop offset="100%" stopColor="#10b981" stopOpacity={0.35} /></linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
-                          <XAxis dataKey="label" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
+                          <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
                           <YAxis stroke="#6b7280" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={32} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
                           <Tooltip content={({ active, payload }) => {
                             if (!active || !payload?.length) return null
                             const d = payload[0].payload as any
-                            const total = weeklyVolumeComparison.reduce((s: number, w: typeof d) => s + w.current, 0)
                             return (
                               <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
                                 className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-emerald-500/5 min-w-[150px]">
                                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
                                 <div className="relative space-y-2">
                                   <div className="flex items-center justify-between pb-2 border-b border-white/5">
-                                    <span className="text-white font-bold text-xs">{d.label}</span>
-                                    <span className="text-[10px] text-gray-500">{((d.current / total) * 100).toFixed(1)}%</span>
-                                  </div>
-                                  <div className="flex items-center gap-2.5">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" />
-                                    <span className="text-gray-400 font-medium">Volume</span>
-                                    <span className="text-white font-bold ml-auto text-sm">{d.current.toLocaleString()}</span>
+                                    <span className="text-white font-bold text-xs">{d.date}</span>
+                                    <span className="text-[10px] text-emerald-400 font-bold">{d.volume >= 1000 ? `${(d.volume / 1000).toFixed(1)}k` : d.volume}</span>
                                   </div>
                                 </div>
                               </motion.div>
                             )
                           }} cursor={{ fill: 'rgba(16,185,129,0.15)' }} />
-                          <Bar dataKey="current" fill="url(#volBarGrad)" radius={[6, 6, 0, 0]} maxBarSize={36} animationDuration={600} animationEasing="ease-out" />
+                          <Bar dataKey="volume" fill="url(#volBarGrad)" radius={[6, 6, 0, 0]} maxBarSize={32} animationDuration={600} animationEasing="ease-out" />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
@@ -899,17 +881,17 @@ export function Progress() {
                     </div>
                   )
                 }
-                if (chartTab === 'volume' && weeklyVolumeComparison.length > 0) {
-                  const currents = weeklyVolumeComparison.map(d => d.current)
-                  const maxC = Math.max(...currents)
-                  const avgC = currents.reduce((s, v) => s + v, 0) / currents.length
+                if (chartTab === 'volume' && volumeTrend.length > 0) {
+                  const vols = volumeTrend.map(d => d.volume)
+                  const maxV = Math.max(...vols)
+                  const avgV = vols.reduce((s, v) => s + v, 0) / vols.length
                   const totalW = workouts.length
                   return (
                     <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
                       <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
-                        <span>📊 Avg Vol <span className="font-semibold text-emerald-400">{avgC.toFixed(0)}</span></span>
-                        <span>📈 Peak <span className="font-semibold text-gray-300">{maxC.toFixed(0)}</span></span>
+                        <span>📊 Avg Vol <span className="font-semibold text-emerald-400">{avgV.toFixed(0)}</span></span>
+                        <span>📈 Peak <span className="font-semibold text-gray-300">{maxV.toFixed(0)}</span></span>
                         <span>📋 Workouts <span className="font-semibold text-violet-400">{totalW}</span></span>
                       </div>
                       <div className="relative h-0.5 bg-white/[0.03]">
