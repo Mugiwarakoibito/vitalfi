@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/Button'
 import {
   Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, Bar, AreaChart, Area,
+  ResponsiveContainer, AreaChart, Area,
 } from 'recharts'
 import { useAppStore } from '@/store/useAppStore'
 import type { Workout, BodyMetric, WorkoutExercise, ExerciseSet } from '@/types/domain'
@@ -138,6 +138,7 @@ export function Progress() {
     goalWeight: '', goalReps: '', goalVolume: '', notes: '',
   })
   const [selectedExercise] = useState<string>('')
+  const [bodyGoalWeight] = useState<string>(() => localStorage.getItem('vitalfi_body_goal_weight') ?? '')
   const [earned, setEarned] = useState<Set<string>>(new Set())
   const [showAchievements, setShowAchievements] = useState(false)
   const [showPerfCoach, setShowPerfCoach] = useState(false)
@@ -188,15 +189,6 @@ export function Progress() {
         bodyFat: m.bodyFat ?? null,
       }))
   }, [bodyMetrics])
-
-  const volumeTrend = useMemo(() => {
-    const sorted = [...workouts].sort((a: Workout, b: Workout) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    return sorted.slice(-20).map((w: Workout) => ({
-      date: new Date(w.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      volume: w.exercises?.reduce((s: number, ex: WorkoutExercise) => s + ex.sets.reduce((st: number, set: ExerciseSet) => st + ((set.weight || 0) * (set.reps || 0)), 0), 0) || 0,
-      name: w.name,
-    }))
-  }, [workouts])
 
   const weeklyVolumeComparison = useMemo(() => {
     const now = new Date()
@@ -747,8 +739,8 @@ export function Progress() {
                           </defs>
                           <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
                           <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
-                          <YAxis yAxisId="l" stroke="#f43f5e" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={[0, 'dataMax + 5']} width={32} tickFormatter={v => `${v}`} />
-                          <YAxis yAxisId="r" orientation="right" stroke="#a78bfa" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={[0, 'dataMax + 10']} width={32} tickFormatter={v => `${v}`} />
+                          <YAxis yAxisId="left" stroke="#f43f5e" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={[0, 'dataMax + 5']} width={32} tickFormatter={v => `${v}`} />
+                          <YAxis yAxisId="right" orientation="right" stroke="#a78bfa" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={[0, 'dataMax + 10']} width={32} tickFormatter={v => `${v}`} />
                           <Tooltip content={({ active, payload }) => {
                             if (!active || !payload?.length) return null
                             const d = payload[0].payload as any
@@ -782,9 +774,9 @@ export function Progress() {
                               </motion.div>
                             )
                           }} cursor={{ fill: 'rgba(244,63,94,0.1)' }} />
-                          <Area yAxisId="l" type="monotone" dataKey="weight" stroke="#f43f5e" strokeWidth={2.5} fill="url(#prWeightGrad)" dot={false} activeDot={{ r: 6, fill: '#f43f5e', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowPrWeight)' }} animationDuration={600} animationEasing="ease-out" name="Weight (lbs)" />
+                          <Area yAxisId="left" type="monotone" dataKey="weight" stroke="#f43f5e" strokeWidth={2.5} fill="url(#prWeightGrad)" dot={false} activeDot={{ r: 6, fill: '#f43f5e', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowPrWeight)' }} animationDuration={600} animationEasing="ease-out" name="Weight (lbs)" />
                           {chartData.some(d => d.estimated1RM != null) && (
-                            <Line yAxisId="r" type="monotone" dataKey="estimated1RM" stroke="#a78bfa" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#a78bfa', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowPr1rm)' }} name="Est. 1RM (lbs)" animationDuration={600} animationEasing="ease-out" />
+                            <Line yAxisId="right" type="monotone" dataKey="estimated1RM" stroke="#a78bfa" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#a78bfa', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowPr1rm)' }} name="Est. 1RM (lbs)" animationDuration={600} animationEasing="ease-out" />
                           )}
                         </AreaChart>
                       </ResponsiveContainer>
@@ -793,108 +785,53 @@ export function Progress() {
                     )
                   )}
                   {chartTab === 'volume' && (
-                    workouts.length >= 7 || volumeTrend.length > 0 ? (
-                      <div className="space-y-4">
-                        {workouts.length >= 7 && (
-                          <div>
-                            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Weekly Volume Comparison</h4>
-                            <div className="h-40">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={weeklyVolumeComparison} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                                  <defs><linearGradient id="volCurrGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9} /><stop offset="100%" stopColor="#10b981" stopOpacity={0.4} /></linearGradient>
-                                    <linearGradient id="volPriorGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#6b7280" stopOpacity={0.6} /><stop offset="100%" stopColor="#6b7280" stopOpacity={0.2} /></linearGradient></defs>
-                                  <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
-                                  <XAxis dataKey="label" stroke="#6b7280" fontSize={8} fontWeight={700} axisLine={false} tickLine={false} dy={4} />
-                                  <Tooltip content={({ active, payload }) => {
-                                    if (!active || !payload?.length) return null
-                                    const current = payload.find(p => p.dataKey === 'current')
-                                    const prior = payload.find(p => p.dataKey === 'prior')
-                                    const delta = current && prior ? (current.value as number) - (prior.value as number) : null
-                                    return (
-                                      <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 shadow-2xl shadow-emerald-500/5 min-w-[140px]">
-                                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
-                                        <div className="relative space-y-1.5">
-                                          {payload.map((entry, i) => (
-                                            <div key={i} className="flex items-center gap-2">
-                                              <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: entry.color }} />
-                                              <span className="text-gray-400 text-[11px]">{entry.name}</span>
-                                              <span className="text-white font-bold text-xs ml-auto">{Number(entry.value).toLocaleString()}</span>
-                                            </div>
-                                          ))}
-                                          {delta != null && (
-                                            <div className="pt-1.5 mt-1.5 border-t border-white/5 text-[10px] flex items-center gap-1">
-                                              <span className={delta >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                                                {delta >= 0 ? '▲' : '▼'}
-                                              </span>
-                                              <span className={delta >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                                                {delta >= 0 ? '+' : ''}{delta.toLocaleString()} vs last week
-                                              </span>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </motion.div>
-                                    )
-                                  }} cursor={{ fill: 'rgba(16,185,129,0.1)' }} />
-                                  <Bar dataKey="current" name="This Week" fill="url(#volCurrGrad)" radius={[4, 4, 0, 0]} maxBarSize={24} animationDuration={600} animationEasing="ease-out" />
-                                  <Bar dataKey="prior" name="Last Week" fill="url(#volPriorGrad)" radius={[4, 4, 0, 0]} maxBarSize={24} animationDuration={600} animationEasing="ease-out" />
-                                </BarChart>
-                              </ResponsiveContainer>
-                            </div>
-                            <div className="flex items-center gap-4 mt-2 text-[10px]">
-                              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" /><span className="text-gray-400">This Week</span></div>
-                              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-gray-600" /><span className="text-gray-400">Last Week</span></div>
-                            </div>
-                          </div>
-                        )}
-                        {volumeTrend.length > 0 && (
-                          <div>
-                            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Workout Volume Trend</h4>
-                            <div className="h-40">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={volumeTrend} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
-                                  <defs>
-                                    <linearGradient id="volTrendGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.45} /><stop offset="60%" stopColor="#10b981" stopOpacity={0.12} /><stop offset="100%" stopColor="#10b981" stopOpacity={0} /></linearGradient>
-                                    <filter id="glowVol"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                                  </defs>
-                                  <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
-                                  <XAxis dataKey="date" stroke="#6b7280" fontSize={8} fontWeight={700} axisLine={false} tickLine={false} dy={4} interval="preserveStartEnd" />
-                                  <YAxis stroke="#6b7280" fontSize={8} fontWeight={600} axisLine={false} tickLine={false} width={32} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
-                                  <Tooltip content={({ active, payload }) => {
-                                    if (!active || !payload?.length) return null
-                                    const d = payload[0].payload as any
-                                    const idx = volumeTrend.indexOf(d)
-                                    const prev = idx > 0 ? volumeTrend[idx - 1] : null
-                                    const delta = prev ? d.volume - prev.volume : null
-                                    return (
-                                      <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 shadow-2xl shadow-emerald-500/5 min-w-[140px]">
-                                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
-                                        <div className="relative space-y-1.5">
-                                          <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
-                                            <span className="text-white font-bold text-xs">{d.date}</span>
-                                            {delta != null && (
-                                              <span className={`text-[9px] font-bold ${delta >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                {delta >= 0 ? '▲' : '▼'} {Math.abs(delta).toLocaleString()}
-                                              </span>
-                                            )}
-                                          </div>
-                                          <div className="flex items-center gap-2.5">
-                                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" style={{ filter: 'url(#glowVol)' }} />
-                                            <span className="text-gray-400 text-[11px] font-medium">Volume</span>
-                                            <span className="text-white font-bold text-xs ml-auto">{Number(d.volume).toLocaleString()}</span>
-                                          </div>
-                                        </div>
-                                      </motion.div>
-                                    )
-                                  }} cursor={{ fill: 'rgba(16,185,129,0.1)' }} />
-                                  <Area type="monotone" dataKey="volume" stroke="#10b981" strokeWidth={2.5} fill="url(#volTrendGrad)" dot={false} activeDot={{ r: 5, fill: '#10b981', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowVol)' }} animationDuration={600} animationEasing="ease-out" />
-                                </AreaChart>
-                              </ResponsiveContainer>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                    weeklyVolumeComparison.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={weeklyVolumeComparison.map(d => ({ ...d, label: d.label.replace(/^\w+\s/, '') }))} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
+                          <defs>
+                            <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.5} /><stop offset="50%" stopColor="#10b981" stopOpacity={0.18} /><stop offset="100%" stopColor="#10b981" stopOpacity={0} /></linearGradient>
+                            <linearGradient id="volPriorGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#6b7280" stopOpacity={0.35} /><stop offset="60%" stopColor="#6b7280" stopOpacity={0.1} /><stop offset="100%" stopColor="#6b7280" stopOpacity={0} /></linearGradient>
+                            <filter id="glowVolCurr"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                            <filter id="glowVolPrior"><feGaussianBlur stdDeviation="2" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                          </defs>
+                          <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
+                          <XAxis dataKey="label" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
+                          <YAxis stroke="#6b7280" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={32} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
+                          <Tooltip content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null
+                            const d = payload[0].payload as any
+                            const current = d.current ?? 0
+                            const prior = d.prior ?? 0
+                            const delta = current - prior
+                            return (
+                              <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-emerald-500/5 min-w-[170px]">
+                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
+                                <div className="relative space-y-2">
+                                  <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                                    <span className="text-white font-bold text-xs">{d.label}</span>
+                                    <span className={`text-[10px] font-bold flex items-center gap-0.5 ${delta > 0 ? 'text-emerald-400' : delta < 0 ? 'text-rose-400' : 'text-gray-500'}`}>
+                                      {delta > 0 ? '▲' : delta < 0 ? '▼' : '–'} {Math.abs(delta).toLocaleString()}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" style={{ filter: 'url(#glowVolCurr)' }} />
+                                    <span className="text-gray-400 font-medium">This Week</span>
+                                    <span className="text-white font-bold ml-auto text-sm">{current.toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-gray-500 shadow-lg shadow-gray-500/40" style={{ filter: 'url(#glowVolPrior)' }} />
+                                    <span className="text-gray-400 font-medium">Last Week</span>
+                                    <span className="text-gray-300 font-bold ml-auto text-sm">{prior.toLocaleString()}</span>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )
+                          }} cursor={{ fill: 'rgba(16,185,129,0.1)' }} />
+                          <Area yAxisId="left" type="monotone" dataKey="current" stroke="#10b981" strokeWidth={2.5} fill="url(#volGrad)" dot={false} activeDot={{ r: 6, fill: '#10b981', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowVolCurr)' }} animationDuration={600} animationEasing="ease-out" name="This Week" />
+                          <Line yAxisId="left" type="monotone" dataKey="prior" stroke="#6b7280" strokeWidth={1.5} strokeDasharray="4 3" dot={false} activeDot={{ r: 4, fill: '#6b7280', strokeWidth: 2, stroke: '#1a1a2e', filter: 'url(#glowVolPrior)' }} name="Last Week" animationDuration={600} animationEasing="ease-out" />
+                        </AreaChart>
+                      </ResponsiveContainer>
                     ) : (
                       <div className="h-full flex items-center justify-center text-gray-500 text-sm">Not enough workout data yet — keep training!</div>
                     )
@@ -911,8 +848,8 @@ export function Progress() {
                           </defs>
                           <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
                           <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
-                          <YAxis yAxisId="l" stroke="#8b5cf6" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={['dataMin - 2', 'dataMax + 2']} width={32} tickFormatter={v => `${v}`} />
-                          <YAxis yAxisId="r" orientation="right" stroke="#f59e0b" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={['dataMin - 3', 'dataMax + 3']} width={32} tickFormatter={v => `${v}%`} />
+                          <YAxis yAxisId="left" stroke="#8b5cf6" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={['dataMin - 2', 'dataMax + 2']} width={32} tickFormatter={v => `${v}`} />
+                          <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={['dataMin - 3', 'dataMax + 3']} width={32} tickFormatter={v => `${v}%`} />
                           <Tooltip content={({ active, payload }) => {
                             if (!active || !payload?.length) return null
                             const d = payload[0].payload as any
@@ -944,14 +881,24 @@ export function Progress() {
                                         <span className="text-white font-bold ml-auto text-sm">{d.bodyFat} <span className="text-[10px] font-normal text-gray-500">%</span></span>
                                       </div>
                                     )}
+                                    {bodyGoalWeight && !isNaN(Number(bodyGoalWeight)) && (
+                                      <div className="flex items-center gap-2.5 pt-1.5 border-t border-white/5">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" />
+                                        <span className="text-gray-400 font-medium">Goal</span>
+                                        <span className="text-emerald-400 font-bold ml-auto">{Number(bodyGoalWeight).toFixed(1)} kg</span>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </motion.div>
                             )
                           }} cursor={{ fill: 'rgba(139,92,246,0.1)' }} />
-                          <Area yAxisId="l" type="monotone" dataKey="weight" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#bodyWeightGrad)" dot={false} activeDot={{ r: 6, fill: '#8b5cf6', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowBw)' }} animationDuration={600} animationEasing="ease-out" />
+                          <Area yAxisId="left" type="monotone" dataKey="weight" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#bodyWeightGrad)" dot={false} activeDot={{ r: 6, fill: '#8b5cf6', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowBw)' }} animationDuration={600} animationEasing="ease-out" />
                           {bodyWeightData.some(d => d.bodyFat != null) && (
-                            <Line yAxisId="r" type="monotone" dataKey="bodyFat" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#f59e0b', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowBf)' }} name="Body Fat %" animationDuration={600} animationEasing="ease-out" />
+                            <Line yAxisId="right" type="monotone" dataKey="bodyFat" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#f59e0b', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowBf)' }} name="Body Fat %" animationDuration={600} animationEasing="ease-out" />
+                          )}
+                          {bodyGoalWeight && !isNaN(Number(bodyGoalWeight)) && (
+                            <Line yAxisId="left" type="monotone" dataKey={() => Number(bodyGoalWeight)} stroke="#10b981" strokeWidth={1.5} strokeDasharray="5 4" dot={false} opacity={0.7} name="Goal" animationDuration={400} />
                           )}
                         </AreaChart>
                       </ResponsiveContainer>
@@ -985,17 +932,18 @@ export function Progress() {
                     </div>
                   )
                 }
-                if (chartTab === 'volume' && volumeTrend.length > 0) {
-                  const totalV = volumeTrend.reduce((s, d) => s + d.volume, 0)
-                  const maxV = Math.max(...volumeTrend.map(d => d.volume))
-                  const avgV = totalV / volumeTrend.length
+                if (chartTab === 'volume' && weeklyVolumeComparison.length > 0) {
+                  const currents = weeklyVolumeComparison.map(d => d.current)
+                  const maxC = Math.max(...currents)
+                  const avgC = currents.reduce((s, v) => s + v, 0) / currents.length
+                  const totalW = workouts.length
                   return (
                     <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
                       <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
-                        <span>📊 Avg Vol <span className="font-semibold text-emerald-400">{avgV.toFixed(0)}</span></span>
-                        <span>📈 Peak <span className="font-semibold text-gray-300">{maxV.toFixed(0)}</span></span>
-                        <span>📋 Sessions <span className="font-semibold text-violet-400">{volumeTrend.length}</span></span>
+                        <span>📊 Avg Vol <span className="font-semibold text-emerald-400">{avgC.toFixed(0)}</span></span>
+                        <span>📈 Peak <span className="font-semibold text-gray-300">{maxC.toFixed(0)}</span></span>
+                        <span>📋 Workouts <span className="font-semibold text-violet-400">{totalW}</span></span>
                       </div>
                       <div className="relative h-0.5 bg-white/[0.03]">
                         <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(workouts.length / 30 * 100, 100)}%` }} />
