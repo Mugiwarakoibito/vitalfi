@@ -732,8 +732,9 @@ export function Progress() {
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
                           <defs>
-                            <linearGradient id="prWeightGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f43f5e" stopOpacity={0.55} /><stop offset="50%" stopColor="#f43f5e" stopOpacity={0.2} /><stop offset="100%" stopColor="#f43f5e" stopOpacity={0} /></linearGradient>
-                            <linearGradient id="pr1rmGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a78bfa" stopOpacity={0.4} /><stop offset="60%" stopColor="#a78bfa" stopOpacity={0.15} /><stop offset="100%" stopColor="#a78bfa" stopOpacity={0} /></linearGradient>
+                            <linearGradient id="prWeightGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f43f5e" stopOpacity={0.65} /><stop offset="40%" stopColor="#f43f5e" stopOpacity={0.3} /><stop offset="100%" stopColor="#f43f5e" stopOpacity={0} /></linearGradient>
+                            <linearGradient id="pr1rmGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a78bfa" stopOpacity={0.5} /><stop offset="60%" stopColor="#a78bfa" stopOpacity={0.15} /><stop offset="100%" stopColor="#a78bfa" stopOpacity={0} /></linearGradient>
+                            <filter id="prWeightGlowLine"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                             <filter id="glowPrWeight"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                             <filter id="glowPr1rm"><feGaussianBlur stdDeviation="2.5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                           </defs>
@@ -774,6 +775,7 @@ export function Progress() {
                               </motion.div>
                             )
                           }} cursor={{ fill: 'rgba(244,63,94,0.1)' }} />
+                          <Area yAxisId="left" type="monotone" dataKey="weight" stroke="#f43f5e" strokeWidth={5} fill="none" dot={false} opacity={0.2} animationDuration={600} animationEasing="ease-out" />
                           <Area yAxisId="left" type="monotone" dataKey="weight" stroke="#f43f5e" strokeWidth={2.5} fill="url(#prWeightGrad)" dot={false} activeDot={{ r: 6, fill: '#f43f5e', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowPrWeight)' }} animationDuration={600} animationEasing="ease-out" name="Weight (lbs)" />
                           {chartData.some(d => d.estimated1RM != null) && (
                             <Line yAxisId="right" type="monotone" dataKey="estimated1RM" stroke="#a78bfa" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#a78bfa', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowPr1rm)' }} name="Est. 1RM (lbs)" animationDuration={600} animationEasing="ease-out" />
@@ -789,14 +791,14 @@ export function Progress() {
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={weeklyVolumeComparison.map(d => ({ ...d, label: d.label.replace(/^\w+\s/, '') }))} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
                           <defs>
-                            <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.5} /><stop offset="50%" stopColor="#10b981" stopOpacity={0.18} /><stop offset="100%" stopColor="#10b981" stopOpacity={0} /></linearGradient>
-                            <linearGradient id="volPriorGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#6b7280" stopOpacity={0.35} /><stop offset="60%" stopColor="#6b7280" stopOpacity={0.1} /><stop offset="100%" stopColor="#6b7280" stopOpacity={0} /></linearGradient>
+                            <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.6} /><stop offset="50%" stopColor="#10b981" stopOpacity={0.2} /><stop offset="100%" stopColor="#10b981" stopOpacity={0} /></linearGradient>
+                            <linearGradient id="volPriorGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#6b7280" stopOpacity={0.4} /><stop offset="60%" stopColor="#6b7280" stopOpacity={0.12} /><stop offset="100%" stopColor="#6b7280" stopOpacity={0} /></linearGradient>
                             <filter id="glowVolCurr"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                             <filter id="glowVolPrior"><feGaussianBlur stdDeviation="2" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                           </defs>
                           <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
                           <XAxis dataKey="label" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
-                          <YAxis stroke="#6b7280" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={32} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
+                          <YAxis yAxisId="left" stroke="#6b7280" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={32} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
                           <Tooltip content={({ active, payload }) => {
                             if (!active || !payload?.length) return null
                             const d = payload[0].payload as any
@@ -828,6 +830,7 @@ export function Progress() {
                               </motion.div>
                             )
                           }} cursor={{ fill: 'rgba(16,185,129,0.1)' }} />
+                          <Area yAxisId="left" type="monotone" dataKey="current" stroke="#10b981" strokeWidth={5} fill="none" dot={false} opacity={0.2} animationDuration={600} animationEasing="ease-out" />
                           <Area yAxisId="left" type="monotone" dataKey="current" stroke="#10b981" strokeWidth={2.5} fill="url(#volGrad)" dot={false} activeDot={{ r: 6, fill: '#10b981', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowVolCurr)' }} animationDuration={600} animationEasing="ease-out" name="This Week" />
                           <Line yAxisId="left" type="monotone" dataKey="prior" stroke="#6b7280" strokeWidth={1.5} strokeDasharray="4 3" dot={false} activeDot={{ r: 4, fill: '#6b7280', strokeWidth: 2, stroke: '#1a1a2e', filter: 'url(#glowVolPrior)' }} name="Last Week" animationDuration={600} animationEasing="ease-out" />
                         </AreaChart>
@@ -841,8 +844,8 @@ export function Progress() {
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={bodyWeightData} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
                           <defs>
-                            <linearGradient id="bodyWeightGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.45} /><stop offset="50%" stopColor="#8b5cf6" stopOpacity={0.2} /><stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} /></linearGradient>
-                            <linearGradient id="bodyFatGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f59e0b" stopOpacity={0.35} /><stop offset="60%" stopColor="#f59e0b" stopOpacity={0.12} /><stop offset="100%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
+                            <linearGradient id="bodyWeightGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.6} /><stop offset="45%" stopColor="#8b5cf6" stopOpacity={0.25} /><stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} /></linearGradient>
+                            <linearGradient id="bodyFatGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f59e0b" stopOpacity={0.45} /><stop offset="60%" stopColor="#f59e0b" stopOpacity={0.15} /><stop offset="100%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
                             <filter id="glowBw"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                             <filter id="glowBf"><feGaussianBlur stdDeviation="2.5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                           </defs>
@@ -893,6 +896,7 @@ export function Progress() {
                               </motion.div>
                             )
                           }} cursor={{ fill: 'rgba(139,92,246,0.1)' }} />
+                          <Area yAxisId="left" type="monotone" dataKey="weight" stroke="#8b5cf6" strokeWidth={5} fill="none" dot={false} opacity={0.2} animationDuration={600} animationEasing="ease-out" />
                           <Area yAxisId="left" type="monotone" dataKey="weight" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#bodyWeightGrad)" dot={false} activeDot={{ r: 6, fill: '#8b5cf6', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowBw)' }} animationDuration={600} animationEasing="ease-out" />
                           {bodyWeightData.some(d => d.bodyFat != null) && (
                             <Line yAxisId="right" type="monotone" dataKey="bodyFat" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#f59e0b', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowBf)' }} name="Body Fat %" animationDuration={600} animationEasing="ease-out" />
