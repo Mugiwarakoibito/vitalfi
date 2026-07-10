@@ -25,6 +25,7 @@ interface PR {
   goalWeight?: number
   goalReps?: number
   goalVolume?: number
+  notes?: string
 }
 
 interface StrengthLevel {
@@ -40,13 +41,21 @@ const STORAGE_KEY = 'vitalfi_progress_records'
 const ACHIEVEMENTS_KEY = 'vitalfi_progress_achievements'
 const CONFETTI_COLORS = ['#F59E0B', '#A78BFA', '#10B981', '#EF4444', '#3B82F6']
 
-const ACHIEVEMENT_DEFS: { id: string; name: string; icon: keyof typeof ACHIEVEMENT_ICON_MAP; description: string; check: (stats: { prCount: number; totalVolume: number; hasAdvanced: boolean }) => boolean }[] = [
+const ACHIEVEMENT_DEFS: { id: string; name: string; icon: keyof typeof ACHIEVEMENT_ICON_MAP; description: string; check: (stats: { prCount: number; totalVolume: number; exercises: number; bestRatio: number; streak: number; hasAdvanced: boolean }) => boolean }[] = [
   { id: 'first_pr', name: 'First PR', icon: 'star', description: 'Log your first personal record', check: s => s.prCount >= 1 },
-  { id: 'ten_prs', name: '10 PRs', icon: 'award', description: 'Log 10 personal records', check: s => s.prCount >= 10 },
-  { id: 'fifty_prs', name: '50 PRs', icon: 'medal', description: 'Log 50 personal records', check: s => s.prCount >= 50 },
-  { id: 'hundred_prs', name: '100 PRs', icon: 'trophy', description: 'Log 100 personal records', check: s => s.prCount >= 100 },
+  { id: 'five_prs', name: 'On Fire', icon: 'flame', description: 'Log 5 personal records', check: s => s.prCount >= 5 },
+  { id: 'ten_prs', name: 'Rising Star', icon: 'award', description: 'Log 10 personal records', check: s => s.prCount >= 10 },
+  { id: 'twenty_five_prs', name: 'Dedicated', icon: 'medal', description: 'Log 25 personal records', check: s => s.prCount >= 25 },
+  { id: 'fifty_prs', name: 'PR Machine', icon: 'trophy', description: 'Log 50 personal records', check: s => s.prCount >= 50 },
+  { id: 'hundred_prs', name: 'Legendary', icon: 'trophy', description: 'Log 100 personal records', check: s => s.prCount >= 100 },
+  { id: 'volume_100k', name: 'Volume Novice', icon: 'flame', description: 'Reach 100,000 total volume', check: s => s.totalVolume >= 100000 },
   { id: 'volume_master', name: 'Volume Master', icon: 'flame', description: 'Reach 1,000,000 total volume', check: s => s.totalVolume >= 1000000 },
+  { id: 'five_exercises', name: 'Explorer', icon: 'star', description: 'Log PRs in 5 different exercises', check: s => s.exercises >= 5 },
+  { id: 'ten_exercises', name: 'Versatile', icon: 'award', description: 'Log PRs in 10 different exercises', check: s => s.exercises >= 10 },
   { id: 'strength_milestone', name: 'Strength Milestone', icon: 'medal', description: 'Reach Advanced tier on any exercise', check: s => s.hasAdvanced },
+  { id: 'elite_milestone', name: 'Elite Status', icon: 'star', description: 'Reach Elite tier on any exercise', check: s => s.bestRatio >= 2.5 },
+  { id: 'seven_day_streak', name: 'Consistent', icon: 'flame', description: 'PR on 7 different days', check: s => s.streak >= 7 },
+  { id: 'fourteen_day_streak', name: 'Unstoppable', icon: 'trophy', description: 'PR on 14 different days', check: s => s.streak >= 14 },
 ]
 
 const ACHIEVEMENT_ICON_MAP = {
@@ -126,7 +135,7 @@ export function Progress() {
   const [formData, setFormData] = useState({
     exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0],
     type: 'weight' as 'weight' | 'reps' | 'volume',
-    goalWeight: '', goalReps: '', goalVolume: '',
+    goalWeight: '', goalReps: '', goalVolume: '', notes: '',
   })
   const [chartMetric, setChartMetric] = useState<'weight' | 'reps' | 'volume'>('weight')
   const [selectedExercise, setSelectedExercise] = useState<string>('')
@@ -207,21 +216,6 @@ export function Progress() {
       weeks.unshift({ label: weekLabel, current: currentVol, prior: priorVol })
     }
     return weeks.slice(-8)
-  }, [workouts])
-
-  const autoPRs = useMemo(() => {
-    const prs: { exercise: string; weight: number; reps: number; volume: number; date: string }[] = []
-    workouts.forEach((w: Workout) => {
-      w.exercises?.forEach((ex: WorkoutExercise) => {
-        ex.sets?.forEach((set: ExerciseSet) => {
-          if (set.weight && set.completed !== false) {
-            const vol = (set.weight || 0) * (set.reps || 0)
-            prs.push({ exercise: ex.name, weight: set.weight, reps: set.reps || 0, volume: vol, date: w.date })
-          }
-        })
-      })
-    })
-    return prs
   }, [workouts])
 
   const totalVolume = useMemo(() =>
@@ -324,7 +318,9 @@ export function Progress() {
   useEffect(() => {
     const newSet = new Set(earned)
     let changed = false
-    const stats = { prCount: records.length, totalVolume, hasAdvanced: hasAdvancedTier }
+    const bestRatio = Math.max(0, ...strengthLevels.map(s => s.ratio))
+    const uniqueDays = new Set(records.map(r => r.date)).size
+    const stats = { prCount: records.length, totalVolume, exercises: exercises.length, bestRatio, streak: uniqueDays, hasAdvanced: hasAdvancedTier }
     ACHIEVEMENT_DEFS.forEach(a => {
       if (!newSet.has(a.id) && a.check(stats)) { newSet.add(a.id); changed = true }
     })
@@ -332,7 +328,7 @@ export function Progress() {
       localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify([...newSet]))
       setEarned(newSet)
     }
-  }, [records.length, totalVolume, hasAdvancedTier])
+  }, [records.length, totalVolume, exercises.length, strengthLevels, hasAdvancedTier])
 
   const perfInsights = useMemo(() => {
     const tips: { icon: string; text: string; color: string }[] = []
@@ -340,6 +336,7 @@ export function Progress() {
       tips.push({ icon: '💡', text: 'Log your first PR to unlock personalized performance insights.', color: 'text-amber-400' })
       return tips
     }
+    const totalPRs = records.length
     const focusTips: Record<string, string> = {
       strength: 'Prioritize low-rep (3-6), high-weight sets. Track your 1RM progression on compound lifts.',
       hypertrophy: 'Focus on moderate-rep (8-12) sets with controlled tempo. Volume is your primary driver.',
@@ -348,18 +345,37 @@ export function Progress() {
       overall: 'Keep a balanced approach across rep ranges. Track PRs in all categories for comprehensive growth.',
     }
     tips.push({ icon: '🎯', text: focusTips[perfFocus], color: 'text-amber-400' })
+
+    const bestPR = records.reduce((a, b) => estimate1RM(a.weight, a.reps) > estimate1RM(b.weight, b.reps) ? a : b)
+    const best1RMVal = estimate1RM(bestPR.weight, bestPR.reps)
+    tips.push({ icon: '🏋️', text: `Your strongest lift: ${bestPR.exerciseName} — ${best1RMVal}lbs estimated 1RM.`, color: 'text-purple-400' })
+
     if (prStreak > 0) tips.push({ icon: '🔥', text: `You're on a ${prStreak}-day PR streak! Keep showing up.`, color: 'text-orange-400' })
+
     if (latestWeight && strengthLevels.length > 0) {
       const highest = strengthLevels.reduce((a, b) => a.ratio > b.ratio ? a : b)
       if (highest.ratio > 2) tips.push({ icon: '💪', text: `${highest.exercise} ratio of ${highest.ratio}x BW is Elite level!`, color: 'text-amber-400' })
+      else if (highest.ratio > 1.5) tips.push({ icon: '📈', text: `${highest.exercise} at ${highest.ratio}x BW — ${highest.level} tier. Next milestone: ${highest.level === 'Intermediate' ? 'Advanced (2.0x)' : 'Intermediate (1.5x)'}.`, color: 'text-violet-400' })
     }
+
     if (totalVolume > 1000000) tips.push({ icon: '🏆', text: 'Over 1M total volume — you\'re a Volume Master!', color: 'text-emerald-400' })
-    if (records.length >= 10) tips.push({ icon: '📊', text: `${records.length} PRs logged — review your progress weekly to spot trends.`, color: 'text-violet-400' })
+    else if (totalVolume > 500000) tips.push({ icon: '📊', text: `${(totalVolume / 1000000).toFixed(1)}M total volume — ${((1000000 - totalVolume) / 1000).toFixed(0)}k more to hit Volume Master!`, color: 'text-emerald-400' })
+
+    if (totalPRs >= 50) tips.push({ icon: '🏅', text: `${totalPRs} PRs logged — you're in the top tier of consistency!`, color: 'text-amber-400' })
+    else if (totalPRs >= 10) tips.push({ icon: '📊', text: `${totalPRs} PRs logged — review your progress weekly to spot trends.`, color: 'text-violet-400' })
+    else tips.push({ icon: '🌱', text: `${totalPRs} PR${totalPRs !== 1 ? 's' : ''} logged — every record builds momentum. Aim for 10 to unlock trend insights.`, color: 'text-sky-400' })
+
+    const prByExercise = new Set(records.map(r => r.exerciseName)).size
+    if (prByExercise >= 5) tips.push({ icon: '🎯', text: `You've set PRs in ${prByExercise} different exercises — great variety!`, color: 'text-amber-400' })
+
+    const prDates = new Set(records.map(r => r.date)).size
+    if (prDates >= 14) tips.push({ icon: '📅', text: `${prDates} different training days with PRs — consistency is key!`, color: 'text-emerald-400' })
+
     if (latestWeight && records.some(r => r.exerciseName.toLowerCase().includes('bench') && (r.weight / latestWeight) < 1)) {
       tips.push({ icon: '🎯', text: 'Aim for 1x BW bench as your next milestone.', color: 'text-amber-400' })
     }
     return tips
-  }, [records, perfFocus, prStreak, latestWeight, strengthLevels, totalVolume])
+  }, [records, perfFocus, prStreak, latestWeight, strengthLevels, totalVolume, exercises])
 
   const saveRecord = () => {
     const w = Number(formData.weight); const r = Number(formData.reps)
@@ -371,9 +387,10 @@ export function Progress() {
     if (formData.goalWeight) newRecord.goalWeight = Number(formData.goalWeight)
     if (formData.goalReps) newRecord.goalReps = Number(formData.goalReps)
     if (formData.goalVolume) newRecord.goalVolume = Number(formData.goalVolume)
+    if (formData.notes) newRecord.notes = formData.notes
     setRecords(prev => [...prev, newRecord])
     setShowModal(false)
-    setFormData({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight', goalWeight: '', goalReps: '', goalVolume: '' })
+    setFormData({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight', goalWeight: '', goalReps: '', goalVolume: '', notes: '' })
     setConfettiTrigger(prev => prev + 1)
     setJustAdded(`${formData.exerciseName} — ${w}lbs × ${r} reps`)
     setTimeout(() => setJustAdded(''), 3000)
@@ -995,46 +1012,62 @@ export function Progress() {
         {showAchievements && records.length > 0 && (
           <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
             className="rounded-2xl border border-amber-500/15 bg-black/60 backdrop-blur-[12px] p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-amber-400" />
-                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Achievement Gallery</h4>
-              </div>
-              <div className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] text-gray-400 font-medium uppercase tracking-wider">
-                {[...earned].filter(id => ACHIEVEMENT_DEFS.some(a => a.id === id)).length}/{ACHIEVEMENT_DEFS.length}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {ACHIEVEMENT_DEFS.map((ach) => {
-                const isUnlocked = earned.has(ach.id)
-                const IconComponent = ACHIEVEMENT_ICON_MAP[ach.icon]
-                return (
-                  <motion.div key={ach.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                    className={`relative overflow-hidden rounded-xl p-4 text-center border transition-all duration-500 ${
-                      isUnlocked
-                        ? 'border-amber-500/30 bg-gradient-to-br from-amber-500/15 via-amber-500/10 to-transparent shadow-lg shadow-amber-500/5'
-                        : 'border-white/[0.04] bg-white/[0.02] opacity-50'
-                    }`}>
-                    {isUnlocked && (
-                      <>
-                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(251,191,36,0.08),transparent_70%)] pointer-events-none rounded-xl" />
-                        <div className="absolute top-0 right-0 w-12 h-12 bg-amber-500/10 rounded-full -mr-6 -mt-6 blur-md" />
-                      </>
-                    )}
-                    <div className={`relative ${isUnlocked ? '' : 'saturate-0'}`}>
-                      <div className={`inline-flex p-2.5 rounded-xl mb-2.5 transition-all duration-500 ${
-                        isUnlocked
-                          ? 'bg-gradient-to-br from-amber-500/25 to-amber-500/10 shadow-lg shadow-amber-500/10'
-                          : 'bg-white/[0.03]'
-                      }`}>
-                        <IconComponent className={`w-5 h-5 ${isUnlocked ? 'text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]' : 'text-gray-600'}`} />
-                      </div>
-                      <p className={`text-xs font-bold ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>{ach.name}</p>
-                      <p className="text-[10px] text-gray-600 mt-0.5 leading-tight">{ach.description}</p>
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/3 via-transparent to-yellow-500/3 pointer-events-none" />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400/20 to-amber-500/20 border border-amber-500/20 flex items-center justify-center">
+                    <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                  </div>
+                  <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">ACHIEVEMENTS</span>
+                </div>
+                <div className="relative">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+                    <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden min-w-[60px]">
+                      <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-700" style={{ width: `${(earned.size / ACHIEVEMENT_DEFS.length) * 100}%` }} />
                     </div>
-                  </motion.div>
-                )
-              })}
+                    <span className="text-[9px] font-bold text-gray-400">{earned.size}/{ACHIEVEMENT_DEFS.length}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {ACHIEVEMENT_DEFS.map((ach) => {
+                  const isUnlocked = earned.has(ach.id)
+                  const IconComponent = ACHIEVEMENT_ICON_MAP[ach.icon]
+                  return (
+                    <motion.div key={ach.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                      whileHover={isUnlocked ? { scale: 1.03, y: -1 } : {}}
+                      className={`relative overflow-hidden rounded-xl p-3.5 text-center border transition-all duration-500 ${
+                        isUnlocked
+                          ? 'border-amber-500/30 bg-gradient-to-br from-amber-500/15 via-amber-500/8 to-transparent shadow-lg shadow-amber-500/5'
+                          : 'border-white/[0.04] bg-white/[0.02] opacity-40 hover:opacity-60'
+                      }`}>
+                      {isUnlocked && (
+                        <>
+                          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(251,191,36,0.06),transparent_70%)] pointer-events-none rounded-xl" />
+                          <div className="absolute -top-6 -right-6 w-16 h-16 bg-amber-500/8 rounded-full blur-xl" />
+                        </>
+                      )}
+                      <div className="relative">
+                        <div className={`inline-flex p-2 rounded-xl mb-2.5 transition-all duration-500 ${
+                          isUnlocked
+                            ? 'bg-gradient-to-br from-amber-500/25 to-amber-500/10 shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/20'
+                            : 'bg-white/[0.03]'
+                        }`}>
+                          <IconComponent className={`w-5 h-5 ${isUnlocked ? 'text-amber-300 drop-shadow-[0_0_6px_rgba(251,191,36,0.3)]' : 'text-gray-600'}`} />
+                        </div>
+                        <p className={`text-[11px] font-bold ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>{ach.name}</p>
+                        <p className={`text-[9px] mt-1 leading-tight ${isUnlocked ? 'text-gray-400' : 'text-gray-600'}`}>{ach.description}</p>
+                        {isUnlocked && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                            <CheckCircle2 className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
             </div>
           </motion.div>
         )}
@@ -1064,28 +1097,6 @@ export function Progress() {
                   <p className="text-xs font-bold text-amber-400">{data.count}</p>
                   <p className="text-[10px] text-gray-500">PRs</p>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Auto PRs from Workouts */}
-      {autoPRs.length > 0 && (
-        <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-[12px] p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Activity className="w-4 h-4 text-amber-400" />
-            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Recent Lifts (from workouts)</h4>
-          </div>
-          <div className="max-h-48 overflow-y-auto space-y-1.5">
-            {autoPRs.slice(-20).reverse().map((pr, i) => (
-              <div key={i} className="flex items-center gap-3 rounded-lg bg-white/[0.02] p-2 text-xs">
-                <Dumbbell className="w-3.5 h-3.5 text-gray-500 shrink-0" />
-                <span className="text-gray-400 font-medium min-w-[100px]">{pr.exercise}</span>
-                <span className="text-amber-300 font-semibold">{pr.weight}lbs</span>
-                <span className="text-gray-600">×</span>
-                <span className="text-purple-300 font-semibold">{pr.reps} reps</span>
-                <span className="text-gray-600 ml-auto">{new Date(pr.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
               </div>
             ))}
           </div>
@@ -1208,7 +1219,7 @@ export function Progress() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 overflow-y-auto"
-            onClick={() => { setFormData({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight', goalWeight: '', goalReps: '', goalVolume: '' }); setShowModal(false) }}
+            onClick={() => { setFormData({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight', goalWeight: '', goalReps: '', goalVolume: '', notes: '' }); setShowModal(false) }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.92, y: 30 }}
@@ -1323,6 +1334,44 @@ export function Progress() {
                             </motion.button>
                           ))}
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Est. 1RM */}
+                    {formData.weight && formData.reps && Number(formData.weight) > 0 && Number(formData.reps) > 0 && (
+                      <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
+                        <div className="rounded-xl bg-gray-900/60 p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-5 h-5 rounded-md bg-amber-500/15 flex items-center justify-center">
+                              <Flame className="w-3 h-3 text-amber-300" />
+                            </div>
+                            <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-amber-300/70">Estimated 1RM</span>
+                            <div className="flex-1 h-px bg-gradient-to-r from-amber-500/20 via-amber-500/5 to-transparent" />
+                          </div>
+                          <div className="text-center py-2">
+                            <span className="text-2xl font-bold text-amber-300">{estimate1RM(Number(formData.weight), Number(formData.reps))}</span>
+                            <span className="text-xs text-gray-500 ml-1">lbs</span>
+                            <p className="text-[9px] text-gray-500 mt-1">Based on Epley formula: weight × (1 + reps / 30)</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Notes */}
+                    <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
+                      <div className="rounded-xl bg-gray-900/60 p-3">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-5 h-5 rounded-md bg-sky-500/15 flex items-center justify-center">
+                            <Activity className="w-3 h-3 text-sky-300" />
+                          </div>
+                          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-sky-300/70">Notes</span>
+                          <div className="flex-1 h-px bg-gradient-to-r from-sky-500/20 via-sky-500/5 to-transparent" />
+                        </div>
+                        <textarea value={formData.notes}
+                          onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                          placeholder="How did this feel? Any technique notes..."
+                          rows={2}
+                          className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-sky-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-sky-500/25 hover:border-white/[0.15] resize-none" />
                       </div>
                     </div>
 
