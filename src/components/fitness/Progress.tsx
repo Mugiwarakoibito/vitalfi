@@ -36,6 +36,7 @@ interface StrengthLevel {
   bodyWeight: number
 }
 
+const STORAGE_KEY = 'vitalfi_progress_records'
 const ACHIEVEMENTS_KEY = 'vitalfi_progress_achievements'
 const CONFETTI_COLORS = ['#F59E0B', '#A78BFA', '#10B981', '#EF4444', '#3B82F6']
 
@@ -113,7 +114,12 @@ function estimate1RM(weight: number, reps: number): number {
 
 export function Progress() {
   const { workouts, bodyMetrics } = useAppStore()
-  const [records, setRecords] = useState<PR[]>([])
+  const [records, setRecords] = useState<PR[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
   const [showModal, setShowModal] = useState(false)
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [justAdded, setJustAdded] = useState('')
@@ -303,6 +309,17 @@ export function Progress() {
     }
     return streak
   }, [records])
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records))
+  }, [records])
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(ACHIEVEMENTS_KEY)
+      if (saved) setEarned(new Set(JSON.parse(saved)))
+    } catch {}
+  }, [])
 
   useEffect(() => {
     const newSet = new Set(earned)
