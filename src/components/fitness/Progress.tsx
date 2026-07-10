@@ -126,8 +126,8 @@ export function Progress() {
   const [selectedExercise, setSelectedExercise] = useState<string>('')
   const [earned, setEarned] = useState<Set<string>>(new Set())
   const [showAchievements, setShowAchievements] = useState(false)
-  const [showPhotos, setShowPhotos] = useState(false)
   const [showPerfCoach, setShowPerfCoach] = useState(false)
+  const [showPerfFocusPref, setShowPerfFocusPref] = useState(false)
   const [showPerfScope, setShowPerfScope] = useState(false)
   const [perfFocus, setPerfFocus] = useState<'strength' | 'hypertrophy' | 'endurance' | 'power' | 'overall'>('overall')
   const [scopeOffset, setScopeOffset] = useState(0)
@@ -399,31 +399,28 @@ export function Progress() {
           )}
         </div>
         <div className="flex items-center gap-2">
-            {records.length > 0 && (
-              <button
-                className={`p-2 rounded-xl border transition-all ${showPerfCoach ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
-                onClick={() => setShowPerfCoach(p => !p)} title="PerfCoach">
-                <Brain className="w-5 h-5" />
-              </button>
-            )}
+          {records.length > 0 && (
+            <button
+              className={`p-2 rounded-xl border transition-all ${showPerfCoach ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              onClick={() => setShowPerfCoach(p => !p)} title="PerfCoach">
+              <Brain className="w-5 h-5" />
+            </button>
+          )}
+          {records.length > 0 && (
             <button
               className={`p-2 rounded-xl border transition-all ${showPerfScope ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
               onClick={() => setShowPerfScope(p => !p)} title="PerfScope">
               <BarChart3 className="w-5 h-5" />
             </button>
-            {records.length > 0 && (
-              <button
-                className={`p-2 rounded-xl border transition-all ${showAchievements ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
-                onClick={() => setShowAchievements(p => !p)} title="Achievements">
-                <Trophy className="w-5 h-5" />
-              </button>
-            )}
+          )}
+          {records.length > 0 && (
             <button
-              className={`p-2 rounded-xl border transition-all ${showPhotos ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
-              onClick={() => setShowPhotos(p => !p)} title="Performance Coach">
-              <Sparkles className="w-5 h-5" />
+              className={`p-2 rounded-xl border transition-all ${showAchievements ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+              onClick={() => setShowAchievements(p => !p)} title="Achievements">
+              <Trophy className="w-5 h-5" />
             </button>
-            <Button variant="primary" size="sm" onClick={() => setShowModal(true)}>
+          )}
+          <Button variant="primary" size="sm" onClick={() => setShowModal(true)}>
               <Plus className="w-4 h-4 mr-1" />Add PR
             </Button>
           </div>
@@ -493,73 +490,150 @@ export function Progress() {
         </div>
       </motion.div>
 
-      {/* PerfCoach Panel */}
+      {/* PERFCOACH Panel */}
       <AnimatePresence>
         {showPerfCoach && (
           <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-            className="rounded-2xl border border-amber-500/15 bg-black/60 backdrop-blur-[12px] p-4 space-y-4">
-            {/* Stats Summary Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              {[
-                { label: 'PRs', value: records.length, icon: <Trophy className="w-3.5 h-3.5" />, color: 'text-amber-400', bg: 'bg-amber-500/10' },
-                { label: 'Best 1RM', value: `${best1RM}`, icon: <Award className="w-3.5 h-3.5" />, color: 'text-purple-400', bg: 'bg-purple-500/10' },
-                { label: 'Volume', value: totalVolume > 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume, icon: <Flame className="w-3.5 h-3.5" />, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-                { label: 'Exercises', value: exercises.length, icon: <Activity className="w-3.5 h-3.5" />, color: 'text-sky-400', bg: 'bg-sky-500/10' },
-                { label: 'Streak', value: `${prStreak}d`, icon: <Flame className="w-3.5 h-3.5" />, color: 'text-rose-400', bg: 'bg-rose-500/10' },
-              ].map(s => (
-                <div key={s.label} className="flex items-center gap-2 rounded-xl bg-white/[0.02] border border-white/5 p-2.5">
-                  <div className={`p-1.5 rounded-lg ${s.bg}`}>{s.icon}</div>
-                  <div>
-                    <p className={`text-sm font-bold ${s.color}`}>{s.value}</p>
-                    <p className="text-[9px] text-gray-500 uppercase tracking-wider">{s.label}</p>
+            className="rounded-2xl border border-amber-500/15 bg-black/60 backdrop-blur-xl p-4 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-violet-500/5 pointer-events-none" />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400/20 to-amber-500/20 border border-amber-500/20 flex items-center justify-center">
+                    <Brain className="w-3.5 h-3.5 text-amber-400" />
+                  </div>
+                  <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">PERFCOACH</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="relative">
+                    <button onClick={() => setShowPerfFocusPref(p => !p)}
+                      className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${showPerfFocusPref
+                        ? perfFocus === 'strength' ? 'bg-red-500/15 border-red-500/30 text-red-400'
+                          : perfFocus === 'hypertrophy' ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                          : perfFocus === 'endurance' ? 'bg-sky-500/15 border-sky-500/30 text-sky-400'
+                          : perfFocus === 'power' ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                          : 'bg-violet-500/15 border-violet-500/30 text-violet-400'
+                        : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:bg-white/10'}`}
+                      title="Training focus">
+                      <span className="text-[11px] leading-none">{perfFocus === 'strength' ? '🏋️' : perfFocus === 'hypertrophy' ? '💪' : perfFocus === 'endurance' ? '🏃' : perfFocus === 'power' ? '⚡' : '🎯'}</span>
+                    </button>
+                    {showPerfFocusPref && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setShowPerfFocusPref(false)} />
+                        <div className="absolute right-0 top-8 z-20 w-44 rounded-xl bg-gray-900 border border-white/10 shadow-2xl p-3">
+                          <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Training Focus</p>
+                          <div className="flex flex-col gap-1">
+                            {([
+                              { key: 'overall' as const, label: '🎯 Overall' },
+                              { key: 'strength' as const, label: '🏋️ Strength' },
+                              { key: 'hypertrophy' as const, label: '💪 Hypertrophy' },
+                              { key: 'endurance' as const, label: '🏃 Endurance' },
+                              { key: 'power' as const, label: '⚡ Power' },
+                            ]).map(opt => (
+                              <button key={opt.key} onClick={() => { setPerfFocus(opt.key); setShowPerfFocusPref(false) }}
+                                className={`text-left px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${perfFocus === opt.key
+                                  ? opt.key === 'strength' ? 'bg-red-500/15 text-red-300 border border-red-500/30'
+                                    : opt.key === 'hypertrophy' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                    : opt.key === 'endurance' ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30'
+                                    : opt.key === 'power' ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                                    : 'bg-violet-500/15 text-violet-300 border border-violet-500/30'
+                                  : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-            {/* Focus Selector */}
-            <div>
-              <div className="flex items-center gap-2 mb-2.5">
-                <Target className="w-4 h-4 text-amber-400" />
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Training Focus</span>
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  { key: 'strength' as const, label: 'Strength', icon: '🏋️' },
-                  { key: 'hypertrophy' as const, label: 'Hypertrophy', icon: '💪' },
-                  { key: 'endurance' as const, label: 'Endurance', icon: '🏃' },
-                  { key: 'power' as const, label: 'Power', icon: '⚡' },
-                  { key: 'overall' as const, label: 'Overall', icon: '🎯' },
-                ].map(f => (
-                  <button key={f.key} onClick={() => setPerfFocus(f.key)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all border ${
-                      perfFocus === f.key
-                        ? f.key === 'strength' ? 'bg-red-500/15 border-red-500/30 text-red-300'
-                        : f.key === 'hypertrophy' ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-                        : f.key === 'endurance' ? 'bg-sky-500/15 border-sky-500/30 text-sky-300'
-                        : f.key === 'power' ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
-                        : 'bg-violet-500/15 border-violet-500/30 text-violet-300'
-                        : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
-                    }`}>
-                    <span>{f.icon}</span> {f.label}
-                  </button>
-                ))}
+
+              {/* Stats summary bar */}
+              <div className="flex items-center gap-4 mb-4 px-1">
+                <div className="text-center">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">PRs</p>
+                  <p className="text-lg font-bold text-amber-400">{records.length}</p>
+                </div>
+                <div className="w-px h-8 bg-white/10" />
+                <div className="text-center">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">Best 1RM</p>
+                  <p className="text-lg font-bold text-purple-400">{best1RM}<span className="text-xs text-gray-500 font-normal"> lbs</span></p>
+                </div>
+                <div className="w-px h-8 bg-white/10" />
+                <div className="text-center">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">Volume</p>
+                  <p className="text-lg font-bold text-emerald-400">{totalVolume > 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume}</p>
+                </div>
+                <div className="w-px h-8 bg-white/10" />
+                <div className="text-center">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">Streak</p>
+                  <p className="text-lg font-bold text-rose-400">{prStreak}<span className="text-xs text-gray-500 font-normal"> d</span></p>
+                </div>
               </div>
-            </div>
-            {/* AI Insights */}
-            <div>
-              <div className="flex items-center gap-2 mb-2.5">
-                <Brain className="w-4 h-4 text-amber-400" />
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">AI Performance Insights</span>
+
+              {/* Coach cards */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Medal className="w-3 h-3 text-amber-400" />
+                    <span className="text-[10px] text-gray-400">Strength Levels</span>
+                  </div>
+                  {strengthLevels.length > 0 ? (
+                    <>
+                      <p className="text-sm font-bold text-white">{strengthLevels.length}<span className="text-xs text-gray-500 font-normal"> exercises</span></p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">
+                        Best: <span className="text-amber-300 font-semibold">{strengthLevels.reduce((a, b) => a.ratio > b.ratio ? a : b).level}</span>
+                      </p>
+                      <div className="space-y-1 mt-2">
+                        {strengthLevels.slice(0, 2).map(sl => (
+                          <div key={sl.exercise} className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: sl.color }} />
+                            <span className="text-[9px] text-gray-500 truncate">{sl.exercise}</span>
+                            <span className="text-[9px] font-semibold ml-auto" style={{ color: sl.color }}>{sl.level}</span>
+                          </div>
+                        ))}
+                        {strengthLevels.length > 2 && <p className="text-[9px] text-gray-500">+{strengthLevels.length - 2} more</p>}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-bold text-gray-500">No data yet</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Log BW + lifts to see strength levels</p>
+                    </>
+                  )}
+                </div>
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Flame className="w-3 h-3 text-emerald-400" />
+                    <span className="text-[10px] text-gray-400">Volume Overview</span>
+                  </div>
+                  <p className="text-sm font-bold text-white">{totalVolume > 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume}<span className="text-xs text-gray-500 font-normal"> total lbs</span></p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">{records.length > 0 ? `${(totalVolume / records.length).toFixed(0)} avg per PR` : 'Log PRs to see averages'}</p>
+                  <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden mt-2">
+                    <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-emerald-400 transition-all" style={{ width: `${Math.min((totalVolume / 500000) * 100, 100)}%` }} />
+                  </div>
+                </div>
               </div>
-              <div className="space-y-1.5">
-                {perfInsights.slice(0, 4).map((tip, i) => (
-                  <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                    className="flex items-start gap-2.5 rounded-xl bg-white/[0.02] border border-white/5 p-3">
-                    <span className="text-sm leading-none mt-0.5">{tip.icon}</span>
-                    <p className="text-xs text-gray-300 leading-relaxed">{tip.text}</p>
-                  </motion.div>
-                ))}
-              </div>
+
+              {/* AI Insights */}
+              {perfInsights.length > 0 && (
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Sparkles className="w-3 h-3 text-amber-400" />
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-400/70">AI INSIGHTS</span>
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                    {perfInsights.slice(0, 3).map((tip, i) => (
+                      <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                        className="flex items-start gap-2 text-xs">
+                        <span className="text-sm leading-none mt-0.5">{tip.icon}</span>
+                        <p className="text-gray-300 flex-1 min-w-0">{tip.text}</p>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -945,37 +1019,6 @@ export function Progress() {
                 )
               })}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Coach Panel (toggleable) */}
-      <AnimatePresence>
-        {showPhotos && (
-          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-            className="rounded-2xl border border-amber-500/15 bg-black/60 backdrop-blur-[12px] p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400/20 to-amber-500/20 border border-amber-500/20 flex items-center justify-center">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              </div>
-              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Performance Coach</h4>
-            </div>
-            {records.length > 0 ? (
-              <div className="space-y-2">
-                {perfInsights.map((tip, i) => (
-                  <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                    className="flex items-start gap-2.5 rounded-xl bg-white/[0.02] border border-white/5 p-3">
-                    <span className="text-sm leading-none mt-0.5">{tip.icon}</span>
-                    <p className="text-xs text-gray-300 leading-relaxed">{tip.text}</p>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-3 py-8 text-center">
-                <Sparkles className="w-10 h-10 text-amber-400/50" />
-                <p className="text-sm text-gray-500">Log your first PR to get coaching insights.</p>
-              </div>
-            )}
           </motion.div>
         )}
       </AnimatePresence>
