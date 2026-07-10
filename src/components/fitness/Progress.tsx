@@ -9,8 +9,8 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import {
-  Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, AreaChart, Area,
+  Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, BarChart,
 } from 'recharts'
 import { useAppStore } from '@/store/useAppStore'
 import type { Workout, BodyMetric, WorkoutExercise, ExerciseSet } from '@/types/domain'
@@ -730,57 +730,37 @@ export function Progress() {
                   {chartTab === 'prs' && (
                     chartData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
+                        <BarChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
                           <defs>
-                            <linearGradient id="prWeightGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f43f5e" stopOpacity={0.65} /><stop offset="40%" stopColor="#f43f5e" stopOpacity={0.3} /><stop offset="100%" stopColor="#f43f5e" stopOpacity={0} /></linearGradient>
-                            <linearGradient id="pr1rmGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a78bfa" stopOpacity={0.5} /><stop offset="60%" stopColor="#a78bfa" stopOpacity={0.15} /><stop offset="100%" stopColor="#a78bfa" stopOpacity={0} /></linearGradient>
-                            <filter id="prWeightGlowLine"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                            <filter id="glowPrWeight"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                            <filter id="glowPr1rm"><feGaussianBlur stdDeviation="2.5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                            <linearGradient id="prBarGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f43f5e" stopOpacity={1} /><stop offset="100%" stopColor="#f43f5e" stopOpacity={0.4} /></linearGradient>
+                            <filter id="prBarGlow"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                           </defs>
                           <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
                           <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
-                          <YAxis yAxisId="left" stroke="#f43f5e" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={[0, 'dataMax + 5']} width={32} tickFormatter={v => `${v}`} />
-                          <YAxis yAxisId="right" orientation="right" stroke="#a78bfa" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={[0, 'dataMax + 10']} width={32} tickFormatter={v => `${v}`} />
+                          <YAxis stroke="#f43f5e" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={[0, 'dataMax + 5']} width={32} tickFormatter={v => `${v}`} />
                           <Tooltip content={({ active, payload }) => {
                             if (!active || !payload?.length) return null
                             const d = payload[0].payload as any
-                            const idx = chartData.indexOf(d)
-                            const prev = idx > 0 ? chartData[idx - 1] : null
-                            const delta = prev ? d.weight - prev.weight : null
                             return (
                               <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-rose-500/5 min-w-[190px]">
+                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-rose-500/5 min-w-[180px]">
                                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-rose-500/5 to-transparent pointer-events-none" />
                                 <div className="relative space-y-2">
                                   <div className="flex items-center justify-between pb-2 border-b border-white/5">
                                     <span className="text-white font-bold text-xs">{d.date}</span>
-                                    {delta != null && (
-                                      <span className={`text-[10px] font-bold flex items-center gap-0.5 ${delta > 0 ? 'text-emerald-400' : delta < 0 ? 'text-rose-400' : 'text-gray-500'}`}>
-                                        {delta > 0 ? '▲' : delta < 0 ? '▼' : '–'} {Math.abs(delta).toFixed(1)} <span className="text-gray-500 font-normal">lbs</span>
-                                      </span>
-                                    )}
+                                    <span className="text-[10px] font-bold text-rose-400">{d.weight} <span className="text-gray-500 font-normal">lbs</span></span>
                                   </div>
                                   <div className="flex items-center gap-2.5">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shadow-lg shadow-rose-400/40" style={{ filter: 'url(#glowPrWeight)' }} />
-                                    <span className="text-gray-400 font-medium">Weight</span>
-                                    <span className="text-white font-bold ml-auto text-sm">{d.weight} <span className="text-[10px] font-normal text-gray-500">lbs</span></span>
-                                  </div>
-                                  <div className="flex items-center gap-2.5">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-purple-400 shadow-lg shadow-purple-400/40" style={{ filter: 'url(#glowPr1rm)' }} />
+                                    <span className="w-2.5 h-2.5 rounded-full bg-purple-400 shadow-lg shadow-purple-400/40" />
                                     <span className="text-gray-400 font-medium">Est. 1RM</span>
                                     <span className="text-purple-300 font-bold ml-auto text-sm">{d.estimated1RM} <span className="text-[10px] font-normal text-gray-500">lbs</span></span>
                                   </div>
                                 </div>
                               </motion.div>
                             )
-                          }} cursor={{ fill: 'rgba(244,63,94,0.1)' }} />
-                          <Area yAxisId="left" type="monotone" dataKey="weight" stroke="#f43f5e" strokeWidth={5} fill="none" dot={false} opacity={0.2} animationDuration={600} animationEasing="ease-out" />
-                          <Area yAxisId="left" type="monotone" dataKey="weight" stroke="#f43f5e" strokeWidth={2.5} fill="url(#prWeightGrad)" dot={false} activeDot={{ r: 6, fill: '#f43f5e', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowPrWeight)' }} animationDuration={600} animationEasing="ease-out" name="Weight (lbs)" />
-                          {chartData.some(d => d.estimated1RM != null) && (
-                            <Line yAxisId="right" type="monotone" dataKey="estimated1RM" stroke="#a78bfa" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#a78bfa', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowPr1rm)' }} name="Est. 1RM (lbs)" animationDuration={600} animationEasing="ease-out" />
-                          )}
-                        </AreaChart>
+                          }} cursor={{ fill: 'rgba(244,63,94,0.15)' }} />
+                          <Bar dataKey="weight" fill="url(#prBarGrad)" radius={[6, 6, 0, 0]} maxBarSize={32} animationDuration={600} animationEasing="ease-out" />
+                        </BarChart>
                       </ResponsiveContainer>
                     ) : (
                       <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your first PR to see trends</div>
@@ -789,51 +769,37 @@ export function Progress() {
                   {chartTab === 'volume' && (
                     weeklyVolumeComparison.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={weeklyVolumeComparison.map(d => ({ ...d, label: d.label.replace(/^\w+\s/, '') }))} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
+                        <BarChart data={weeklyVolumeComparison.map(d => ({ ...d, label: d.label.replace(/^\w+\s/, '') }))} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
                           <defs>
-                            <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.6} /><stop offset="50%" stopColor="#10b981" stopOpacity={0.2} /><stop offset="100%" stopColor="#10b981" stopOpacity={0} /></linearGradient>
-                            <linearGradient id="volPriorGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#6b7280" stopOpacity={0.4} /><stop offset="60%" stopColor="#6b7280" stopOpacity={0.12} /><stop offset="100%" stopColor="#6b7280" stopOpacity={0} /></linearGradient>
-                            <filter id="glowVolCurr"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                            <filter id="glowVolPrior"><feGaussianBlur stdDeviation="2" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                            <linearGradient id="volBarGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={1} /><stop offset="100%" stopColor="#10b981" stopOpacity={0.35} /></linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
                           <XAxis dataKey="label" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
-                          <YAxis yAxisId="left" stroke="#6b7280" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={32} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
+                          <YAxis stroke="#6b7280" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={32} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
                           <Tooltip content={({ active, payload }) => {
                             if (!active || !payload?.length) return null
                             const d = payload[0].payload as any
-                            const current = d.current ?? 0
-                            const prior = d.prior ?? 0
-                            const delta = current - prior
+                            const total = weeklyVolumeComparison.reduce((s: number, w: typeof d) => s + w.current, 0)
                             return (
                               <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-emerald-500/5 min-w-[170px]">
+                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-emerald-500/5 min-w-[150px]">
                                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
                                 <div className="relative space-y-2">
                                   <div className="flex items-center justify-between pb-2 border-b border-white/5">
                                     <span className="text-white font-bold text-xs">{d.label}</span>
-                                    <span className={`text-[10px] font-bold flex items-center gap-0.5 ${delta > 0 ? 'text-emerald-400' : delta < 0 ? 'text-rose-400' : 'text-gray-500'}`}>
-                                      {delta > 0 ? '▲' : delta < 0 ? '▼' : '–'} {Math.abs(delta).toLocaleString()}
-                                    </span>
+                                    <span className="text-[10px] text-gray-500">{((d.current / total) * 100).toFixed(1)}%</span>
                                   </div>
                                   <div className="flex items-center gap-2.5">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" style={{ filter: 'url(#glowVolCurr)' }} />
-                                    <span className="text-gray-400 font-medium">This Week</span>
-                                    <span className="text-white font-bold ml-auto text-sm">{current.toLocaleString()}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2.5">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-gray-500 shadow-lg shadow-gray-500/40" style={{ filter: 'url(#glowVolPrior)' }} />
-                                    <span className="text-gray-400 font-medium">Last Week</span>
-                                    <span className="text-gray-300 font-bold ml-auto text-sm">{prior.toLocaleString()}</span>
+                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" />
+                                    <span className="text-gray-400 font-medium">Volume</span>
+                                    <span className="text-white font-bold ml-auto text-sm">{d.current.toLocaleString()}</span>
                                   </div>
                                 </div>
                               </motion.div>
                             )
-                          }} cursor={{ fill: 'rgba(16,185,129,0.1)' }} />
-                          <Area yAxisId="left" type="monotone" dataKey="current" stroke="#10b981" strokeWidth={5} fill="none" dot={false} opacity={0.2} animationDuration={600} animationEasing="ease-out" />
-                          <Area yAxisId="left" type="monotone" dataKey="current" stroke="#10b981" strokeWidth={2.5} fill="url(#volGrad)" dot={false} activeDot={{ r: 6, fill: '#10b981', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowVolCurr)' }} animationDuration={600} animationEasing="ease-out" name="This Week" />
-                          <Line yAxisId="left" type="monotone" dataKey="prior" stroke="#6b7280" strokeWidth={1.5} strokeDasharray="4 3" dot={false} activeDot={{ r: 4, fill: '#6b7280', strokeWidth: 2, stroke: '#1a1a2e', filter: 'url(#glowVolPrior)' }} name="Last Week" animationDuration={600} animationEasing="ease-out" />
-                        </AreaChart>
+                          }} cursor={{ fill: 'rgba(16,185,129,0.15)' }} />
+                          <Bar dataKey="current" fill="url(#volBarGrad)" radius={[6, 6, 0, 0]} maxBarSize={36} animationDuration={600} animationEasing="ease-out" />
+                        </BarChart>
                       </ResponsiveContainer>
                     ) : (
                       <div className="h-full flex items-center justify-center text-gray-500 text-sm">Not enough workout data yet — keep training!</div>
@@ -842,12 +808,10 @@ export function Progress() {
                   {chartTab === 'weight' && (
                     bodyWeightData.length > 1 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={bodyWeightData} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
+                        <BarChart data={bodyWeightData} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
                           <defs>
-                            <linearGradient id="bodyWeightGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.6} /><stop offset="45%" stopColor="#8b5cf6" stopOpacity={0.25} /><stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} /></linearGradient>
-                            <linearGradient id="bodyFatGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f59e0b" stopOpacity={0.45} /><stop offset="60%" stopColor="#f59e0b" stopOpacity={0.15} /><stop offset="100%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
-                            <filter id="glowBw"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                            <filter id="glowBf"><feGaussianBlur stdDeviation="2.5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                            <linearGradient id="bwBarGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b5cf6" stopOpacity={1} /><stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.4} /></linearGradient>
+                            <filter id="bwBarGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                           </defs>
                           <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
                           <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
@@ -873,13 +837,13 @@ export function Progress() {
                                   </div>
                                   <div className="space-y-2">
                                     <div className="flex items-center gap-2.5">
-                                      <span className="w-2.5 h-2.5 rounded-full bg-violet-400 shadow-lg shadow-violet-400/40" style={{ filter: 'url(#glowBw)' }} />
+                                      <span className="w-2.5 h-2.5 rounded-full bg-violet-400 shadow-lg shadow-violet-400/40" style={{ filter: 'url(#bwBarGlow)' }} />
                                       <span className="text-gray-400 font-medium">Weight</span>
                                       <span className="text-white font-bold ml-auto text-sm">{d.weight} <span className="text-[10px] font-normal text-gray-500">kg</span></span>
                                     </div>
                                     {d.bodyFat != null && (
                                       <div className="flex items-center gap-2.5">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-lg shadow-amber-400/40" style={{ filter: 'url(#glowBf)' }} />
+                                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-lg shadow-amber-400/40" />
                                         <span className="text-gray-400 font-medium">Body Fat</span>
                                         <span className="text-white font-bold ml-auto text-sm">{d.bodyFat} <span className="text-[10px] font-normal text-gray-500">%</span></span>
                                       </div>
@@ -895,16 +859,15 @@ export function Progress() {
                                 </div>
                               </motion.div>
                             )
-                          }} cursor={{ fill: 'rgba(139,92,246,0.1)' }} />
-                          <Area yAxisId="left" type="monotone" dataKey="weight" stroke="#8b5cf6" strokeWidth={5} fill="none" dot={false} opacity={0.2} animationDuration={600} animationEasing="ease-out" />
-                          <Area yAxisId="left" type="monotone" dataKey="weight" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#bodyWeightGrad)" dot={false} activeDot={{ r: 6, fill: '#8b5cf6', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowBw)' }} animationDuration={600} animationEasing="ease-out" />
+                          }} cursor={{ fill: 'rgba(139,92,246,0.15)' }} />
+                          <Bar yAxisId="left" dataKey="weight" fill="url(#bwBarGrad)" radius={[6, 6, 0, 0]} maxBarSize={28} animationDuration={600} animationEasing="ease-out" />
                           {bodyWeightData.some(d => d.bodyFat != null) && (
-                            <Line yAxisId="right" type="monotone" dataKey="bodyFat" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#f59e0b', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowBf)' }} name="Body Fat %" animationDuration={600} animationEasing="ease-out" />
+                            <Line yAxisId="right" type="monotone" dataKey="bodyFat" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#f59e0b', strokeWidth: 2.5, stroke: '#1a1a2e' }} name="Body Fat %" animationDuration={600} animationEasing="ease-out" />
                           )}
                           {bodyGoalWeight && !isNaN(Number(bodyGoalWeight)) && (
                             <Line yAxisId="left" type="monotone" dataKey={() => Number(bodyGoalWeight)} stroke="#10b981" strokeWidth={1.5} strokeDasharray="5 4" dot={false} opacity={0.7} name="Goal" animationDuration={400} />
                           )}
-                        </AreaChart>
+                        </BarChart>
                       </ResponsiveContainer>
                     ) : (
                       <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your body weight in the Body tab to see trends here.</div>
