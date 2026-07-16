@@ -1,8 +1,32 @@
 # Sentience Engine — Session Memory
 
-## Last Updated: June 20, 2026
+## Last Updated: July 16, 2026
+
+## Session: Deploy to Vercel & verify
+
+### What was done
+- Ran successful build (`tsc && vite build`)
+- Deployed to Vercel production
+- Live at https://vitalfi.vercel.app
+
+### Key decisions
+- Production deploy completed with build caching
+
+### Files modified
+- `memory.md` — updated session log
+
+### Next steps
+- Verify on deployed site: https://vitalfi.vercel.app
+
+### Deployed to
+- **Vercel:** https://vitalfi.vercel.app
+- **GitHub:** https://github.com/Mugiwarakoibito/vitalfi
+
+---
 
 ## Session: Simplify Recovery.tsx to match HydraCoach patterns
+
+### What was done
 
 ### What was done
 - Replaced the 200-line full-screen Settings modal with a small inline dropdown (Target icon with range slider) — matching HydraCoach's settings pattern
