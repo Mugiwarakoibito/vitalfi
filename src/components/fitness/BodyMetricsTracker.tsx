@@ -1063,7 +1063,7 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
           className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowForm(false)}>
           <motion.div initial={{ scale: 0.92, opacity: 0, y: 30 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0, y: 30 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-gray-900 via-gray-900/95 to-gray-950 p-6 shadow-2xl shadow-violet-500/5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-gray-900 via-gray-900/95 to-gray-950 p-6 shadow-2xl shadow-violet-500/5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full -mr-20 -mt-20 blur-2xl" />
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-violet-500/5 rounded-full -ml-12 -mb-12 blur-xl" />
             <div className="relative">
@@ -1072,8 +1072,8 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                   <Activity className="w-5 h-5 text-emerald-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Log Body Metrics</h3>
-                  <p className="text-[10px] text-gray-500">Weight, body fat & measurements</p>
+                  <h3 className="text-lg font-semibold text-white">New Personal Record</h3>
+                  <p className="text-[10px] text-gray-500">Complete your body snapshot with live insights</p>
                 </div>
               </div>
               <div className="space-y-5">
@@ -1084,34 +1084,98 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                   </div>
                   <div>
                     <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Weight <span className="text-emerald-400">*</span></label>
-                    <input type="number" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-emerald-500/40 transition-all" placeholder="75.0" />
+                    <input type="number" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-emerald-500/40 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="75.0" />
                   </div>
                 </div>
+
+                {/* Live preview cards */}
+                <AnimatePresence>
+                  {(() => {
+                    const w = parseFloat(weight)
+                    const bf = parseFloat(bodyFat)
+                    const hasWeight = !isNaN(w) && w > 0
+                    const hasBf = !isNaN(bf) && bf > 0 && bf <= 100
+                    const previews: { label: string; value: string; color: string; icon: string }[] = []
+                    if (hasWeight) {
+                      const bmiVal = heightCm ? w / ((heightCm / 100) ** 2) : null
+                      if (bmiVal) {
+                        const cat = bmiCategory(bmiVal)
+                        previews.push({ label: 'BMI', value: `${bmiVal.toFixed(1)} (${cat.label.split(' ')[0]})`, color: cat.color, icon: '📊' })
+                      }
+                      const bmrVal = heightCm ? calculateBMR(w, heightCm, settings.age || 30, biologicalSex) : null
+                      if (bmrVal) {
+                        previews.push({ label: 'BMR', value: `${bmrVal} kcal`, color: '#38bdf8', icon: '🔥' })
+                      }
+                    }
+                    if (hasWeight && hasBf) {
+                      const lMass = w * (1 - bf / 100)
+                      const fMass = w * (bf / 100)
+                      previews.push({ label: 'Lean Mass', value: `${lMass.toFixed(1)} kg`, color: '#10b981', icon: '💪' })
+                      previews.push({ label: 'Fat Mass', value: `${fMass.toFixed(1)} kg`, color: '#f59e0b', icon: '🟡' })
+                    }
+                    const waistVal = parseFloat(measurements['waist'] ?? '')
+                    if (!isNaN(waistVal) && waistVal > 0 && heightCm) {
+                      const whr = waistVal / heightCm
+                      previews.push({
+                        label: 'Waist:Height',
+                        value: whr.toFixed(2) + (whr <= 0.5 ? ' ✅' : ' ⚠️'),
+                        color: whr <= 0.5 ? '#10b981' : '#f59e0b',
+                        icon: '📏',
+                      })
+                    }
+                    if (previews.length === 0) return null
+                    return (
+                      <motion.div key="previews" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                        className="grid grid-cols-2 gap-2 overflow-hidden">
+                        {previews.map((p, i) => (
+                          <motion.div key={p.label} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.06 }}
+                            className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-2.5">
+                            <p className="text-[9px] text-gray-500 uppercase tracking-wider">{p.icon} {p.label}</p>
+                            <p className="text-sm font-bold" style={{ color: p.color }}>{p.value}</p>
+                          </motion.div>
+                        ))}
+                      </motion.div>
+                    )
+                  })()}
+                </AnimatePresence>
+
                 <div>
                   <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Body Fat %</label>
-                  <input type="number" step="0.1" value={bodyFat} onChange={(e) => setBodyFat(e.target.value)} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/40 transition-all" placeholder="Optional" />
+                  <input type="number" step="0.1" value={bodyFat} onChange={(e) => setBodyFat(e.target.value)} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/40 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="Optional — unlocks body composition insights" />
+                  {(() => {
+                    const bfVal = parseFloat(bodyFat)
+                    if (isNaN(bfVal) || bfVal <= 0 || bfVal > 100) return null
+                    return (
+                      <p className="text-[10px] text-amber-400/70 mt-1.5 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" /> Body fat at {bfVal.toFixed(1)}% — {bfVal <= 10 ? 'Athletic' : bfVal <= 18 ? 'Fit' : bfVal <= 25 ? 'Moderate' : 'Higher'} range
+                      </p>
+                    )
+                  })()}
                 </div>
+
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Measurements</span>
                     <span className="text-[9px] text-gray-600">(cm)</span>
+                    <span className="ml-auto text-[9px] text-gray-600">{Object.values(measurements).filter(v => v !== '').length}/{measurementFields.length} filled</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2.5">
                     {measurementFields.map((field, idx) => (
                       <motion.div key={field.key} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }}
-                        className="group relative rounded-xl bg-white/[0.03] border border-white/[0.06] p-2.5 hover:border-white/20 transition-all">
+                        className={`group relative rounded-xl bg-white/[0.03] border transition-all p-2.5 ${measurements[field.key] ? 'border-white/10' : 'border-white/[0.06]'} hover:border-white/20`}>
                         <label className="block text-[9px] text-gray-500 uppercase tracking-wider mb-1.5">{field.label}</label>
-                        <input type="number" step="0.1" value={measurements[field.key] ?? ''} onChange={(e) => setMeasurements({ ...measurements, [field.key]: e.target.value })} className="w-full bg-transparent text-white text-sm font-medium focus:outline-none placeholder-gray-600" placeholder="--" />
+                        <input type="number" step="0.1" value={measurements[field.key] ?? ''} onChange={(e) => setMeasurements({ ...measurements, [field.key]: e.target.value })} className="w-full bg-transparent text-white text-sm font-medium focus:outline-none placeholder-gray-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="--" />
                         <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-transparent group-focus-within:ring-emerald-500/20 transition-all pointer-events-none" />
                       </motion.div>
                     ))}
                   </div>
                 </div>
+
                 <div className="flex gap-3 pt-2">
                   <button onClick={() => { setShowForm(false); reset() }} className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all text-sm font-medium">Cancel</button>
                   <motion.button whileTap={{ scale: 0.97 }} onClick={handleSave} disabled={!weight || isNaN(parseFloat(weight)) || parseFloat(weight) <= 0}
                     className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500/20 to-emerald-600/10 border border-emerald-500/30 text-emerald-300 font-semibold hover:bg-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/10 transition-all disabled:opacity-40 text-sm">
-                    Save Entry
+                    💾 Save Entry
                   </motion.button>
                 </div>
               </div>
