@@ -1257,36 +1257,96 @@ export function Progress() {
                       </div>
                     )}
 
-                    {/* RPE - quick effort selector */}
-                    <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
-                      <div className="rounded-xl bg-gray-900/60 p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[11px]">💪</span>
-                          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-gray-500">RPE (Effort)</span>
-                          {formData.rpe > 0 && (
-                            <span className={`text-[10px] font-bold ml-auto ${formData.rpe <= 3 ? 'text-emerald-400' : formData.rpe <= 6 ? 'text-amber-400' : formData.rpe <= 8 ? 'text-orange-400' : 'text-rose-400'}`}>
-                              {formData.rpe <= 3 ? 'Light' : formData.rpe <= 5 ? 'Moderate' : formData.rpe <= 7 ? 'Hard' : formData.rpe <= 9 ? 'Very Hard' : 'Max Effort'}
-                            </span>
-                          )}
+                    {/* RPE - effort selector, dynamic by type */}
+                    {(() => {
+                      const rpeConfigs: Record<string, { icon: string; label: string; thresholds: { max: number; label: string; color: string }[] }> = {
+                        weight: {
+                          icon: '🏋️', label: 'RPE (Effort)',
+                          thresholds: [
+                            { max: 3, label: 'Warmup', color: 'text-emerald-400' },
+                            { max: 5, label: 'Light', color: 'text-sky-400' },
+                            { max: 7, label: 'Moderate', color: 'text-amber-400' },
+                            { max: 9, label: 'Grinder', color: 'text-orange-400' },
+                            { max: 10, label: 'Max', color: 'text-rose-400' },
+                          ],
+                        },
+                        reps: {
+                          icon: '🔥', label: 'RPE (Effort)',
+                          thresholds: [
+                            { max: 3, label: 'Easy', color: 'text-emerald-400' },
+                            { max: 5, label: 'Controlled', color: 'text-sky-400' },
+                            { max: 7, label: 'Challenging', color: 'text-amber-400' },
+                            { max: 9, label: 'Near Failure', color: 'text-orange-400' },
+                            { max: 10, label: 'Failure', color: 'text-rose-400' },
+                          ],
+                        },
+                        volume: {
+                          icon: '📊', label: 'RPE (Effort)',
+                          thresholds: [
+                            { max: 3, label: 'Easy', color: 'text-emerald-400' },
+                            { max: 5, label: 'Building', color: 'text-sky-400' },
+                            { max: 7, label: 'Pushing', color: 'text-amber-400' },
+                            { max: 9, label: 'Deep', color: 'text-orange-400' },
+                            { max: 10, label: 'Max Volume', color: 'text-rose-400' },
+                          ],
+                        },
+                        endurance: {
+                          icon: '⏱️', label: 'Exertion',
+                          thresholds: [
+                            { max: 3, label: 'Easy Pace', color: 'text-emerald-400' },
+                            { max: 5, label: 'Conversational', color: 'text-sky-400' },
+                            { max: 7, label: 'Tempo', color: 'text-amber-400' },
+                            { max: 9, label: 'Threshold', color: 'text-orange-400' },
+                            { max: 10, label: 'All Out', color: 'text-rose-400' },
+                          ],
+                        },
+                        speed: {
+                          icon: '⚡', label: 'Exertion',
+                          thresholds: [
+                            { max: 3, label: 'Jog', color: 'text-emerald-400' },
+                            { max: 5, label: 'Stride', color: 'text-sky-400' },
+                            { max: 7, label: 'Fast', color: 'text-amber-400' },
+                            { max: 9, label: 'Sprint', color: 'text-orange-400' },
+                            { max: 10, label: 'Max Speed', color: 'text-rose-400' },
+                          ],
+                        },
+                      }
+                      const cfg = rpeConfigs[formData.type] ?? rpeConfigs.weight
+                      const activeThreshold = cfg.thresholds.find(t => formData.rpe <= t.max) ?? cfg.thresholds[cfg.thresholds.length - 1]
+                      return (
+                        <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
+                          <div className="rounded-xl bg-gray-900/60 p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-[11px]">{cfg.icon}</span>
+                              <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-gray-500">{cfg.label}</span>
+                              {formData.rpe > 0 && (
+                                <span className={`text-[10px] font-bold ml-auto ${activeThreshold.color}`}>
+                                  {activeThreshold.label}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex gap-1">
+                              {[1,2,3,4,5,6,7,8,9,10].map(n => {
+                                const t = cfg.thresholds.find(th => n <= th.max) ?? cfg.thresholds[cfg.thresholds.length - 1]
+                                return (
+                                  <button key={n} type="button"
+                                    onClick={() => setFormData({ ...formData, rpe: formData.rpe === n ? 0 : n })}
+                                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                                      formData.rpe === n
+                                        ? 'bg-white/10 text-white border border-white/20 shadow-sm'
+                                        : formData.rpe > n
+                                        ? `bg-white/[0.06] ${t.color} border border-white/[0.08]`
+                                        : 'bg-white/[0.03] text-gray-500 border border-white/[0.06] hover:border-white/[0.15]'
+                                    }`}>
+                                    {n}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex gap-1">
-                          {[1,2,3,4,5,6,7,8,9,10].map(n => (
-                            <button key={n} type="button"
-                              onClick={() => setFormData({ ...formData, rpe: formData.rpe === n ? 0 : n })}
-                              className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                                formData.rpe === n
-                                  ? n <= 3 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                    : n <= 6 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                    : n <= 8 ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
-                                    : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                                  : 'bg-white/[0.03] text-gray-500 border border-white/[0.06] hover:border-white/[0.15]'
-                              }`}>
-                              {n}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
+                      )
+                    })()}
 
                     {/* Sets */}
                     <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
