@@ -659,6 +659,50 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                   {(() => {
                     if (chartTab === 'weight') {
                       if (filteredChartData.length < 1) return <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log more entries to see trends</div>
+                      if (filteredChartData.length === 1) {
+                        const entry = filteredChartData[0]
+                        const w = entry.weight as number
+                        const bf = entry.bodyFat as number | undefined
+                        const bmiVal = heightCm && w ? w / ((heightCm / 100) ** 2) : null
+                        const goalDist2 = goal ? w - goal : null
+                        return (
+                          <div className="h-full flex flex-col items-center justify-center gap-3">
+                            <div className="relative">
+                              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/20 via-transparent to-rose-500/20 rounded-full blur-3xl w-32 h-32 -top-6 -left-6" />
+                              <div className="relative flex items-baseline gap-1">
+                                <span className="text-5xl font-bold text-white drop-shadow-lg tabular-nums">{w.toFixed(1)}</span>
+                                <span className="text-sm text-gray-500 font-medium">kg</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              {bmiVal != null && (
+                                <div className="text-center">
+                                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">BMI</p>
+                                  <p className="text-sm font-bold text-violet-400 tabular-nums">{bmiVal.toFixed(1)}</p>
+                                </div>
+                              )}
+                              {bf != null && (
+                                <div className="text-center">
+                                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">Body Fat</p>
+                                  <p className="text-sm font-bold text-amber-400 tabular-nums">{bf.toFixed(1)}%</p>
+                                </div>
+                              )}
+                              {goalDist2 != null && (
+                                <div className="text-center">
+                                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">From Goal</p>
+                                  <p className={`text-sm font-bold tabular-nums ${Math.abs(goalDist2) < 0.5 ? 'text-emerald-400' : goalDist2 > 0 ? 'text-rose-400' : 'text-emerald-300'}`}>
+                                    {goalDist2 > 0 ? `+${goalDist2.toFixed(1)}` : goalDist2 < 0 ? goalDist2.toFixed(1) : '0'} kg
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1 px-4 py-2 rounded-xl bg-white/5 border border-white/5">
+                              <TrendingUp className="w-3.5 h-3.5 text-violet-400/60" />
+                              <span className="text-[10px] text-gray-500">Log another entry to see your weight trend</span>
+                            </div>
+                          </div>
+                        )
+                      }
                       const latestW = filteredChartData[filteredChartData.length - 1]?.weight as number | undefined
                       return (
                         <ResponsiveContainer width="100%" height="100%">
