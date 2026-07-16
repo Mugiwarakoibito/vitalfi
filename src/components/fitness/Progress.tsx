@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Trophy, Plus, Star, Award, X,
-  Dumbbell, Flame, BarChart3, Activity,
+  Dumbbell, Flame, BarChart3,
   Sparkles, Target, CheckCircle2, Medal,
   Calendar,
   Brain, ChevronLeft, ChevronRight, RotateCcw,
@@ -439,65 +439,45 @@ export function Progress() {
           </div>
       </motion.div>
 
-      {/* 6 Stat Cards */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/[0.04] to-transparent pointer-events-none" />
-          <div className="relative flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-amber-500/10"><Trophy className="w-4 h-4 text-amber-400" /></div>
+      {/* Stat Cards — merged essentials */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="relative overflow-hidden rounded-xl border border-amber-500/20 bg-black/60 backdrop-blur-xl p-3">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/[0.04] to-transparent" />
+          <div className="relative flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-amber-500/10"><Trophy className="w-3.5 h-3.5 text-amber-400" /></div>
             <div>
-              <p className="text-2xl font-bold text-white">{records.length}</p>
-              <p className="text-xs text-gray-500">Total PRs</p>
+              <p className="text-lg font-bold text-white">{records.length}</p>
+              <p className="text-[9px] text-gray-500">PR{records.length !== 1 ? 's' : ''}</p>
             </div>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/[0.04] to-transparent pointer-events-none" />
-          <div className="relative flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-purple-500/10"><Award className="w-4 h-4 text-purple-400" /></div>
+        <div className="relative overflow-hidden rounded-xl border border-purple-500/20 bg-black/60 backdrop-blur-xl p-3">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/[0.04] to-transparent" />
+          <div className="relative flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-purple-500/10"><Award className="w-3.5 h-3.5 text-purple-400" /></div>
             <div>
-              <p className="text-2xl font-bold text-white">{best1RM} <span className="text-sm font-normal text-gray-500">lbs</span></p>
-              <p className="text-xs text-gray-500">Best 1RM</p>
+              <p className="text-lg font-bold text-white">{best1RM} <span className="text-[10px] font-normal text-gray-500">lbs</span></p>
+              <p className="text-[9px] text-gray-500">Best 1RM</p>
             </div>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.04] to-transparent pointer-events-none" />
-          <div className="relative flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-emerald-500/10"><Flame className="w-4 h-4 text-emerald-400" /></div>
+        <div className="relative overflow-hidden rounded-xl border border-emerald-500/20 bg-black/60 backdrop-blur-xl p-3">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.04] to-transparent" />
+          <div className="relative flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-emerald-500/10"><Flame className="w-3.5 h-3.5 text-emerald-400" /></div>
             <div>
-              <p className="text-2xl font-bold text-white">{totalVolume > 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume}</p>
-              <p className="text-xs text-gray-500">Total Volume</p>
+              <p className="text-lg font-bold text-white">{totalVolume > 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume}</p>
+              <p className="text-[9px] text-gray-500">Volume</p>
             </div>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-sky-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg">
-          <div className="absolute inset-0 bg-gradient-to-br from-sky-500/[0.04] to-transparent pointer-events-none" />
-          <div className="relative flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-sky-500/10"><Activity className="w-4 h-4 text-sky-400" /></div>
+        <div className="relative overflow-hidden rounded-xl border border-rose-500/20 bg-black/60 backdrop-blur-xl p-3">
+          <div className="absolute inset-0 bg-gradient-to-br from-rose-500/[0.04] to-transparent" />
+          <div className="relative flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-rose-500/10"><Flame className="w-3.5 h-3.5 text-rose-400" /></div>
             <div>
-              <p className="text-2xl font-bold text-white">{exercises.length}</p>
-              <p className="text-xs text-gray-500">Exercises</p>
-            </div>
-          </div>
-        </div>
-        <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg">
-          <div className="absolute inset-0 bg-gradient-to-br from-rose-500/[0.04] to-transparent pointer-events-none" />
-          <div className="relative flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-rose-500/10"><Flame className="w-4 h-4 text-rose-400" /></div>
-            <div>
-              <p className="text-2xl font-bold text-white">{prStreak} <span className="text-sm font-normal text-gray-500">d</span></p>
-              <p className="text-xs text-gray-500">PR Streak</p>
-            </div>
-          </div>
-        </div>
-        <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-black/60 backdrop-blur-[12px] p-4 shadow-lg">
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.04] to-transparent pointer-events-none" />
-          <div className="relative flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-violet-500/10"><Medal className="w-4 h-4 text-violet-400" /></div>
-            <div>
-              <p className="text-2xl font-bold text-white">{strengthLevels.length}</p>
-              <p className="text-xs text-gray-500">Strength Levels</p>
+              <p className="text-lg font-bold text-white">{prStreak}<span className="text-[10px] font-normal text-gray-500">d</span></p>
+              <p className="text-[9px] text-gray-500">Streak</p>
             </div>
           </div>
         </div>
@@ -1061,62 +1041,7 @@ export function Progress() {
         )}
       </AnimatePresence>
 
-      {/* PR Leaderboard */}
-      {prLeaderboard.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-black/60 backdrop-blur-[12px] p-4">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/3 via-transparent to-violet-500/3 pointer-events-none" />
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-white/[0.04]">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-500/5 border border-amber-500/20 flex items-center justify-center">
-                <Award className="w-3.5 h-3.5 text-amber-400" />
-              </div>
-              <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">PR Leaderboard</h4>
-              <span className="ml-auto text-[9px] text-gray-600 font-medium">{prLeaderboard.length} exercises</span>
-            </div>
-            <div className="space-y-1.5">
-              {(() => {
-                const maxCount = prLeaderboard[0]?.[1].count || 1
-                return prLeaderboard.map(([name, data], idx) => {
-                  const barPct = (data.count / maxCount) * 100
-                  return (
-                    <motion.div key={name} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.03 }}
-                      className="relative group">
-                      <div className="relative flex items-center gap-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] p-2.5 border border-white/5 transition-all">
-                        <span className={`shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[12px] font-bold ${
-                          idx === 0 ? 'bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/20' :
-                          idx === 1 ? 'bg-gray-400/15 text-gray-400 ring-1 ring-gray-400/15' :
-                          idx === 2 ? 'bg-orange-500/15 text-orange-400 ring-1 ring-orange-500/15' :
-                          'bg-white/5 text-gray-500'
-                        }`}>
-                          {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}
-                        </span>
-                        <div className="flex-1 min-w-0 z-10">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold text-white truncate">{name}</p>
-                            <span className="text-[11px] font-bold text-amber-400 ml-2">{data.count}</span>
-                          </div>
-                          <p className="text-[9px] text-gray-500 mt-0.5">
-                            Best: <span className="text-gray-400 font-medium">{data.bestWeight}lbs</span>
-                            {data.bestReps > 0 && <> · <span className="text-gray-400 font-medium">{data.bestReps}</span> reps</>}
-                          </p>
-                        </div>
-                        {/* Progress bar */}
-                        <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${barPct}%` }}
-                            className={`h-full transition-all duration-700 ${idx === 0 ? 'bg-gradient-to-r from-amber-500/10 to-amber-500/5' : 'bg-white/[0.02]'}`} />
-                        </div>
-                      </div>
-                    </motion.div>
-                  )
-                })
-              })()}
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* PR Exercise Cards */}
+      {/* PR Exercise Cards — with ranking integrated */}
       {records.length === 0 ? (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent p-10 text-center">
@@ -1146,7 +1071,7 @@ export function Progress() {
                 className="relative overflow-hidden rounded-2xl border border-amber-500/15 bg-gradient-to-br from-amber-500/8 to-transparent p-4 shadow-lg shadow-black/20">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
                 <div className="relative">
-                  {/* Header */}
+                  {/* Header with rank */}
                   <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/[0.05]">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-500/5 border border-amber-500/15 flex items-center justify-center shrink-0">
@@ -1154,9 +1079,12 @@ export function Progress() {
                       </div>
                       <h4 className="text-sm font-bold text-white truncate">{exercise}</h4>
                     </div>
-                    <div className="text-right shrink-0 ml-2">
-                      <p className="text-[10px] font-bold text-amber-400">{totalPRs}</p>
-                      <p className="text-[7px] text-gray-600 uppercase tracking-wider">PRs</p>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      {(() => { const rank = prLeaderboard.findIndex(([n]) => n === exercise); if (rank >= 0) return <span className={`text-[10px] ${rank === 0 ? '' : 'opacity-40'}`}>{['🥇','🥈','🥉'][rank] || `#${rank + 1}`}</span> })()}
+                      <div className="text-right">
+                        <p className="text-[10px] font-bold text-amber-400">{totalPRs}</p>
+                        <p className="text-[7px] text-gray-600 uppercase tracking-wider">PRs</p>
+                      </div>
                     </div>
                   </div>
                   {/* Stats */}
@@ -1191,65 +1119,31 @@ export function Progress() {
                       <span className="text-gray-500">{latestPR.weight}lbs × {latestPR.reps}</span>
                     </div>
                   )}
-                  {/* Goals */}
+                  {/* Goals — merged display */}
                   {goals.length > 0 && (
                     <div className="mt-3 space-y-2 pt-3 border-t border-white/[0.04]">
                       {goals.map(g => {
-                        if (g.goalWeight) {
-                          const pct = Math.min(100, Math.round((g.weight / g.goalWeight) * 100))
-                          const achieved = pct >= 100
-                          return (
-                            <div key={g.id}>
-                              <div className="flex justify-between text-[9px] mb-1">
-                                <span className="text-gray-500 flex items-center gap-1"><Target className="w-2.5 h-2.5 text-amber-400" />Goal {g.goalWeight}lbs</span>
-                                <span className={`font-semibold ${achieved ? 'text-emerald-400' : 'text-gray-500'}`}>
-                                  {achieved && <CheckCircle2 className="w-2.5 h-2.5 inline mr-0.5 text-emerald-400" />}{pct}%
-                                </span>
-                              </div>
-                              <div className="h-1 rounded-full bg-white/5 overflow-hidden">
-                                <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                                  className={`h-full rounded-full ${achieved ? 'bg-emerald-500' : 'bg-gradient-to-r from-amber-500 to-amber-400'} transition-all duration-700`} />
-                              </div>
+                        const goalConfig = g.goalWeight ? { label: `${g.goalWeight}lbs`, current: g.weight, target: g.goalWeight, color: 'from-amber-500 to-amber-400', doneColor: 'bg-emerald-500', icon: 'text-amber-400' }
+                          : g.goalReps ? { label: `${g.goalReps} reps`, current: g.reps, target: g.goalReps, color: 'from-purple-500 to-purple-400', doneColor: 'bg-emerald-500', icon: 'text-purple-400' }
+                          : g.goalVolume ? { label: `${g.goalVolume.toLocaleString()} vol`, current: g.weight * g.reps, target: g.goalVolume, color: 'from-emerald-500 to-emerald-400', doneColor: 'bg-emerald-500', icon: 'text-emerald-400' }
+                          : null
+                        if (!goalConfig) return null
+                        const pct = Math.min(100, Math.round((goalConfig.current / goalConfig.target) * 100))
+                        const achieved = pct >= 100
+                        return (
+                          <div key={g.id}>
+                            <div className="flex justify-between text-[9px] mb-1">
+                              <span className="text-gray-500 flex items-center gap-1"><Target className={`w-2.5 h-2.5 ${goalConfig.icon}`} />Goal {goalConfig.label}</span>
+                              <span className={`font-semibold ${achieved ? 'text-emerald-400' : 'text-gray-500'}`}>
+                                {achieved && <CheckCircle2 className="w-2.5 h-2.5 inline mr-0.5 text-emerald-400" />}{pct}%
+                              </span>
                             </div>
-                          )
-                        }
-                        if (g.goalReps) {
-                          const pct = Math.min(100, Math.round((g.reps / g.goalReps) * 100))
-                          const achieved = pct >= 100
-                          return (
-                            <div key={g.id}>
-                              <div className="flex justify-between text-[9px] mb-1">
-                                <span className="text-gray-500 flex items-center gap-1"><Target className="w-2.5 h-2.5 text-purple-400" />Goal {g.goalReps} reps</span>
-                                <span className={`font-semibold ${achieved ? 'text-emerald-400' : 'text-gray-500'}`}>
-                                  {achieved && <CheckCircle2 className="w-2.5 h-2.5 inline mr-0.5 text-emerald-400" />}{pct}%
-                                </span>
-                              </div>
-                              <div className="h-1 rounded-full bg-white/5 overflow-hidden">
-                                <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                                  className={`h-full rounded-full ${achieved ? 'bg-emerald-500' : 'bg-gradient-to-r from-purple-500 to-purple-400'} transition-all duration-700`} />
-                              </div>
+                            <div className="h-1 rounded-full bg-white/5 overflow-hidden">
+                              <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                                className={`h-full rounded-full ${achieved ? goalConfig.doneColor : `bg-gradient-to-r ${goalConfig.color}`} transition-all duration-700`} />
                             </div>
-                          )
-                        }
-                        if (g.goalVolume) {
-                          const pct = Math.min(100, Math.round(((g.weight * g.reps) / g.goalVolume) * 100))
-                          const achieved = pct >= 100
-                          return (
-                            <div key={g.id}>
-                              <div className="flex justify-between text-[9px] mb-1">
-                                <span className="text-gray-500 flex items-center gap-1"><Target className="w-2.5 h-2.5 text-emerald-400" />Goal {g.goalVolume.toLocaleString()} vol</span>
-                                <span className={`font-semibold ${achieved ? 'text-emerald-400' : 'text-gray-500'}`}>
-                                  {achieved && <CheckCircle2 className="w-2.5 h-2.5 inline mr-0.5 text-emerald-400" />}{pct}%
-                                </span>
-                              </div>
-                              <div className="h-1 rounded-full bg-white/5 overflow-hidden">
-                                <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                                  className={`h-full rounded-full ${achieved ? 'bg-emerald-500' : 'bg-gradient-to-r from-emerald-500 to-emerald-400'} transition-all duration-700`} />
-                              </div>
-                            </div>
-                          )
-                        }
-                        return null
+                          </div>
+                        )
                       })}
                     </div>
                   )}
