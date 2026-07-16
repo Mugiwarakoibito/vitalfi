@@ -1261,7 +1261,7 @@ export function Progress() {
                     {(() => {
                       const rpeConfigs: Record<string, { icon: string; label: string; thresholds: { max: number; label: string; color: string }[] }> = {
                         weight: {
-                          icon: '🏋️', label: 'RPE (Effort)',
+                          icon: '🏋️', label: 'Lift Intensity',
                           thresholds: [
                             { max: 3, label: 'Warmup', color: 'text-emerald-400' },
                             { max: 5, label: 'Light', color: 'text-sky-400' },
@@ -1271,7 +1271,7 @@ export function Progress() {
                           ],
                         },
                         reps: {
-                          icon: '🔥', label: 'RPE (Effort)',
+                          icon: '🔥', label: 'Rep Intensity',
                           thresholds: [
                             { max: 3, label: 'Easy', color: 'text-emerald-400' },
                             { max: 5, label: 'Controlled', color: 'text-sky-400' },
@@ -1281,7 +1281,7 @@ export function Progress() {
                           ],
                         },
                         volume: {
-                          icon: '📊', label: 'RPE (Effort)',
+                          icon: '📊', label: 'Work Rate',
                           thresholds: [
                             { max: 3, label: 'Easy', color: 'text-emerald-400' },
                             { max: 5, label: 'Building', color: 'text-sky-400' },
@@ -1291,7 +1291,7 @@ export function Progress() {
                           ],
                         },
                         endurance: {
-                          icon: '⏱️', label: 'Exertion',
+                          icon: '⏱️', label: 'Pace Level',
                           thresholds: [
                             { max: 3, label: 'Easy Pace', color: 'text-emerald-400' },
                             { max: 5, label: 'Conversational', color: 'text-sky-400' },
@@ -1301,7 +1301,7 @@ export function Progress() {
                           ],
                         },
                         speed: {
-                          icon: '⚡', label: 'Exertion',
+                          icon: '⚡', label: 'Speed Intensity',
                           thresholds: [
                             { max: 3, label: 'Jog', color: 'text-emerald-400' },
                             { max: 5, label: 'Stride', color: 'text-sky-400' },
