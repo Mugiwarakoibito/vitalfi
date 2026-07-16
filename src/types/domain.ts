@@ -180,8 +180,12 @@ export interface BodyMetric {
   weight?: number;
   bodyFat?: number;
   measurements: Record<string, number>;
+  vo2max?: number;
+  gripStrength?: number;
+  plank?: number;
+  verticalJump?: number;
+  sitAndReach?: number;
   notes?: string;
-  energy?: number;
   createdAt: string;
   updatedAt: string;
 }

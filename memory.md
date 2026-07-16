@@ -2,25 +2,23 @@
 
 ## Last Updated: July 16, 2026
 
-## Session: Deploy to Vercel & verify
+## Session: Fix BodyMetricsTracker not appearing in build
 
 ### What was done
-- Ran successful build (`tsc && vite build`)
-- Deployed to Vercel production
-- Live at https://vitalfi.vercel.app
+- Diagnosed why `BodyMetricsTracker` component was silently excluded from the production bundle
+- Root cause: `console.log('BODY_METRICS_TRACKER_LOADED')` on line 1 before all `import` statements — ESM syntax violation causes esbuild to silently fail module graph resolution, tree-shaking out the entire named export
+- Fixed by moving debug statement after imports (changed to `export const BODY_METRICS_DEBUG = 'LOADED'`)
+- Rebuilt and verified BodyMetricsTracker code is in `Fitness-C9kpH8-S.js` chunk
+- Deployed to Vercel production — live at https://vitalfi.vercel.app
 
 ### Key decisions
-- Production deploy completed with build caching
+- Never put code before import statements in ESM modules — even if esbuild/vite appear to handle it, it can silently break module bundling
 
 ### Files modified
-- `memory.md` — updated session log
-
-### Next steps
-- Verify on deployed site: https://vitalfi.vercel.app
+- `src/components/fitness/BodyMetricsTracker.tsx` — moved `console.log` debug statement after imports
 
 ### Deployed to
 - **Vercel:** https://vitalfi.vercel.app
-- **GitHub:** https://github.com/Mugiwarakoibito/vitalfi
 
 ---
 
