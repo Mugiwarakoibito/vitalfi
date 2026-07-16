@@ -976,30 +976,38 @@ export function Progress() {
               </div>
             </div>
 
-            {/* Tier tabs */}
-            <div className="relative flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06] mb-4 overflow-x-auto">
-              <button key="all" onClick={() => setAchTab('all')}
-                className={`relative px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
-                  achTab === 'all'
-                    ? 'text-white bg-white/10 border border-white/10 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-300'
-                }`}>
-                All
-              </button>
+            {/* Tier switcher — compact cards */}
+            <div className="flex gap-1.5 mb-4 overflow-x-auto pb-0.5 custom-scrollbar">
               {ACHIEVEMENT_TIERS.map(tier => {
+                const isActive = achTab === tier.key
                 const tierCount = ACHIEVEMENT_DEFS.filter(d => d.tier === tier.key).length
                 const tierDone = ACHIEVEMENT_DEFS.filter(d => d.tier === tier.key && earned.has(d.id)).length
+                const allDone = tierDone === tierCount
                 return (
-                  <button key={tier.key} onClick={() => setAchTab(tier.key)}
-                    className={`relative px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                      achTab === tier.key
-                        ? 'text-white bg-white/10 border border-white/10 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-300'
+                  <motion.button key={tier.key} onClick={() => setAchTab(isActive ? 'all' : tier.key)}
+                    whileTap={{ scale: 0.95 }}
+                    className={`relative shrink-0 px-3 py-2 rounded-xl border transition-all ${
+                      isActive
+                        ? tier.key === 'milestones' ? 'bg-amber-500/15 border-amber-500/30 text-amber-300 shadow-sm shadow-amber-500/8'
+                          : tier.key === 'volume' ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300 shadow-sm shadow-emerald-500/8'
+                          : tier.key === 'variety' ? 'bg-violet-500/15 border-violet-500/30 text-violet-300 shadow-sm shadow-violet-500/8'
+                          : tier.key === 'strength' ? 'bg-rose-500/15 border-rose-500/30 text-rose-300 shadow-sm shadow-rose-500/8'
+                          : 'bg-cyan-500/15 border-cyan-500/30 text-cyan-300 shadow-sm shadow-cyan-500/8'
+                        : 'bg-white/[0.03] border-white/[0.06] text-gray-500 hover:text-gray-300 hover:border-white/[0.15]'
                     }`}>
-                    <span className="text-xs">{tier.icon}</span>
-                    <span className="hidden sm:inline">{tier.label}</span>
-                    <span className={`text-[8px] ${tierDone === tierCount ? 'text-emerald-400' : 'text-gray-600'}`}>{tierDone}/{tierCount}</span>
-                  </button>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm leading-none">{tier.icon}</span>
+                      <div className="text-left">
+                        <p className={`text-[9px] font-bold uppercase tracking-wider leading-tight ${isActive ? 'text-inherit' : 'text-gray-500'}`}>{tier.label}</p>
+                        <p className={`text-[8px] leading-tight ${allDone ? 'text-emerald-400' : 'text-gray-600'}`}>
+                          {allDone ? '✓ Complete' : `${tierDone}/${tierCount}`}
+                        </p>
+                      </div>
+                    </div>
+                    {isActive && (
+                      <motion.div layoutId="achActiveTier" className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/[0.08]" />
+                    )}
+                  </motion.button>
                 )
               })}
             </div>
