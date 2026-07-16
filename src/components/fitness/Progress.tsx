@@ -135,6 +135,7 @@ export function Progress() {
   const [showPerfCoach, setShowPerfCoach] = useState(false)
   const [showPerfFocusPref, setShowPerfFocusPref] = useState(false)
   const [showPerfScope, setShowPerfScope] = useState(false)
+  const [achTab, setAchTab] = useState<string>('milestones')
   const [perfFocus, setPerfFocus] = useState<'strength' | 'hypertrophy' | 'endurance' | 'power' | 'overall'>('overall')
   const [scopeOffset, setScopeOffset] = useState(0)
   const [chartTab, setChartTab] = useState<'prs' | 'volume' | 'weight'>('prs')
@@ -975,9 +976,37 @@ export function Progress() {
               </div>
             </div>
 
-            {/* Tiers */}
+            {/* Tier tabs */}
+            <div className="relative flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06] mb-4 overflow-x-auto">
+              <button key="all" onClick={() => setAchTab('all')}
+                className={`relative px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+                  achTab === 'all'
+                    ? 'text-white bg-white/10 border border-white/10 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-300'
+                }`}>
+                All
+              </button>
+              {ACHIEVEMENT_TIERS.map(tier => {
+                const tierCount = ACHIEVEMENT_DEFS.filter(d => d.tier === tier.key).length
+                const tierDone = ACHIEVEMENT_DEFS.filter(d => d.tier === tier.key && earned.has(d.id)).length
+                return (
+                  <button key={tier.key} onClick={() => setAchTab(tier.key)}
+                    className={`relative px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                      achTab === tier.key
+                        ? 'text-white bg-white/10 border border-white/10 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-300'
+                    }`}>
+                    <span className="text-xs">{tier.icon}</span>
+                    <span className="hidden sm:inline">{tier.label}</span>
+                    <span className={`text-[8px] ${tierDone === tierCount ? 'text-emerald-400' : 'text-gray-600'}`}>{tierDone}/{tierCount}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Active tier / all */}
             <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
-              {ACHIEVEMENT_TIERS.map((tier, ti) => {
+              {(achTab === 'all' ? ACHIEVEMENT_TIERS : ACHIEVEMENT_TIERS.filter(t => t.key === achTab)).map((tier, ti) => {
                 const tierDefs = ACHIEVEMENT_DEFS.filter(d => d.tier === tier.key)
                 const tierUnlocked = tierDefs.filter(d => earned.has(d.id)).length
                 const totalTier = tierDefs.length
