@@ -976,110 +976,102 @@ export function Progress() {
               </div>
             </div>
 
-            {/* Tier switcher — compact cards */}
-            <div className="flex gap-1.5 mb-4 overflow-x-auto pb-0.5 custom-scrollbar">
-              {ACHIEVEMENT_TIERS.map(tier => {
-                const isActive = achTab === tier.key
-                const tierCount = ACHIEVEMENT_DEFS.filter(d => d.tier === tier.key).length
-                const tierDone = ACHIEVEMENT_DEFS.filter(d => d.tier === tier.key && earned.has(d.id)).length
-                const allDone = tierDone === tierCount
-                return (
-                  <motion.button key={tier.key} onClick={() => setAchTab(isActive ? 'all' : tier.key)}
-                    whileTap={{ scale: 0.95 }}
-                    className={`relative shrink-0 px-3 py-2 rounded-xl border transition-all ${
-                      isActive
-                        ? tier.key === 'milestones' ? 'bg-amber-500/15 border-amber-500/30 text-amber-300 shadow-sm shadow-amber-500/8'
-                          : tier.key === 'volume' ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300 shadow-sm shadow-emerald-500/8'
-                          : tier.key === 'variety' ? 'bg-violet-500/15 border-violet-500/30 text-violet-300 shadow-sm shadow-violet-500/8'
-                          : tier.key === 'strength' ? 'bg-rose-500/15 border-rose-500/30 text-rose-300 shadow-sm shadow-rose-500/8'
-                          : 'bg-cyan-500/15 border-cyan-500/30 text-cyan-300 shadow-sm shadow-cyan-500/8'
-                        : 'bg-white/[0.03] border-white/[0.06] text-gray-500 hover:text-gray-300 hover:border-white/[0.15]'
-                    }`}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm leading-none">{tier.icon}</span>
-                      <div className="text-left">
-                        <p className={`text-[9px] font-bold uppercase tracking-wider leading-tight ${isActive ? 'text-inherit' : 'text-gray-500'}`}>{tier.label}</p>
-                        <p className={`text-[8px] leading-tight ${allDone ? 'text-emerald-400' : 'text-gray-600'}`}>
-                          {allDone ? '✓ Complete' : `${tierDone}/${tierCount}`}
-                        </p>
-                      </div>
-                    </div>
-                    {isActive && (
-                      <motion.div layoutId="achActiveTier" className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/[0.08]" />
-                    )}
-                  </motion.button>
-                )
-              })}
-            </div>
-
-            {/* Active tier / all */}
-            <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
-              {(achTab === 'all' ? ACHIEVEMENT_TIERS : ACHIEVEMENT_TIERS.filter(t => t.key === achTab)).map((tier, ti) => {
+            {/* Tier explorer — vertical accordion */}
+            <div className="space-y-2 max-h-[55vh] overflow-y-auto pr-1 custom-scrollbar">
+              {ACHIEVEMENT_TIERS.map((tier, ti) => {
+                const isOpen = achTab === tier.key
                 const tierDefs = ACHIEVEMENT_DEFS.filter(d => d.tier === tier.key)
-                const tierUnlocked = tierDefs.filter(d => earned.has(d.id)).length
+                const tierDone = tierDefs.filter(d => earned.has(d.id)).length
                 const totalTier = tierDefs.length
+                const allDone = tierDone === totalTier
+                const pct = totalTier > 0 ? Math.round((tierDone / totalTier) * 100) : 0
                 return (
-                  <motion.div key={tier.key} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: ti * 0.08 }}>
-                    <div className={`rounded-xl ${tier.bg} border ${tier.border} p-3`}>
-                      <div className="flex items-center justify-between mb-2.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm leading-none">{tier.icon}</span>
-                          <span className={`text-[10px] font-bold uppercase tracking-wider ${tier.text}`}>{tier.label}</span>
+                  <motion.div key={tier.key} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: ti * 0.06 }}>
+                    <motion.button onClick={() => setAchTab(isOpen ? '' : tier.key)}
+                      className={`w-full rounded-xl border transition-all text-left ${isOpen ? tier.border + ' ' + tier.bg : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.03]'}`}>
+                      <div className="flex items-center gap-3 px-3.5 py-3">
+                        {/* Tier icon with ring */}
+                        <div className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                          isOpen
+                            ? 'bg-gradient-to-br from-white/10 to-white/5 ring-1 ring-white/10 shadow-sm'
+                            : 'bg-white/[0.04] ring-1 ring-white/[0.06]'
+                        }`}>
+                          <span className="text-lg leading-none">{tier.icon}</span>
                         </div>
-                        <span className="text-[9px] text-gray-500 font-medium">{tierUnlocked}/{totalTier}</span>
+                        {/* Tier info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[11px] font-bold uppercase tracking-wider ${isOpen ? tier.text : 'text-gray-400'}`}>{tier.label}</span>
+                            {allDone && <span className="text-[9px] text-emerald-400">✓</span>}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[9px] text-gray-500">{tierDone}/{totalTier}</span>
+                            <div className="flex-1 max-w-[80px] h-1 rounded-full bg-white/5 overflow-hidden">
+                              <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                                className="h-full rounded-full bg-gradient-to-r from-amber-500/60 to-amber-400/40 transition-all duration-700" />
+                            </div>
+                            <motion.span animate={{ rotate: isOpen ? 180 : 0 }} className="text-[10px] text-gray-600 leading-none transition-transform">
+                              ▸
+                            </motion.span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {tierDefs.map((ach, ai) => {
-                          const isUnlocked = earned.has(ach.id)
-                          const stats = { prCount: records.length, totalVolume, exercises: exercises.length, bestRatio: Math.max(0, ...strengthLevels.map(s => s.ratio)), streak: new Set(records.map(r => r.date)).size, hasAdvanced: hasAdvancedTier }
-                          const prog = ach.progress?.(stats)
-                          const pct = prog ? Math.min(100, Math.round((prog.current / prog.target) * 100)) : isUnlocked ? 100 : 0
-                          const IconComponent = ACHIEVEMENT_ICON_MAP[ach.icon]
-                          return (
-                            <motion.div key={ach.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: ti * 0.08 + ai * 0.03 }}
-                              whileHover={{ y: -1 }}
-                              className={`relative overflow-hidden rounded-xl p-2.5 border transition-all duration-300 ${
-                                isUnlocked
-                                  ? 'border-white/[0.08] bg-white/[0.03]'
-                                  : pct > 0
-                                  ? 'border-white/[0.06] bg-white/[0.02]'
-                                  : 'border-white/[0.04] bg-white/[0.01] opacity-50'
-                              }`}>
-                              <div className="relative flex items-start gap-2.5">
-                                <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                                  isUnlocked
-                                    ? 'bg-gradient-to-br from-amber-500/25 to-amber-500/10 shadow-sm shadow-amber-500/10 ring-1 ring-amber-500/20'
-                                    : 'bg-white/[0.04] ring-1 ring-white/[0.06]'
-                                }`}>
-                                  <IconComponent className={`w-4 h-4 ${isUnlocked ? 'text-amber-300' : 'text-gray-600'}`} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className={`text-[11px] font-bold leading-tight ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>{ach.name}</p>
-                                  <p className={`text-[8px] mt-0.5 leading-tight ${isUnlocked ? 'text-gray-500' : 'text-gray-600'}`}>{ach.description}</p>
-                                  {!isUnlocked && prog && (
-                                    <div className="mt-1.5">
-                                      <div className="flex items-center justify-between mb-0.5">
-                                        <span className={`text-[7px] font-semibold uppercase tracking-wider ${tier.text}`}>{pct}%</span>
-                                        <span className="text-[7px] text-gray-600">{prog.current}/{prog.target}</span>
+                      {/* Expanded achievements */}
+                      <AnimatePresence>
+                        {isOpen && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.25, ease: 'easeInOut' }} className="overflow-hidden">
+                            <div className="px-3.5 pb-3.5 pt-0 border-t border-white/[0.04] mt-0">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2.5">
+                                {tierDefs.map((ach, ai) => {
+                                  const isUnlocked = earned.has(ach.id)
+                                  const stats = { prCount: records.length, totalVolume, exercises: exercises.length, bestRatio: Math.max(0, ...strengthLevels.map(s => s.ratio)), streak: new Set(records.map(r => r.date)).size, hasAdvanced: hasAdvancedTier }
+                                  const prog = ach.progress?.(stats)
+                                  const pct2 = prog ? Math.min(100, Math.round((prog.current / prog.target) * 100)) : isUnlocked ? 100 : 0
+                                  const IconComponent = ACHIEVEMENT_ICON_MAP[ach.icon]
+                                  return (
+                                    <motion.div key={ach.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: ai * 0.03 }}
+                                      className={`relative overflow-hidden rounded-xl p-2.5 border transition-all ${
+                                        isUnlocked
+                                          ? 'border-white/[0.08] bg-white/[0.03]'
+                                          : pct2 > 0
+                                          ? 'border-white/[0.06] bg-white/[0.02]'
+                                          : 'border-white/[0.04] bg-white/[0.01] opacity-50'
+                                      }`}>
+                                      <div className="flex items-start gap-2">
+                                        <div className={`shrink-0 w-7 h-7 rounded-lg flex items-center justify-center ${
+                                          isUnlocked ? 'bg-gradient-to-br from-amber-500/25 to-amber-500/10 ring-1 ring-amber-500/20' : 'bg-white/[0.04] ring-1 ring-white/[0.06]'
+                                        }`}>
+                                          <IconComponent className={`w-3.5 h-3.5 ${isUnlocked ? 'text-amber-300' : 'text-gray-600'}`} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className={`text-[10px] font-bold leading-tight ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>{ach.name}</p>
+                                          <p className={`text-[7px] mt-0.5 leading-tight ${isUnlocked ? 'text-gray-500' : 'text-gray-600'}`}>{ach.description}</p>
+                                          {!isUnlocked && prog && (
+                                            <div className="mt-1">
+                                              <div className="h-1 rounded-full bg-white/5 overflow-hidden">
+                                                <motion.div initial={{ width: 0 }} animate={{ width: `${pct2}%` }}
+                                                  className="h-full rounded-full bg-gradient-to-r from-amber-500/60 to-amber-400/40 transition-all duration-700" />
+                                              </div>
+                                              <span className="text-[6px] text-gray-600 mt-0.5 block">{prog.current}/{prog.target}</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                        {isUnlocked && (
+                                          <div className="shrink-0 w-3.5 h-3.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+                                            <CheckCircle2 className="w-2 h-2 text-emerald-400" />
+                                          </div>
+                                        )}
                                       </div>
-                                      <div className="h-1 rounded-full bg-white/5 overflow-hidden">
-                                        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                                          className="h-full rounded-full bg-gradient-to-r from-amber-500/60 to-amber-400/40 transition-all duration-700" />
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                                {isUnlocked && (
-                                  <div className="shrink-0 w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
-                                    <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
-                                  </div>
-                                )}
+                                    </motion.div>
+                                  )
+                                })}
                               </div>
-                            </motion.div>
-                          )
-                        })}
-                      </div>
-                    </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.button>
                   </motion.div>
                 )
               })}
