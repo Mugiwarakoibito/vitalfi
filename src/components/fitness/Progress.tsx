@@ -371,8 +371,10 @@ export function Progress() {
     setShowModal(false)
     setFormData({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight', rpe: 0, sets: '', duration: '', distance: '', contextTags: [], goalWeight: '', goalReps: '', goalVolume: '', notes: '' })
     setConfettiTrigger(prev => prev + 1)
+    setShowPerfCoach(true)
+    setShowPerfScope(true)
     setJustAdded(`${formData.exerciseName} — ${formData.type === 'endurance' ? `${formData.duration || 0}s` : formData.type === 'speed' ? `${formData.distance || 0}m` : `${w}lbs × ${r} reps`}`)
-    setTimeout(() => setJustAdded(''), 3000)
+    setTimeout(() => setJustAdded(''), 4000)
   }
 
   return (
@@ -381,11 +383,29 @@ export function Progress() {
 
       {justAdded && (
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-          className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/20 to-amber-500/10 p-4 shadow-lg shadow-emerald-500/10">
-          <div className="relative flex items-center gap-3">
-            <Sparkles className="w-5 h-5 text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-            <p className="text-sm font-bold text-white">New PR! {justAdded}</p>
-            <button onClick={() => setJustAdded('')} className="ml-auto p-1 text-gray-500 hover:text-white"><X className="w-4 h-4" /></button>
+          className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/20 via-amber-500/10 to-violet-500/10 p-4 shadow-lg shadow-emerald-500/10">
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-violet-500/5" />
+          <div className="relative flex items-center gap-3 flex-wrap">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500/25 to-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white">New PR Logged!</p>
+              <p className="text-[11px] text-emerald-300/70 mt-0.5">{justAdded}</p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => { setShowPerfCoach(p => !p); setShowPerfScope(false) }}
+                className={`px-2.5 py-1.5 rounded-lg border text-[9px] font-bold uppercase tracking-wider transition-all ${showPerfCoach ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
+                <Brain className="w-3 h-3 inline mr-1" />Coach
+              </button>
+              <button onClick={() => { setShowPerfScope(p => !p); setShowPerfCoach(false) }}
+                className={`px-2.5 py-1.5 rounded-lg border text-[9px] font-bold uppercase tracking-wider transition-all ${showPerfScope ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
+                <BarChart3 className="w-3 h-3 inline mr-1" />Scope
+              </button>
+              <button onClick={() => setJustAdded('')} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-500 hover:text-white">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </motion.div>
       )}
@@ -441,46 +461,27 @@ export function Progress() {
 
       {/* Stat Cards — merged essentials */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        <div className="relative overflow-hidden rounded-xl border border-amber-500/20 bg-black/60 backdrop-blur-xl p-3">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/[0.04] to-transparent" />
-          <div className="relative flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-amber-500/10"><Trophy className="w-3.5 h-3.5 text-amber-400" /></div>
-            <div>
-              <p className="text-lg font-bold text-white">{records.length}</p>
-              <p className="text-[9px] text-gray-500">PR{records.length !== 1 ? 's' : ''}</p>
+        {[
+          { label: records.length === 1 ? 'PR' : 'PRs', value: records.length, icon: Trophy, color: 'amber', border: 'border-amber-500/25', bg: 'from-amber-500/8 to-transparent', iconBg: 'bg-amber-500/15', iconColor: 'text-amber-400' },
+          { label: 'Best 1RM', value: best1RM, suffix: ' lbs', icon: Award, color: 'purple', border: 'border-purple-500/25', bg: 'from-purple-500/8 to-transparent', iconBg: 'bg-purple-500/15', iconColor: 'text-purple-400' },
+          { label: 'Volume', value: totalVolume > 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume, icon: Flame, color: 'emerald', border: 'border-emerald-500/25', bg: 'from-emerald-500/8 to-transparent', iconBg: 'bg-emerald-500/15', iconColor: 'text-emerald-400' },
+          { label: 'Streak', value: prStreak, suffix: 'd', icon: Flame, color: 'rose', border: 'border-rose-500/25', bg: 'from-rose-500/8 to-transparent', iconBg: 'bg-rose-500/15', iconColor: 'text-rose-400' },
+        ].map((card, i) => (
+          <motion.div key={i} whileHover={{ y: -1, scale: 1.01 }}
+            className={`relative overflow-hidden rounded-xl border ${card.border} bg-black/60 backdrop-blur-xl p-3 group`}>
+            <div className={`absolute inset-0 bg-gradient-to-br ${card.bg} group-hover:opacity-150 transition-opacity`} />
+            <div className="absolute -inset-1 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
+            <div className="relative flex items-center gap-2.5">
+              <div className={`p-1.5 rounded-lg ${card.iconBg} ring-1 ring-white/5`}>
+                <card.icon className={`w-3.5 h-3.5 ${card.iconColor}`} />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-white">{card.value}{card.suffix && <span className="text-[10px] font-normal text-gray-500">{card.suffix}</span>}</p>
+                <p className="text-[9px] text-gray-500">{card.label}</p>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="relative overflow-hidden rounded-xl border border-purple-500/20 bg-black/60 backdrop-blur-xl p-3">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/[0.04] to-transparent" />
-          <div className="relative flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-purple-500/10"><Award className="w-3.5 h-3.5 text-purple-400" /></div>
-            <div>
-              <p className="text-lg font-bold text-white">{best1RM} <span className="text-[10px] font-normal text-gray-500">lbs</span></p>
-              <p className="text-[9px] text-gray-500">Best 1RM</p>
-            </div>
-          </div>
-        </div>
-        <div className="relative overflow-hidden rounded-xl border border-emerald-500/20 bg-black/60 backdrop-blur-xl p-3">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.04] to-transparent" />
-          <div className="relative flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-emerald-500/10"><Flame className="w-3.5 h-3.5 text-emerald-400" /></div>
-            <div>
-              <p className="text-lg font-bold text-white">{totalVolume > 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume}</p>
-              <p className="text-[9px] text-gray-500">Volume</p>
-            </div>
-          </div>
-        </div>
-        <div className="relative overflow-hidden rounded-xl border border-rose-500/20 bg-black/60 backdrop-blur-xl p-3">
-          <div className="absolute inset-0 bg-gradient-to-br from-rose-500/[0.04] to-transparent" />
-          <div className="relative flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-rose-500/10"><Flame className="w-3.5 h-3.5 text-rose-400" /></div>
-            <div>
-              <p className="text-lg font-bold text-white">{prStreak}<span className="text-[10px] font-normal text-gray-500">d</span></p>
-              <p className="text-[9px] text-gray-500">Streak</p>
-            </div>
-          </div>
-        </div>
+          </motion.div>
+        ))}
       </motion.div>
 
       {/* PERFCOACH Panel */}
@@ -567,11 +568,15 @@ export function Progress() {
 
               {/* Coach cards */}
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Medal className="w-3 h-3 text-amber-400" />
-                    <span className="text-[10px] text-gray-400">Strength Levels</span>
-                  </div>
+                <div className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-amber-500/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-500/5 border border-amber-500/15 flex items-center justify-center">
+                        <Medal className="w-2.5 h-2.5 text-amber-400" />
+                      </div>
+                      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Strength Levels</span>
+                    </div>
                   {strengthLevels.length > 0 ? (
                     <>
                       <p className="text-sm font-bold text-white">{strengthLevels.length}<span className="text-xs text-gray-500 font-normal"> exercises</span></p>
@@ -596,11 +601,16 @@ export function Progress() {
                     </>
                   )}
                 </div>
-                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Flame className="w-3 h-3 text-emerald-400" />
-                    <span className="text-[10px] text-gray-400">Volume Overview</span>
-                  </div>
+              </div>
+              <div className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 border border-emerald-500/15 flex items-center justify-center">
+                        <Flame className="w-2.5 h-2.5 text-emerald-400" />
+                      </div>
+                      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Volume Overview</span>
+                    </div>
                   <p className="text-sm font-bold text-white">{totalVolume > 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume}<span className="text-xs text-gray-500 font-normal"> total lbs</span></p>
                   <p className="text-[10px] text-gray-500 mt-0.5">{records.length > 0 ? `${(totalVolume / records.length).toFixed(0)} avg per PR` : 'Log PRs to see averages'}</p>
                   <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden mt-2">
@@ -608,14 +618,19 @@ export function Progress() {
                   </div>
                 </div>
               </div>
+            </div>
 
               {/* AI Insights */}
               {perfInsights.length > 0 && (
-                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Sparkles className="w-3 h-3 text-amber-400" />
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-400/70">AI INSIGHTS</span>
-                  </div>
+                <div className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                  <div className="absolute inset-0 bg-gradient-to-br from-amber-500/3 via-transparent to-violet-500/3" />
+                  <div className="relative">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-500/5 border border-amber-500/15 flex items-center justify-center">
+                        <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400/70">AI Insights</span>
+                    </div>
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
                     {perfInsights.slice(0, 3).map((tip, i) => (
                       <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
@@ -626,6 +641,7 @@ export function Progress() {
                     ))}
                   </div>
                 </div>
+              </div>
               )}
             </div>
           </motion.div>
@@ -970,10 +986,11 @@ export function Progress() {
                       isActive
                         ? isAll ? 'bg-white/10 text-white border border-white/15 shadow-sm' : `${tier.text} border-current/25 bg-current/12 shadow-sm shadow-current/8`
                         : 'bg-white/[0.03] text-gray-600 border border-white/[0.06] hover:text-gray-400 hover:border-white/[0.12]'
-                    }`}>
+                    }`}
+                    style={isActive && !isAll ? { boxShadow: `0 0 10px currentColor, 0 0 20px currentColor` } : {}}>
                     <span className="mr-1.5">{isAll ? '✦' : tier.icon}</span>
                     {tier.label}
-                    <span className={`ml-1.5 ${isActive ? 'opacity-70' : 'text-gray-700'}`}>{tDone}</span>
+                    <span className={`ml-1.5 font-bold ${isActive ? 'opacity-70' : 'text-gray-700'}`}>{tDone}</span>
                   </motion.button>
                 )
               })}
