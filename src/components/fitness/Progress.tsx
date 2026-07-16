@@ -115,7 +115,9 @@ export function Progress() {
   const [justAdded, setJustAdded] = useState('')
   const [formData, setFormData] = useState({
     exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0],
-    type: 'weight' as 'weight' | 'reps' | 'volume',
+    type: 'weight' as 'weight' | 'reps' | 'volume' | 'endurance' | 'speed',
+    rpe: 0, sets: '', duration: '', distance: '',
+    contextTags: [] as string[],
     goalWeight: '', goalReps: '', goalVolume: '', notes: '',
   })
   const [selectedExercise] = useState<string>('')
@@ -335,11 +337,21 @@ export function Progress() {
   }, [records, perfFocus, prStreak, latestWeight, strengthLevels, totalVolume, exercises])
 
   const saveRecord = async () => {
-    const w = Number(formData.weight); const r = Number(formData.reps)
-    if (!formData.exerciseName.trim() || w <= 0 || r <= 0) return
+    if (!formData.exerciseName.trim()) return
+    const w = Number(formData.weight)
+    const r = Number(formData.reps)
+    if (formData.type !== 'endurance' && formData.type !== 'speed' && (w <= 0 || r <= 0) && !formData.duration && !formData.distance) return
     const newRecord: PersonalRecord = {
       id: crypto.randomUUID?.() ?? Math.random().toString(36).substring(2, 15),
-      exerciseName: formData.exerciseName.trim(), weight: w, reps: r, date: formData.date, type: formData.type,
+      exerciseName: formData.exerciseName.trim(),
+      weight: formData.type === 'endurance' ? 0 : (w || 0),
+      reps: formData.type === 'endurance' ? 0 : (r || 0),
+      date: formData.date, type: formData.type,
+      rpe: formData.rpe || undefined,
+      sets: Number(formData.sets) || undefined,
+      duration: Number(formData.duration) || undefined,
+      distance: Number(formData.distance) || undefined,
+      contextTags: formData.contextTags.length > 0 ? formData.contextTags : undefined,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     }
     if (formData.goalWeight) newRecord.goalWeight = Number(formData.goalWeight)
@@ -348,9 +360,9 @@ export function Progress() {
     if (formData.notes) newRecord.notes = formData.notes
     await addPersonalRecord(newRecord)
     setShowModal(false)
-    setFormData({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight', goalWeight: '', goalReps: '', goalVolume: '', notes: '' })
+    setFormData({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight', rpe: 0, sets: '', duration: '', distance: '', contextTags: [], goalWeight: '', goalReps: '', goalVolume: '', notes: '' })
     setConfettiTrigger(prev => prev + 1)
-    setJustAdded(`${formData.exerciseName} — ${w}lbs × ${r} reps`)
+    setJustAdded(`${formData.exerciseName} — ${formData.type === 'endurance' ? `${formData.duration || 0}s` : formData.type === 'speed' ? `${formData.distance || 0}m` : `${w}lbs × ${r} reps`}`)
     setTimeout(() => setJustAdded(''), 3000)
   }
 
@@ -1121,7 +1133,7 @@ export function Progress() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 overflow-y-auto"
-            onClick={() => { setFormData({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight', goalWeight: '', goalReps: '', goalVolume: '', notes: '' }); setShowModal(false) }}
+            onClick={() => { setFormData({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight', rpe: 0, sets: '', duration: '', distance: '', contextTags: [], goalWeight: '', goalReps: '', goalVolume: '', notes: '' }); setShowModal(false) }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.92, y: 30 }}
@@ -1141,13 +1153,13 @@ export function Progress() {
                       <Trophy className="w-4 h-4 text-amber-300" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-white tracking-tight">New Personal Record</h3>
-                      <p className="text-[10px] text-gray-500 mt-0.5">Log your latest achievement</p>
+                      <h3 className="text-base font-bold text-white tracking-tight">Log Achievement</h3>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Record what you crushed today</p>
                     </div>
                   </div>
 
                   <div className="space-y-3 max-h-[62vh] overflow-y-auto pr-1 custom-scrollbar">
-                    {/* Exercise */}
+                    {/* Exercise (kept, essential) */}
                     <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
                       <div className="rounded-xl bg-gray-900/60 p-3">
                         <div className="flex items-center gap-2 mb-3">
@@ -1157,40 +1169,158 @@ export function Progress() {
                           <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-amber-300/70">Exercise</span>
                           <div className="flex-1 h-px bg-gradient-to-r from-amber-500/20 via-amber-500/5 to-transparent" />
                         </div>
-                        <div>
-                          <input type="text" value={formData.exerciseName}
-                            onChange={e => setFormData({ ...formData, exerciseName: e.target.value })}
-                            placeholder="e.g., Bench Press"
-                            list="exercise-list"
-                            className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-amber-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-amber-500/25 hover:border-white/[0.15]" />
-                          <datalist id="exercise-list">{exercises.map(ex => <option key={ex} value={ex} />)}</datalist>
+                        <input type="text" value={formData.exerciseName}
+                          onChange={e => setFormData({ ...formData, exerciseName: e.target.value })}
+                          placeholder="e.g., Bench Press"
+                          list="exercise-list"
+                          className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-amber-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-amber-500/25 hover:border-white/[0.15]" />
+                        <datalist id="exercise-list">{exercises.map(ex => <option key={ex} value={ex} />)}</datalist>
+                      </div>
+                    </div>
+
+                    {/* PR Type — full-width visual cards */}
+                    <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
+                      <div className="rounded-xl bg-gray-900/60 p-3">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-5 h-5 rounded-md bg-violet-500/15 flex items-center justify-center">
+                            <Target className="w-3 h-3 text-violet-300" />
+                          </div>
+                          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-violet-300/70">Record Type</span>
+                          <div className="flex-1 h-px bg-gradient-to-r from-violet-500/20 via-violet-500/5 to-transparent" />
+                        </div>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {[
+                            { value: 'weight' as const, label: 'Weight', icon: '🏋️', active: 'bg-amber-500/15 border-amber-500/40', inactive: 'border-white/[0.06]' },
+                            { value: 'reps' as const, label: 'Reps', icon: '🔥', active: 'bg-purple-500/15 border-purple-500/40', inactive: 'border-white/[0.06]' },
+                            { value: 'volume' as const, label: 'Volume', icon: '📊', active: 'bg-emerald-500/15 border-emerald-500/40', inactive: 'border-white/[0.06]' },
+                            { value: 'endurance' as const, label: 'Endurance', icon: '⏱️', active: 'bg-cyan-500/15 border-cyan-500/40', inactive: 'border-white/[0.06]' },
+                            { value: 'speed' as const, label: 'Speed', icon: '⚡', active: 'bg-rose-500/15 border-rose-500/40', inactive: 'border-white/[0.06]' },
+                          ].map(({ value, label, icon, active, inactive }) => (
+                            <motion.button key={value} type="button"
+                              whileTap={{ scale: 0.93 }}
+                              onClick={() => setFormData({ ...formData, type: value })}
+                              className={`flex flex-col items-center gap-0.5 py-2 rounded-lg border transition-all ${formData.type === value ? active : `bg-white/[0.03] ${inactive} hover:border-white/[0.15]`}`}>
+                              <span className="text-base leading-none">{icon}</span>
+                              <span className={`text-[7px] font-bold uppercase tracking-wider ${formData.type === value ? 'text-white' : 'text-gray-500'}`}>{label}</span>
+                            </motion.button>
+                          ))}
                         </div>
                       </div>
                     </div>
 
-                    {/* Weight & Reps */}
+                    {/* Dynamic fields based on type */}
+                    {formData.type !== 'endurance' && formData.type !== 'speed' && (
+                      <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
+                        <div className="rounded-xl bg-gray-900/60 p-3">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[10px] font-semibold text-gray-500 mb-1">Weight <span className="text-gray-600">(lbs)</span></label>
+                              <input type="number" value={formData.weight} onChange={e => setFormData({ ...formData, weight: e.target.value })}
+                                placeholder="0" className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-violet-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-violet-500/25 hover:border-white/[0.15]" />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-semibold text-gray-500 mb-1">Reps</label>
+                              <input type="number" value={formData.reps} onChange={e => setFormData({ ...formData, reps: e.target.value })}
+                                placeholder="0" className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-violet-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-violet-500/25 hover:border-white/[0.15]" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {formData.type === 'endurance' && (
+                      <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
+                        <div className="rounded-xl bg-gray-900/60 p-3">
+                          <label className="block text-[10px] font-semibold text-gray-500 mb-1">Duration <span className="text-gray-600">(seconds)</span></label>
+                          <input type="number" value={formData.duration} onChange={e => setFormData({ ...formData, duration: e.target.value })}
+                            placeholder="e.g., 120" className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-cyan-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-cyan-500/25 hover:border-white/[0.15]" />
+                        </div>
+                      </div>
+                    )}
+
+                    {formData.type === 'speed' && (
+                      <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
+                        <div className="rounded-xl bg-gray-900/60 p-3">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[10px] font-semibold text-gray-500 mb-1">Distance <span className="text-gray-600">(m)</span></label>
+                              <input type="number" value={formData.distance} onChange={e => setFormData({ ...formData, distance: e.target.value })}
+                                placeholder="e.g., 100" className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-rose-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-rose-500/25 hover:border-white/[0.15]" />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-semibold text-gray-500 mb-1">Time <span className="text-gray-600">(s)</span></label>
+                              <input type="number" value={formData.duration} onChange={e => setFormData({ ...formData, duration: e.target.value })}
+                                placeholder="e.g., 9.8" step="0.01" className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-rose-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-rose-500/25 hover:border-white/[0.15]" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* RPE - quick effort selector */}
                     <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
                       <div className="rounded-xl bg-gray-900/60 p-3">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-5 h-5 rounded-md bg-purple-500/15 flex items-center justify-center">
-                            <Award className="w-3 h-3 text-purple-300" />
-                          </div>
-                          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-purple-300/70">Lift Details</span>
-                          <div className="flex-1 h-px bg-gradient-to-r from-purple-500/20 via-purple-500/5 to-transparent" />
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[11px]">💪</span>
+                          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-gray-500">RPE (Effort)</span>
+                          {formData.rpe > 0 && (
+                            <span className={`text-[10px] font-bold ml-auto ${formData.rpe <= 3 ? 'text-emerald-400' : formData.rpe <= 6 ? 'text-amber-400' : formData.rpe <= 8 ? 'text-orange-400' : 'text-rose-400'}`}>
+                              {formData.rpe <= 3 ? 'Light' : formData.rpe <= 5 ? 'Moderate' : formData.rpe <= 7 ? 'Hard' : formData.rpe <= 9 ? 'Very Hard' : 'Max Effort'}
+                            </span>
+                          )}
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="block text-[10px] font-semibold text-gray-500 mb-1">Weight (lbs)</label>
-                            <input type="number" value={formData.weight} onChange={e => setFormData({ ...formData, weight: e.target.value })}
-                              placeholder="0"
-                              className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-purple-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-purple-500/25 hover:border-white/[0.15]" />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-semibold text-gray-500 mb-1">Reps</label>
-                            <input type="number" value={formData.reps} onChange={e => setFormData({ ...formData, reps: e.target.value })}
-                              placeholder="0"
-                              className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-purple-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-purple-500/25 hover:border-white/[0.15]" />
-                          </div>
+                        <div className="flex gap-1">
+                          {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                            <button key={n} type="button"
+                              onClick={() => setFormData({ ...formData, rpe: formData.rpe === n ? 0 : n })}
+                              className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                                formData.rpe === n
+                                  ? n <= 3 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                    : n <= 6 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                    : n <= 8 ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+                                    : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                  : 'bg-white/[0.03] text-gray-500 border border-white/[0.06] hover:border-white/[0.15]'
+                              }`}>
+                              {n}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sets */}
+                    <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
+                      <div className="rounded-xl bg-gray-900/60 p-3">
+                        <label className="block text-[10px] font-semibold text-gray-500 mb-1">Sets Performed</label>
+                        <input type="number" value={formData.sets} onChange={e => setFormData({ ...formData, sets: e.target.value })}
+                          placeholder="1" className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-violet-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-violet-500/25 hover:border-white/[0.15]" />
+                      </div>
+                    </div>
+
+                    {/* Context Tags */}
+                    <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
+                      <div className="rounded-xl bg-gray-900/60 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[11px]">🏷️</span>
+                          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-gray-500">Context</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {['New PR', 'Matched PR', 'Technique Focus', 'Post-Break', 'Peak Week', 'Deload', 'Solo', 'Spotter'].map(tag => {
+                            const active = formData.contextTags.includes(tag)
+                            return (
+                              <button key={tag} type="button" onClick={() => setFormData({
+                                ...formData,
+                                contextTags: active ? formData.contextTags.filter(t => t !== tag) : [...formData.contextTags, tag],
+                              })}
+                                className={`px-2.5 py-1 rounded-lg text-[9px] font-semibold transition-all border ${
+                                  active
+                                    ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+                                    : 'bg-white/[0.03] border-white/[0.06] text-gray-500 hover:text-gray-300 hover:border-white/[0.15]'
+                                }`}>
+                                {tag}
+                              </button>
+                            )
+                          })}
                         </div>
                       </div>
                     </div>
@@ -1198,80 +1328,26 @@ export function Progress() {
                     {/* Date */}
                     <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
                       <div className="rounded-xl bg-gray-900/60 p-3">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-5 h-5 rounded-md bg-violet-500/15 flex items-center justify-center">
-                            <Calendar className="w-3 h-3 text-violet-300" />
-                          </div>
-                          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-violet-300/70">Date</span>
-                          <div className="flex-1 h-px bg-gradient-to-r from-violet-500/20 via-violet-500/5 to-transparent" />
+                        <div className="flex items-center gap-2 mb-2">
+                          <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-gray-500">Date</span>
                         </div>
                         <input type="date" value={formData.date}
                           onChange={e => setFormData({ ...formData, date: e.target.value })}
-                          className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-violet-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-violet-500/25 hover:border-white/[0.15] [color-scheme:dark]" />
+                          className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs focus:border-violet-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-violet-500/25 hover:border-white/[0.15] [color-scheme:dark]" />
                       </div>
                     </div>
-
-                    {/* PR Category */}
-                    <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
-                      <div className="rounded-xl bg-gray-900/60 p-3">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-5 h-5 rounded-md bg-emerald-500/15 flex items-center justify-center">
-                            <Star className="w-3 h-3 text-emerald-300" />
-                          </div>
-                          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-emerald-300/70">PR Category</span>
-                          <div className="flex-1 h-px bg-gradient-to-r from-emerald-500/20 via-emerald-500/5 to-transparent" />
-                        </div>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {([{ value: 'weight', label: 'Weight', icon: Award }, { value: 'reps', label: 'Reps', icon: Star }, { value: 'volume', label: 'Volume', icon: Flame }] as const).map(({ value, label, icon: Icon }) => (
-                            <motion.button key={value} type="button"
-                              whileTap={{ scale: 0.93 }}
-                              onClick={() => setFormData({ ...formData, type: value })}
-                              className={`flex flex-col items-center gap-1 py-2.5 rounded-lg border transition-all ${
-                                formData.type === value
-                                  ? value === 'weight' ? 'bg-amber-500/15 border-amber-500/40' : value === 'reps' ? 'bg-purple-500/15 border-purple-500/40' : 'bg-emerald-500/15 border-emerald-500/40'
-                                  : 'bg-white/[0.03] border-white/[0.06] hover:border-white/[0.15]'
-                              }`}>
-                              <Icon className={`w-4 h-4 ${formData.type === value ? (value === 'weight' ? 'text-amber-300' : value === 'reps' ? 'text-purple-300' : 'text-emerald-300') : 'text-gray-500'}`} />
-                              <span className={`text-[8px] font-semibold ${formData.type === value ? (value === 'weight' ? 'text-amber-300' : value === 'reps' ? 'text-purple-300' : 'text-emerald-300') : 'text-gray-500'}`}>{label} PR</span>
-                            </motion.button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Est. 1RM */}
-                    {formData.weight && formData.reps && Number(formData.weight) > 0 && Number(formData.reps) > 0 && (
-                      <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
-                        <div className="rounded-xl bg-gray-900/60 p-3">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-5 h-5 rounded-md bg-amber-500/15 flex items-center justify-center">
-                              <Flame className="w-3 h-3 text-amber-300" />
-                            </div>
-                            <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-amber-300/70">Estimated 1RM</span>
-                            <div className="flex-1 h-px bg-gradient-to-r from-amber-500/20 via-amber-500/5 to-transparent" />
-                          </div>
-                          <div className="text-center py-2">
-                            <span className="text-2xl font-bold text-amber-300">{estimate1RM(Number(formData.weight), Number(formData.reps))}</span>
-                            <span className="text-xs text-gray-500 ml-1">lbs</span>
-                            <p className="text-[9px] text-gray-500 mt-1">Based on Epley formula: weight × (1 + reps / 30)</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
 
                     {/* Notes */}
                     <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-[1px]">
                       <div className="rounded-xl bg-gray-900/60 p-3">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-5 h-5 rounded-md bg-sky-500/15 flex items-center justify-center">
-                            <Activity className="w-3 h-3 text-sky-300" />
-                          </div>
-                          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-sky-300/70">Notes</span>
-                          <div className="flex-1 h-px bg-gradient-to-r from-sky-500/20 via-sky-500/5 to-transparent" />
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[11px]">📝</span>
+                          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-gray-500">Notes</span>
                         </div>
                         <textarea value={formData.notes}
                           onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                          placeholder="How did this feel? Any technique notes..."
+                          placeholder="How did it feel? Anything notable..."
                           rows={2}
                           className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:border-sky-500/50 focus:outline-none transition-all focus:ring-1 focus:ring-sky-500/25 hover:border-white/[0.15] resize-none" />
                       </div>
@@ -1284,7 +1360,7 @@ export function Progress() {
                       className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-emerald-500/20 border border-amber-500/25 text-amber-300 font-bold text-xs uppercase tracking-widest hover:from-amber-500/25 hover:via-amber-500/15 hover:to-emerald-500/25 transition-all flex items-center justify-center gap-2"
                     >
                       <Trophy className="w-4 h-4" />
-                      Save Personal Record
+                      Log Achievement
                     </motion.button>
                   </div>
 

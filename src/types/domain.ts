@@ -234,7 +234,12 @@ export interface PersonalRecord {
   exerciseId?: string;
   weight: number;
   reps: number;
-  type: 'weight' | 'reps' | 'volume';
+  type: 'weight' | 'reps' | 'volume' | 'endurance' | 'speed';
+  rpe?: number;
+  sets?: number;
+  duration?: number;
+  distance?: number;
+  contextTags?: string[];
   goalWeight?: number;
   goalReps?: number;
   goalVolume?: number;
