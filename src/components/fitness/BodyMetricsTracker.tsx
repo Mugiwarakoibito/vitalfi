@@ -14,7 +14,8 @@ import type { BodyMetric } from '@/types/fitness'
 import type { BodyFatResult } from '@/lib/calculations'
 import {
   Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area, PieChart, Pie, Cell,
+  AreaChart, Area, ReferenceLine,
+  PieChart, Pie, Cell,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from 'recharts'
 
@@ -110,6 +111,12 @@ function generateInsights(
 
   return insights.slice(0, 6)
 }
+
+const CustomGoalLabel = ({ goal }: { goal: number }) => (
+  <text x="0" y="0" dy="-6" dx="4" fill="#10b981" fontSize="9" fontWeight="700" opacity={0.8}>
+    Goal {goal.toFixed(1)}
+  </text>
+)
 
 export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
   const { bodyMetrics, addBodyMetric, deleteBodyMetric, settings } = useAppStore()
@@ -645,73 +652,101 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
               {/* Charts */}
               <div className="h-64 rounded-2xl bg-gradient-to-br from-black/60 via-white/[0.02] to-transparent border border-white/[0.06] p-4 shadow-inner shadow-white/5 relative overflow-hidden" style={{ minHeight: '260px' }}>
                 <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
-                <div className="absolute -top-12 -right-12 w-36 h-36 bg-rose-500/5 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -top-16 -right-16 w-44 h-44 bg-rose-500/8 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-16 -left-16 w-44 h-44 bg-violet-500/8 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute top-1/3 left-1/4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
                 <div className="relative z-10 h-full">
                   {(() => {
                     if (chartTab === 'weight') {
                       if (filteredChartData.length < 1) return <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log more entries to see trends</div>
+                      const latestW = filteredChartData[filteredChartData.length - 1]?.weight as number | undefined
                       return (
                         <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={filteredChartData} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
+                          <AreaChart data={filteredChartData} margin={{ top: 12, right: 8, bottom: 0, left: -16 }}>
                           <defs>
-                            <linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f43f5e" stopOpacity={0.45} /><stop offset="50%" stopColor="#f43f5e" stopOpacity={0.2} /><stop offset="100%" stopColor="#f43f5e" stopOpacity={0} /></linearGradient>
-                            <linearGradient id="bfg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f59e0b" stopOpacity={0.35} /><stop offset="60%" stopColor="#f59e0b" stopOpacity={0.12} /><stop offset="100%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
-                            <filter id="glowWeight"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                            <filter id="glowBf"><feGaussianBlur stdDeviation="2.5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                            <linearGradient id="wg" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#a78bfa" stopOpacity={0.5} />
+                              <stop offset="35%" stopColor="#7c3aed" stopOpacity={0.3} />
+                              <stop offset="65%" stopColor="#6366f1" stopOpacity={0.15} />
+                              <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                            </linearGradient>
+                            <linearGradient id="bfg" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.35} />
+                              <stop offset="60%" stopColor="#f59e0b" stopOpacity={0.12} />
+                              <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
+                            </linearGradient>
+                            <linearGradient id="gridGrad" x1="0" y1="0" x2="1" y2="0">
+                              <stop offset="0%" stopColor="rgba(255,255,255,0)" />
+                              <stop offset="50%" stopColor="rgba(255,255,255,0.04)" />
+                              <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+                            </linearGradient>
+                            <filter id="glowWeight"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                            <filter id="glowBf"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                            <filter id="glowDot"><feGaussianBlur stdDeviation="5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                            <filter id="glowGoal"><feGaussianBlur stdDeviation="2" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                           </defs>
-                          <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
-                          <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
-                          <YAxis yAxisId="left" stroke="#f43f5e" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={['dataMin - 2', 'dataMax + 2']} width={32} tickFormatter={v => `${v}`} />
-                          <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={['dataMin - 3', 'dataMax + 3']} width={32} tickFormatter={v => `${v}%`} />
+                          <CartesianGrid strokeDasharray="3 6" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
+                          <XAxis dataKey="date" stroke="#4b5563" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={8} interval="preserveStartEnd" tickMargin={4} />
+                          <YAxis yAxisId="left" stroke="#a78bfa" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={['dataMin - 1.5', 'dataMax + 1.5']} width={32} tickFormatter={v => `${v.toFixed(1)}`} tickMargin={2} />
+                          <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={['dataMin - 2', 'dataMax + 2']} width={32} tickFormatter={v => `${v.toFixed(0)}%`} tickMargin={2} />
+                          {goal && <ReferenceLine yAxisId="left" y={goal} stroke="#10b981" strokeWidth={1.5} strokeDasharray="6 4" opacity={0.7} label={<CustomGoalLabel goal={goal} />} />}
                           <Tooltip content={({ active, payload }) => {
                             if (!active || !payload?.length) return null
                             const d = payload[0].payload
-                            const prev = filteredChartData[filteredChartData.indexOf(d) - 1]
+                            const idx = filteredChartData.indexOf(d)
+                            const prev = idx > 0 ? filteredChartData[idx - 1] : null
                             const delta = prev?.weight != null && d.weight != null ? (d.weight as number) - (prev.weight as number) : null
+                            const goalDist = goal && d.weight != null ? (d.weight as number) - goal : null
                             return (
-                              <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-violet-500/5 min-w-[170px]">
-                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none" />
+                              <motion.div initial={{ opacity: 0, y: 8, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                                className="bg-gray-900/90 backdrop-blur-2xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-violet-500/10 min-w-[190px] relative overflow-hidden">
+                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/8 via-transparent to-rose-500/5 pointer-events-none" />
+                                <div className="absolute -top-8 -right-8 w-20 h-20 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
                                 <div className="relative">
                                   <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-white/5">
-                                    <span className="text-white font-bold text-xs">{d.date}</span>
-                                    {delta != null && (
-                                      <span className={`text-[10px] font-bold flex items-center gap-0.5 ${delta > 0 ? 'text-rose-400' : delta < 0 ? 'text-emerald-400' : 'text-gray-500'}`}>
-                                        {delta > 0 ? '▲' : delta < 0 ? '▼' : '–'} {Math.abs(delta).toFixed(2)} kg
+                                    <span className="text-white font-bold text-xs tracking-wide">{d.date}</span>
+                                    {delta != null && delta !== 0 && (
+                                      <span className={`text-[10px] font-bold flex items-center gap-1 px-1.5 py-0.5 rounded-md ${delta > 0 ? 'bg-rose-500/15 text-rose-300' : 'bg-emerald-500/15 text-emerald-300'}`}>
+                                        {delta > 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(1)} kg
                                       </span>
                                     )}
                                   </div>
                                   <div className="space-y-2">
                                     <div className="flex items-center gap-2.5">
-                                      <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shadow-lg shadow-rose-400/40" style={{ filter: 'url(#glowWeight)' }} />
+                                      <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-violet-400 to-rose-400 shadow-lg shadow-violet-400/40" style={{ filter: 'url(#glowWeight)' }} />
                                       <span className="text-gray-400 font-medium">Weight</span>
-                                      <span className="text-white font-bold ml-auto text-sm">{d.weight} <span className="text-[10px] font-normal text-gray-500">kg</span></span>
+                                      <span className="text-white font-bold ml-auto text-sm tabular-nums">{Number(d.weight).toFixed(1)} <span className="text-[10px] font-normal text-gray-500">kg</span></span>
                                     </div>
                                     {d.bodyFat != null && (
                                       <div className="flex items-center gap-2.5">
                                         <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-lg shadow-amber-400/40" style={{ filter: 'url(#glowBf)' }} />
                                         <span className="text-gray-400 font-medium">Body Fat</span>
-                                        <span className="text-white font-bold ml-auto text-sm">{d.bodyFat} <span className="text-[10px] font-normal text-gray-500">%</span></span>
+                                        <span className="text-white font-bold ml-auto text-sm tabular-nums">{Number(d.bodyFat).toFixed(1)} <span className="text-[10px] font-normal text-gray-500">%</span></span>
                                       </div>
                                     )}
-                                    {goal && (
-                                      <div className="flex items-center gap-2.5 pt-1.5 border-t border-white/5">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" />
+                                    {goalDist != null && (
+                                      <div className={`flex items-center gap-2.5 pt-1.5 border-t border-white/5 ${d.bodyFat != null ? '' : ''}`}>
+                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" style={{ filter: 'url(#glowGoal)' }} />
                                         <span className="text-gray-400 font-medium">Goal</span>
-                                        <span className="text-emerald-400 font-bold ml-auto">{goal.toFixed(1)} kg</span>
+                                        <span className={`font-bold ml-auto text-sm tabular-nums ${Math.abs(goalDist) < 0.5 ? 'text-emerald-400' : goalDist > 0 ? 'text-rose-400' : 'text-emerald-300'}`}>
+                                          {goalDist > 0 ? `${goalDist.toFixed(1)} kg above` : goalDist < 0 ? `${Math.abs(goalDist).toFixed(1)} kg below` : '✓ Reached'}
+                                        </span>
                                       </div>
                                     )}
                                   </div>
                                 </div>
                               </motion.div>
                             )
-                          }} cursor={{ fill: 'rgba(139,92,246,0.1)' }} />
-                          <Area yAxisId="left" type="monotone" dataKey="weight" stroke="#f43f5e" strokeWidth={2.5} fill="url(#wg)" dot={false} activeDot={{ r: 6, fill: '#f43f5e', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowWeight)' }} name="Weight (kg)" animationDuration={600} animationEasing="ease-out" />
+                          }} cursor={false} />
+                          <Area yAxisId="left" type="monotone" dataKey="weight" stroke="#a78bfa" strokeWidth={2.5} fill="url(#wg)" dot={{ r: 4, fill: '#a78bfa', strokeWidth: 2, stroke: '#1a1a2e', filter: 'url(#glowDot)' }} activeDot={{ r: 6, fill: '#c4b5fd', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowWeight)' }} name="Weight (kg)" animationDuration={800} animationEasing="ease-out" />
                           {filteredChartData.some(d => d.bodyFat != null) && (
-                            <Line yAxisId="right" type="monotone" dataKey="bodyFat" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#f59e0b', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowBf)' }} name="Body Fat %" animationDuration={600} animationEasing="ease-out" />
+                            <Line yAxisId="right" type="monotone" dataKey="bodyFat" stroke="#f59e0b" strokeWidth={2} strokeOpacity={0.8} dot={{ r: 3, fill: '#f59e0b', strokeWidth: 1.5, stroke: '#1a1a2e' }} activeDot={{ r: 5, fill: '#fcd34d', strokeWidth: 2.5, stroke: '#1a1a2e', filter: 'url(#glowBf)' }} name="Body Fat %" animationDuration={800} animationEasing="ease-out" />
                           )}
-                          {goal && <Line yAxisId="left" type="monotone" dataKey={() => goal} stroke="#10b981" strokeWidth={1.5} strokeDasharray="5 4" dot={false} opacity={0.7} name="Goal" animationDuration={400} />}
+                          {latestW != null && (
+                            <text x="96%" y="12" textAnchor="end" fill="#a78bfa" fontSize="10" fontWeight="700" className="tabular-nums">
+                              {latestW.toFixed(1)} kg
+                            </text>
+                          )}
                         </AreaChart>
                       </ResponsiveContainer>
                     )}
