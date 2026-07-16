@@ -125,6 +125,8 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
   const [weight, setWeight] = useState('')
   const [bodyFat, setBodyFat] = useState('')
   const [measurements, setMeasurements] = useState<Record<string, string>>({})
+  const [notes, setNotes] = useState('')
+  const [energy, setEnergy] = useState(5)
   const [deletingEntry, setDeletingEntry] = useState<BodyMetric | null>(null)
   const [targetWeight, setTargetWeight] = useState<string>(() => localStorage.getItem(GOAL_STORAGE_KEY) ?? '')
   const [goalBodyFat, setGoalBodyFat] = useState<string>(() => localStorage.getItem(GOAL_BF_KEY) ?? '')
@@ -260,7 +262,7 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
   const weightOrDefault = latest?.weight?.toString() ?? '70'
   const bodyFatOrDefault = latest?.bodyFat?.toString() ?? '15'
 
-  const reset = () => { setDate(new Date().toISOString().split('T')[0]); setWeight(''); setBodyFat(''); setMeasurements({}) }
+  const reset = () => { setDate(new Date().toISOString().split('T')[0]); setWeight(''); setBodyFat(''); setMeasurements({}); setNotes(''); setEnergy(5) }
 
   const handleSave = async () => {
     const w = parseFloat(weight); if (isNaN(w) || w <= 0) return
@@ -268,7 +270,7 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
     if (bf != null && (isNaN(bf) || bf <= 0 || bf > 100)) return
     const numericMeasurements: Record<string, number> = {}
     Object.entries(measurements).forEach(([k, v]) => { const num = parseFloat(v); if (!isNaN(num) && num > 0) numericMeasurements[k] = num })
-    await addBodyMetric({ id: generateId(), date, weight: w, bodyFat: bf, measurements: numericMeasurements, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
+    await addBodyMetric({ id: generateId(), date, weight: w, bodyFat: bf, measurements: numericMeasurements, notes: notes || undefined, energy: energy || undefined, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
     reset(); setShowForm(false)
   }
 
@@ -1010,19 +1012,20 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                 <div className="absolute inset-0 bg-gradient-to-r from-rose-500/[0.02] to-transparent pointer-events-none" />
                 <div className="relative z-10">
                   <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center shadow-lg" style={{ boxShadow: '0 0 20px rgba(244,63,94,0.15)' }}>
-                        <Activity className="w-5 h-5 text-rose-400" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-white text-sm">{new Date(m.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</h4>
-                        <div className="flex gap-3 text-xs">
-                          {m.weight && <span className="text-gray-300">{m.weight.toFixed(1)} kg</span>}
-                          {m.bodyFat && <span className="text-amber-400">{m.bodyFat.toFixed(1)}% fat</span>}
-                          {Object.keys(m.measurements).length > 0 && <span className="text-gray-500">{Object.keys(m.measurements).length} measurements</span>}
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center shadow-lg" style={{ boxShadow: '0 0 20px rgba(244,63,94,0.15)' }}>
+                          <Activity className="w-5 h-5 text-rose-400" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-white text-sm">{new Date(m.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</h4>
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
+                            {m.weight && <span className="text-gray-300">{m.weight.toFixed(1)} kg</span>}
+                            {m.bodyFat && <span className="text-amber-400">{m.bodyFat.toFixed(1)}% fat</span>}
+                            {m.energy && <span className="text-amber-400/70">⚡{m.energy}/10</span>}
+                            {Object.keys(m.measurements).length > 0 && <span className="text-gray-500">{Object.keys(m.measurements).length} measurements</span>}
+                          </div>
                         </div>
                       </div>
-                    </div>
                     <button onClick={() => setDeletingEntry(m)} className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                   {Object.keys(m.measurements).length > 0 && (
@@ -1047,6 +1050,12 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                     <div className="mt-2 flex items-center gap-2">
                       <span className="text-[10px] text-gray-500">BMI: {calculateBMI(m.weight, heightCm).toFixed(1)}</span>
                       <span className={`text-[10px] ${bmiCategory(calculateBMI(m.weight, heightCm)).color}`}>{bmiCategory(calculateBMI(m.weight, heightCm)).label}</span>
+                    </div>
+                  )}
+                  {m.notes && (
+                    <div className="mt-2 flex items-start gap-1.5 text-[10px] text-gray-500 italic border-t border-white/5 pt-2">
+                      <span className="text-gray-600 shrink-0">📝</span>
+                      <span>{m.notes}</span>
                     </div>
                   )}
                 </div>
@@ -1169,6 +1178,27 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                       </motion.div>
                     ))}
                   </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Energy Level</label>
+                    <span className="text-sm font-bold text-white">{energy}/10</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs">😴</span>
+                    <input type="range" min={1} max={10} value={energy} onChange={(e) => setEnergy(parseInt(e.target.value))}
+                      className="flex-1 h-1.5 rounded-full appearance-none bg-white/10 outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-400 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-amber-400/30"
+                      style={{ background: `linear-gradient(to right, #f59e0b ${(energy / 10) * 100}%, rgba(255,255,255,0.1) ${(energy / 10) * 100}%)` }} />
+                    <span className="text-xs">⚡</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Notes</label>
+                  <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/40 transition-all resize-none h-20 placeholder-gray-600"
+                    placeholder="How are you feeling today? Any observations..." />
                 </div>
 
                 <div className="flex gap-3 pt-2">

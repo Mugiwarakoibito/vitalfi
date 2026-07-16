@@ -180,6 +180,8 @@ export interface BodyMetric {
   weight?: number;
   bodyFat?: number;
   measurements: Record<string, number>;
+  notes?: string;
+  energy?: number;
   createdAt: string;
   updatedAt: string;
 }
