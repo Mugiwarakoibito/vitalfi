@@ -650,7 +650,7 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                 <div className="relative z-10 h-full">
                   {(() => {
                     if (chartTab === 'weight') {
-                      if (filteredChartData.length <= 1) return <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log more entries to see trends</div>
+                      if (filteredChartData.length < 1) return <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log more entries to see trends</div>
                       return (
                         <ResponsiveContainer width="100%" height="100%">
                           <AreaChart data={filteredChartData} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
