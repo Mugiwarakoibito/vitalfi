@@ -26,8 +26,8 @@ export const useAppStore = create<AppState>()((...args) => {
     loadAllData: async () => {
       const stores = [
         'accounts', 'transactions', 'budgets', 'workouts', 'meals',
-        'bodyMetrics', 'hydration', 'sleep', 'goals', 'investments',
-        'bills', 'debts', 'subscriptions',
+        'bodyMetrics', 'hydration', 'sleep', 'goals', 'personalRecords',
+        'investments', 'bills', 'debts', 'subscriptions',
       ];
       const results = await Promise.allSettled(
         stores.map(store => storage.getAll(store as any))

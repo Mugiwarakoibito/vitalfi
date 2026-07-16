@@ -13,20 +13,7 @@ import {
   ResponsiveContainer, BarChart,
 } from 'recharts'
 import { useAppStore } from '@/store/useAppStore'
-import type { Workout, BodyMetric, WorkoutExercise, ExerciseSet } from '@/types/domain'
-
-interface PR {
-  id: string
-  exerciseName: string
-  weight: number
-  reps: number
-  date: string
-  type: 'weight' | 'reps' | 'volume'
-  goalWeight?: number
-  goalReps?: number
-  goalVolume?: number
-  notes?: string
-}
+import type { Workout, BodyMetric, WorkoutExercise, ExerciseSet, PersonalRecord } from '@/types/domain'
 
 interface StrengthLevel {
   exercise: string
@@ -37,7 +24,6 @@ interface StrengthLevel {
   bodyWeight: number
 }
 
-const STORAGE_KEY = 'vitalfi_progress_records'
 const ACHIEVEMENTS_KEY = 'vitalfi_progress_achievements'
 const CONFETTI_COLORS = ['#F59E0B', '#A78BFA', '#10B981', '#EF4444', '#3B82F6']
 
@@ -122,13 +108,8 @@ function estimate1RM(weight: number, reps: number): number {
 }
 
 export function Progress() {
-  const { workouts, bodyMetrics } = useAppStore()
-  const [records, setRecords] = useState<PR[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      return saved ? JSON.parse(saved) : []
-    } catch { return [] }
-  })
+  const { workouts, bodyMetrics, personalRecords, addPersonalRecord } = useAppStore()
+  const records = personalRecords
   const [showModal, setShowModal] = useState(false)
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [justAdded, setJustAdded] = useState('')
@@ -285,10 +266,6 @@ export function Progress() {
   }, [records])
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records))
-  }, [records])
-
-  useEffect(() => {
     try {
       const saved = localStorage.getItem(ACHIEVEMENTS_KEY)
       if (saved) setEarned(new Set(JSON.parse(saved)))
@@ -357,18 +334,19 @@ export function Progress() {
     return tips
   }, [records, perfFocus, prStreak, latestWeight, strengthLevels, totalVolume, exercises])
 
-  const saveRecord = () => {
+  const saveRecord = async () => {
     const w = Number(formData.weight); const r = Number(formData.reps)
     if (!formData.exerciseName.trim() || w <= 0 || r <= 0) return
-    const newRecord: PR = {
+    const newRecord: PersonalRecord = {
       id: crypto.randomUUID?.() ?? Math.random().toString(36).substring(2, 15),
       exerciseName: formData.exerciseName.trim(), weight: w, reps: r, date: formData.date, type: formData.type,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     }
     if (formData.goalWeight) newRecord.goalWeight = Number(formData.goalWeight)
     if (formData.goalReps) newRecord.goalReps = Number(formData.goalReps)
     if (formData.goalVolume) newRecord.goalVolume = Number(formData.goalVolume)
     if (formData.notes) newRecord.notes = formData.notes
-    setRecords(prev => [...prev, newRecord])
+    await addPersonalRecord(newRecord)
     setShowModal(false)
     setFormData({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight', goalWeight: '', goalReps: '', goalVolume: '', notes: '' })
     setConfettiTrigger(prev => prev + 1)

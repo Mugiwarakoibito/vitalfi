@@ -227,6 +227,22 @@ export interface SleepEntry {
   updatedAt: string;
 }
 
+export interface PersonalRecord {
+  id: string;
+  date: string;
+  exerciseName: string;
+  exerciseId?: string;
+  weight: number;
+  reps: number;
+  type: 'weight' | 'reps' | 'volume';
+  goalWeight?: number;
+  goalReps?: number;
+  goalVolume?: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Goal {
   id: string;
   type: 'financial' | 'fitness';
@@ -268,6 +284,7 @@ export interface DBSchema {
   hydration: HydrationEntry;
   sleep: SleepEntry;
   goals: Goal;
+  personalRecords: PersonalRecord;
   settings: AppSettings;
   investments: Investment;
   bills: Bill;

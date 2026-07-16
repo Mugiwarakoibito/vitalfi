@@ -1,4 +1,4 @@
-import type { AppSettings, Account, Transaction, Budget, Workout, Meal, BodyMetric, HydrationEntry, SleepEntry, Goal, Investment, Bill, Debt, Subscription } from '../types/domain';
+import type { AppSettings, Account, Transaction, Budget, Workout, Meal, BodyMetric, HydrationEntry, SleepEntry, PersonalRecord, Goal, Investment, Bill, Debt, Subscription } from '../types/domain';
 
 export interface AuthSlice {
   isLicensed: boolean;
@@ -65,6 +65,9 @@ export interface FitnessSlice {
   hydration: HydrationEntry[];
   sleep: SleepEntry[];
   goals: Goal[];
+  personalRecords: PersonalRecord[];
+  addPersonalRecord: (record: PersonalRecord) => Promise<void>;
+  deletePersonalRecord: (id: string) => Promise<void>;
   addWorkout: (workout: Workout) => Promise<void>;
   updateWorkout: (workout: Workout) => Promise<void>;
   deleteWorkout: (id: string) => Promise<void>;

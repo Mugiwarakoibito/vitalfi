@@ -2,7 +2,7 @@ import { generateId } from './utils';
 import type { DBSchema } from '../types/domain';
 
 const DB_NAME = 'LifeSyncDB';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 class Storage {
   private db: IDBDatabase | null = null;
@@ -42,8 +42,8 @@ class Storage {
           const stores = [
             'accounts', 'transactions', 'budgets', 'workouts',
             'workoutTemplates', 'meals', 'bodyMetrics', 'hydration',
-            'sleep', 'goals', 'settings', 'investments', 'bills',
-            'debts', 'subscriptions'
+            'sleep', 'goals', 'personalRecords', 'settings', 'investments',
+            'bills', 'debts', 'subscriptions'
           ];
           stores.forEach(store => {
             if (!db.objectStoreNames.contains(store)) {
@@ -191,8 +191,8 @@ class Storage {
     const storeNames: (keyof DBSchema)[] = [
       'accounts', 'transactions', 'budgets', 'workouts',
       'workoutTemplates', 'meals', 'bodyMetrics', 'hydration',
-      'sleep', 'goals', 'settings', 'investments', 'bills',
-      'debts', 'subscriptions'
+      'sleep', 'goals', 'personalRecords', 'settings', 'investments',
+      'bills', 'debts', 'subscriptions'
     ];
 
     for (const storeName of storeNames) {
@@ -209,8 +209,8 @@ class Storage {
     const storeNames: (keyof DBSchema)[] = [
       'accounts', 'transactions', 'budgets', 'workouts',
       'workoutTemplates', 'meals', 'bodyMetrics', 'hydration',
-      'sleep', 'goals', 'settings', 'investments', 'bills',
-      'debts', 'subscriptions'
+      'sleep', 'goals', 'personalRecords', 'settings', 'investments',
+      'bills', 'debts', 'subscriptions'
     ];
 
     for (const storeName of storeNames) {
