@@ -222,6 +222,19 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
 
   const activeMeasureFields = useMemo(() => measurementFields.filter(f => measureChartData.some(d => d[f.key] != null)), [measureChartData])
 
+  const availableBodyTabs: ('weight' | 'measurements' | 'composition')[] = useMemo(() => {
+    const tabs: ('weight' | 'measurements' | 'composition')[] = ['weight']
+    if (activeMeasureFields.length > 0) tabs.push('measurements')
+    if (leanMass != null || fatMass != null) tabs.push('composition')
+    return tabs
+  }, [activeMeasureFields, leanMass, fatMass])
+
+  useEffect(() => {
+    if (!availableBodyTabs.includes(chartTab as typeof availableBodyTabs[number])) {
+      setChartTab('weight')
+    }
+  }, [availableBodyTabs, chartTab])
+
   const estimatedBfResult = useMemo<BodyFatResult | null>(() => {
     if (latest?.bodyFat != null) return null
     const m = latest?.measurements
@@ -530,48 +543,34 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
               </div>
             </div>
 
-            {/* Coach cards */}
+            {/* Coach cards — data related */}
             <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Heart className="w-3 h-3 text-emerald-400" />
-                  <span className="text-[10px] text-gray-400">Body Composition</span>
+              {leanMass != null && fatMass != null && (
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Heart className="w-3 h-3 text-emerald-400" />
+                    <span className="text-[10px] text-gray-400">Body Composition</span>
+                  </div>
+                  <p className="text-sm font-bold text-white">{leanMass.toFixed(1)}<span className="text-xs text-gray-500 font-normal"> kg lean</span></p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">{fatMass.toFixed(1)} kg fat · {((fatMass / (leanMass + fatMass)) * 100).toFixed(1)}% body fat</p>
+                  <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden mt-2">
+                    <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-amber-500 transition-all" style={{ width: `${(leanMass / (leanMass + fatMass)) * 100}%` }} />
+                  </div>
                 </div>
-                {leanMass != null && fatMass != null ? (
-                  <>
-                    <p className="text-sm font-bold text-white">{leanMass.toFixed(1)}<span className="text-xs text-gray-500 font-normal"> kg lean</span></p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">{fatMass.toFixed(1)} kg fat · {((fatMass / (leanMass + fatMass)) * 100).toFixed(1)}% body fat</p>
-                    <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden mt-2">
-                      <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-amber-500 transition-all" style={{ width: `${(leanMass / (leanMass + fatMass)) * 100}%` }} />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm font-bold text-gray-500">Need body fat %</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Log body fat to see composition breakdown</p>
-                  </>
-                )}
-              </div>
-              <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Target className="w-3 h-3 text-violet-400" />
-                  <span className="text-[10px] text-gray-400">Goal Projection</span>
+              )}
+              {goal && latest?.weight != null && (
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Target className="w-3 h-3 text-violet-400" />
+                    <span className="text-[10px] text-gray-400">Goal Projection</span>
+                  </div>
+                  <p className="text-sm font-bold text-white">{goal.toFixed(1)}<span className="text-xs text-gray-500 font-normal"> kg target</span></p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">{Math.abs(latest.weight - goal).toFixed(1)} kg {latest.weight > goal ? 'to lose' : 'to gain'}</p>
+                  <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden mt-2">
+                    <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-emerald-400 transition-all" style={{ width: `${Math.max(0, Math.min(100, goalPercent ?? 0))}%` }} />
+                  </div>
                 </div>
-                {goal && latest?.weight != null ? (
-                  <>
-                    <p className="text-sm font-bold text-white">{goal.toFixed(1)}<span className="text-xs text-gray-500 font-normal"> kg target</span></p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">{Math.abs(latest.weight - goal).toFixed(1)} kg {latest.weight > goal ? 'to lose' : 'to gain'}</p>
-                    <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden mt-2">
-                      <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-emerald-400 transition-all" style={{ width: `${Math.max(0, Math.min(100, goalPercent ?? 0))}%` }} />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm font-bold text-gray-500">Set a goal weight</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Use the Target icon to set goals</p>
-                  </>
-                )}
-              </div>
+              )}
             </div>
 
             {/* AI Insights */}
@@ -598,7 +597,7 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
 
       {/* BODYSCOPE Panel */}
       <AnimatePresence>
-        {showBodyScope && (
+        {bodyMetrics.length > 0 && showBodyScope && (
           <motion.div key="bodyscope" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
             className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
@@ -630,7 +629,7 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                   )}
                 </div>
                 <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
-                  {(['weight', 'measurements', 'composition'] as const).map(mode => (
+                  {availableBodyTabs.map(mode => (
                     <button key={mode} onClick={() => setChartTab(mode)}
                       className={`relative px-3.5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
                         chartTab === mode
