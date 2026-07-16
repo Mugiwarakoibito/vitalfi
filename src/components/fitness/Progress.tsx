@@ -27,21 +27,29 @@ interface StrengthLevel {
 const ACHIEVEMENTS_KEY = 'vitalfi_progress_achievements'
 const CONFETTI_COLORS = ['#F59E0B', '#A78BFA', '#10B981', '#EF4444', '#3B82F6']
 
-const ACHIEVEMENT_DEFS: { id: string; name: string; icon: keyof typeof ACHIEVEMENT_ICON_MAP; description: string; check: (stats: { prCount: number; totalVolume: number; exercises: number; bestRatio: number; streak: number; hasAdvanced: boolean }) => boolean }[] = [
-  { id: 'first_pr', name: 'First PR', icon: 'star', description: 'Log your first personal record', check: s => s.prCount >= 1 },
-  { id: 'five_prs', name: 'On Fire', icon: 'flame', description: 'Log 5 personal records', check: s => s.prCount >= 5 },
-  { id: 'ten_prs', name: 'Rising Star', icon: 'award', description: 'Log 10 personal records', check: s => s.prCount >= 10 },
-  { id: 'twenty_five_prs', name: 'Dedicated', icon: 'medal', description: 'Log 25 personal records', check: s => s.prCount >= 25 },
-  { id: 'fifty_prs', name: 'PR Machine', icon: 'trophy', description: 'Log 50 personal records', check: s => s.prCount >= 50 },
-  { id: 'hundred_prs', name: 'Legendary', icon: 'trophy', description: 'Log 100 personal records', check: s => s.prCount >= 100 },
-  { id: 'volume_100k', name: 'Volume Novice', icon: 'flame', description: 'Reach 100,000 total volume', check: s => s.totalVolume >= 100000 },
-  { id: 'volume_master', name: 'Volume Master', icon: 'flame', description: 'Reach 1,000,000 total volume', check: s => s.totalVolume >= 1000000 },
-  { id: 'five_exercises', name: 'Explorer', icon: 'star', description: 'Log PRs in 5 different exercises', check: s => s.exercises >= 5 },
-  { id: 'ten_exercises', name: 'Versatile', icon: 'award', description: 'Log PRs in 10 different exercises', check: s => s.exercises >= 10 },
-  { id: 'strength_milestone', name: 'Strength Milestone', icon: 'medal', description: 'Reach Advanced tier on any exercise', check: s => s.hasAdvanced },
-  { id: 'elite_milestone', name: 'Elite Status', icon: 'star', description: 'Reach Elite tier on any exercise', check: s => s.bestRatio >= 2.5 },
-  { id: 'seven_day_streak', name: 'Consistent', icon: 'flame', description: 'PR on 7 different days', check: s => s.streak >= 7 },
-  { id: 'fourteen_day_streak', name: 'Unstoppable', icon: 'trophy', description: 'PR on 14 different days', check: s => s.streak >= 14 },
+const ACHIEVEMENT_TIERS: { key: string; label: string; icon: string; gradient: string; border: string; text: string; bg: string }[] = [
+  { key: 'milestones', label: 'Milestones', icon: '🏆', gradient: 'from-amber-500/20 to-yellow-500/10', border: 'border-amber-500/20', text: 'text-amber-300', bg: 'bg-amber-500/[0.04]' },
+  { key: 'volume', label: 'Volume', icon: '📊', gradient: 'from-emerald-500/20 to-teal-500/10', border: 'border-emerald-500/20', text: 'text-emerald-300', bg: 'bg-emerald-500/[0.04]' },
+  { key: 'variety', label: 'Variety', icon: '🎯', gradient: 'from-violet-500/20 to-purple-500/10', border: 'border-violet-500/20', text: 'text-violet-300', bg: 'bg-violet-500/[0.04]' },
+  { key: 'strength', label: 'Strength', icon: '💪', gradient: 'from-rose-500/20 to-pink-500/10', border: 'border-rose-500/20', text: 'text-rose-300', bg: 'bg-rose-500/[0.04]' },
+  { key: 'consistency', label: 'Consistency', icon: '🔥', gradient: 'from-cyan-500/20 to-sky-500/10', border: 'border-cyan-500/20', text: 'text-cyan-300', bg: 'bg-cyan-500/[0.04]' },
+]
+
+const ACHIEVEMENT_DEFS: { id: string; name: string; icon: keyof typeof ACHIEVEMENT_ICON_MAP; description: string; tier: string; check: (stats: { prCount: number; totalVolume: number; exercises: number; bestRatio: number; streak: number; hasAdvanced: boolean }) => boolean; progress?: (stats: { prCount: number; totalVolume: number; exercises: number; bestRatio: number; streak: number; hasAdvanced: boolean }) => { current: number; target: number } }[] = [
+  { id: 'first_pr', name: 'First PR', icon: 'star', description: 'Log your first personal record', tier: 'milestones', check: s => s.prCount >= 1, progress: s => ({ current: Math.min(s.prCount, 1), target: 1 }) },
+  { id: 'five_prs', name: 'On Fire', icon: 'flame', description: 'Log 5 personal records', tier: 'milestones', check: s => s.prCount >= 5, progress: s => ({ current: Math.min(s.prCount, 5), target: 5 }) },
+  { id: 'ten_prs', name: 'Rising Star', icon: 'award', description: 'Log 10 personal records', tier: 'milestones', check: s => s.prCount >= 10, progress: s => ({ current: Math.min(s.prCount, 10), target: 10 }) },
+  { id: 'twenty_five_prs', name: 'Dedicated', icon: 'medal', description: 'Log 25 personal records', tier: 'milestones', check: s => s.prCount >= 25, progress: s => ({ current: Math.min(s.prCount, 25), target: 25 }) },
+  { id: 'fifty_prs', name: 'PR Machine', icon: 'trophy', description: 'Log 50 personal records', tier: 'milestones', check: s => s.prCount >= 50, progress: s => ({ current: Math.min(s.prCount, 50), target: 50 }) },
+  { id: 'hundred_prs', name: 'Legendary', icon: 'trophy', description: 'Log 100 personal records', tier: 'milestones', check: s => s.prCount >= 100, progress: s => ({ current: Math.min(s.prCount, 100), target: 100 }) },
+  { id: 'volume_100k', name: 'Volume Novice', icon: 'flame', description: 'Reach 100,000 total volume', tier: 'volume', check: s => s.totalVolume >= 100000, progress: s => ({ current: Math.min(Math.round(s.totalVolume / 1000), 100), target: 100 }) },
+  { id: 'volume_master', name: 'Volume Master', icon: 'flame', description: 'Reach 1,000,000 total volume', tier: 'volume', check: s => s.totalVolume >= 1000000, progress: s => ({ current: Math.min(Math.round(s.totalVolume / 10000), 100), target: 100 }) },
+  { id: 'five_exercises', name: 'Explorer', icon: 'star', description: 'Log PRs in 5 different exercises', tier: 'variety', check: s => s.exercises >= 5, progress: s => ({ current: Math.min(s.exercises, 5), target: 5 }) },
+  { id: 'ten_exercises', name: 'Versatile', icon: 'award', description: 'Log PRs in 10 different exercises', tier: 'variety', check: s => s.exercises >= 10, progress: s => ({ current: Math.min(s.exercises, 10), target: 10 }) },
+  { id: 'strength_milestone', name: 'Strength Milestone', icon: 'medal', description: 'Reach Advanced tier on any exercise', tier: 'strength', check: s => s.hasAdvanced },
+  { id: 'elite_milestone', name: 'Elite Status', icon: 'star', description: 'Reach Elite tier on any exercise', tier: 'strength', check: s => s.bestRatio >= 2.5, progress: s => ({ current: Math.min(Math.round(s.bestRatio * 10), 25), target: 25 }) },
+  { id: 'seven_day_streak', name: 'Consistent', icon: 'flame', description: 'PR on 7 different days', tier: 'consistency', check: s => s.streak >= 7, progress: s => ({ current: Math.min(s.streak, 7), target: 7 }) },
+  { id: 'fourteen_day_streak', name: 'Unstoppable', icon: 'trophy', description: 'PR on 14 different days', tier: 'consistency', check: s => s.streak >= 14, progress: s => ({ current: Math.min(s.streak, 14), target: 14 }) },
 ]
 
 const ACHIEVEMENT_ICON_MAP = {
@@ -921,67 +929,123 @@ export function Progress() {
         )}
       </AnimatePresence>
 
-      {/* Achievements Panel (toggleable) */}
+      {/* Achievements Panel */}
       <AnimatePresence>
         {showAchievements && records.length > 0 && (
           <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-            className="rounded-2xl border border-amber-500/15 bg-black/60 backdrop-blur-[12px] p-4">
+            className="rounded-2xl border border-amber-500/15 bg-black/60 backdrop-blur-xl p-5 overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-br from-amber-500/3 via-transparent to-yellow-500/3 pointer-events-none" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400/20 to-amber-500/20 border border-amber-500/20 flex items-center justify-center">
-                    <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                  </div>
-                  <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">ACHIEVEMENTS</span>
-                </div>
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-amber-500/8 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-violet-500/8 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Header */}
+            <div className="relative flex items-center justify-between mb-5 pb-4 border-b border-white/[0.04]">
+              <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                    <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden min-w-[60px]">
-                      <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-700" style={{ width: `${(earned.size / ACHIEVEMENT_DEFS.length) * 100}%` }} />
-                    </div>
-                    <span className="text-[9px] font-bold text-gray-400">{earned.size}/{ACHIEVEMENT_DEFS.length}</span>
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400/25 to-amber-500/10 border border-amber-500/25 flex items-center justify-center shadow-lg shadow-amber-500/10">
+                    <Trophy className="w-5 h-5 text-amber-300" />
                   </div>
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
+                    className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-gray-950 flex items-center justify-center">
+                    <span className="text-[7px] font-bold text-white">{earned.size}</span>
+                  </motion.div>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Achievements</h3>
+                  <p className="text-[10px] text-gray-500 mt-0.5">{earned.size} of {ACHIEVEMENT_DEFS.length} unlocked</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {ACHIEVEMENT_DEFS.map((ach) => {
-                  const isUnlocked = earned.has(ach.id)
-                  const IconComponent = ACHIEVEMENT_ICON_MAP[ach.icon]
-                  return (
-                    <motion.div key={ach.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                      whileHover={isUnlocked ? { scale: 1.03, y: -1 } : {}}
-                      className={`relative overflow-hidden rounded-xl p-3.5 text-center border transition-all duration-500 ${
-                        isUnlocked
-                          ? 'border-amber-500/30 bg-gradient-to-br from-amber-500/15 via-amber-500/8 to-transparent shadow-lg shadow-amber-500/5'
-                          : 'border-white/[0.04] bg-white/[0.02] opacity-40 hover:opacity-60'
-                      }`}>
-                      {isUnlocked && (
-                        <>
-                          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(251,191,36,0.06),transparent_70%)] pointer-events-none rounded-xl" />
-                          <div className="absolute -top-6 -right-6 w-16 h-16 bg-amber-500/8 rounded-full blur-xl" />
-                        </>
-                      )}
-                      <div className="relative">
-                        <div className={`inline-flex p-2 rounded-xl mb-2.5 transition-all duration-500 ${
-                          isUnlocked
-                            ? 'bg-gradient-to-br from-amber-500/25 to-amber-500/10 shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/20'
-                            : 'bg-white/[0.03]'
-                        }`}>
-                          <IconComponent className={`w-5 h-5 ${isUnlocked ? 'text-amber-300 drop-shadow-[0_0_6px_rgba(251,191,36,0.3)]' : 'text-gray-600'}`} />
-                        </div>
-                        <p className={`text-[11px] font-bold ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>{ach.name}</p>
-                        <p className={`text-[9px] mt-1 leading-tight ${isUnlocked ? 'text-gray-400' : 'text-gray-600'}`}>{ach.description}</p>
-                        {isUnlocked && (
-                          <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                            <CheckCircle2 className="w-3 h-3 text-white" />
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  )
-                })}
+              <div className="relative">
+                <svg className="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="3" />
+                  <motion.circle cx="18" cy="18" r="15.5" fill="none" stroke="url(#achRingGrad)" strokeWidth="3" strokeLinecap="round"
+                    strokeDasharray={`${(earned.size / ACHIEVEMENT_DEFS.length) * 97} 97`}
+                    initial={{ strokeDasharray: '0 97' }} animate={{ strokeDasharray: `${(earned.size / ACHIEVEMENT_DEFS.length) * 97} 97` }}
+                    transition={{ duration: 1, ease: 'easeOut' }} />
+                  <defs>
+                    <linearGradient id="achRingGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#f59e0b" />
+                      <stop offset="100%" stopColor="#10b981" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
+                  {Math.round((earned.size / ACHIEVEMENT_DEFS.length) * 100)}%
+                </span>
               </div>
+            </div>
+
+            {/* Tiers */}
+            <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+              {ACHIEVEMENT_TIERS.map((tier, ti) => {
+                const tierDefs = ACHIEVEMENT_DEFS.filter(d => d.tier === tier.key)
+                const tierUnlocked = tierDefs.filter(d => earned.has(d.id)).length
+                const totalTier = tierDefs.length
+                return (
+                  <motion.div key={tier.key} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: ti * 0.08 }}>
+                    <div className={`rounded-xl ${tier.bg} border ${tier.border} p-3`}>
+                      <div className="flex items-center justify-between mb-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm leading-none">{tier.icon}</span>
+                          <span className={`text-[10px] font-bold uppercase tracking-wider ${tier.text}`}>{tier.label}</span>
+                        </div>
+                        <span className="text-[9px] text-gray-500 font-medium">{tierUnlocked}/{totalTier}</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {tierDefs.map((ach, ai) => {
+                          const isUnlocked = earned.has(ach.id)
+                          const stats = { prCount: records.length, totalVolume, exercises: exercises.length, bestRatio: Math.max(0, ...strengthLevels.map(s => s.ratio)), streak: new Set(records.map(r => r.date)).size, hasAdvanced: hasAdvancedTier }
+                          const prog = ach.progress?.(stats)
+                          const pct = prog ? Math.min(100, Math.round((prog.current / prog.target) * 100)) : isUnlocked ? 100 : 0
+                          const IconComponent = ACHIEVEMENT_ICON_MAP[ach.icon]
+                          return (
+                            <motion.div key={ach.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: ti * 0.08 + ai * 0.03 }}
+                              whileHover={{ y: -1 }}
+                              className={`relative overflow-hidden rounded-xl p-2.5 border transition-all duration-300 ${
+                                isUnlocked
+                                  ? 'border-white/[0.08] bg-white/[0.03]'
+                                  : pct > 0
+                                  ? 'border-white/[0.06] bg-white/[0.02]'
+                                  : 'border-white/[0.04] bg-white/[0.01] opacity-50'
+                              }`}>
+                              <div className="relative flex items-start gap-2.5">
+                                <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                                  isUnlocked
+                                    ? 'bg-gradient-to-br from-amber-500/25 to-amber-500/10 shadow-sm shadow-amber-500/10 ring-1 ring-amber-500/20'
+                                    : 'bg-white/[0.04] ring-1 ring-white/[0.06]'
+                                }`}>
+                                  <IconComponent className={`w-4 h-4 ${isUnlocked ? 'text-amber-300' : 'text-gray-600'}`} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-[11px] font-bold leading-tight ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>{ach.name}</p>
+                                  <p className={`text-[8px] mt-0.5 leading-tight ${isUnlocked ? 'text-gray-500' : 'text-gray-600'}`}>{ach.description}</p>
+                                  {!isUnlocked && prog && (
+                                    <div className="mt-1.5">
+                                      <div className="flex items-center justify-between mb-0.5">
+                                        <span className={`text-[7px] font-semibold uppercase tracking-wider ${tier.text}`}>{pct}%</span>
+                                        <span className="text-[7px] text-gray-600">{prog.current}/{prog.target}</span>
+                                      </div>
+                                      <div className="h-1 rounded-full bg-white/5 overflow-hidden">
+                                        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                                          className="h-full rounded-full bg-gradient-to-r from-amber-500/60 to-amber-400/40 transition-all duration-700" />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                                {isUnlocked && (
+                                  <div className="shrink-0 w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+                                    <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </motion.div>
+                )
+              })}
             </div>
           </motion.div>
         )}
