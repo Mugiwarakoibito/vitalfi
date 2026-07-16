@@ -986,39 +986,58 @@ export function Progress() {
                   const allDone = tierDone === totalTier
                   const pct = totalTier > 0 ? Math.round((tierDone / totalTier) * 100) : 0
                   return (
-                    <motion.div key={tier.key} initial={{ opacity: 0, x: 60 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -60 }}
-                      transition={{ duration: 0.3, ease: 'easeInOut' }}>
-                      {/* Tier header with progress ring */}
-                      <div className={`rounded-2xl border ${tier.border} ${tier.bg} p-4 mb-3 relative overflow-hidden`}>
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
-                        <div className="relative flex items-center gap-4">
-                          <div className={`relative w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-white/10 to-white/5 ring-1 ring-white/10`}>
-                            <span className="text-2xl leading-none">{tier.icon}</span>
-                            {allDone && (
-                              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-black/40 flex items-center justify-center">
-                                <CheckCircle2 className="w-3 h-3 text-white" />
-                              </motion.div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className={`text-sm font-bold uppercase tracking-wider ${tier.text}`}>{tier.label}</span>
-                              {allDone && <span className="text-[9px] text-emerald-400 font-semibold">COMPLETE</span>}
+                    <motion.div key={tier.key} initial={{ opacity: 0, x: 80 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -80 }}
+                      transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}>
+                      {/* Tier header */}
+                      <div className={`relative mb-4 rounded-2xl border ${tier.border} overflow-hidden`}>
+                        <div className={`absolute inset-0 bg-gradient-to-br ${tier.gradient} opacity-30`} />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        <div className="relative px-5 pt-5 pb-4">
+                          <div className="flex items-start gap-4">
+                            {/* Icon orb */}
+                            <div className="relative shrink-0">
+                              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-white/15 to-white/5 ring-1 ring-white/15 shadow-xl backdrop-blur-sm`}>
+                                <span className="text-3xl leading-none">{tier.icon}</span>
+                              </div>
+                              <svg className="absolute -inset-1.5 w-[76px] h-[76px] -rotate-90" viewBox="0 0 76 76">
+                                <circle cx="38" cy="38" r="34" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="2.5" />
+                                <motion.circle cx="38" cy="38" r="34" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                                  className={tier.text} initial={{ strokeDasharray: '0 214' }}
+                                  animate={{ strokeDasharray: `${(pct / 100) * 214} 214` }}
+                                  transition={{ duration: 1, ease: 'easeOut' }} />
+                              </svg>
+                              {allDone && (
+                                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/40 flex items-center justify-center">
+                                  <CheckCircle2 className="w-3 h-3 text-white" />
+                                </motion.div>
+                              )}
                             </div>
-                            <p className="text-[10px] text-gray-500 mb-2">{tierDone} of {totalTier} achievements unlocked</p>
-                            <div className="relative h-2 rounded-full bg-white/5 overflow-hidden">
-                              <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                                className={`h-full rounded-full transition-all duration-1000 bg-gradient-to-r ${tier.gradient}`} />
+                            {/* Info */}
+                            <div className="flex-1 min-w-0 pt-1">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-lg font-black uppercase tracking-wider ${tier.text}`}>{tier.label}</span>
+                                {allDone && (
+                                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/25 text-[8px] font-bold text-emerald-400 uppercase tracking-wider">Complete</span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-gray-500 mt-0.5">{tierDone}/{totalTier} achievements unlocked</p>
+                              <div className="mt-2.5 relative h-2.5 rounded-full bg-white/5 overflow-hidden shadow-inner">
+                                <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                                  className={`h-full rounded-full bg-gradient-to-r ${tier.gradient} relative`}>
+                                  <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
+                                </motion.div>
+                              </div>
                             </div>
-                          </div>
-                          <div className="shrink-0 text-center">
-                            <span className={`text-2xl font-black ${tier.text}`}>{pct}%</span>
-                            <p className="text-[8px] text-gray-600 uppercase tracking-wider">Done</p>
+                            {/* Pct badge */}
+                            <div className={`shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-white/10 to-white/5 ring-1 ring-white/10 flex flex-col items-center justify-center backdrop-blur-sm`}>
+                              <span className={`text-lg font-black ${tier.text}`}>{pct}%</span>
+                              <span className="text-[7px] text-gray-500 uppercase tracking-widest">Done</span>
+                            </div>
                           </div>
                         </div>
                       </div>
                       {/* Achievement cards */}
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-2.5">
                         {tierDefs.map((ach, ai) => {
                           const isUnlocked = earned.has(ach.id)
                           const stats = { prCount: records.length, totalVolume, exercises: exercises.length, bestRatio: Math.max(0, ...strengthLevels.map(s => s.ratio)), streak: new Set(records.map(r => r.date)).size, hasAdvanced: hasAdvancedTier }
@@ -1026,76 +1045,97 @@ export function Progress() {
                           const pct2 = prog ? Math.min(100, Math.round((prog.current / prog.target) * 100)) : isUnlocked ? 100 : 0
                           const IconComponent = ACHIEVEMENT_ICON_MAP[ach.icon]
                           return (
-                            <motion.div key={ach.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: ai * 0.04 }}
-                              whileHover={{ scale: 1.02, y: -1 }}
-                              className={`relative overflow-hidden rounded-xl p-3 border transition-all duration-300 ${
+                            <motion.div key={ach.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: ai * 0.05, ease: 'easeOut' }}
+                              whileHover={{ y: -2, transition: { duration: 0.2 } }}
+                              className={`relative rounded-xl border transition-all duration-300 ${
                                 isUnlocked
-                                  ? 'border-white/[0.08] bg-white/[0.04] shadow-sm'
+                                  ? 'bg-white/[0.04] border-white/[0.08] shadow-md shadow-black/20'
                                   : pct2 > 0
-                                  ? 'border-white/[0.06] bg-white/[0.02]'
-                                  : 'border-white/[0.03] bg-white/[0.01] opacity-40'
+                                  ? 'bg-white/[0.02] border-white/[0.06]'
+                                  : 'bg-white/[0.01] border-white/[0.03] opacity-35'
                               }`}>
-                              <div className="flex items-start gap-2.5">
-                                <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center ${
-                                  isUnlocked
-                                    ? 'bg-gradient-to-br from-amber-500/25 to-amber-500/10 ring-1 ring-amber-500/20 shadow-sm shadow-amber-500/10'
-                                    : 'bg-white/[0.04] ring-1 ring-white/[0.06]'
-                                }`}>
-                                  <IconComponent className={`w-4 h-4 ${isUnlocked ? 'text-amber-300 drop-shadow-[0_0_6px_rgba(251,191,36,0.3)]' : 'text-gray-600'}`} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5">
-                                    <p className={`text-[11px] font-bold leading-tight ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>{ach.name}</p>
-                                    {isUnlocked && <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />}
+                              <div className={`absolute left-0 top-2 bottom-2 w-0.5 rounded-full transition-all duration-500 ${
+                                isUnlocked ? tier.text + ' bg-current shadow-sm' : 'bg-white/5'
+                              }`} />
+                              <div className="p-3 pl-3.5">
+                                <div className="flex items-start gap-2.5">
+                                  <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
+                                    isUnlocked
+                                      ? 'bg-gradient-to-br from-amber-500/20 to-amber-500/5 ring-1 ring-amber-500/20 shadow-sm shadow-amber-500/10'
+                                      : 'bg-white/[0.04] ring-1 ring-white/[0.06]'
+                                  }`}>
+                                    <IconComponent className={`w-4 h-4 ${isUnlocked ? 'text-amber-300' : 'text-gray-600'}`} />
                                   </div>
-                                  <p className={`text-[8px] mt-0.5 leading-tight ${isUnlocked ? 'text-gray-500' : 'text-gray-600'}`}>{ach.description}</p>
-                                  {!isUnlocked && prog && (
-                                    <div className="mt-2">
-                                      <div className="flex items-center justify-between mb-0.5">
-                                        <span className={`text-[8px] font-bold ${tier.text}`}>{pct2}%</span>
-                                        <span className="text-[7px] text-gray-600">{prog.current}/{prog.target}</span>
-                                      </div>
-                                      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                                        <motion.div initial={{ width: 0 }} animate={{ width: `${pct2}%` }}
-                                          className={`h-full rounded-full bg-gradient-to-r ${tier.gradient} transition-all duration-700`} />
-                                      </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <p className={`text-[11px] font-bold leading-tight truncate ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>{ach.name}</p>
+                                      {isUnlocked && <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />}
                                     </div>
-                                  )}
+                                    <p className={`text-[8px] mt-0.5 leading-tight line-clamp-2 ${isUnlocked ? 'text-gray-500' : 'text-gray-600'}`}>{ach.description}</p>
+                                    {!isUnlocked && prog && (
+                                      <div className="mt-2">
+                                        <div className="flex items-center justify-between mb-1">
+                                          <span className={`text-[8px] font-bold ${tier.text}`}>{pct2}%</span>
+                                          <span className="text-[7px] text-gray-600 font-medium">{prog.current}/{prog.target}</span>
+                                        </div>
+                                        <div className="h-1.5 rounded-full bg-white/5 overflow-hidden shadow-inner">
+                                          <motion.div initial={{ width: 0 }} animate={{ width: `${pct2}%` }}
+                                            className={`h-full rounded-full bg-gradient-to-r ${tier.gradient} transition-all duration-700`} />
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </motion.div>
                           )
                         })}
                       </div>
+                      {tierDefs.length === 0 && (
+                        <div className="rounded-xl border border-dashed border-white/10 p-8 text-center">
+                          <p className="text-sm text-gray-600">No achievements in this tier yet</p>
+                        </div>
+                      )}
                     </motion.div>
                   )
                 })}
               </AnimatePresence>
-              {/* Nav arrows */}
+              {/* Nav arrows + dots */}
               <div className="flex items-center justify-between mt-4">
-                <button onClick={() => {
-                  const idx = ACHIEVEMENT_TIERS.findIndex(t => t.key === achTab)
-                  if (idx > 0) setAchTab(ACHIEVEMENT_TIERS[idx - 1].key)
-                }} disabled={ACHIEVEMENT_TIERS.findIndex(t => t.key === achTab) === 0}
-                  className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-500 hover:text-white hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed">
+                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }}
+                  onClick={() => { const idx = ACHIEVEMENT_TIERS.findIndex(t => t.key === achTab); if (idx > 0) setAchTab(ACHIEVEMENT_TIERS[idx - 1].key) }}
+                  disabled={ACHIEVEMENT_TIERS.findIndex(t => t.key === achTab) === 0}
+                  className={`p-2.5 rounded-xl border transition-all disabled:opacity-15 disabled:cursor-not-allowed ${
+                    ACHIEVEMENT_TIERS.findIndex(t => t.key === achTab) > 0
+                      ? ACHIEVEMENT_TIERS.find(t => t.key === achTab)?.text + ' border-current/30 bg-current/5 hover:bg-current/10 hover:shadow-sm hover:shadow-current/15'
+                      : 'bg-white/5 border-white/10 text-gray-600'
+                  }`}>
                   <ChevronLeft className="w-4 h-4" />
-                </button>
-                {/* Dots */}
-                <div className="flex items-center gap-1.5">
-                  {ACHIEVEMENT_TIERS.map(tier => (
-                    <button key={tier.key} onClick={() => setAchTab(tier.key)}
-                      className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                        achTab === tier.key ? 'w-6 ' + tier.text + ' bg-current' : 'bg-white/10 hover:bg-white/20'
-                      }`} />
-                  ))}
+                </motion.button>
+                <div className="flex items-center gap-2">
+                  {ACHIEVEMENT_TIERS.map(tier => {
+                    return (
+                      <motion.button key={tier.key} onClick={() => setAchTab(tier.key)} layout
+                        whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.8 }}
+                        className={`relative rounded-full transition-all duration-500 ${
+                          achTab === tier.key
+                            ? 'w-7 h-2.5 bg-current ' + tier.text
+                            : 'w-2 h-2 bg-white/15 hover:bg-white/30'
+                        }`}
+                        style={achTab === tier.key ? { boxShadow: `0 0 8px currentColor` } : {}} />
+                    )
+                  })}
                 </div>
-                <button onClick={() => {
-                  const idx = ACHIEVEMENT_TIERS.findIndex(t => t.key === achTab)
-                  if (idx < ACHIEVEMENT_TIERS.length - 1) setAchTab(ACHIEVEMENT_TIERS[idx + 1].key)
-                }} disabled={ACHIEVEMENT_TIERS.findIndex(t => t.key === achTab) === ACHIEVEMENT_TIERS.length - 1}
-                  className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-500 hover:text-white hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed">
+                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }}
+                  onClick={() => { const idx = ACHIEVEMENT_TIERS.findIndex(t => t.key === achTab); if (idx < ACHIEVEMENT_TIERS.length - 1) setAchTab(ACHIEVEMENT_TIERS[idx + 1].key) }}
+                  disabled={ACHIEVEMENT_TIERS.findIndex(t => t.key === achTab) === ACHIEVEMENT_TIERS.length - 1}
+                  className={`p-2.5 rounded-xl border transition-all disabled:opacity-15 disabled:cursor-not-allowed ${
+                    ACHIEVEMENT_TIERS.findIndex(t => t.key === achTab) < ACHIEVEMENT_TIERS.length - 1
+                      ? ACHIEVEMENT_TIERS.find(t => t.key === achTab)?.text + ' border-current/30 bg-current/5 hover:bg-current/10 hover:shadow-sm hover:shadow-current/15'
+                      : 'bg-white/5 border-white/10 text-gray-600'
+                  }`}>
                   <ChevronRight className="w-4 h-4" />
-                </button>
+                </motion.button>
               </div>
             </div>
           </motion.div>
