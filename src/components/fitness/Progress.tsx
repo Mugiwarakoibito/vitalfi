@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/Button'
 import {
   Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, LineChart,
+  ResponsiveContainer, BarChart, LineChart, Cell,
 } from 'recharts'
 import { useAppStore } from '@/store/useAppStore'
 import type { Workout, BodyMetric, WorkoutExercise, ExerciseSet, PersonalRecord } from '@/types/domain'
@@ -171,20 +171,23 @@ export function Progress() {
   }, [bodyMetrics])
 
   const strengthProgression = useMemo(() => {
-    const groups = new Map<string, { date: string; estimated1RM: number }[]>()
-    for (const r of records) {
-      const name = r.exerciseName || 'Unknown'
-      if (!groups.has(name)) groups.set(name, [])
-      groups.get(name)!.push({
-        date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        estimated1RM: estimate1RM(r.weight, r.reps),
-      })
-    }
-    for (const [, data] of groups) data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    return [...groups.entries()]
-      .sort((a, b) => b[1].length - a[1].length)
-      .slice(0, 5)
-      .map(([exercise, data]) => ({ exercise, data }))
+    const top5 = [...new Set(records.map(r => r.exerciseName))]
+      .map(ex => ({ ex, count: records.filter(r => r.exerciseName === ex).length }))
+      .sort((a, b) => b.count - a.count).slice(0, 5).map(e => e.ex)
+    const allDates = [...new Set(records.map(r => r.date))].sort()
+    const data = allDates.map(date => {
+      const point: Record<string, string | number | null> = {
+        date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })
+      }
+      for (const ex of top5) {
+        const bestUpTo = records
+          .filter(r => r.exerciseName === ex && r.date <= date)
+          .reduce((best, r) => Math.max(best, estimate1RM(r.weight, r.reps)), 0)
+        point[ex] = bestUpTo > 0 ? bestUpTo : null
+      }
+      return point
+    })
+    return { data, exercises: top5 }
   }, [records])
 
   const PROGRESSION_COLORS = ['#f43f5e', '#10b981', '#8b5cf6', '#f59e0b', '#3b82f6']
@@ -763,42 +766,54 @@ export function Progress() {
                     )
                   )}
                   {chartTab === 'progression' && (
-                    strengthProgression.length > 0 ? (
+                    strengthProgression.exercises.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={strengthProgression[0].data} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
+                        <LineChart data={strengthProgression.data} margin={{ top: 8, right: 12, bottom: 0, left: -16 }}>
                           <defs>
                             {PROGRESSION_COLORS.map((c, i) => (
-                              <linearGradient key={i} id={`progGrad_${i}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor={c} stopOpacity={1} /><stop offset="100%" stopColor={c} stopOpacity={0.2} />
+                              <linearGradient key={i} id={`progArea_${i}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={c} stopOpacity={0.35} /><stop offset="100%" stopColor={c} stopOpacity={0.02} />
                               </linearGradient>
                             ))}
                           </defs>
                           <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
                           <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
-                          <YAxis stroke="#10b981" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={36} tickFormatter={v => `${v}`} />
+                          <YAxis stroke="#6b7280" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={36} domain={['dataMin - 10', 'dataMax + 20']} tickFormatter={v => `${v}`} />
                           <Tooltip content={({ active, payload, label }) => {
                             if (!active || !payload?.length) return null
                             return (
                               <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-emerald-500/5 min-w-[180px]">
-                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
-                                <div className="relative space-y-2">
-                                  <div className="text-white font-bold text-xs pb-2 border-b border-white/5">{label}</div>
-                                  {payload.map((p, i) => (
-                                    <div key={i} className="flex items-center gap-2">
-                                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
-                                      <span className="text-gray-400 font-medium">{p.name}</span>
-                                      <span className="text-white font-bold ml-auto">{p.value} lbs</span>
-                                    </div>
-                                  ))}
+                                className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/50 min-w-[200px]">
+                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/8 to-transparent pointer-events-none" />
+                                <div className="relative">
+                                  <div className="text-white font-bold text-xs pb-2 mb-2 border-b border-white/[0.06]">{label}</div>
+                                  {payload.filter(p => p.value != null).map((p, i) => {
+                                    const prevIdx = Math.max(0, strengthProgression.data.findIndex(d => d.date === label) - 1)
+                                    const prevVal = strengthProgression.data[prevIdx]?.[p.name as keyof typeof strengthProgression.data[0]] as number | null
+                                    const delta = prevVal != null && p.value != null ? (p.value as number) - prevVal : null
+                                    return (
+                                      <div key={i} className="flex items-center gap-2 py-1">
+                                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color, filter: 'brightness(1.4)' }} />
+                                        <span className="text-gray-400 font-medium max-w-[80px] truncate">{p.name}</span>
+                                        <span className="text-white font-bold ml-auto text-xs">{p.value} <span className="text-[9px] font-normal text-gray-500">lbs</span></span>
+                                        {delta != null && delta !== 0 && (
+                                          <span className={`text-[10px] font-bold ${delta > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                            {delta > 0 ? '▲' : '▼'} {Math.abs(delta)}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
                                 </div>
                               </motion.div>
                             )
-                          }} cursor={{ fill: 'rgba(16,185,129,0.1)' }} />
-                          {strengthProgression.map((ex, i) => (
-                            <Line key={ex.exercise} type="monotone" data={ex.data} dataKey="estimated1RM" name={ex.exercise}
-                              stroke={PROGRESSION_COLORS[i % PROGRESSION_COLORS.length]} strokeWidth={2.5} dot={{ r: 3, strokeWidth: 1.5, fill: '#1a1a2e' }}
-                              activeDot={{ r: 5, strokeWidth: 2 }} animationDuration={600} connectNulls />
+                          }} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                          {strengthProgression.exercises.map((ex, i) => (
+                            <Line key={ex} type="monotone" dataKey={ex} name={ex}
+                              stroke={PROGRESSION_COLORS[i % PROGRESSION_COLORS.length]}
+                              strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 2, stroke: PROGRESSION_COLORS[i % PROGRESSION_COLORS.length], fill: '#0f0f1a' }}
+                              animationDuration={800} connectNulls={false}
+                            />
                           ))}
                         </LineChart>
                       </ResponsiveContainer>
@@ -809,41 +824,63 @@ export function Progress() {
                   {chartTab === 'matrix' && (
                     strengthMatrix.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={strengthMatrix} layout="vertical" margin={{ top: 4, right: 16, bottom: 0, left: 8 }}>
+                        <BarChart data={strengthMatrix} layout="vertical" margin={{ top: 4, right: 20, bottom: 0, left: 8 }}>
                           <defs>
-                            <linearGradient id="matrixGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#8b5cf6" stopOpacity={1} /><stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.35} /></linearGradient>
-                            <filter id="matrixGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                            {['#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#6b7280'].map((c, i) => (
+                              <linearGradient key={i} id={`matrixBarGrad_${i}`} x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor={c} stopOpacity={1} /><stop offset="100%" stopColor={c} stopOpacity={0.55} />
+                              </linearGradient>
+                            ))}
                           </defs>
                           <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" horizontal={false} strokeWidth={1} />
                           <XAxis type="number" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dx={4} tickFormatter={v => `${v}`} />
-                          <YAxis type="category" dataKey="name" stroke="#d1d5db" fontSize={10} fontWeight={600} axisLine={false} tickLine={false} width={72} tick={{ fill: '#d1d5db' }} />
+                          <YAxis type="category" dataKey="name" stroke="#d1d5db" fontSize={10} fontWeight={600} axisLine={false} tickLine={false} width={80} tick={{ fill: '#d1d5db' }} />
                           <Tooltip content={({ active, payload }) => {
                             if (!active || !payload?.length) return null
                             const d = payload[0].payload as any
-                            const levelColors: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
+                            const levelColorMap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
                             return (
                               <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-violet-500/5 min-w-[170px]">
-                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none" />
+                                className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/50 min-w-[190px]">
+                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/8 to-transparent pointer-events-none" />
                                 <div className="relative space-y-2">
-                                  <div className="text-white font-bold text-xs">{d.name}</div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color || '#8b5cf6' }} />
+                                  <div className="flex items-center gap-2 pb-2 mb-2 border-b border-white/[0.06]">
+                                    <div className="w-5 h-5 rounded-lg flex items-center justify-center text-[10px]" style={{ backgroundColor: d.color + '30' }}>
+                                      <span className="font-bold" style={{ color: d.color }}>{d.name[0]}</span>
+                                    </div>
+                                    <span className="text-white font-bold text-xs">{d.name}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between">
                                     <span className="text-gray-400 font-medium">Best 1RM</span>
-                                    <span className="text-white font-bold ml-auto">{d.best1RM} lbs</span>
+                                    <span className="text-white font-bold text-sm">{d.best1RM} <span className="text-[10px] font-normal text-gray-500">lbs</span></span>
                                   </div>
                                   {d.level && (
-                                    <div className="flex items-center gap-2 pt-1 border-t border-white/5">
-                                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: levelColors[d.level.toLowerCase()] || '#6b7280' }} />
-                                      <span className="text-gray-400 font-medium capitalize">{d.level}</span>
-                                      {d.ratio > 0 && <span className="text-gray-500 ml-auto">{d.ratio.toFixed(2)}× BW</span>}
+                                    <div className="flex items-center justify-between pt-1.5 border-t border-white/[0.04]">
+                                      <span className="text-gray-400 font-medium">Classification</span>
+                                      <span className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: levelColorMap[d.level.toLowerCase()] || '#6b7280' }} />
+                                        <span className="font-bold text-xs capitalize" style={{ color: levelColorMap[d.level.toLowerCase()] || '#6b7280' }}>{d.level}</span>
+                                      </span>
+                                    </div>
+                                  )}
+                                  {d.ratio > 0 && (
+                                    <div className="flex items-center justify-between text-[10px]">
+                                      <span className="text-gray-500">Bodyweight Ratio</span>
+                                      <span className="text-gray-300 font-semibold">{d.ratio.toFixed(2)}×</span>
                                     </div>
                                   )}
                                 </div>
                               </motion.div>
                             )
-                          }} cursor={{ fill: 'rgba(139,92,246,0.15)' }} />
-                          <Bar dataKey="best1RM" fill="url(#matrixGrad)" radius={[0, 6, 6, 0]} maxBarSize={22} animationDuration={600} animationEasing="ease-out" />
+                          }} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                           <Bar dataKey="best1RM" radius={[0, 7, 7, 0]} maxBarSize={22} animationDuration={700} animationEasing="ease-out">
+                             {strengthMatrix.map((entry, idx) => {
+                               const colorMap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
+                               const levelKey = entry.level.toLowerCase()
+                               const color = colorMap[levelKey] || '#6b7280'
+                               return <Cell key={`cell-${idx}`} fill={color} fillOpacity={0.85} />
+                             })}
+                           </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
@@ -876,39 +913,50 @@ export function Progress() {
                     </div>
                   )
                 }
-                if (chartTab === 'progression' && strengthProgression.length > 0) {
-                  const totalExercises = strengthProgression.length
-                  const totalPrs = strengthProgression.reduce((s, ex) => s + ex.data.length, 0)
+                if (chartTab === 'progression' && strengthProgression.exercises.length > 0) {
+                  const totalEx = strengthProgression.exercises.length
+                  const totalData = strengthProgression.data.length
+                  const all1RMs = strengthProgression.data.flatMap(d =>
+                    strengthProgression.exercises.map(ex => (d[ex] as number) || 0)
+                  ).filter(Boolean)
+                  const bestOverall = Math.max(...all1RMs, 0)
                   return (
                     <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
                       <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
-                        <span>🏋️ Exercises <span className="font-semibold text-emerald-400">{totalExercises}</span></span>
-                        <span>📊 Total Entries <span className="font-semibold text-gray-300">{totalPrs}</span></span>
-                        <span>📈 Top <span className="font-semibold text-amber-400">{strengthProgression[0].exercise}</span></span>
-                        <span>🏆 Best 1RM <span className="font-semibold text-rose-400">{Math.max(...strengthProgression.flatMap(ex => ex.data.map(d => d.estimated1RM)))}</span></span>
+                        <span>🏋️ Exercises <span className="font-semibold text-emerald-400">{totalEx}</span></span>
+                        <span>📊 Data Points <span className="font-semibold text-gray-300">{totalData}</span></span>
+                        <span>🏆 Peak 1RM <span className="font-semibold text-rose-400">{bestOverall}</span></span>
+                        <span>🔥 Best <span className="font-semibold text-amber-400">{strengthProgression.exercises[0]}</span></span>
                       </div>
                       <div className="relative h-0.5 bg-white/[0.03]">
-                        <div className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(totalExercises / 10 * 100, 100)}%` }} />
+                        <div className="h-full bg-gradient-to-r from-emerald-500 via-violet-500 to-cyan-400 rounded-full transition-all duration-500 animate-pulse" style={{ width: `${Math.min(totalEx / 8 * 100, 100)}%` }} />
                       </div>
                     </div>
                   )
                 }
                 if (chartTab === 'matrix' && strengthMatrix.length > 0) {
-                  const avg1RM = strengthMatrix.reduce((s, m) => s + m.best1RM, 0) / strengthMatrix.length
+                  const avg1RM = Math.round(strengthMatrix.reduce((s, m) => s + m.best1RM, 0) / strengthMatrix.length)
                   const max1RM = strengthMatrix[0].best1RM
-                  const advancedCount = strengthMatrix.filter(m => m.level.toLowerCase() === 'advanced' || m.level.toLowerCase() === 'elite').length
+                  const totals = { novice: 0, intermediate: 0, advanced: 0, elite: 0, untrained: 0 }
+                  for (const m of strengthMatrix) {
+                    const key = (m.level.toLowerCase() in totals ? m.level.toLowerCase() : 'untrained') as keyof typeof totals
+                    totals[key]++
+                  }
                   return (
                     <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
-                      <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
-                        <span>🎯 Exercises <span className="font-semibold text-violet-400">{strengthMatrix.length}</span></span>
-                        <span>📊 Avg 1RM <span className="font-semibold text-gray-300">{avg1RM.toFixed(0)}</span></span>
+                      <div className="relative flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
+                        <span>🎯 Total <span className="font-semibold text-violet-400">{strengthMatrix.length}</span></span>
+                        <span>📊 Avg <span className="font-semibold text-gray-300">{avg1RM}</span></span>
                         <span>🏆 Peak <span className="font-semibold text-amber-400">{max1RM}</span></span>
-                        <span>⚡ Elite/Adv <span className="font-semibold text-rose-400">{advancedCount}</span></span>
+                        {totals.elite > 0 && <span>🟣 Elite <span className="font-semibold text-violet-400">{totals.elite}</span></span>}
+                        {totals.advanced > 0 && <span>🔴 Adv <span className="font-semibold text-rose-400">{totals.advanced}</span></span>}
+                        {totals.intermediate > 0 && <span>🟡 Int <span className="font-semibold text-amber-400">{totals.intermediate}</span></span>}
+                        {totals.novice > 0 && <span>🟢 Nov <span className="font-semibold text-emerald-400">{totals.novice}</span></span>}
                       </div>
                       <div className="relative h-0.5 bg-white/[0.03]">
-                        <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(advancedCount / strengthMatrix.length * 100, 100)}%` }} />
+                        <div className="h-full bg-gradient-to-r from-emerald-500 via-amber-500 via-rose-500 to-violet-500 rounded-full transition-all duration-500" style={{ width: `${Math.min((totals.advanced + totals.elite) / Math.max(strengthMatrix.length, 1) * 100, 100)}%` }} />
                       </div>
                     </div>
                   )
