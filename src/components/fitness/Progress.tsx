@@ -9,8 +9,8 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import {
-  Bar, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, LineChart, Cell,
+  Bar, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, AreaChart, RadialBarChart, RadialBar, BarChart,
 } from 'recharts'
 import { useAppStore } from '@/store/useAppStore'
 import type { Workout, BodyMetric, WorkoutExercise, ExerciseSet, PersonalRecord } from '@/types/domain'
@@ -136,8 +136,6 @@ export function Progress() {
   const [showPerfScope, setShowPerfScope] = useState(false)
   const [achTab, setAchTab] = useState<string>('milestones')
   const [perfFocus, setPerfFocus] = useState<'strength' | 'hypertrophy' | 'endurance' | 'power' | 'overall'>('overall')
-  const [hiddenExes, setHiddenExes] = useState<Set<string>>(new Set())
-  const [selectedMatrixItem, setSelectedMatrixItem] = useState<{ name: string; best1RM: number; level: string; color: string; ratio: number } | null>(null)
   const [scopeOffset, setScopeOffset] = useState(0)
   const [chartTab, setChartTab] = useState<'prs' | 'progression' | 'matrix'>('prs')
   const [targetDate, setTargetDate] = useState(new Date())
@@ -769,141 +767,107 @@ export function Progress() {
                   )}
                   {chartTab === 'progression' && (
                     strengthProgression.exercises.length > 0 ? (
-                      <div className="h-full flex flex-col">
-                        <div className="flex items-center gap-2.5 px-1 pb-1.5 flex-shrink-0">
-                          {strengthProgression.exercises.map((ex, i) => {
-                            const color = PROGRESSION_COLORS[i % PROGRESSION_COLORS.length]
-                            const hidden = hiddenExes.has(ex)
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={strengthProgression.data} margin={{ top: 8, right: 0, bottom: 0, left: -16 }}>
+                          <defs>
+                            <linearGradient id="progRiver" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.7} />
+                              <stop offset="40%" stopColor="#3b82f6" stopOpacity={0.45} />
+                              <stop offset="100%" stopColor="#06b6d4" stopOpacity={0.05} />
+                            </linearGradient>
+                            {PROGRESSION_COLORS.slice(0, strengthProgression.exercises.length).map((c, i) => (
+                              <linearGradient key={i} id={`rFill_${i}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={c} stopOpacity={0.65} />
+                                <stop offset="100%" stopColor={c} stopOpacity={0.35} />
+                              </linearGradient>
+                            ))}
+                          </defs>
+                          <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                          <XAxis dataKey="date" stroke="rgba(255,255,255,0.15)" fontSize={10} fontWeight={600} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
+                          <YAxis stroke="rgba(255,255,255,0.1)" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={32} tickFormatter={v => `${v}`} />
+                          <Tooltip content={({ active, payload, label }) => {
+                            if (!active || !payload?.length) return null
+                            const total = payload.reduce((s, p) => s + ((p.value as number) || 0), 0)
                             return (
-                              <button key={ex} onClick={() => {
-                                const next = new Set(hiddenExes)
-                                hidden ? next.delete(ex) : next.add(ex)
-                                setHiddenExes(next)
-                              }} className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg transition-all ${hidden ? 'opacity-30 line-through' : 'opacity-90 hover:opacity-100'}`}>
-                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: hidden ? 'rgba(255,255,255,0.2)' : color }} />
-                                <span style={{ color: hidden ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.6)' }}>{ex}</span>
-                              </button>
+                              <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                                className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[180px]">
+                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/10 via-transparent to-cyan-500/5 pointer-events-none" />
+                                <div className="relative">
+                                  <div className="text-white font-bold text-xs pb-2 mb-2 border-b border-white/[0.06]">{label}</div>
+                                  {payload.map((p, i) => (
+                                    <div key={i} className="flex items-center gap-2 py-1">
+                                      <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: p.color }} />
+                                      <span className="text-gray-400 max-w-[90px] truncate">{p.name}</span>
+                                      <span className="text-white font-bold ml-auto tabular-nums">{p.value}</span>
+                                    </div>
+                                  ))}
+                                  <div className="flex items-center justify-between pt-2 mt-2 border-t border-white/[0.06] text-[10px]">
+                                    <span className="text-gray-500 font-semibold">Total</span>
+                                    <span className="text-white font-bold tabular-nums">{total}</span>
+                                  </div>
+                                </div>
+                              </motion.div>
                             )
-                          })}
-                        </div>
-                        <div className="flex-1 min-h-0">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={strengthProgression.data} margin={{ top: 4, right: 8, bottom: 0, left: -16 }}>
-                              <defs>
-                                {PROGRESSION_COLORS.map((c, i) => (
-                                  <linearGradient key={i} id={`pFill_${i}`} x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor={c} stopOpacity={0.2} /><stop offset="100%" stopColor={c} stopOpacity={0.01} />
-                                  </linearGradient>
-                                ))}
-                              </defs>
-                              <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                              <XAxis dataKey="date" stroke="rgba(255,255,255,0.2)" fontSize={10} fontWeight={600} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
-                              <YAxis stroke="rgba(255,255,255,0.15)" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={32} domain={['dataMin - 10', 'dataMax + 20']} tickFormatter={v => `${v}`} />
-                              <Tooltip content={({ active, payload, label }) => {
-                                if (!active || !payload?.length) return null
-                                return (
-                                  <motion.div initial={{ opacity: 0, y: 4, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    className="bg-gray-950/95 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-2.5 text-[11px] shadow-2xl shadow-black/30">
-                                    <div className="text-white font-bold text-xs mb-1.5">{label}</div>
-                                    {payload.filter(p => p.value != null).map((p, i) => (
-                                      <div key={i} className="flex items-center gap-2 py-0.5">
-                                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
-                                        <span className="text-gray-400 max-w-[80px] truncate">{p.name}</span>
-                                        <span className="text-white font-bold ml-auto tabular-nums">{p.value}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></span>
-                                      </div>
-                                    ))}
-                                  </motion.div>
-                                )
-                              }} cursor={{ stroke: 'rgba(255,255,255,0.08)', strokeDasharray: '3 3' }} />
-                              {strengthProgression.exercises.filter(ex => !hiddenExes.has(ex)).map((ex) => {
-                                const idx = strengthProgression.exercises.indexOf(ex)
-                                const color = PROGRESSION_COLORS[idx % PROGRESSION_COLORS.length]
-                                return [
-                                  <Area key={`af-${ex}`} type="monotone" dataKey={ex} fill={`url(#pFill_${idx})`} stroke="none" />,
-                                  <Line key={`al-${ex}`} type="monotone" dataKey={ex} name={ex}
-                                    stroke={color} strokeWidth={2.5} dot={{ r: 3, fill: color, strokeWidth: 0 }}
-                                    activeDot={{ r: 6, fill: color, stroke: '#0f0f1a', strokeWidth: 2.5 }}
-                                    connectNulls animationDuration={600}
-                                  />,
-                                ]
-                              })}
-                              {hiddenExes.size > 0 && strengthProgression.exercises.filter(ex => hiddenExes.has(ex)).map((ex) => {
-                                const idx = strengthProgression.exercises.indexOf(ex)
-                                const color = PROGRESSION_COLORS[idx % PROGRESSION_COLORS.length]
-                                return (
-                                  <Line key={`hl-${ex}`} type="monotone" dataKey={ex} name={ex}
-                                    stroke={color} strokeWidth={1} strokeDasharray="4 3" dot={false}
-                                    activeDot={false} connectNulls animationDuration={0}
-                                  />
-                                )
-                              })}
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
+                          }} cursor={{ stroke: 'rgba(255,255,255,0.06)', strokeWidth: 1 }} />
+                          {strengthProgression.exercises.map((ex, i) => (
+                            <Area key={ex} type="monotone" dataKey={ex} name={ex} stackId="1"
+                              stroke={PROGRESSION_COLORS[i % PROGRESSION_COLORS.length]}
+                              strokeWidth={1.5}
+                              fill={`url(#rFill_${i})`}
+                              dot={false}
+                              activeDot={{ r: 4, fill: PROGRESSION_COLORS[i % PROGRESSION_COLORS.length], strokeWidth: 0 }}
+                              animationDuration={800}
+                            />
+                          ))}
+                        </AreaChart>
+                      </ResponsiveContainer>
                     ) : (
                       <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your first PR to see trends</div>
                     )
                   )}
                   {chartTab === 'matrix' && (
                     strengthMatrix.length > 0 ? (
-                      <div className="h-full flex flex-col">
-                        {selectedMatrixItem && (
-                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                            className="flex-shrink-0 mb-2 rounded-xl bg-white/[0.04] border border-white/[0.06] p-3 overflow-hidden">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="text-xs font-bold text-white">{selectedMatrixItem.name}</div>
-                                <div className="text-[10px] text-gray-500 mt-0.5">Best 1RM — <span className="text-white font-bold tabular-nums">{selectedMatrixItem.best1RM} lbs</span></div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {selectedMatrixItem.level && (
-                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize" style={{ backgroundColor: `${selectedMatrixItem.color}25`, color: selectedMatrixItem.color }}>
-                                    {selectedMatrixItem.level}
-                                  </span>
-                                )}
-                                <button onClick={() => setSelectedMatrixItem(null)} className="text-gray-500 hover:text-white text-[16px] leading-none">&times;</button>
-                              </div>
-                            </div>
-                            {selectedMatrixItem.ratio > 0 && (
-                              <div className="mt-2 flex items-center gap-2 text-[10px]">
-                                <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                                  <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(selectedMatrixItem.ratio / 3 * 100, 100)}%`, background: `linear-gradient(90deg, ${selectedMatrixItem.color}, ${selectedMatrixItem.color}80)` }} />
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RadialBarChart innerRadius={15} outerRadius={130} barSize={22} data={strengthMatrix} startAngle={200} endAngle={-20}>
+                          <defs>
+                            {['#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#6b7280'].map((c, i) => (
+                              <linearGradient key={i} id={`radGrad_${i}`} x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor={c} stopOpacity={1} />
+                                <stop offset="100%" stopColor={c} stopOpacity={0.5} />
+                              </linearGradient>
+                            ))}
+                          </defs>
+                          <Tooltip content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null
+                            const d = payload[0].payload as any
+                            const lmap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
+                            return (
+                              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                                className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3 text-[11px] shadow-2xl shadow-black/40 min-w-[150px]">
+                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/10 via-transparent to-cyan-500/5 pointer-events-none" />
+                                <div className="relative">
+                                  <div className="text-white font-bold text-xs mb-1.5">{d.name}</div>
+                                  <div className="flex items-center justify-between"><span className="text-gray-400">1RM</span><span className="text-white font-bold tabular-nums">{d.best1RM}</span></div>
+                                  {d.level && <div className="flex items-center justify-between mt-1"><span className="text-gray-400">Level</span><span className="font-semibold capitalize" style={{ color: lmap[d.level.toLowerCase()] || '#6b7280' }}>{d.level}</span></div>}
                                 </div>
-                                <span className="text-gray-500 font-medium tabular-nums">{selectedMatrixItem.ratio.toFixed(2)}× BW</span>
-                              </div>
-                            )}
-                          </motion.div>
-                        )}
-                        <div className="flex-1 min-h-0">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={strengthMatrix} layout="vertical" margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-                              <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" horizontal={false} />
-                              <XAxis type="number" stroke="rgba(255,255,255,0.2)" fontSize={10} fontWeight={600} axisLine={false} tickLine={false} dx={4} tickFormatter={v => `${v}`} />
-                              <YAxis type="category" dataKey="name" stroke="rgba(255,255,255,0.5)" fontSize={10} fontWeight={600} axisLine={false} tickLine={false} width={80} tick={{ fill: 'rgba(255,255,255,0.5)' }} />
-                              <Tooltip content={({ active, payload }) => {
-                                if (!active || !payload?.length) return null
-                                const d = payload[0].payload as any
-                                const lmap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
-                                return (
-                                  <motion.div initial={{ opacity: 0, y: 4, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    className="bg-gray-950/95 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-2.5 text-[11px] shadow-2xl shadow-black/30 min-w-[140px]">
-                                    <div className="text-white font-bold text-xs mb-1">{d.name}</div>
-                                    <div className="flex items-center justify-between"><span className="text-gray-400">1RM</span><span className="text-white font-bold tabular-nums">{d.best1RM}</span></div>
-                                    {d.level && <div className="flex items-center justify-between mt-0.5"><span className="text-gray-400">Level</span><span className="font-semibold capitalize" style={{ color: lmap[d.level.toLowerCase()] || '#6b7280' }}>{d.level}</span></div>}
-                                  </motion.div>
-                                )
-                              }} cursor={{ stroke: 'rgba(255,255,255,0.08)', strokeDasharray: '3 3' }} />
-                              <Bar dataKey="best1RM" radius={[0, 5, 5, 0]} maxBarSize={24} onClick={(data: any) => setSelectedMatrixItem(data)}>
-                                {strengthMatrix.map((entry, idx) => {
-                                  const cmap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
-                                  return <Cell key={idx} fill={cmap[entry.level.toLowerCase()] || '#6b7280'} fillOpacity={selectedMatrixItem?.name === entry.name ? 1 : 0.75} />
-                                })}
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
+                              </motion.div>
+                            )
+                          }} />
+                          {strengthMatrix.map((entry) => {
+                            const cmap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
+                            const c = cmap[entry.level.toLowerCase()] || '#6b7280'
+                            const gIdx = ['#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#6b7280'].indexOf(c)
+                            return (
+                              <RadialBar key={entry.name} data={[entry]} dataKey="best1RM" name={entry.name}
+                                fill={`url(#radGrad_${gIdx >= 0 ? gIdx : 4})`}
+                                label={{ fill: 'rgba(255,255,255,0.5)', fontSize: 9, fontWeight: 600, position: 'insideStart' }}
+                                background={{ fill: 'rgba(255,255,255,0.03)' }}
+                                cornerRadius={8}
+                              />
+                            )
+                          })}
+                        </RadialBarChart>
+                      </ResponsiveContainer>
                     ) : (
                       <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your first PR to see your strength matrix</div>
                     )
