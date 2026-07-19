@@ -789,41 +789,66 @@ export function Progress() {
                     {chartTab === 'progression' && (
                       strengthProgression.exercises.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={strengthProgression.data} barGap={2} barCategoryGap="20%" margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
+                          <BarChart data={strengthProgression.data} barGap={2} barCategoryGap="18%" margin={{ top: 10, right: 8, bottom: 0, left: -16 }}>
                             <defs>
                               {PROGRESSION_COLORS.slice(0, strengthProgression.exercises.length).map((c, i) => (
                                 <linearGradient key={i} id={`progBar_${i}`} x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor={c} stopOpacity={0.9} />
-                                  <stop offset="60%" stopColor={c} stopOpacity={0.65} />
-                                  <stop offset="100%" stopColor={c} stopOpacity={0.1} />
+                                  <stop offset="0%" stopColor={c} stopOpacity={1} />
+                                  <stop offset="40%" stopColor={c} stopOpacity={0.75} />
+                                  <stop offset="100%" stopColor={c} stopOpacity={0.12} />
                                 </linearGradient>
                               ))}
+                              <linearGradient id="progRefLine" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="#f43f5e" stopOpacity={0} />
+                                <stop offset="50%" stopColor="#f43f5e" stopOpacity={0.8} />
+                                <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
+                              </linearGradient>
+                              <filter id="progBestGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
                             <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
                             <YAxis stroke="rgba(255,255,255,0.12)" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={32} tickFormatter={v => `${v}`} />
+                            {(() => {
+                              const allVals = strengthProgression.data.flatMap(d =>
+                                strengthProgression.exercises.map(ex => (d[ex] as number) || 0)
+                              )
+                              const peak = Math.max(...allVals)
+                              return peak > 0 ? (
+                                <ReferenceLine y={peak} stroke="url(#progRefLine)" strokeWidth={2} strokeDasharray="6 4"
+                                  label={{ value: `🏆 ${peak}`, fill: '#f43f5e', fontSize: 10, fontWeight: 800, position: 'right' }} />
+                              ) : null
+                            })()}
                             <Tooltip content={({ active, payload, label }) => {
                               if (!active || !payload?.length) return null
                               const sorted = [...payload].sort((a, b) => ((b.value as number) || 0) - ((a.value as number) || 0))
                               return (
                                 <motion.div initial={{ opacity: 0, y: 8, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[170px]">
+                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[180px]">
                                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-transparent to-violet-500/5 pointer-events-none" />
                                   <div className="relative">
-                                    <div className="text-white font-bold text-xs pb-2 mb-2 border-b border-white/[0.06]">{label}</div>
-                                    {sorted.map((p, i) => (
-                                      <div key={i} className="flex items-center gap-2 py-0.5">
-                                        <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: p.color }} />
-                                        <span className="text-gray-400 flex-1 min-w-0 truncate">{p.name}</span>
-                                        <span className="text-white font-bold ml-auto tabular-nums">{p.value} <span className="text-[9px] font-normal text-gray-500">lbs</span></span>
-                                      </div>
-                                    ))}
+                                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/[0.06]">
+                                      <span className="text-white font-bold text-xs">{label}</span>
+                                      <span className="text-[10px] text-emerald-400 font-bold">{sorted.length} lifts</span>
+                                    </div>
+                                    {sorted.map((p, i) => {
+                                      const medals = ['🥇', '🥈', '🥉']
+                                      const isBest = i === 0
+                                      return (
+                                        <div key={i} className="flex items-center gap-2 py-0.5">
+                                          <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: p.color }} />
+                                          <span className="text-gray-400 flex-1 min-w-0 truncate">{p.name}</span>
+                                          <span className="text-white font-bold ml-auto tabular-nums">{p.value} <span className="text-[9px] font-normal text-gray-500">lbs</span></span>
+                                          {i < 3 && <span className="text-[11px]">{medals[i]}</span>}
+                                          {isBest && <span className="text-[8px] font-bold text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded">BEST</span>}
+                                        </div>
+                                      )
+                                    })}
                                   </div>
                                 </motion.div>
                               )
                             }} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
                             {strengthProgression.exercises.map((ex, i) => (
-                              <Bar key={ex} dataKey={ex} name={ex} fill={`url(#progBar_${i})`} radius={[4, 4, 0, 0]} maxBarSize={28} animationDuration={800} animationEasing="ease-out" />
+                              <Bar key={ex} dataKey={ex} name={ex} fill={`url(#progBar_${i})`} radius={[4, 4, 0, 0]} maxBarSize={24} animationDuration={800} animationEasing="ease-out" />
                             ))}
                           </BarChart>
                         </ResponsiveContainer>
@@ -834,31 +859,54 @@ export function Progress() {
                     {chartTab === 'matrix' && (
                       strengthMatrix.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={strengthMatrix} layout="vertical" margin={{ top: 4, right: 16, bottom: 0, left: 0 }} barGap={4} barCategoryGap="25%">
+                          <BarChart data={strengthMatrix} layout="vertical" margin={{ top: 4, right: 20, bottom: 0, left: 0 }} barGap={4} barCategoryGap="25%">
                             <defs>
                               {['#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#6b7280'].map((c, i) => (
                                 <linearGradient key={i} id={`matBar_${i}`} x1="0" y1="0" x2="1" y2="0">
-                                  <stop offset="0%" stopColor={c} stopOpacity={0.9} />
-                                  <stop offset="100%" stopColor={c} stopOpacity={0.3} />
+                                  <stop offset="0%" stopColor={c} stopOpacity={1} />
+                                  <stop offset="50%" stopColor={c} stopOpacity={0.75} />
+                                  <stop offset="100%" stopColor={c} stopOpacity={0.2} />
                                 </linearGradient>
                               ))}
-                              <filter id="matGlowFilter"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <filter id="matGlowFilter"><feGaussianBlur stdDeviation="5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <linearGradient id="matAvgLine" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="#a78bfa" stopOpacity={0} />
+                                <stop offset="50%" stopColor="#a78bfa" stopOpacity={0.8} />
+                                <stop offset="100%" stopColor="#a78bfa" stopOpacity={0} />
+                              </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" horizontal={false} vertical={true} />
-                            <XAxis type="number" stroke="rgba(255,255,255,0.1)" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={[0, 'dataMax + 30']} tickFormatter={v => `${v}`} />
+                            <XAxis type="number" stroke="rgba(255,255,255,0.1)" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={[0, 'dataMax + 35']} tickFormatter={v => `${v}`} />
                             <YAxis type="category" dataKey="name" stroke="rgba(255,255,255,0.2)" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} width={95} tick={{ fill: 'rgba(255,255,255,0.7)' }} />
+                            {(() => {
+                              const avg = Math.round(strengthMatrix.reduce((s, m) => s + m.best1RM, 0) / strengthMatrix.length)
+                              return (
+                                <ReferenceLine x={avg} stroke="url(#matAvgLine)" strokeWidth={2} strokeDasharray="6 4"
+                                  label={{ value: `📊 avg ${avg}`, fill: '#a78bfa', fontSize: 10, fontWeight: 800, position: 'top' }} />
+                              )
+                            })()}
                             <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
                               const d = payload[0].payload as any
                               const lmap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
+                              const isTop = d.best1RM === Math.max(...strengthMatrix.map(m => m.best1RM))
+                              const emojiMap: Record<string, string> = { novice: '🟢', intermediate: '🟡', advanced: '🔴', elite: '🟣' }
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[160px]">
+                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[170px]">
                                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/10 via-transparent to-cyan-500/5 pointer-events-none" />
                                   <div className="relative">
-                                    <div className="text-white font-bold text-xs mb-2 pb-2 border-b border-white/[0.06]">{d.name}</div>
-                                    <div className="flex items-center justify-between"><span className="text-gray-400">1RM</span><span className="text-white font-bold tabular-nums">{d.best1RM} <span className="text-[9px] font-normal text-gray-500">lbs</span></span></div>
-                                    {d.level && <div className="flex items-center justify-between mt-1.5"><span className="text-gray-400">Level</span><span className="font-semibold capitalize px-2 py-0.5 rounded-md text-[10px]" style={{ backgroundColor: `${lmap[d.level.toLowerCase()] || '#6b7280'}20`, color: lmap[d.level.toLowerCase()] || '#6b7280' }}>{d.level}</span></div>}
+                                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/[0.06]">
+                                      <span className="text-white font-bold text-xs">{d.name.replace(/_/g, ' ')}</span>
+                                      {isTop && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 BEST</span>}
+                                    </div>
+                                    <div className="flex items-center justify-between"><span className="text-gray-400">Best 1RM</span><span className="text-white font-bold text-sm tabular-nums">{d.best1RM} <span className="text-[9px] font-normal text-gray-500">lbs</span></span></div>
+                                    {d.level && <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/[0.04]">
+                                      <span className="text-gray-400">Strength Level</span>
+                                      <span className="font-bold capitalize px-2.5 py-0.5 rounded-full text-[10px]" style={{ backgroundColor: `${lmap[d.level.toLowerCase()] || '#6b7280'}20`, color: lmap[d.level.toLowerCase()] || '#6b7280' }}>
+                                        {emojiMap[d.level.toLowerCase()] || '⚪'} {d.level}
+                                      </span>
+                                    </div>}
                                     {d.ratio > 0 && <div className="flex items-center justify-between mt-1.5"><span className="text-gray-400">BW Ratio</span><span className="text-gray-300 font-semibold tabular-nums">{d.ratio.toFixed(2)}x</span></div>}
                                   </div>
                                 </motion.div>
