@@ -183,16 +183,26 @@ export function Progress() {
   }, [bodyMetrics])
 
   const volumeTrend = useMemo(() => {
-    const sorted = [...workouts].sort((a: Workout, b: Workout) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    return sorted.slice(-20).map((w: Workout) => ({
-      date: new Date(w.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      volume: w.exercises?.reduce((s: number, ex: WorkoutExercise) => s + ex.sets.reduce((st: number, set: ExerciseSet) => st + ((set.weight || 0) * (set.reps || 0)), 0), 0) || 0,
-    }))
-  }, [workouts])
+    if (workouts.length > 0) {
+      const sorted = [...workouts].sort((a: Workout, b: Workout) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      return sorted.slice(-20).map((w: Workout) => ({
+        date: new Date(w.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        volume: w.exercises?.reduce((s: number, ex: WorkoutExercise) => s + ex.sets.reduce((st: number, set: ExerciseSet) => st + ((set.weight || 0) * (set.reps || 0)), 0), 0) || 0,
+      }))
+    }
+    return records.length > 0
+      ? [...new Set(records.map(r => r.date))].sort().slice(-20).map(d => ({
+          date: new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          volume: records.filter(r => r.date === d).reduce((s, r) => s + (r.weight || 0) * (r.reps || 0), 0),
+        }))
+      : []
+  }, [workouts, records])
 
   const totalVolume = useMemo(() =>
-    workouts.reduce((s: number, w: Workout) => s + (w.exercises?.reduce((se: number, ex: WorkoutExercise) => se + ex.sets.reduce((st: number, set: ExerciseSet) => st + ((set.weight || 0) * (set.reps || 0)), 0), 0) || 0), 0),
-    [workouts]
+    workouts.length > 0
+      ? workouts.reduce((s: number, w: Workout) => s + (w.exercises?.reduce((se: number, ex: WorkoutExercise) => se + ex.sets.reduce((st: number, set: ExerciseSet) => st + ((set.weight || 0) * (set.reps || 0)), 0), 0) || 0), 0)
+      : records.reduce((s, r) => s + (r.weight || 0) * (r.reps || 0), 0),
+    [workouts, records]
   )
 
   const best1RM = useMemo(() => {
