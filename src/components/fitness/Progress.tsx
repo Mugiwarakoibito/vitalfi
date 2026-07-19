@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button'
 import {
   Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, ReferenceLine,
+  AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from 'recharts'
 import { useAppStore } from '@/store/useAppStore'
 import type { Workout, BodyMetric, WorkoutExercise, ExerciseSet, PersonalRecord } from '@/types/domain'
@@ -789,13 +790,13 @@ export function Progress() {
                     {chartTab === 'progression' && (
                       strengthProgression.exercises.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={strengthProgression.data} barGap={2} barCategoryGap="18%" margin={{ top: 10, right: 8, bottom: 0, left: -16 }}>
+                          <AreaChart data={strengthProgression.data} margin={{ top: 10, right: 8, bottom: 0, left: -16 }}>
                             <defs>
                               {PROGRESSION_COLORS.slice(0, strengthProgression.exercises.length).map((c, i) => (
-                                <linearGradient key={i} id={`progBar_${i}`} x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor={c} stopOpacity={1} />
-                                  <stop offset="40%" stopColor={c} stopOpacity={0.75} />
-                                  <stop offset="100%" stopColor={c} stopOpacity={0.12} />
+                                <linearGradient key={i} id={`progArea_${i}`} x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor={c} stopOpacity={0.45} />
+                                  <stop offset="60%" stopColor={c} stopOpacity={0.15} />
+                                  <stop offset="100%" stopColor={c} stopOpacity={0.02} />
                                 </linearGradient>
                               ))}
                               <linearGradient id="progRefLine" x1="0" y1="0" x2="1" y2="0">
@@ -803,9 +804,8 @@ export function Progress() {
                                 <stop offset="50%" stopColor="#f43f5e" stopOpacity={0.8} />
                                 <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
                               </linearGradient>
-                              <filter id="progBestGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} strokeWidth={1} />
                             <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
                             <YAxis stroke="rgba(255,255,255,0.12)" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={32} tickFormatter={v => `${v}`} />
                             {(() => {
@@ -832,25 +832,31 @@ export function Progress() {
                                     </div>
                                     {sorted.map((p, i) => {
                                       const medals = ['🥇', '🥈', '🥉']
-                                      const isBest = i === 0
                                       return (
                                         <div key={i} className="flex items-center gap-2 py-0.5">
-                                          <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: p.color }} />
+                                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
                                           <span className="text-gray-400 flex-1 min-w-0 truncate">{p.name}</span>
                                           <span className="text-white font-bold ml-auto tabular-nums">{p.value} <span className="text-[9px] font-normal text-gray-500">lbs</span></span>
                                           {i < 3 && <span className="text-[11px]">{medals[i]}</span>}
-                                          {isBest && <span className="text-[8px] font-bold text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded">BEST</span>}
+                                          {i === 0 && <span className="text-[8px] font-bold text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded">BEST</span>}
                                         </div>
                                       )
                                     })}
                                   </div>
                                 </motion.div>
                               )
-                            }} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                            }} cursor={{ stroke: 'rgba(255,255,255,0.06)', strokeWidth: 1 }} />
                             {strengthProgression.exercises.map((ex, i) => (
-                              <Bar key={ex} dataKey={ex} name={ex} fill={`url(#progBar_${i})`} radius={[4, 4, 0, 0]} maxBarSize={24} animationDuration={800} animationEasing="ease-out" />
+                              <Area key={ex} type="monotone" dataKey={ex} name={ex} stackId="1"
+                                stroke={PROGRESSION_COLORS[i % PROGRESSION_COLORS.length]}
+                                strokeWidth={2}
+                                fill={`url(#progArea_${i})`}
+                                dot={false}
+                                activeDot={{ r: 5, fill: PROGRESSION_COLORS[i % PROGRESSION_COLORS.length], strokeWidth: 0 }}
+                                animationDuration={800}
+                              />
                             ))}
-                          </BarChart>
+                          </AreaChart>
                         </ResponsiveContainer>
                       ) : (
                         <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log PRs in multiple exercises to see progression</div>
@@ -859,74 +865,54 @@ export function Progress() {
                     {chartTab === 'matrix' && (
                       strengthMatrix.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={strengthMatrix} layout="vertical" margin={{ top: 4, right: 20, bottom: 0, left: 0 }} barGap={4} barCategoryGap="25%">
+                          <RadarChart data={strengthMatrix.map(m => ({ ...m, fullName: m.name.replace(/_/g, ' ') }))} cx="50%" cy="50%" outerRadius="72%">
                             <defs>
-                              {['#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#6b7280'].map((c, i) => (
-                                <linearGradient key={i} id={`matBar_${i}`} x1="0" y1="0" x2="1" y2="0">
-                                  <stop offset="0%" stopColor={c} stopOpacity={1} />
-                                  <stop offset="50%" stopColor={c} stopOpacity={0.75} />
-                                  <stop offset="100%" stopColor={c} stopOpacity={0.2} />
-                                </linearGradient>
-                              ))}
-                              <filter id="matGlowFilter"><feGaussianBlur stdDeviation="5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                              <linearGradient id="matAvgLine" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stopColor="#a78bfa" stopOpacity={0} />
-                                <stop offset="50%" stopColor="#a78bfa" stopOpacity={0.8} />
-                                <stop offset="100%" stopColor="#a78bfa" stopOpacity={0} />
-                              </linearGradient>
+                              {(() => {
+                                const topLevel = strengthMatrix[0]?.level?.toLowerCase() || 'novice'
+                                const cmap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
+                                const tc = cmap[topLevel] || '#8b5cf6'
+                                return (
+                                  <linearGradient id="radarFill" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0%" stopColor={tc} stopOpacity={0.35} />
+                                    <stop offset="100%" stopColor={tc} stopOpacity={0.08} />
+                                  </linearGradient>
+                                )
+                              })()}
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" horizontal={false} vertical={true} />
-                            <XAxis type="number" stroke="rgba(255,255,255,0.1)" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={[0, 'dataMax + 35']} tickFormatter={v => `${v}`} />
-                            <YAxis type="category" dataKey="name" stroke="rgba(255,255,255,0.2)" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} width={95} tick={{ fill: 'rgba(255,255,255,0.7)' }} />
-                            {(() => {
-                              const avg = Math.round(strengthMatrix.reduce((s, m) => s + m.best1RM, 0) / strengthMatrix.length)
-                              return (
-                                <ReferenceLine x={avg} stroke="url(#matAvgLine)" strokeWidth={2} strokeDasharray="6 4"
-                                  label={{ value: `📊 avg ${avg}`, fill: '#a78bfa', fontSize: 10, fontWeight: 800, position: 'top' }} />
-                              )
-                            })()}
+                            <PolarGrid stroke="rgba(255,255,255,0.06)" gridType="polygon" />
+                            <PolarAngleAxis dataKey="fullName" tick={{ fill: '#9ca3af', fontSize: 9, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                            <PolarRadiusAxis angle={90} domain={[0, Math.max(...strengthMatrix.map(m => m.best1RM)) * 1.2]} tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickCount={4} />
                             <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
                               const d = payload[0].payload as any
                               const lmap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
+                              const elMap: Record<string, string> = { novice: '🟢', intermediate: '🟡', advanced: '🔴', elite: '🟣' }
                               const isTop = d.best1RM === Math.max(...strengthMatrix.map(m => m.best1RM))
-                              const emojiMap: Record<string, string> = { novice: '🟢', intermediate: '🟡', advanced: '🔴', elite: '🟣' }
+                              const idx = strengthMatrix.findIndex(m => m.name === d.name)
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[170px]">
+                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[160px]">
                                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/10 via-transparent to-cyan-500/5 pointer-events-none" />
                                   <div className="relative">
                                     <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/[0.06]">
-                                      <span className="text-white font-bold text-xs">{d.name.replace(/_/g, ' ')}</span>
+                                      <span className="text-white font-bold text-xs">{d.fullName}</span>
                                       {isTop && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 BEST</span>}
                                     </div>
-                                    <div className="flex items-center justify-between"><span className="text-gray-400">Best 1RM</span><span className="text-white font-bold text-sm tabular-nums">{d.best1RM} <span className="text-[9px] font-normal text-gray-500">lbs</span></span></div>
+                                    <div className="flex items-center justify-between"><span className="text-gray-400">1RM</span><span className="text-white font-bold tabular-nums">{d.best1RM} <span className="text-[9px] font-normal text-gray-500">lbs</span></span></div>
                                     {d.level && <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/[0.04]">
-                                      <span className="text-gray-400">Strength Level</span>
+                                      <span className="text-gray-400">Level</span>
                                       <span className="font-bold capitalize px-2.5 py-0.5 rounded-full text-[10px]" style={{ backgroundColor: `${lmap[d.level.toLowerCase()] || '#6b7280'}20`, color: lmap[d.level.toLowerCase()] || '#6b7280' }}>
-                                        {emojiMap[d.level.toLowerCase()] || '⚪'} {d.level}
+                                        {elMap[d.level.toLowerCase()] || '⚪'} {d.level}
                                       </span>
                                     </div>}
                                     {d.ratio > 0 && <div className="flex items-center justify-between mt-1.5"><span className="text-gray-400">BW Ratio</span><span className="text-gray-300 font-semibold tabular-nums">{d.ratio.toFixed(2)}x</span></div>}
+                                    <div className="mt-2 pt-2 border-t border-white/[0.04] text-[9px] text-gray-500">Rank #{idx + 1} of {strengthMatrix.length}</div>
                                   </div>
                                 </motion.div>
                               )
-                            }} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                            {strengthMatrix.map((entry, idx) => {
-                              const cmap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
-                              const c = cmap[entry.level.toLowerCase()] || '#6b7280'
-                              const gIdx = ['#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#6b7280'].indexOf(c)
-                              return (
-                                <Bar key={entry.name} data={[entry]} dataKey="best1RM" name={entry.name}
-                                  fill={`url(#matBar_${gIdx >= 0 ? gIdx : 4})`}
-                                  radius={[0, 8, 8, 0]}
-                                  maxBarSize={28}
-                                  background={{ fill: 'rgba(255,255,255,0.02)' }}
-                                  filter={idx === 0 ? 'url(#matGlowFilter)' : undefined}
-                                />
-                              )
-                            })}
-                          </BarChart>
+                            }} />
+                            <Radar name="Strength" dataKey="best1RM" stroke="#8b5cf6" strokeWidth={2} fill="url(#radarFill)" animationDuration={800} animationEasing="ease-out" />
+                          </RadarChart>
                         </ResponsiveContainer>
                       ) : (
                         <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your first PR to see your strength matrix</div>
