@@ -378,7 +378,7 @@ export function Progress() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Confetti active={confettiTrigger > 0} />
 
       {justAdded && (
@@ -485,17 +485,16 @@ export function Progress() {
       </motion.div>
 
       {/* PERFCOACH Panel */}
-      <AnimatePresence>
-        {showPerfCoach && (
-          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-            className="rounded-2xl border border-amber-500/15 bg-black/60 backdrop-blur-xl p-4 overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-violet-500/5 pointer-events-none" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400/20 to-amber-500/20 border border-amber-500/20 flex items-center justify-center">
-                    <Brain className="w-3.5 h-3.5 text-amber-400" />
-                  </div>
+      {showPerfCoach && (
+        <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+          className="rounded-2xl border border-amber-500/15 bg-black/60 backdrop-blur-xl p-4 overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-violet-500/5 pointer-events-none" />
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400/20 to-amber-500/20 border border-amber-500/20 flex items-center justify-center">
+                  <Brain className="w-3.5 h-3.5 text-amber-400" />
+                </div>
                   <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">PERFCOACH</span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -646,11 +645,9 @@ export function Progress() {
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
-
+        
       {/* PerfScope Panel */}
-      <AnimatePresence>
-        {showPerfScope && (
+      {showPerfScope && (
           <motion.div key="perfscope" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
             className="rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-[12px] p-4 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
@@ -924,11 +921,9 @@ export function Progress() {
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
-
+        
       {/* Achievements Panel */}
-      <AnimatePresence>
-        {showAchievements && records.length > 0 && (
+      {showAchievements && records.length > 0 && (
           <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
             className="rounded-2xl border border-amber-500/15 bg-black/60 backdrop-blur-xl p-5 overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-br from-amber-500/3 via-transparent to-yellow-500/3 pointer-events-none" />
@@ -1056,8 +1051,7 @@ export function Progress() {
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
-
+        
       {/* PR Exercise Cards — with ranking integrated */}
       {records.length === 0 ? (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
