@@ -9,8 +9,8 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import {
-  Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart,
+  Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, BarChart, LineChart, Area,
 } from 'recharts'
 import { useAppStore } from '@/store/useAppStore'
 import type { Workout, BodyMetric, WorkoutExercise, ExerciseSet, PersonalRecord } from '@/types/domain'
@@ -129,7 +129,6 @@ export function Progress() {
     goalWeight: '', goalReps: '', goalVolume: '', notes: '',
   })
   const [selectedExercise] = useState<string>('')
-  const [bodyGoalWeight] = useState<string>(() => localStorage.getItem('vitalfi_body_goal_weight') ?? '')
   const [earned, setEarned] = useState<Set<string>>(new Set())
   const [showAchievements, setShowAchievements] = useState(false)
   const [showPerfCoach, setShowPerfCoach] = useState(false)
@@ -138,7 +137,7 @@ export function Progress() {
   const [achTab, setAchTab] = useState<string>('milestones')
   const [perfFocus, setPerfFocus] = useState<'strength' | 'hypertrophy' | 'endurance' | 'power' | 'overall'>('overall')
   const [scopeOffset, setScopeOffset] = useState(0)
-  const [chartTab, setChartTab] = useState<'prs' | 'volume' | 'weight'>('prs')
+  const [chartTab, setChartTab] = useState<'prs' | 'exercises' | 'activity'>('prs')
   const [targetDate, setTargetDate] = useState(new Date())
   const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d }, [])
 
@@ -171,32 +170,29 @@ export function Progress() {
     return withWeight.sort((a: BodyMetric, b: BodyMetric) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].weight!
   }, [bodyMetrics])
 
-  const bodyWeightData = useMemo(() => {
-    return [...bodyMetrics]
-      .filter((m: BodyMetric) => m.weight != null)
-      .sort((a: BodyMetric, b: BodyMetric) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .map((m: BodyMetric) => ({
-        date: new Date(m.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        weight: m.weight!,
-        bodyFat: m.bodyFat ?? null,
-      }))
-  }, [bodyMetrics])
-
-  const volumeTrend = useMemo(() => {
-    if (workouts.length > 0) {
-      const sorted = [...workouts].sort((a: Workout, b: Workout) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      return sorted.slice(-20).map((w: Workout) => ({
-        date: new Date(w.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        volume: w.exercises?.reduce((s: number, ex: WorkoutExercise) => s + ex.sets.reduce((st: number, set: ExerciseSet) => st + ((set.weight || 0) * (set.reps || 0)), 0), 0) || 0,
-      }))
+  const prsByExercise = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const r of records) {
+      const name = r.exerciseName || 'Unknown'
+      map.set(name, (map.get(name) || 0) + 1)
     }
-    return records.length > 0
-      ? [...new Set(records.map(r => r.date))].sort().slice(-20).map(d => ({
-          date: new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          volume: records.filter(r => r.date === d).reduce((s, r) => s + (r.weight || 0) * (r.reps || 0), 0),
-        }))
-      : []
-  }, [workouts, records])
+    return [...map.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 15)
+      .map(([name, count]) => ({ name, count }))
+  }, [records])
+
+  const prActivity = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const r of records) {
+      const day = new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      map.set(day, (map.get(day) || 0) + 1)
+    }
+    return [...map.entries()]
+      .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
+      .slice(-20)
+      .map(([date, count]) => ({ date, count }))
+  }, [records])
 
   const totalVolume = useMemo(() =>
     workouts.length > 0
@@ -691,14 +687,14 @@ export function Progress() {
                 <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
                   {[
                     { key: 'prs' as const, label: 'PRs', icon: '📊' },
-                    { key: 'volume' as const, label: 'Volume', icon: '📈' },
-                    { key: 'weight' as const, label: 'Weight', icon: '⚖️' },
+                    { key: 'exercises' as const, label: 'Exercises', icon: '🏋️' },
+                    { key: 'activity' as const, label: 'Activity', icon: '📅' },
                   ].map(m => (
                     <button key={m.key} onClick={() => setChartTab(m.key)}
                       className={`relative px-3.5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
                         chartTab === m.key
                           ? m.key === 'prs' ? 'text-amber-300 bg-gradient-to-b from-amber-500/20 to-amber-500/5 border border-amber-500/25 shadow-lg shadow-amber-500/8'
-                          : m.key === 'volume' ? 'text-emerald-300 bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border border-emerald-500/25 shadow-lg shadow-emerald-500/8'
+                          : m.key === 'exercises' ? 'text-emerald-300 bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border border-emerald-500/25 shadow-lg shadow-emerald-500/8'
                           : 'text-violet-300 bg-gradient-to-b from-violet-500/20 to-violet-500/5 border border-violet-500/25 shadow-lg shadow-violet-500/8'
                           : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'
                       }`}>
@@ -756,105 +752,70 @@ export function Progress() {
                       <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your first PR to see trends</div>
                     )
                   )}
-                  {chartTab === 'volume' && (
-                    volumeTrend.length > 0 ? (
+                  {chartTab === 'exercises' && (
+                    prsByExercise.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={volumeTrend} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
+                        <BarChart data={prsByExercise} layout="vertical" margin={{ top: 4, right: 12, bottom: 0, left: 8 }}>
                           <defs>
-                            <linearGradient id="volBarGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={1} /><stop offset="100%" stopColor="#10b981" stopOpacity={0.35} /></linearGradient>
+                            <linearGradient id="exBarGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#10b981" stopOpacity={1} /><stop offset="100%" stopColor="#10b981" stopOpacity={0.35} /></linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
-                          <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
-                          <YAxis stroke="#6b7280" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={32} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
+                          <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" horizontal={false} strokeWidth={1} />
+                          <XAxis type="number" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dx={4} tickFormatter={v => `${v}`} />
+                          <YAxis type="category" dataKey="name" stroke="#d1d5db" fontSize={10} fontWeight={600} axisLine={false} tickLine={false} width={80} tick={{ fill: '#d1d5db' }} />
                           <Tooltip content={({ active, payload }) => {
                             if (!active || !payload?.length) return null
                             const d = payload[0].payload as any
                             return (
                               <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-emerald-500/5 min-w-[150px]">
+                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 text-[11px] shadow-2xl shadow-emerald-500/5 min-w-[140px]">
                                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
-                                <div className="relative space-y-2">
-                                  <div className="flex items-center justify-between pb-2 border-b border-white/5">
-                                    <span className="text-white font-bold text-xs">{d.date}</span>
-                                    <span className="text-[10px] text-emerald-400 font-bold">{d.volume >= 1000 ? `${(d.volume / 1000).toFixed(1)}k` : d.volume}</span>
-                                  </div>
+                                <div className="relative space-y-1">
+                                  <div className="text-white font-bold text-xs">{d.name}</div>
+                                  <div className="text-emerald-400 font-bold">{d.count} PR{d.count !== 1 ? 's' : ''}</div>
                                 </div>
                               </motion.div>
                             )
                           }} cursor={{ fill: 'rgba(16,185,129,0.15)' }} />
-                          <Bar dataKey="volume" fill="url(#volBarGrad)" radius={[6, 6, 0, 0]} maxBarSize={32} animationDuration={600} animationEasing="ease-out" />
+                          <Bar dataKey="count" fill="url(#exBarGrad)" radius={[0, 6, 6, 0]} maxBarSize={20} animationDuration={600} animationEasing="ease-out" />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">Not enough workout data yet — keep training!</div>
+                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your first PR to see exercises</div>
                     )
                   )}
-                  {chartTab === 'weight' && (
-                    bodyWeightData.length > 1 ? (
+                  {chartTab === 'activity' && (
+                    prActivity.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={bodyWeightData} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
+                        <LineChart data={prActivity} margin={{ top: 8, right: 4, bottom: 0, left: -16 }}>
                           <defs>
-                            <linearGradient id="bwBarGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b5cf6" stopOpacity={1} /><stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.4} /></linearGradient>
-                            <filter id="bwBarGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                            <linearGradient id="actBarGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b5cf6" stopOpacity={1} /><stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.3} /></linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
                           <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
-                          <YAxis yAxisId="left" stroke="#8b5cf6" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={['dataMin - 2', 'dataMax + 2']} width={32} tickFormatter={v => `${v}`} />
-                          <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={['dataMin - 3', 'dataMax + 3']} width={32} tickFormatter={v => `${v}%`} />
+                          <YAxis allowDecimals={false} stroke="#8b5cf6" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={32} tickFormatter={v => `${v}`} />
                           <Tooltip content={({ active, payload }) => {
                             if (!active || !payload?.length) return null
                             const d = payload[0].payload as any
-                            const prev = bodyWeightData[bodyWeightData.indexOf(d) - 1]
-                            const delta = prev?.weight != null && d.weight != null ? d.weight - prev.weight : null
                             return (
                               <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-violet-500/5 min-w-[170px]">
+                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 text-[11px] shadow-2xl shadow-violet-500/5 min-w-[150px]">
                                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none" />
-                                <div className="relative">
-                                  <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-white/5">
-                                    <span className="text-white font-bold text-xs">{d.date}</span>
-                                    {delta != null && (
-                                      <span className={`text-[10px] font-bold flex items-center gap-0.5 ${delta > 0 ? 'text-rose-400' : delta < 0 ? 'text-emerald-400' : 'text-gray-500'}`}>
-                                        {delta > 0 ? '▲' : delta < 0 ? '▼' : '–'} {Math.abs(delta).toFixed(2)} kg
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="space-y-2">
-                                    <div className="flex items-center gap-2.5">
-                                      <span className="w-2.5 h-2.5 rounded-full bg-violet-400 shadow-lg shadow-violet-400/40" style={{ filter: 'url(#bwBarGlow)' }} />
-                                      <span className="text-gray-400 font-medium">Weight</span>
-                                      <span className="text-white font-bold ml-auto text-sm">{d.weight} <span className="text-[10px] font-normal text-gray-500">kg</span></span>
-                                    </div>
-                                    {d.bodyFat != null && (
-                                      <div className="flex items-center gap-2.5">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-lg shadow-amber-400/40" />
-                                        <span className="text-gray-400 font-medium">Body Fat</span>
-                                        <span className="text-white font-bold ml-auto text-sm">{d.bodyFat} <span className="text-[10px] font-normal text-gray-500">%</span></span>
-                                      </div>
-                                    )}
-                                    {bodyGoalWeight && !isNaN(Number(bodyGoalWeight)) && (
-                                      <div className="flex items-center gap-2.5 pt-1.5 border-t border-white/5">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" />
-                                        <span className="text-gray-400 font-medium">Goal</span>
-                                        <span className="text-emerald-400 font-bold ml-auto">{Number(bodyGoalWeight).toFixed(1)} kg</span>
-                                      </div>
-                                    )}
+                                <div className="relative space-y-1">
+                                  <div className="text-white font-bold text-xs">{d.date}</div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-violet-400 shadow-lg shadow-violet-400/40" />
+                                    <span className="text-gray-400 font-medium">PRs</span>
+                                    <span className="text-violet-300 font-bold ml-auto">{d.count}</span>
                                   </div>
                                 </div>
                               </motion.div>
                             )
                           }} cursor={{ fill: 'rgba(139,92,246,0.15)' }} />
-                          <Bar yAxisId="left" dataKey="weight" fill="url(#bwBarGrad)" radius={[6, 6, 0, 0]} maxBarSize={28} animationDuration={600} animationEasing="ease-out" />
-                          {bodyWeightData.some(d => d.bodyFat != null) && (
-                            <Line yAxisId="right" type="monotone" dataKey="bodyFat" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#f59e0b', strokeWidth: 2.5, stroke: '#1a1a2e' }} name="Body Fat %" animationDuration={600} animationEasing="ease-out" />
-                          )}
-                          {bodyGoalWeight && !isNaN(Number(bodyGoalWeight)) && (
-                            <Line yAxisId="left" type="monotone" dataKey={() => Number(bodyGoalWeight)} stroke="#10b981" strokeWidth={1.5} strokeDasharray="5 4" dot={false} opacity={0.7} name="Goal" animationDuration={400} />
-                          )}
-                        </BarChart>
+                          <Area type="monotone" dataKey="count" stroke="#8b5cf6" strokeWidth={2} fill="url(#actBarGrad)" animationDuration={600} animationEasing="ease-out" />
+                        </LineChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your body weight in the Body tab to see trends here.</div>
+                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your first PR to see activity</div>
                     )
                   )}
                 </div>
@@ -883,45 +844,37 @@ export function Progress() {
                     </div>
                   )
                 }
-                if (chartTab === 'volume' && volumeTrend.length > 0) {
-                  const vols = volumeTrend.map(d => d.volume)
-                  const maxV = Math.max(...vols)
-                  const avgV = vols.reduce((s, v) => s + v, 0) / vols.length
-                  const totalW = workouts.length
+                if (chartTab === 'exercises' && prsByExercise.length > 0) {
+                  const totalPrs = prsByExercise.reduce((s, e) => s + e.count, 0)
+                  const topEx = prsByExercise[0]
                   return (
                     <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
                       <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
-                        <span>📊 Avg Vol <span className="font-semibold text-emerald-400">{avgV.toFixed(0)}</span></span>
-                        <span>📈 Peak <span className="font-semibold text-gray-300">{maxV.toFixed(0)}</span></span>
-                        <span>📋 Workouts <span className="font-semibold text-violet-400">{totalW}</span></span>
+                        <span>🏋️ Exercises <span className="font-semibold text-emerald-400">{prsByExercise.length}</span></span>
+                        <span>📊 Total PRs <span className="font-semibold text-gray-300">{totalPrs}</span></span>
+                        <span>⭐ Top <span className="font-semibold text-amber-400">{topEx.name}</span> <span className="text-gray-500">({topEx.count})</span></span>
                       </div>
                       <div className="relative h-0.5 bg-white/[0.03]">
-                        <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(workouts.length / 30 * 100, 100)}%` }} />
+                        <div className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(prsByExercise.length / 15 * 100, 100)}%` }} />
                       </div>
                     </div>
                   )
                 }
-                if (chartTab === 'weight' && bodyWeightData.length > 1) {
-                  const vals = bodyWeightData.map(d => d.weight)
-                  const avg = vals.reduce((s, v) => s + v, 0) / vals.length
-                  const max = Math.max(...vals)
-                  const min = Math.min(...vals)
-                  const hasBf = bodyWeightData.some(d => d.bodyFat != null)
-                  const bfVals = bodyWeightData.filter(d => d.bodyFat != null).map(d => d.bodyFat!)
-                  const avgBf = bfVals.length > 0 ? bfVals.reduce((s, v) => s + v, 0) / bfVals.length : null
+                if (chartTab === 'activity' && prActivity.length > 0) {
+                  const totalDays = prActivity.length
+                  const totalPrs = prActivity.reduce((s, d) => s + d.count, 0)
+                  const peakDay = prActivity.reduce((max, d) => d.count > max.count ? d : max, prActivity[0])
                   return (
                     <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
                       <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
-                        <span>📊 Avg <span className="font-semibold text-violet-400">{avg.toFixed(1)}</span> kg</span>
-                        <span>📈 High <span className="font-semibold text-gray-300">{max.toFixed(1)}</span> kg</span>
-                        <span>📉 Low <span className="font-semibold text-gray-300">{min.toFixed(1)}</span> kg</span>
-                        <span>📋 Entries <span className="font-semibold text-violet-400">{bodyWeightData.length}</span></span>
-                        {hasBf && avgBf != null && <span>🟡 Body Fat <span className="font-semibold text-amber-400">{avgBf.toFixed(1)}%</span></span>}
+                        <span>📅 Active Days <span className="font-semibold text-violet-400">{totalDays}</span></span>
+                        <span>📊 Total PRs <span className="font-semibold text-gray-300">{totalPrs}</span></span>
+                        <span>📈 Best Day <span className="font-semibold text-amber-400">{peakDay.count}</span> <span className="text-gray-500">({peakDay.date})</span></span>
                       </div>
                       <div className="relative h-0.5 bg-white/[0.03]">
-                        <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(bodyWeightData.length / 30 * 100, 100)}%` }} />
+                        <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(totalDays / 30 * 100, 100)}%` }} />
                       </div>
                     </div>
                   )
