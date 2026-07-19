@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button'
 import {
   Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, ReferenceLine,
+  ComposedChart, Line, PieChart, Pie,
 } from 'recharts'
 import { useAppStore } from '@/store/useAppStore'
 import type { Workout, BodyMetric, WorkoutExercise, ExerciseSet, PersonalRecord } from '@/types/domain'
@@ -802,67 +803,64 @@ export function Progress() {
                     {chartTab === 'progression' && (
                       gainChartData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={gainChartData} barGap={4} barCategoryGap="25%">
+                          <ComposedChart data={gainChartData} barGap={6} barCategoryGap="28%">
                             <defs>
                               {gainChartData.map((d, i) => (
-                                <linearGradient key={i} id={`progBar_${i}`} x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor={d.gain > 0 ? '#10b981' : d.gain < 0 ? '#f43f5e' : d.color} stopOpacity={0.95} />
-                                  <stop offset="50%" stopColor={d.gain > 0 ? '#059669' : d.gain < 0 ? '#e11d48' : d.color} stopOpacity={0.7} />
-                                  <stop offset="100%" stopColor={d.gain > 0 ? '#047857' : d.gain < 0 ? '#be123c' : d.color} stopOpacity={0.12} />
+                                <linearGradient key={i} id={`compoBar_${i}`} x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor={d.gain > 0 ? '#10b981' : d.gain < 0 ? '#f43f5e' : '#6b7280'} stopOpacity={0.95} />
+                                  <stop offset="50%" stopColor={d.gain > 0 ? '#059669' : d.gain < 0 ? '#e11d48' : '#4b5563'} stopOpacity={0.7} />
+                                  <stop offset="100%" stopColor={d.gain > 0 ? '#047857' : d.gain < 0 ? '#be123c' : '#374151'} stopOpacity={0.15} />
                                 </linearGradient>
                               ))}
-                              <linearGradient id="progRefLine" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stopColor="#c084fc" stopOpacity={0} />
-                                <stop offset="50%" stopColor="#c084fc" stopOpacity={0.8} />
-                                <stop offset="100%" stopColor="#c084fc" stopOpacity={0} />
+                              <linearGradient id="compoLine" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="#fbbf24" stopOpacity={0} />
+                                <stop offset="50%" stopColor="#fbbf24" stopOpacity={0.9} />
+                                <stop offset="100%" stopColor="#fbbf24" stopOpacity={0} />
                               </linearGradient>
-                              <filter id="progBarGlow"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <filter id="compoLineGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <filter id="compoBarGlow"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
                             <XAxis dataKey="name" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} tickFormatter={v => v.replace(/_/g, ' ')} />
                             <YAxis stroke="#a78bfa" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={[0, 'dataMax + 15']} width={32} tickFormatter={v => `${v}`} />
-                            {(() => {
-                              const avg = gainChartData.reduce((s, d) => s + d.current, 0) / gainChartData.length
-                              return avg > 0 ? (
-                                <ReferenceLine y={avg} stroke="url(#progRefLine)" strokeWidth={2} strokeDasharray="6 4"
-                                  label={{ value: `📊 ${avg.toFixed(0)}`, fill: '#c084fc', fontSize: 10, fontWeight: 800, position: 'right' }} />
-                              ) : null
-                            })()}
                             <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
-                              const d = payload[0].payload as any
+                              const d = payload[0]?.payload as any
+                              if (!d) return null
                               const isGrowing = d.gain > 0
                               const maxCurrent = Math.max(...gainChartData.map(x => x.current))
                               const isTop = d.current >= maxCurrent
                               return (
                                 <motion.div initial={{ opacity: 0, y: 8, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[180px]">
-                                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-transparent to-violet-500/5 pointer-events-none" />
+                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[190px]">
+                                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-amber-500/10 via-transparent to-emerald-500/5 pointer-events-none" />
                                   <div className="relative space-y-1.5">
                                     <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
                                       <span className="text-white font-bold text-xs">{d.name}</span>
                                       {isTop && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 BEST</span>}
                                     </div>
                                     <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/40" /><span className="text-gray-400">Current</span><span className="text-white font-bold ml-auto tabular-nums">{d.current} <span className="text-[9px] font-normal text-gray-500">lbs</span></span></div>
-                                    <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-gray-500 shadow-sm shadow-gray-500/40" /><span className="text-gray-400">Start</span><span className="text-gray-300 font-semibold ml-auto tabular-nums">{d.start} lbs</span></div>
-                                    <div className="flex items-center gap-2 pt-1 border-t border-white/[0.04]">
-                                      <span className="text-gray-400 text-[10px]">Change</span>
+                                    <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-amber-400 shadow-sm shadow-amber-400/40" /><span className="text-gray-400">Start</span><span className="text-gray-300 font-semibold ml-auto tabular-nums">{d.start} lbs</span></div>
+                                    <div className="flex items-center gap-2 pt-1.5 border-t border-white/[0.04]">
+                                      <span className="text-gray-500 text-[10px]">Growth</span>
                                       <span className={`font-bold ml-auto tabular-nums flex items-center gap-1 ${isGrowing ? 'text-emerald-400' : d.gain < 0 ? 'text-rose-400' : 'text-gray-400'}`}>
-                                        {isGrowing ? '📈' : d.gain < 0 ? '📉' : '➡️'} {d.gain >= 0 ? '+' : ''}{d.gain} lbs {d.pct !== 0 && <span className="text-[9px] opacity-70">({d.pct}%)</span>}
+                                        {isGrowing ? '📈' : d.gain < 0 ? '📉' : '➡️'} {d.gain >= 0 ? '+' : ''}{d.gain} lbs
+                                        {d.pct !== 0 && <span className="text-[9px] opacity-70">({d.pct > 0 ? '+' : ''}{d.pct}%)</span>}
                                       </span>
                                     </div>
                                   </div>
                                 </motion.div>
                               )
                             }} cursor={{ fill: 'rgba(16,185,129,0.12)' }} />
-                            <Bar dataKey="current" radius={[6, 6, 0, 0]} maxBarSize={40} animationDuration={800} animationEasing="ease-out">
+                            <Bar dataKey="current" radius={[6, 6, 0, 0]} maxBarSize={36} animationDuration={800} animationEasing="ease-out">
                               {gainChartData.map((entry, idx) => {
                                 const maxCurrent = Math.max(...gainChartData.map(x => x.current))
                                 const isBest = entry.current >= maxCurrent
-                                return <Cell key={idx} fill={`url(#progBar_${idx})`} filter={isBest ? 'url(#progBarGlow)' : undefined} />
+                                return <Cell key={idx} fill={`url(#compoBar_${idx})`} filter={isBest ? 'url(#compoBarGlow)' : undefined} />
                               })}
                             </Bar>
-                          </BarChart>
+                            <Line type="monotone" dataKey="start" stroke="url(#compoLine)" strokeWidth={2.5} strokeDasharray="5 4" dot={{ fill: '#fbbf24', strokeWidth: 0, r: 5, filter: 'url(#compoLineGlow)' }} activeDot={{ r: 6, fill: '#fbbf24', strokeWidth: 0 }} animationDuration={1000} />
+                          </ComposedChart>
                         </ResponsiveContainer>
                       ) : (
                         <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log PRs in multiple exercises to see progression</div>
@@ -871,67 +869,63 @@ export function Progress() {
                     {chartTab === 'matrix' && (
                       strengthMatrix.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={strengthMatrix} barGap={4} barCategoryGap="25%">
+                          <PieChart>
                             <defs>
                               {strengthMatrix.map((m, i) => {
                                 const isBest = m.best1RM === Math.max(...strengthMatrix.map(x => x.best1RM))
                                 return (
-                                  <linearGradient key={i} id={`matBar_${i}`} x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor={m.color} stopOpacity={isBest ? 1 : 0.9} />
-                                    <stop offset="50%" stopColor={m.color} stopOpacity={isBest ? 0.85 : 0.65} />
-                                    <stop offset="100%" stopColor={m.color} stopOpacity={isBest ? 0.25 : 0.1} />
+                                  <linearGradient key={i} id={`pieSlice_${i}`} x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0%" stopColor={m.color} stopOpacity={isBest ? 0.95 : 0.85} />
+                                    <stop offset="100%" stopColor={m.color} stopOpacity={isBest ? 0.55 : 0.35} />
                                   </linearGradient>
                                 )
                               })}
-                              <linearGradient id="matRefLine" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stopColor="#fbbf24" stopOpacity={0} />
-                                <stop offset="50%" stopColor="#fbbf24" stopOpacity={0.8} />
-                                <stop offset="100%" stopColor="#fbbf24" stopOpacity={0} />
-                              </linearGradient>
-                              <filter id="matBarGlow"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <filter id="pieBestGlow"><feGaussianBlur stdDeviation="5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <radialGradient id="pieCenterGlow" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stopColor="rgba(139,92,246,0.15)" />
+                                <stop offset="100%" stopColor="rgba(139,92,246,0)" />
+                              </radialGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
-                            <XAxis dataKey="name" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} tickFormatter={v => v.replace(/_/g, ' ')} />
-                            <YAxis stroke="#a78bfa" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={[0, 'dataMax + 20']} width={32} tickFormatter={v => `${v}`} />
-                            <ReferenceLine y={0} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
-                            {(() => {
-                              const avg = strengthMatrix.reduce((s, m) => s + m.best1RM, 0) / strengthMatrix.length
-                              return avg > 0 ? (
-                                <ReferenceLine y={avg} stroke="url(#matRefLine)" strokeWidth={2} strokeDasharray="6 4"
-                                  label={{ value: `📊 avg ${avg.toFixed(0)}`, fill: '#fbbf24', fontSize: 10, fontWeight: 800, position: 'right' }} />
-                              ) : null
-                            })()}
+                            <Pie data={strengthMatrix.map(m => ({ ...m, value: m.best1RM }))} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={72} outerRadius={105} paddingAngle={3} startAngle={90} endAngle={-270} animationDuration={1000} animationEasing="ease-out">
+                              {strengthMatrix.map((entry, idx) => {
+                                const isBest = entry.best1RM === Math.max(...strengthMatrix.map(x => x.best1RM))
+                                return <Cell key={idx} fill={`url(#pieSlice_${idx})`} stroke={isBest ? '#fbbf24' : 'rgba(255,255,255,0.06)'} strokeWidth={isBest ? 2 : 1} filter={isBest ? 'url(#pieBestGlow)' : undefined} />
+                              })}
+                            </Pie>
                             <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
-                              const d = payload[0].payload as any
+                              const d = payload[0]?.payload as any
+                              if (!d) return null
                               const lmap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
                               const elMap: Record<string, string> = { novice: '🟢', intermediate: '🟡', advanced: '🔴', elite: '🟣' }
-                              const isTop = d.best1RM === Math.max(...strengthMatrix.map(m => m.best1RM))
+                              const isBest = d.best1RM === Math.max(...strengthMatrix.map(x => x.best1RM))
                               const idx = strengthMatrix.findIndex(m => m.name === d.name)
+                              const total = strengthMatrix.reduce((s, m) => s + m.best1RM, 0)
                               return (
-                                <motion.div initial={{ opacity: 0, y: 8, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                                <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
                                   className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[180px]">
                                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/10 via-transparent to-cyan-500/5 pointer-events-none" />
                                   <div className="relative space-y-1.5">
                                     <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
                                       <span className="text-white font-bold text-xs">{d.name.replace(/_/g, ' ')}</span>
-                                      {isTop && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 BEST</span>}
+                                      {isBest && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 BEST</span>}
                                     </div>
                                     <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color, boxShadow: `0 0 6px ${d.color}66` }} /><span className="text-gray-400">1RM</span><span className="text-white font-bold ml-auto tabular-nums">{d.best1RM} <span className="text-[9px] font-normal text-gray-500">lbs</span></span></div>
                                     {d.level && <div className="flex items-center gap-2"><span className="text-gray-400">Level</span><span className="font-bold capitalize ml-auto px-2.5 py-0.5 rounded-full text-[10px]" style={{ backgroundColor: `${lmap[d.level.toLowerCase()] || '#6b7280'}20`, color: lmap[d.level.toLowerCase()] || '#6b7280' }}>{elMap[d.level.toLowerCase()] || '⚪'} {d.level}</span></div>}
-                                    {d.ratio > 0 && <div className="flex items-center gap-2 pt-1 border-t border-white/[0.04]"><span className="text-gray-400 text-[10px]">BW Ratio</span><span className="text-gray-300 font-semibold ml-auto tabular-nums">{d.ratio.toFixed(2)}x</span></div>}
+                                    {d.ratio > 0 && <div className="flex items-center gap-2 pt-1 border-t border-white/[0.04]"><span className="text-gray-400 text-[10px]">Share</span><span className="text-gray-300 font-semibold ml-auto tabular-nums">{total > 0 ? ((d.best1RM / total) * 100).toFixed(1) : '0'}% of total</span></div>}
                                     <div className="text-[9px] text-gray-500 text-right">Rank #{idx + 1} of {strengthMatrix.length}</div>
                                   </div>
                                 </motion.div>
                               )
-                            }} cursor={{ fill: 'rgba(139,92,246,0.12)' }} />
-                            <Bar dataKey="best1RM" radius={[6, 6, 0, 0]} maxBarSize={40} animationDuration={800} animationEasing="ease-out">
-                              {strengthMatrix.map((entry, idx) => {
-                                const isBest = entry.best1RM >= Math.max(...strengthMatrix.map(m => m.best1RM))
-                                return <Cell key={idx} fill={`url(#matBar_${idx})`} filter={isBest ? 'url(#matBarGlow)' : undefined} />
-                              })}
-                            </Bar>
-                          </BarChart>
+                            }} />
+                            {/* Center label */}
+                            <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={20} fontWeight={800} style={{ textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
+                              {strengthMatrix.length}
+                            </text>
+                            <text x="50%" y="58%" textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.4)" fontSize={9} fontWeight={700}>
+                              exercises
+                            </text>
+                          </PieChart>
                         </ResponsiveContainer>
                       ) : (
                         <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your first PR to see your strength matrix</div>
