@@ -788,98 +788,137 @@ export function Progress() {
                     )}
                     {chartTab === 'progression' && (
                       strengthProgression.exercises.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={strengthProgression.data} barGap={2} barCategoryGap="20%">
-                            <defs>
-                              {PROGRESSION_COLORS.slice(0, strengthProgression.exercises.length).map((c, i) => (
-                                <linearGradient key={i} id={`progBar_${i}`} x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor={c} stopOpacity={0.9} />
-                                  <stop offset="50%" stopColor={c} stopOpacity={0.7} />
-                                  <stop offset="100%" stopColor={c} stopOpacity={0.1} />
-                                </linearGradient>
-                              ))}
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
-                            <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
-                            <YAxis stroke="rgba(255,255,255,0.15)" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={32} tickFormatter={v => `${v}`} />
-                            <Tooltip content={({ active, payload, label }) => {
-                              if (!active || !payload?.length) return null
-                              const sorted = [...payload].sort((a, b) => ((b.value as number) || 0) - ((a.value as number) || 0))
-                              return (
-                                <motion.div initial={{ opacity: 0, y: 8, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[170px]">
-                                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-transparent to-violet-500/5 pointer-events-none" />
-                                  <div className="relative">
-                                    <div className="text-white font-bold text-xs pb-2 mb-2 border-b border-white/[0.06]">{label}</div>
-                                    {sorted.map((p, i) => (
-                                      <div key={i} className="flex items-center gap-2 py-0.5">
-                                        <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: p.color }} />
-                                        <span className="text-gray-400 flex-1 min-w-0 truncate">{p.name}</span>
-                                        <span className="text-white font-bold ml-auto tabular-nums">{p.value} <span className="text-[9px] font-normal text-gray-500">lbs</span></span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </motion.div>
-                              )
-                            }} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                            {strengthProgression.exercises.map((ex, i) => (
-                              <Bar key={ex} dataKey={ex} name={ex} fill={`url(#progBar_${i})`} radius={[4, 4, 0, 0]} maxBarSize={28} animationDuration={800} animationEasing="ease-out" />
+                        <svg viewBox="0 0 600 240" className="w-full h-full overflow-visible">
+                          <defs>
+                            {PROGRESSION_COLORS.slice(0, strengthProgression.exercises.length).map((_, i) => (
+                              <filter key={i} id={`progGlow_${i}`}>
+                                <feGaussianBlur stdDeviation="3" result="blur" />
+                                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                              </filter>
                             ))}
-                          </BarChart>
-                        </ResponsiveContainer>
+                          </defs>
+                          {(() => {
+                            const { data, exercises } = strengthProgression
+                            const dates = data.map(d => d.date as string)
+                            const allVals = data.flatMap(d => exercises.map(ex => (d[ex] as number) || 0)).filter(Boolean)
+                            const maxVal = Math.max(...allVals, 1)
+                            const PAD = { t: 12, r: 100, b: 24, l: 36 }
+                            const W = 600, H = 240
+                            const sx = (i: number) => PAD.l + (i / Math.max(dates.length - 1, 1)) * (W - PAD.l - PAD.r)
+                            const sy = (v: number) => H - PAD.b - (v / (maxVal * 1.15)) * (H - PAD.t - PAD.b)
+                            const paths = exercises.map((ex, i) => {
+                              const pts = data.map((d, idx) => ({ x: sx(idx), y: sy((d[ex] as number) || 0), val: d[ex] as number | null }))
+                                .filter(p => p.val !== null && p.val > 0)
+                              if (pts.length < 2) return null
+                              const line = pts.map((p, j) => `${j === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+                              const area = line + `L${pts[pts.length - 1].x.toFixed(1)},${H - PAD.b}L${pts[0].x.toFixed(1)},${H - PAD.b}Z`
+                              const last = pts[pts.length - 1]
+                              return { ex, color: PROGRESSION_COLORS[i % PROGRESSION_COLORS.length], pts, line, area, last }
+                            }).filter(Boolean)
+
+                            return (
+                              <>
+                                {[0, 0.25, 0.5, 0.75, 1].map(f => {
+                                  const y = sy(f * maxVal * 1.15)
+                                  return (
+                                    <g key={f}>
+                                      <line x1={PAD.l} y1={y} x2={W - PAD.r} y2={y} stroke="rgba(255,255,255,0.04)" strokeWidth={1} />
+                                      <text x={PAD.l - 6} y={y} fill="#6b7280" fontSize={9} fontWeight={600} textAnchor="end" dominantBaseline="middle">
+                                        {Math.round(f * maxVal * 1.15)}
+                                      </text>
+                                    </g>
+                                  )
+                                })}
+                                {[0, Math.floor(dates.length / 2), dates.length - 1].filter(i => i < dates.length).map(i => (
+                                  <text key={i} x={sx(i)} y={H - 4} fill="#6b7280" fontSize={9} fontWeight={700} textAnchor="middle">{dates[i]}</text>
+                                ))}
+                                {paths.map(p => p && (
+                                  <path key={`area-${p.ex}`} d={p.area} fill={p.color} fillOpacity={0.07} />
+                                ))}
+                                {paths.map(p => p && (
+                                  <path key={`line-${p.ex}`} d={p.line} fill="none" stroke={p.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" filter={`url(#progGlow_${exercises.indexOf(p.ex)})`} />
+                                ))}
+                                {paths.map(p => p && p.pts.map((pt, j) => (
+                                  <circle key={`${p.ex}-${j}`} cx={pt.x} cy={pt.y} r={j === p.pts.length - 1 ? 5 : 3} fill={j === p.pts.length - 1 ? p.color : 'rgba(255,255,255,0.4)'} stroke={j === p.pts.length - 1 ? 'rgba(255,255,255,0.2)' : 'none'} strokeWidth={1.5} />
+                                )))}
+                                {paths.map(p => p && (
+                                  <g key={`label-${p.ex}`}>
+                                    <text x={p.last.x + 8} y={p.last.y - 1} fill={p.color} fontSize={11} fontWeight={800} dominantBaseline="auto">
+                                      {p.ex.replace(/_/g, ' ')}
+                                    </text>
+                                    <text x={p.last.x + 8} y={p.last.y + 12} fill="rgba(255,255,255,0.5)" fontSize={10} fontWeight={600} dominantBaseline="auto">
+                                      {p.last.val} lbs
+                                    </text>
+                                  </g>
+                                ))}
+                              </>
+                            )
+                          })()}
+                        </svg>
                       ) : (
                         <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log PRs in multiple exercises to see progression</div>
                       )
                     )}
                     {chartTab === 'matrix' && (
                       strengthMatrix.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={strengthMatrix} layout="vertical" margin={{ top: 4, right: 24, bottom: 0, left: 0 }} barGap={4} barCategoryGap="30%">
-                            <defs>
-                              {['#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#6b7280'].map((c, i) => (
-                                <linearGradient key={i} id={`matBar_${i}`} x1="0" y1="0" x2="1" y2="0">
-                                  <stop offset="0%" stopColor={c} stopOpacity={0.9} />
-                                  <stop offset="100%" stopColor={c} stopOpacity={0.35} />
-                                </linearGradient>
-                              ))}
-                              <filter id="matGlow"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" horizontal={false} vertical={true} />
-                            <XAxis type="number" stroke="rgba(255,255,255,0.1)" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={[0, 'dataMax + 25']} tickFormatter={v => `${v}`} />
-                            <YAxis type="category" dataKey="name" stroke="rgba(255,255,255,0.2)" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} width={90} tick={{ fill: 'rgba(255,255,255,0.7)' }} />
-                            <Tooltip content={({ active, payload }) => {
-                              if (!active || !payload?.length) return null
-                              const d = payload[0].payload as any
-                              const lmap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
-                              return (
-                                <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[160px]">
-                                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/10 via-transparent to-cyan-500/5 pointer-events-none" />
-                                  <div className="relative">
-                                    <div className="text-white font-bold text-xs mb-2 pb-2 border-b border-white/[0.06]">{d.name}</div>
-                                    <div className="flex items-center justify-between"><span className="text-gray-400">1RM</span><span className="text-white font-bold tabular-nums">{d.best1RM} <span className="text-[9px] font-normal text-gray-500">lbs</span></span></div>
-                                    {d.level && <div className="flex items-center justify-between mt-1.5"><span className="text-gray-400">Level</span><span className="font-semibold capitalize px-2 py-0.5 rounded-md text-[10px]" style={{ backgroundColor: `${lmap[d.level.toLowerCase()] || '#6b7280'}20`, color: lmap[d.level.toLowerCase()] || '#6b7280' }}>{d.level}</span></div>}
-                                    {d.ratio > 0 && <div className="flex items-center justify-between mt-1.5"><span className="text-gray-400">BW Ratio</span><span className="text-gray-300 font-semibold tabular-nums">{d.ratio.toFixed(2)}x</span></div>}
-                                  </div>
-                                </motion.div>
-                              )
-                            }} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                            {strengthMatrix.map((entry, idx) => {
-                              const cmap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
-                              const c = cmap[entry.level.toLowerCase()] || '#6b7280'
-                              const gIdx = ['#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#6b7280'].indexOf(c)
-                              return (
-                                <Bar key={entry.name} data={[entry]} dataKey="best1RM" name={entry.name}
-                                  fill={`url(#matBar_${gIdx >= 0 ? gIdx : 4})`}
-                                  radius={[0, 8, 8, 0]}
-                                  maxBarSize={28}
-                                  background={{ fill: 'rgba(255,255,255,0.02)' }}
-                                  filter={idx === 0 ? 'url(#matGlow)' : undefined}
-                                />
-                              )
-                            })}
-                          </BarChart>
-                        </ResponsiveContainer>
+                        <svg viewBox="0 0 500 250" className="w-full h-full overflow-visible">
+                          <defs>
+                            {['#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#6b7280'].map((c, i) => (
+                              <linearGradient key={i} id={`svMatBar_${i}`} x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor={c} stopOpacity={0.85} />
+                                <stop offset="100%" stopColor={c} stopOpacity={0.3} />
+                              </linearGradient>
+                            ))}
+                            <filter id="svMatGlow">
+                              <feGaussianBlur stdDeviation="4" result="blur" />
+                              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                            </filter>
+                          </defs>
+                          {(() => {
+                            const data = strengthMatrix
+                            const maxRM = Math.max(...data.map(d => d.best1RM), 1)
+                            const BH = Math.min(28, (220 - 12) / data.length)
+                            const gap = 6
+                            const startY = 12
+                            const barLeft = 100
+                            const barRight = 460
+                            const barMaxW = barRight - barLeft
+                            const cmap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6', untrained: '#6b7280' }
+                            const lmap: Record<string, string> = { novice: 'Novice', intermediate: 'Intermediate', advanced: 'Advanced', elite: 'Elite', untrained: 'Untrained' }
+
+                            return (
+                              <>
+                                {[0, 0.25, 0.5, 0.75, 1].map(f => (
+                                  <line key={f} x1={barLeft + f * barMaxW} y1={12} x2={barLeft + f * barMaxW} y2={startY + data.length * (BH + gap) + 8}
+                                    stroke="rgba(255,255,255,0.025)" strokeWidth={1} strokeDasharray="3 3" />
+                                ))}
+                                {data.map((entry, i) => {
+                                  const y = startY + i * (BH + gap)
+                                  const c = cmap[entry.level.toLowerCase()] || '#6b7280'
+                                  const gIdx = ['#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#6b7280'].indexOf(c)
+                                  const barW = (entry.best1RM / (maxRM * 1.25)) * barMaxW
+                                  return (
+                                    <g key={entry.name}>
+                                      <rect x={barLeft} y={y} width={barMaxW} height={BH} rx={BH / 2} fill="rgba(255,255,255,0.02)" />
+                                      <rect x={barLeft} y={y} width={Math.max(barW, BH)} height={BH} rx={BH / 2}
+                                        fill={`url(#svMatBar_${gIdx >= 0 ? gIdx : 4})`}
+                                        filter={i === 0 ? 'url(#svMatGlow)' : undefined} />
+                                      <text x={barLeft - 8} y={y + BH / 2} fill="rgba(255,255,255,0.75)" fontSize={10} fontWeight={700} textAnchor="end" dominantBaseline="middle">
+                                        {entry.name.replace(/_/g, ' ')}
+                                      </text>
+                                      <text x={barLeft + Math.max(barW, BH) + 6} y={y + BH / 2} fill={c} fontSize={11} fontWeight={800} dominantBaseline="middle">
+                                        {entry.best1RM}
+                                      </text>
+                                      <text x={barLeft + Math.max(barW, BH) + 6} y={y + BH / 2} fill="rgba(255,255,255,0.25)" fontSize={9} fontWeight={600} dominantBaseline="middle" dx={entry.best1RM >= 100 ? 36 : 28}>
+                                        {lmap[entry.level.toLowerCase()] || entry.level}
+                                      </text>
+                                    </g>
+                                  )
+                                })}
+                              </>
+                            )
+                          })()}
+                        </svg>
                       ) : (
                         <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your first PR to see your strength matrix</div>
                       )
