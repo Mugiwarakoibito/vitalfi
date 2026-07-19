@@ -9,8 +9,8 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import {
-  Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, LineChart, Area,
+  Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, BarChart, LineChart,
 } from 'recharts'
 import { useAppStore } from '@/store/useAppStore'
 import type { Workout, BodyMetric, WorkoutExercise, ExerciseSet, PersonalRecord } from '@/types/domain'
@@ -56,7 +56,7 @@ const ACHIEVEMENT_ICON_MAP = {
   star: Star, award: Award, medal: Medal, trophy: Trophy, flame: Flame,
 }
 
-function classifyStrength(exerciseName: string, weight: number, bodyWeight: number): { level: string; color: string } | null {
+function classifyStrength(exerciseName: string, weight: number, bodyWeight: number): { level: string; color: string; ratio: number } | null {
   if (!bodyWeight) return null
   const ratio = weight / bodyWeight
   const name = exerciseName.toLowerCase()
@@ -76,8 +76,8 @@ function classifyStrength(exerciseName: string, weight: number, bodyWeight: numb
       { level: 'Novice', minRatio: 1.5, color: '#10b981' },
     ]
   } else { return null }
-  for (const t of thresholds) { if (ratio >= t.minRatio) return { level: t.level, color: t.color } }
-  return { level: 'Untrained', color: '#6b7280' }
+  for (const t of thresholds) { if (ratio >= t.minRatio) return { level: t.level, color: t.color, ratio } }
+  return { level: 'Untrained', color: '#6b7280', ratio }
 }
 
 function Confetti({ active }: { active: boolean }) {
@@ -137,7 +137,7 @@ export function Progress() {
   const [achTab, setAchTab] = useState<string>('milestones')
   const [perfFocus, setPerfFocus] = useState<'strength' | 'hypertrophy' | 'endurance' | 'power' | 'overall'>('overall')
   const [scopeOffset, setScopeOffset] = useState(0)
-  const [chartTab, setChartTab] = useState<'prs' | 'exercises' | 'activity'>('prs')
+  const [chartTab, setChartTab] = useState<'prs' | 'progression' | 'matrix'>('prs')
   const [targetDate, setTargetDate] = useState(new Date())
   const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d }, [])
 
@@ -170,29 +170,39 @@ export function Progress() {
     return withWeight.sort((a: BodyMetric, b: BodyMetric) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].weight!
   }, [bodyMetrics])
 
-  const prsByExercise = useMemo(() => {
-    const map = new Map<string, number>()
+  const strengthProgression = useMemo(() => {
+    const groups = new Map<string, { date: string; estimated1RM: number }[]>()
     for (const r of records) {
       const name = r.exerciseName || 'Unknown'
-      map.set(name, (map.get(name) || 0) + 1)
+      if (!groups.has(name)) groups.set(name, [])
+      groups.get(name)!.push({
+        date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        estimated1RM: estimate1RM(r.weight, r.reps),
+      })
     }
-    return [...map.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 15)
-      .map(([name, count]) => ({ name, count }))
+    for (const [, data] of groups) data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    return [...groups.entries()]
+      .sort((a, b) => b[1].length - a[1].length)
+      .slice(0, 5)
+      .map(([exercise, data]) => ({ exercise, data }))
   }, [records])
 
-  const prActivity = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const r of records) {
-      const day = new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      map.set(day, (map.get(day) || 0) + 1)
-    }
-    return [...map.entries()]
-      .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
-      .slice(-20)
-      .map(([date, count]) => ({ date, count }))
-  }, [records])
+  const PROGRESSION_COLORS = ['#f43f5e', '#10b981', '#8b5cf6', '#f59e0b', '#3b82f6']
+
+  const strengthMatrix = useMemo(() => {
+    return [...new Map(records.map(r => [r.exerciseName, r])).values()]
+      .map(r => {
+        const best = records
+          .filter(pr => pr.exerciseName === r.exerciseName)
+          .reduce((a, b) => estimate1RM(a.weight, a.reps) > estimate1RM(b.weight, b.reps) ? a : b)
+        const e1rm = estimate1RM(best.weight, best.reps)
+        const classification = latestWeight
+          ? classifyStrength(best.exerciseName, best.weight, latestWeight)
+          : null
+        return { name: best.exerciseName, best1RM: e1rm, ratio: classification?.ratio ?? 0, level: classification?.level ?? '', color: classification?.color ?? '#6b7280' }
+      })
+      .sort((a, b) => b.best1RM - a.best1RM)
+  }, [records, latestWeight])
 
   const totalVolume = useMemo(() =>
     workouts.length > 0
@@ -687,14 +697,14 @@ export function Progress() {
                 <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
                   {[
                     { key: 'prs' as const, label: 'PRs', icon: '📊' },
-                    { key: 'exercises' as const, label: 'Exercises', icon: '🏋️' },
-                    { key: 'activity' as const, label: 'Activity', icon: '📅' },
+                    { key: 'progression' as const, label: 'Progression', icon: '📈' },
+                    { key: 'matrix' as const, label: 'Matrix', icon: '🎯' },
                   ].map(m => (
                     <button key={m.key} onClick={() => setChartTab(m.key)}
                       className={`relative px-3.5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
                         chartTab === m.key
                           ? m.key === 'prs' ? 'text-amber-300 bg-gradient-to-b from-amber-500/20 to-amber-500/5 border border-amber-500/25 shadow-lg shadow-amber-500/8'
-                          : m.key === 'exercises' ? 'text-emerald-300 bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border border-emerald-500/25 shadow-lg shadow-emerald-500/8'
+                          : m.key === 'progression' ? 'text-emerald-300 bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border border-emerald-500/25 shadow-lg shadow-emerald-500/8'
                           : 'text-violet-300 bg-gradient-to-b from-violet-500/20 to-violet-500/5 border border-violet-500/25 shadow-lg shadow-violet-500/8'
                           : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'
                       }`}>
@@ -752,70 +762,92 @@ export function Progress() {
                       <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your first PR to see trends</div>
                     )
                   )}
-                  {chartTab === 'exercises' && (
-                    prsByExercise.length > 0 ? (
+                  {chartTab === 'progression' && (
+                    strengthProgression.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={prsByExercise} layout="vertical" margin={{ top: 4, right: 12, bottom: 0, left: 8 }}>
+                        <LineChart data={strengthProgression[0].data} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
                           <defs>
-                            <linearGradient id="exBarGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#10b981" stopOpacity={1} /><stop offset="100%" stopColor="#10b981" stopOpacity={0.35} /></linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" horizontal={false} strokeWidth={1} />
-                          <XAxis type="number" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dx={4} tickFormatter={v => `${v}`} />
-                          <YAxis type="category" dataKey="name" stroke="#d1d5db" fontSize={10} fontWeight={600} axisLine={false} tickLine={false} width={80} tick={{ fill: '#d1d5db' }} />
-                          <Tooltip content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null
-                            const d = payload[0].payload as any
-                            return (
-                              <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 text-[11px] shadow-2xl shadow-emerald-500/5 min-w-[140px]">
-                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
-                                <div className="relative space-y-1">
-                                  <div className="text-white font-bold text-xs">{d.name}</div>
-                                  <div className="text-emerald-400 font-bold">{d.count} PR{d.count !== 1 ? 's' : ''}</div>
-                                </div>
-                              </motion.div>
-                            )
-                          }} cursor={{ fill: 'rgba(16,185,129,0.15)' }} />
-                          <Bar dataKey="count" fill="url(#exBarGrad)" radius={[0, 6, 6, 0]} maxBarSize={20} animationDuration={600} animationEasing="ease-out" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your first PR to see exercises</div>
-                    )
-                  )}
-                  {chartTab === 'activity' && (
-                    prActivity.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={prActivity} margin={{ top: 8, right: 4, bottom: 0, left: -16 }}>
-                          <defs>
-                            <linearGradient id="actBarGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b5cf6" stopOpacity={1} /><stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.3} /></linearGradient>
+                            {PROGRESSION_COLORS.map((c, i) => (
+                              <linearGradient key={i} id={`progGrad_${i}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={c} stopOpacity={1} /><stop offset="100%" stopColor={c} stopOpacity={0.2} />
+                              </linearGradient>
+                            ))}
                           </defs>
                           <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
                           <XAxis dataKey="date" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dy={6} interval="preserveStartEnd" />
-                          <YAxis allowDecimals={false} stroke="#8b5cf6" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={32} tickFormatter={v => `${v}`} />
+                          <YAxis stroke="#10b981" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={36} tickFormatter={v => `${v}`} />
+                          <Tooltip content={({ active, payload, label }) => {
+                            if (!active || !payload?.length) return null
+                            return (
+                              <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-emerald-500/5 min-w-[180px]">
+                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
+                                <div className="relative space-y-2">
+                                  <div className="text-white font-bold text-xs pb-2 border-b border-white/5">{label}</div>
+                                  {payload.map((p, i) => (
+                                    <div key={i} className="flex items-center gap-2">
+                                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
+                                      <span className="text-gray-400 font-medium">{p.name}</span>
+                                      <span className="text-white font-bold ml-auto">{p.value} lbs</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </motion.div>
+                            )
+                          }} cursor={{ fill: 'rgba(16,185,129,0.1)' }} />
+                          {strengthProgression.map((ex, i) => (
+                            <Line key={ex.exercise} type="monotone" data={ex.data} dataKey="estimated1RM" name={ex.exercise}
+                              stroke={PROGRESSION_COLORS[i % PROGRESSION_COLORS.length]} strokeWidth={2.5} dot={{ r: 3, strokeWidth: 1.5, fill: '#1a1a2e' }}
+                              activeDot={{ r: 5, strokeWidth: 2 }} animationDuration={600} connectNulls />
+                          ))}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your first PR to see strength progression</div>
+                    )
+                  )}
+                  {chartTab === 'matrix' && (
+                    strengthMatrix.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={strengthMatrix} layout="vertical" margin={{ top: 4, right: 16, bottom: 0, left: 8 }}>
+                          <defs>
+                            <linearGradient id="matrixGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#8b5cf6" stopOpacity={1} /><stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.35} /></linearGradient>
+                            <filter id="matrixGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                          </defs>
+                          <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.025)" horizontal={false} strokeWidth={1} />
+                          <XAxis type="number" stroke="#6b7280" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} dx={4} tickFormatter={v => `${v}`} />
+                          <YAxis type="category" dataKey="name" stroke="#d1d5db" fontSize={10} fontWeight={600} axisLine={false} tickLine={false} width={72} tick={{ fill: '#d1d5db' }} />
                           <Tooltip content={({ active, payload }) => {
                             if (!active || !payload?.length) return null
                             const d = payload[0].payload as any
+                            const levelColors: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
                             return (
                               <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 text-[11px] shadow-2xl shadow-violet-500/5 min-w-[150px]">
+                                className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-violet-500/5 min-w-[170px]">
                                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none" />
-                                <div className="relative space-y-1">
-                                  <div className="text-white font-bold text-xs">{d.date}</div>
+                                <div className="relative space-y-2">
+                                  <div className="text-white font-bold text-xs">{d.name}</div>
                                   <div className="flex items-center gap-2">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-violet-400 shadow-lg shadow-violet-400/40" />
-                                    <span className="text-gray-400 font-medium">PRs</span>
-                                    <span className="text-violet-300 font-bold ml-auto">{d.count}</span>
+                                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color || '#8b5cf6' }} />
+                                    <span className="text-gray-400 font-medium">Best 1RM</span>
+                                    <span className="text-white font-bold ml-auto">{d.best1RM} lbs</span>
                                   </div>
+                                  {d.level && (
+                                    <div className="flex items-center gap-2 pt-1 border-t border-white/5">
+                                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: levelColors[d.level.toLowerCase()] || '#6b7280' }} />
+                                      <span className="text-gray-400 font-medium capitalize">{d.level}</span>
+                                      {d.ratio > 0 && <span className="text-gray-500 ml-auto">{d.ratio.toFixed(2)}× BW</span>}
+                                    </div>
+                                  )}
                                 </div>
                               </motion.div>
                             )
                           }} cursor={{ fill: 'rgba(139,92,246,0.15)' }} />
-                          <Area type="monotone" dataKey="count" stroke="#8b5cf6" strokeWidth={2} fill="url(#actBarGrad)" animationDuration={600} animationEasing="ease-out" />
-                        </LineChart>
+                          <Bar dataKey="best1RM" fill="url(#matrixGrad)" radius={[0, 6, 6, 0]} maxBarSize={22} animationDuration={600} animationEasing="ease-out" />
+                        </BarChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your first PR to see activity</div>
+                      <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your first PR to build your strength matrix</div>
                     )
                   )}
                 </div>
@@ -844,37 +876,39 @@ export function Progress() {
                     </div>
                   )
                 }
-                if (chartTab === 'exercises' && prsByExercise.length > 0) {
-                  const totalPrs = prsByExercise.reduce((s, e) => s + e.count, 0)
-                  const topEx = prsByExercise[0]
+                if (chartTab === 'progression' && strengthProgression.length > 0) {
+                  const totalExercises = strengthProgression.length
+                  const totalPrs = strengthProgression.reduce((s, ex) => s + ex.data.length, 0)
                   return (
                     <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
                       <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
-                        <span>🏋️ Exercises <span className="font-semibold text-emerald-400">{prsByExercise.length}</span></span>
-                        <span>📊 Total PRs <span className="font-semibold text-gray-300">{totalPrs}</span></span>
-                        <span>⭐ Top <span className="font-semibold text-amber-400">{topEx.name}</span> <span className="text-gray-500">({topEx.count})</span></span>
+                        <span>🏋️ Exercises <span className="font-semibold text-emerald-400">{totalExercises}</span></span>
+                        <span>📊 Total Entries <span className="font-semibold text-gray-300">{totalPrs}</span></span>
+                        <span>📈 Top <span className="font-semibold text-amber-400">{strengthProgression[0].exercise}</span></span>
+                        <span>🏆 Best 1RM <span className="font-semibold text-rose-400">{Math.max(...strengthProgression.flatMap(ex => ex.data.map(d => d.estimated1RM)))}</span></span>
                       </div>
                       <div className="relative h-0.5 bg-white/[0.03]">
-                        <div className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(prsByExercise.length / 15 * 100, 100)}%` }} />
+                        <div className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(totalExercises / 10 * 100, 100)}%` }} />
                       </div>
                     </div>
                   )
                 }
-                if (chartTab === 'activity' && prActivity.length > 0) {
-                  const totalDays = prActivity.length
-                  const totalPrs = prActivity.reduce((s, d) => s + d.count, 0)
-                  const peakDay = prActivity.reduce((max, d) => d.count > max.count ? d : max, prActivity[0])
+                if (chartTab === 'matrix' && strengthMatrix.length > 0) {
+                  const avg1RM = strengthMatrix.reduce((s, m) => s + m.best1RM, 0) / strengthMatrix.length
+                  const max1RM = strengthMatrix[0].best1RM
+                  const advancedCount = strengthMatrix.filter(m => m.level.toLowerCase() === 'advanced' || m.level.toLowerCase() === 'elite').length
                   return (
                     <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
                       <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
-                        <span>📅 Active Days <span className="font-semibold text-violet-400">{totalDays}</span></span>
-                        <span>📊 Total PRs <span className="font-semibold text-gray-300">{totalPrs}</span></span>
-                        <span>📈 Best Day <span className="font-semibold text-amber-400">{peakDay.count}</span> <span className="text-gray-500">({peakDay.date})</span></span>
+                        <span>🎯 Exercises <span className="font-semibold text-violet-400">{strengthMatrix.length}</span></span>
+                        <span>📊 Avg 1RM <span className="font-semibold text-gray-300">{avg1RM.toFixed(0)}</span></span>
+                        <span>🏆 Peak <span className="font-semibold text-amber-400">{max1RM}</span></span>
+                        <span>⚡ Elite/Adv <span className="font-semibold text-rose-400">{advancedCount}</span></span>
                       </div>
                       <div className="relative h-0.5 bg-white/[0.03]">
-                        <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(totalDays / 30 * 100, 100)}%` }} />
+                        <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(advancedCount / strengthMatrix.length * 100, 100)}%` }} />
                       </div>
                     </div>
                   )
