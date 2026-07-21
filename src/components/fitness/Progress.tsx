@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button'
 import {
   Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, ReferenceLine,
-  ScatterChart, Scatter, ReferenceArea,
+  FunnelChart, Funnel, LabelList,
 } from 'recharts'
 import { useAppStore } from '@/store/useAppStore'
 import type { Workout, BodyMetric, WorkoutExercise, ExerciseSet, PersonalRecord } from '@/types/domain'
@@ -803,43 +803,30 @@ export function Progress() {
                     {chartTab === 'progression' && (
                       gainChartData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={[...gainChartData].sort((a, b) => b.gain - a.gain)} layout="vertical" margin={{ top: 6, right: 48, bottom: 0, left: 0 }} barGap={6} barCategoryGap="20%">
+                          <FunnelChart width={500} height={300}>
                             <defs>
                               {gainChartData.map((d, i) => (
-                                <linearGradient key={i} id={`progBar_${i}`} x1="0" y1="0" x2="1" y2="0">
-                                  <stop offset="0%" stopColor={d.gain > 0 ? '#10b981' : '#f43f5e'} stopOpacity={0.95} />
-                                  <stop offset="60%" stopColor={d.gain > 0 ? '#059669' : '#e11d48'} stopOpacity={0.7} />
-                                  <stop offset="100%" stopColor={d.gain > 0 ? '#047857' : '#be123c'} stopOpacity={0.25} />
+                                <linearGradient key={i} id={`funnelGrad_${i}`} x1="0" y1="0" x2="1" y2="0">
+                                  <stop offset="0%" stopColor={d.gain > 0 ? '#10b981' : '#f43f5e'} stopOpacity={0.9} />
+                                  <stop offset="100%" stopColor={d.gain > 0 ? '#047857' : '#be123c'} stopOpacity={0.4} />
                                 </linearGradient>
                               ))}
-                              <filter id="progGlow"><feGaussianBlur stdDeviation="5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                              <filter id="progLabelGlow"><feGaussianBlur stdDeviation="2" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <filter id="funnelGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" horizontal={false} vertical={true} />
-                            <XAxis type="number" stroke="rgba(255,255,255,0.08)" fontSize={9} fontWeight={700} axisLine={false} tickLine={false} domain={[Math.min(...gainChartData.map(d => d.gain), 0) - 8, 'dataMax + 12']} tickFormatter={v => `${v >= 0 ? '+' : ''}${v}`} />
-                            <YAxis type="category" dataKey="name" stroke="rgba(255,255,255,0.2)" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} width={105} tick={{ fill: 'rgba(255,255,255,0.7)' }} tickFormatter={v => v.replace(/_/g, ' ')} />
-                            <ReferenceLine x={0} stroke="rgba(255,255,255,0.15)" strokeWidth={1.5} strokeDasharray="4 4" label={{ value: 'baseline', fill: 'rgba(255,255,255,0.15)', fontSize: 8, fontWeight: 600, position: 'center' }} />
-                            {(() => {
-                              const avgGain = gainChartData.reduce((s, d) => s + d.gain, 0) / gainChartData.length
-                              return (
-                                <ReferenceLine x={avgGain} stroke="rgba(139,92,246,0.5)" strokeWidth={2} strokeDasharray="6 4"
-                                  label={{ value: `📊 avg ${avgGain >= 0 ? '+' : ''}${avgGain.toFixed(1)}`, fill: '#a78bfa', fontSize: 9, fontWeight: 800, position: 'top' }} />
-                              )
-                            })()}
                             <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
                               const d = payload[0]?.payload as any
                               if (!d) return null
-                              const maxGain = Math.max(...gainChartData.map(x => x.gain))
-                              const isTopGainer = d.gain >= maxGain
+                              const all = [...gainChartData].sort((a, b) => b.current - a.current)
+                              const rank = all.findIndex(x => x.name === d.name) + 1
                               return (
-                                <motion.div initial={{ opacity: 0, y: 8, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[200px]">
+                                <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
+                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[190px]">
                                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-transparent to-violet-500/5 pointer-events-none" />
                                   <div className="relative space-y-2">
                                     <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
                                       <span className="text-white font-bold text-xs">{d.name}</span>
-                                      {isTopGainer && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 TOP GAINER</span>}
+                                      <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">#{rank}</span>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                       <div className="rounded-lg bg-white/[0.03] p-2 text-center">
@@ -852,7 +839,7 @@ export function Progress() {
                                       </div>
                                     </div>
                                     <div className={`flex items-center justify-between rounded-lg p-2 ${d.gain > 0 ? 'bg-emerald-500/10 border border-emerald-500/20' : d.gain < 0 ? 'bg-rose-500/10 border border-rose-500/20' : 'bg-white/[0.03]'}`}>
-                                      <span className="text-gray-400 text-[10px] font-semibold">Total Gain</span>
+                                      <span className="text-gray-400 text-[10px] font-semibold">Strength Change</span>
                                       <span className={`font-bold text-sm tabular-nums flex items-center gap-1 ${d.gain > 0 ? 'text-emerald-400' : d.gain < 0 ? 'text-rose-400' : 'text-gray-400'}`}>
                                         {d.gain > 0 ? '📈' : d.gain < 0 ? '📉' : '➡️'} {d.gain >= 0 ? '+' : ''}{d.gain} lbs
                                         {d.pct !== 0 && <span className="text-[10px] opacity-70 font-semibold">({d.pct > 0 ? '+' : ''}{d.pct}%)</span>}
@@ -861,15 +848,15 @@ export function Progress() {
                                   </div>
                                 </motion.div>
                               )
-                            }} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                            <Bar dataKey="gain" radius={[0, 6, 6, 0]} maxBarSize={28} animationDuration={800} animationEasing="ease-out">
-                              {[...gainChartData].sort((a, b) => b.gain - a.gain).map((entry, idx) => {
-                                const maxGain = Math.max(...gainChartData.map(x => x.gain))
-                                const isBest = entry.gain >= maxGain
-                                return <Cell key={idx} fill={`url(#progBar_${gainChartData.indexOf(entry)})`} filter={isBest && entry.gain > 0 ? 'url(#progGlow)' : undefined} />
-                              })}
-                            </Bar>
-                          </BarChart>
+                            }} />
+                            <Funnel dataKey="current" data={[...gainChartData].sort((a, b) => b.current - a.current)} isAnimationActive={true} animationDuration={800} animationEasing="ease-out">
+                              {[...gainChartData].sort((a, b) => b.current - a.current).map((entry, idx) => (
+                                <Cell key={idx} fill={`url(#funnelGrad_${gainChartData.indexOf(entry)})`} stroke={entry.gain > 0 ? 'rgba(16,185,129,0.2)' : 'rgba(244,63,94,0.2)'} strokeWidth={1} filter={idx === 0 ? 'url(#funnelGlow)' : undefined} />
+                              ))}
+                              <LabelList dataKey="current" position="right" fill="rgba(255,255,255,0.7)" fontSize={10} fontWeight={700} formatter={(v: number) => `${v} lbs`} />
+                              <LabelList dataKey="name" position="left" fill="rgba(255,255,255,0.9)" fontSize={10} fontWeight={800} formatter={(v: string) => v.replace(/_/g, ' ')} />
+                            </Funnel>
+                          </FunnelChart>
                         </ResponsiveContainer>
                       ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center">
@@ -884,50 +871,50 @@ export function Progress() {
                     {chartTab === 'matrix' && (
                       strengthMatrix.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
-                          <ScatterChart margin={{ top: 8, right: 16, bottom: 8, left: 12 }}>
+                          <BarChart data={[...strengthMatrix].sort((a, b) => b.ratio - a.ratio)} layout="vertical" margin={{ top: 6, right: 36, bottom: 0, left: 0 }} barGap={6} barCategoryGap="20%">
                             <defs>
-                              <filter id="scatGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                              <filter id="scatBestGlow"><feGaussianBlur stdDeviation="6" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              {strengthMatrix.map((m, i) => (
+                                <linearGradient key={i} id={`ratioBar_${i}`} x1="0" y1="0" x2="1" y2="0">
+                                  <stop offset="0%" stopColor={m.color} stopOpacity={0.9} />
+                                  <stop offset="70%" stopColor={m.color} stopOpacity={0.6} />
+                                  <stop offset="100%" stopColor={m.color} stopOpacity={0.2} />
+                                </linearGradient>
+                              ))}
+                              <filter id="ratioBarGlow"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                             </defs>
-                            {/* Classification zone backgrounds */}
-                            <ReferenceArea y1={0} y2={1} fill="#10b981" fillOpacity={0.04} />
-                            <ReferenceArea y1={1} y2={1.5} fill="#f59e0b" fillOpacity={0.04} />
-                            <ReferenceArea y1={1.5} y2={2} fill="#ef4444" fillOpacity={0.04} />
-                            <ReferenceArea y1={2} y2={2.5} fill="#ef4444" fillOpacity={0.04} />
-                            <ReferenceArea y1={2.5} y2={5} fill="#8b5cf6" fillOpacity={0.04} />
-                            {/* Zone labels */}
-                            <ReferenceLine y={1} stroke="#10b981" strokeWidth={1} strokeDasharray="4 4" strokeOpacity={0.2} label={{ value: '🟢 Novice 1.0x', fill: 'rgba(16,185,129,0.25)', fontSize: 8, fontWeight: 700, position: 'insideTopRight' }} />
-                            <ReferenceLine y={1.5} stroke="#f59e0b" strokeWidth={1} strokeDasharray="4 4" strokeOpacity={0.2} label={{ value: '🟡 Intermediate 1.5x', fill: 'rgba(245,158,11,0.25)', fontSize: 8, fontWeight: 700, position: 'insideTopRight' }} />
-                            <ReferenceLine y={2} stroke="#ef4444" strokeWidth={1} strokeDasharray="4 4" strokeOpacity={0.2} label={{ value: '🔴 Advanced 2.0x', fill: 'rgba(239,68,68,0.25)', fontSize: 8, fontWeight: 700, position: 'insideTopRight' }} />
-                            <ReferenceLine y={2.5} stroke="#8b5cf6" strokeWidth={1} strokeDasharray="4 4" strokeOpacity={0.2} label={{ value: '🟣 Elite 2.5x', fill: 'rgba(139,92,246,0.25)', fontSize: 8, fontWeight: 700, position: 'insideTopRight' }} />
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.025)" strokeWidth={1} />
-                            <XAxis type="number" dataKey="best1RM" name="1RM" stroke="rgba(255,255,255,0.12)" fontSize={9} fontWeight={700} axisLine={false} tickLine={false} tickFormatter={v => `${v}`} domain={[0, 'auto']} label={{ value: '1RM (lbs) →', position: 'insideBottomRight', fill: 'rgba(255,255,255,0.15)', fontSize: 9, fontWeight: 700, dy: 4 }} />
-                            <YAxis type="number" dataKey="ratio" name="BW Ratio" stroke="rgba(255,255,255,0.12)" fontSize={9} fontWeight={700} axisLine={false} tickLine={false} domain={[0, 'auto']} tickFormatter={v => v.toFixed(1) + 'x'} label={{ value: 'BW Ratio ↑', angle: -90, position: 'insideLeft', fill: 'rgba(255,255,255,0.15)', fontSize: 9, fontWeight: 700, dx: -4 }} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" horizontal={false} vertical={true} />
+                            <XAxis type="number" stroke="rgba(255,255,255,0.08)" fontSize={9} fontWeight={700} axisLine={false} tickLine={false} domain={[0, 'dataMax + 0.5']} tickFormatter={v => v.toFixed(1) + 'x'} />
+                            <YAxis type="category" dataKey="name" stroke="rgba(255,255,255,0.2)" fontSize={10} fontWeight={700} axisLine={false} tickLine={false} width={105} tick={{ fill: 'rgba(255,255,255,0.7)' }} tickFormatter={v => v.replace(/_/g, ' ')} />
+                            {/* Classification threshold reference lines */}
+                            <ReferenceLine x={1.0} stroke="rgba(16,185,129,0.25)" strokeWidth={1} strokeDasharray="4 4" label={{ value: '🟢 Novice', fill: 'rgba(16,185,129,0.3)', fontSize: 8, fontWeight: 700, position: 'top' }} />
+                            <ReferenceLine x={1.5} stroke="rgba(245,158,11,0.25)" strokeWidth={1} strokeDasharray="4 4" label={{ value: '🟡 Intermediate', fill: 'rgba(245,158,11,0.3)', fontSize: 8, fontWeight: 700, position: 'top' }} />
+                            <ReferenceLine x={2.0} stroke="rgba(239,68,68,0.25)" strokeWidth={1} strokeDasharray="4 4" label={{ value: '🔴 Advanced', fill: 'rgba(239,68,68,0.3)', fontSize: 8, fontWeight: 700, position: 'top' }} />
+                            <ReferenceLine x={2.5} stroke="rgba(139,92,246,0.25)" strokeWidth={1} strokeDasharray="4 4" label={{ value: '🟣 Elite', fill: 'rgba(139,92,246,0.3)', fontSize: 8, fontWeight: 700, position: 'top' }} />
                             <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
                               const d = payload[0]?.payload as any
                               if (!d) return null
                               const lmap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
                               const elMap: Record<string, string> = { novice: '🟢', intermediate: '🟡', advanced: '🔴', elite: '🟣' }
-                              const isBest = d.best1RM === Math.max(...strengthMatrix.map(m => m.best1RM))
-                              const idx = strengthMatrix.findIndex(m => m.name === d.name)
+                              const all = [...strengthMatrix].sort((a, b) => b.ratio - a.ratio)
+                              const rank = all.findIndex(x => x.name === d.name) + 1
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
-                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[180px]">
-                                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/10 via-transparent to-emerald-500/5 pointer-events-none" />
+                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[190px]">
+                                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/10 via-transparent to-cyan-500/5 pointer-events-none" />
                                   <div className="relative space-y-2">
                                     <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
                                       <span className="text-white font-bold text-xs">{d.name.replace(/_/g, ' ')}</span>
-                                      {isBest && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 BEST</span>}
+                                      {rank === 1 && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 STRONGEST</span>}
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                       <div className="rounded-lg bg-white/[0.03] p-2 text-center">
-                                        <div className="text-[9px] text-gray-500 mb-0.5">1RM</div>
-                                        <div className="text-sm font-bold text-white">{d.best1RM}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
-                                      </div>
-                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center">
                                         <div className="text-[9px] text-gray-500 mb-0.5">BW Ratio</div>
                                         <div className="text-sm font-bold text-cyan-400">{d.ratio.toFixed(2)}<span className="text-[9px] font-normal text-cyan-400/60 ml-0.5">x</span></div>
+                                      </div>
+                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center">
+                                        <div className="text-[9px] text-gray-500 mb-0.5">1RM</div>
+                                        <div className="text-sm font-bold text-white">{d.best1RM}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
                                       </div>
                                     </div>
                                     {d.level && <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${lmap[d.level.toLowerCase()] || '#6b7280'}12`, border: `1px solid ${lmap[d.level.toLowerCase()] || '#6b7280'}20` }}>
@@ -937,39 +924,19 @@ export function Progress() {
                                       </span>
                                     </div>}
                                     <div className="flex items-center justify-between text-[9px]">
-                                      <span className="text-gray-500">Rank</span>
-                                      <span className="text-gray-400 font-semibold">#{idx + 1} of {strengthMatrix.length}</span>
+                                      <span className="text-gray-500">Relative Rank</span>
+                                      <span className="text-gray-400 font-semibold">#{rank} of {strengthMatrix.length}</span>
                                     </div>
                                   </div>
                                 </motion.div>
                               )
-                            }} cursor={{ stroke: 'rgba(139,92,246,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }} />
-                            {strengthMatrix.map(m => {
-                              const isBest = m.best1RM === Math.max(...strengthMatrix.map(x => x.best1RM))
-                              return (
-                                <Scatter key={m.name} name={m.name} data={[m]} fill={m.color} stroke={m.color} strokeWidth={0} line={false} shape={(props: any) => {
-                                  const { cx, cy } = props
-                                  if (!cx || !cy || isNaN(cx) || isNaN(cy)) return <g />
-                                  const r = isBest ? 16 : 11
-                                  const initials = m.name.replace(/_/g, ' ').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
-                                  return (
-                                    <g>
-                                      {/* Outer glow ring */}
-                                      <circle cx={cx} cy={cy} r={r + 3} fill="none" stroke={m.color} strokeWidth={isBest ? 1 : 0.5} opacity={0.2} />
-                                      {/* Main dot */}
-                                      <circle cx={cx} cy={cy} r={r} fill={m.color} fillOpacity={isBest ? 0.9 : 0.7} stroke={isBest ? '#fbbf24' : 'rgba(255,255,255,0.15)'} strokeWidth={isBest ? 2.5 : 1} filter={isBest ? 'url(#scatBestGlow)' : 'url(#scatGlow)'} />
-                                      {/* Inner shine */}
-                                      <circle cx={cx - r * 0.25} cy={cy - r * 0.25} r={r * 0.35} fill="white" fillOpacity={0.15} />
-                                      {/* Initials */}
-                                      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={isBest ? 9 : 7} fontWeight={800} style={{ textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
-                                        {initials}
-                                      </text>
-                                    </g>
-                                  )
-                                }} animationDuration={800} />
-                              )
-                            })}
-                          </ScatterChart>
+                            }} cursor={{ fill: 'rgba(139,92,246,0.08)' }} />
+                            <Bar dataKey="ratio" radius={[0, 6, 6, 0]} maxBarSize={28} animationDuration={800} animationEasing="ease-out">
+                              {[...strengthMatrix].sort((a, b) => b.ratio - a.ratio).map((entry, idx) => (
+                                <Cell key={idx} fill={`url(#ratioBar_${strengthMatrix.indexOf(entry)})`} filter={idx === 0 ? 'url(#ratioBarGlow)' : undefined} />
+                              ))}
+                            </Bar>
+                          </BarChart>
                         </ResponsiveContainer>
                       ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center">
@@ -977,7 +944,7 @@ export function Progress() {
                             <Target className="w-7 h-7 text-violet-400/30" />
                           </div>
                           <p className="text-gray-400 text-sm font-medium mb-1">No strength matrix yet</p>
-                          <p className="text-gray-500 text-xs max-w-[200px]">Log your first PR to see your strength profile mapped by 1RM and bodyweight ratio</p>
+                          <p className="text-gray-500 text-xs max-w-[200px]">Log your first PR to see your strength profile mapped by bodyweight ratio</p>
                         </div>
                       )
                     )}
