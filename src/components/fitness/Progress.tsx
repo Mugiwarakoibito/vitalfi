@@ -258,6 +258,15 @@ export function Progress() {
     return Math.max(...records.map(r => estimate1RM(r.weight, r.reps)))
   }, [records])
 
+  const metricConfig = useMemo(() => {
+    if (recordType === 'all' || recordType === 'weight') return { barKey: 'weight' as const, barLabel: 'Weight', barUnit: 'lbs', refKey: 'estimated1RM' as const, refLabel: 'Est 1RM', refUnit: 'lbs', matrixKey: 'best1RM' as const, matrixLabel: '1RM', progKey: 'ratio' as const, progLabel: 'Strength Ratio', progUnit: 'x BW', progFormat: (v: number) => `${v}x` }
+    if (recordType === 'reps') return { barKey: 'reps' as const, barLabel: 'Reps', barUnit: 'reps', refKey: 'estimated1RM' as const, refLabel: 'Est 1RM', refUnit: 'lbs', matrixKey: 'maxReps' as const, matrixLabel: 'Max Reps', progKey: 'maxReps' as const, progLabel: 'Max Reps', progUnit: 'reps', progFormat: (v: number) => `${v}` }
+    if (recordType === 'volume') return { barKey: 'volume' as const, barLabel: 'Volume', barUnit: 'lbs', refKey: 'estimated1RM' as const, refLabel: 'Est 1RM', refUnit: 'lbs', matrixKey: 'maxVolume' as const, matrixLabel: 'Max Volume', progKey: 'maxVolume' as const, progLabel: 'Max Volume', progUnit: 'lbs', progFormat: (v: number) => v.toLocaleString() }
+    if (recordType === 'endurance') return { barKey: 'duration' as const, barLabel: 'Duration', barUnit: 'min:sec', refKey: 'estimated1RM' as const, refLabel: 'Est 1RM', refUnit: 'lbs', matrixKey: 'maxDuration' as const, matrixLabel: 'Max Duration', progKey: 'maxDuration' as const, progLabel: 'Max Duration', progUnit: 'min:sec', progFormat: (v: number) => { const m = Math.floor(v / 60); const s = Math.floor(v % 60); return `${m}:${s.toString().padStart(2, '0')}` } }
+    if (recordType === 'speed') return { barKey: 'distance' as const, barLabel: 'Distance', barUnit: 'mi', refKey: 'estimated1RM' as const, refLabel: 'Est 1RM', refUnit: 'lbs', matrixKey: 'maxSpeed' as const, matrixLabel: 'Max Speed', progKey: 'maxSpeed' as const, progLabel: 'Max Speed', progUnit: 'mph', progFormat: (v: number) => `${v.toFixed(1)}` }
+    return { barKey: 'weight' as const, barLabel: 'Weight', barUnit: 'lbs', refKey: 'estimated1RM' as const, refLabel: 'Est 1RM', refUnit: 'lbs', matrixKey: 'best1RM' as const, matrixLabel: '1RM', progKey: 'ratio' as const, progLabel: 'Strength Ratio', progUnit: 'x BW', progFormat: (v: number) => `${v}x` }
+  }, [recordType])
+
   const chartData = useMemo(() => {
     const targetRecords = selectedExercise
       ? filteredRecords.filter(r => r.exerciseName === selectedExercise)
@@ -441,6 +450,8 @@ export function Progress() {
       setTimeout(() => setJustAdded(''), 4000)
     }
   }
+
+  const formatDur = (s: number) => { const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}` }
 
   return (
     <div className="space-y-4">
@@ -812,14 +823,14 @@ export function Progress() {
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
                             <XAxis dataKey="date" stroke="rgba(255,255,255,0.1)" fontSize={8} fontWeight={700} axisLine={false} tickLine={false} dy={4} interval="preserveStartEnd" />
                             <YAxis stroke="rgba(255,255,255,0.12)" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={30} domain={[0, 'dataMax + 10']} tickFormatter={v => `${v}`} />
-                            <ReferenceLine y={Math.max(...chartData.map(d => d.estimated1RM))} stroke="rgba(251,191,36,0.3)" strokeWidth={1.5} strokeDasharray="6 4"
-                              label={{ value: `🏆 ${Math.max(...chartData.map(d => d.estimated1RM))}`, fill: '#fbbf24', fontSize: 10, fontWeight: 800, position: 'right' }} />
+                            <ReferenceLine y={Math.max(...chartData.map(d => recordType === 'all' || recordType === 'weight' ? d.estimated1RM : (d as any)[metricConfig.barKey] ?? 0))} stroke="rgba(251,191,36,0.3)" strokeWidth={1.5} strokeDasharray="6 4"
+                              label={{ value: `🏆 ${Math.max(...chartData.map(d => recordType === 'all' || recordType === 'weight' ? d.estimated1RM : (d as any)[metricConfig.barKey] ?? 0))}`, fill: '#fbbf24', fontSize: 10, fontWeight: 800, position: 'right' }} />
                             <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
                               const d = payload[0].payload as any
                               if (!d) return null
-                              const max1RM = Math.max(...chartData.map(e => e.estimated1RM))
-                              const isBest = d.estimated1RM >= max1RM
+                              const maxBarVal = Math.max(...chartData.map(e => (e as any)[metricConfig.barKey] ?? 0))
+                              const isBest = (d as any)[metricConfig.barKey] >= maxBarVal
                               const formatDur = (s: number) => { const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}` }
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
@@ -936,10 +947,10 @@ export function Progress() {
                                 </motion.div>
                               )
                             }} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} />
-                            <Bar dataKey="weight" radius={[6, 6, 0, 0]} maxBarSize={32} animationDuration={800} animationEasing="ease-out">
+                            <Bar dataKey={metricConfig.barKey} radius={[6, 6, 0, 0]} maxBarSize={32} animationDuration={800} animationEasing="ease-out">
                               {chartData.map((entry, idx) => {
-                                const max1RM = Math.max(...chartData.map(e => e.estimated1RM))
-                                const isBest = entry.estimated1RM >= max1RM
+                                const maxVal = Math.max(...chartData.map(e => (e as any)[metricConfig.barKey] ?? 0))
+                                const isBest = (entry as any)[metricConfig.barKey] >= maxVal
                                 return <Cell key={idx} fill={`url(#cmpBar_${entry.exerciseName.replace(/\s/g, '_')})`} filter={isBest ? 'url(#cmpLineGlow)' : undefined} stroke={isBest ? '#fbbf24' : 'rgba(255,255,255,0.04)'} strokeWidth={isBest ? 1.5 : 0} />
                               })}
                             </Bar>
@@ -968,8 +979,8 @@ export function Progress() {
                             </defs>
                             <PolarGrid stroke="rgba(255,255,255,0.05)" gridType="circle" />
                             <PolarAngleAxis dataKey="exercise" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 9, fontWeight: 600 }} axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
-                            <PolarRadiusAxis tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 8 }} axisLine={{ stroke: 'rgba(255,255,255,0.04)' }} tickFormatter={v => `${v}x`} />
-                            <Radar name="Strength Ratio" dataKey="ratio" stroke="url(#radarRatioStroke)" fill="url(#radarRatioFill)" strokeWidth={2.5}
+                            <PolarRadiusAxis tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 8 }} axisLine={{ stroke: 'rgba(255,255,255,0.04)' }} tickFormatter={v => recordType === 'all' || recordType === 'weight' ? `${v}x` : `${v}`} />
+                            <Radar name={metricConfig.progLabel} dataKey={metricConfig.progKey} stroke="url(#radarRatioStroke)" fill="url(#radarRatioFill)" strokeWidth={2.5}
                               dot={{ r: 3.5, fill: '#a78bfa', stroke: '#7c3aed', strokeWidth: 2, filter: 'url(#radarDotGlow)' }}
                               activeDot={{ r: 7, fill: '#c4b5fd', stroke: '#7c3aed', strokeWidth: 3, filter: 'url(#radarDotGlow)' }} />
                             <Tooltip content={({ active, payload }) => {
@@ -1125,7 +1136,7 @@ export function Progress() {
                     {chartTab === 'matrix' && (
                       strengthMatrix.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%" key={`mat-${dataVersion}`}>
-                          <BarChart data={[...strengthMatrix].sort((a, b) => b.best1RM - a.best1RM)} layout="vertical" barGap={2} barCategoryGap="16%" margin={{ left: 72, right: 16, top: 4, bottom: 4 }}>
+                          <BarChart data={[...strengthMatrix].sort((a, b) => (b as any)[metricConfig.matrixKey] - (a as any)[metricConfig.matrixKey])} layout="vertical" barGap={2} barCategoryGap="16%" margin={{ left: 72, right: 16, top: 4, bottom: 4 }}>
                             <defs>
                               {strengthMatrix.map((m, i) => (
                                 <linearGradient key={i} id={`hBarGrad_${i}`} x1="0" y1="0" x2="1" y2="0">
@@ -1146,7 +1157,7 @@ export function Progress() {
                               const lmap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
                               const elMap: Record<string, string> = { novice: '🟢', intermediate: '🟡', advanced: '🔴', elite: '🟣' }
                               const idx = strengthMatrix.findIndex(m => m.name === d.name)
-                              const avg = strengthMatrix.reduce((s, m) => s + m.best1RM, 0) / strengthMatrix.length
+                              const avg = strengthMatrix.reduce((s, m) => s + ((m as any)[metricConfig.matrixKey] ?? 0), 0) / strengthMatrix.length
                               const formatDur = (s: number) => { const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}` }
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
@@ -1169,8 +1180,8 @@ export function Progress() {
                                           </div>
                                           <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
                                             <div className="text-[9px] text-gray-500 mb-0.5">vs Avg</div>
-                                            <div className={`text-sm font-bold ${d.best1RM >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                              {d.best1RM >= avg ? '+' : ''}{Math.round(d.best1RM - avg)}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span>
+                                            <div className={`text-sm font-bold ${(d as any)[metricConfig.matrixKey] >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                              {(d as any)[metricConfig.matrixKey] >= avg ? '+' : ''}{Math.round((d as any)[metricConfig.matrixKey] - avg)}
                                             </div>
                                           </div>
                                         </div>
@@ -1190,8 +1201,8 @@ export function Progress() {
                                           </div>
                                           <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
                                             <div className="text-[9px] text-gray-500 mb-0.5">vs Avg</div>
-                                            <div className={`text-sm font-bold ${d.best1RM >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                              {d.best1RM >= avg ? '+' : ''}{Math.round(d.best1RM - avg)}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span>
+                                            <div className={`text-sm font-bold ${(d as any)[metricConfig.matrixKey] >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                              {(d as any)[metricConfig.matrixKey] >= avg ? '+' : ''}{Math.round((d as any)[metricConfig.matrixKey] - avg)}
                                             </div>
                                           </div>
                                         </div>
@@ -1205,8 +1216,8 @@ export function Progress() {
                                           </div>
                                           <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
                                             <div className="text-[9px] text-gray-500 mb-0.5">vs Avg</div>
-                                            <div className={`text-sm font-bold ${d.best1RM >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                              {d.best1RM >= avg ? '+' : ''}{Math.round(d.best1RM - avg)}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span>
+                                            <div className={`text-sm font-bold ${(d as any)[metricConfig.matrixKey] >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                              {(d as any)[metricConfig.matrixKey] >= avg ? '+' : ''}{Math.round((d as any)[metricConfig.matrixKey] - avg)}
                                             </div>
                                           </div>
                                         </div>
@@ -1242,8 +1253,8 @@ export function Progress() {
                                           </div>
                                           <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
                                             <div className="text-[9px] text-gray-500 mb-0.5">vs Avg</div>
-                                            <div className={`text-sm font-bold ${d.best1RM >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                              {d.best1RM >= avg ? '+' : ''}{Math.round(d.best1RM - avg)}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span>
+                                            <div className={`text-sm font-bold ${(d as any)[metricConfig.matrixKey] >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                              {(d as any)[metricConfig.matrixKey] >= avg ? '+' : ''}{Math.round((d as any)[metricConfig.matrixKey] - avg)}
                                             </div>
                                           </div>
                                         </div>
@@ -1254,8 +1265,8 @@ export function Progress() {
                                 </motion.div>
                               )
                             }} cursor={{ fill: 'rgba(139,92,246,0.08)' }} />
-                            <Bar dataKey="best1RM" radius={[0, 8, 8, 0]} maxBarSize={22} animationDuration={800} animationEasing="ease-out">
-                              {[...strengthMatrix].sort((a, b) => b.best1RM - a.best1RM).map((entry, idx) => {
+                            <Bar dataKey={metricConfig.matrixKey} radius={[0, 8, 8, 0]} maxBarSize={22} animationDuration={800} animationEasing="ease-out">
+                              {[...strengthMatrix].sort((a, b) => (b as any)[metricConfig.matrixKey] - (a as any)[metricConfig.matrixKey]).map((entry, idx) => {
                                 const origIdx = strengthMatrix.indexOf(entry)
                                 return <Cell key={idx} fill={`url(#hBarGrad_${origIdx})`} filter={idx === 0 ? 'url(#hBarBestGlow)' : undefined} stroke={idx === 0 ? '#fbbf24' : 'rgba(255,255,255,0.04)'} strokeWidth={idx === 0 ? 1.5 : 0} />
                               })}
@@ -1280,19 +1291,20 @@ export function Progress() {
               {/* Stats strip */}
               {(() => {
                 if (chartTab === 'prs' && chartData.length > 0) {
-                  const avgW = chartData.reduce((s, d) => s + d.weight, 0) / chartData.length
-                  const maxW = Math.max(...chartData.map(d => d.weight))
-                  const best1RM = Math.max(...chartData.map(d => d.estimated1RM ?? 0))
-                  const lastW = chartData[chartData.length - 1]?.weight ?? 0
-                  const pctChange = chartData.length > 1 ? ((lastW - chartData[0].weight) / chartData[0].weight * 100).toFixed(1) : null
+                  const values = chartData.map(d => (d as any)[metricConfig.barKey] ?? 0)
+                  const avgV = values.reduce((s, v) => s + v, 0) / values.length
+                  const maxV = Math.max(...values)
+                  const lastV = values[values.length - 1] ?? 0
+                  const best1RMVal = Math.max(...chartData.map(d => d.estimated1RM ?? 0))
+                  const pctChange = values.length > 1 ? ((lastV - values[0]) / values[0] * 100).toFixed(1) : null
                   return (
                     <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-r from-rose-500/3 via-transparent to-violet-500/3 pointer-events-none" />
                       <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
-                        <span>📊 Avg <span className="font-semibold text-rose-400">{avgW.toFixed(1)}</span></span>
-                        <span>🏆 Peak <span className="font-semibold text-amber-400">{maxW.toFixed(1)}</span></span>
-                        <span>⚡ Best 1RM <span className="font-semibold text-violet-400">{best1RM}</span></span>
-                        <span>📋 Latest <span className="font-semibold text-cyan-400">{lastW.toFixed(1)}</span></span>
+                        <span>📊 Avg <span className="font-semibold text-rose-400">{recordType === 'endurance' ? formatDur(avgV) : avgV.toFixed(1)}</span></span>
+                        <span>🏆 Peak <span className="font-semibold text-amber-400">{recordType === 'endurance' ? formatDur(maxV) : maxV.toFixed(1)}</span></span>
+                        <span>⚡ Best 1RM <span className="font-semibold text-violet-400">{best1RMVal}</span></span>
+                        <span>📋 Latest <span className="font-semibold text-cyan-400">{recordType === 'endurance' ? formatDur(lastV) : lastV.toFixed(1)}</span></span>
                         {pctChange !== null && <span>📈 Trend <span className={`font-semibold ${Number(pctChange) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{pctChange}%</span></span>}
                         <span>📝 Entries <span className="font-semibold text-indigo-400">{chartData.length}</span></span>
                       </div>
