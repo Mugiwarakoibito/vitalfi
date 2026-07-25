@@ -167,6 +167,17 @@ export function Progress() {
 
   const isScopeCurrentWeek = useMemo(() => scopeOffset === 0, [scopeOffset])
 
+  const scopedRecords = useMemo(() => {
+    if (scopeOffset === 0) return records
+    const start = new Date(scopeWeek.start)
+    const end = new Date(scopeWeek.end)
+    end.setHours(23, 59, 59, 999)
+    return records.filter(r => {
+      const d = new Date(r.date)
+      return d >= start && d <= end
+    })
+  }, [records, scopeOffset, scopeWeek])
+
   const exercises = useMemo(() => [...new Set(records.map(r => r.exerciseName))].sort(), [records])
 
   const latestWeight = useMemo(() => {
@@ -176,9 +187,9 @@ export function Progress() {
   }, [bodyMetrics])
 
   const filteredRecords = useMemo(() => {
-    if (recordType === 'all') return records
-    return records.filter(r => r.type === recordType)
-  }, [records, recordType])
+    if (recordType === 'all') return scopedRecords
+    return scopedRecords.filter(r => r.type === recordType)
+  }, [scopedRecords, recordType])
 
   const strengthProgression = useMemo(() => {
     const top5 = [...new Set(filteredRecords.map(r => r.exerciseName))]
