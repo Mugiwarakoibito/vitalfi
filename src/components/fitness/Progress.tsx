@@ -142,6 +142,7 @@ export function Progress() {
   const [perfFocus, setPerfFocus] = useState<'strength' | 'hypertrophy' | 'endurance' | 'power' | 'overall'>('overall')
   const [scopeOffset, setScopeOffset] = useState(0)
   const [chartTab, setChartTab] = useState<'prs' | 'progression' | 'matrix'>('prs')
+  const [recordType, setRecordType] = useState<'all' | 'weight' | 'reps' | 'volume' | 'endurance' | 'speed'>('all')
   const [targetDate, setTargetDate] = useState(new Date())
   const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d }, [])
 
@@ -174,17 +175,22 @@ export function Progress() {
     return withWeight.sort((a: BodyMetric, b: BodyMetric) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].weight!
   }, [bodyMetrics])
 
+  const filteredRecords = useMemo(() => {
+    if (recordType === 'all') return records
+    return records.filter(r => r.type === recordType)
+  }, [records, recordType])
+
   const strengthProgression = useMemo(() => {
-    const top5 = [...new Set(records.map(r => r.exerciseName))]
-      .map(ex => ({ ex, count: records.filter(r => r.exerciseName === ex).length }))
+    const top5 = [...new Set(filteredRecords.map(r => r.exerciseName))]
+      .map(ex => ({ ex, count: filteredRecords.filter(r => r.exerciseName === ex).length }))
       .sort((a, b) => b.count - a.count).slice(0, 5).map(e => e.ex)
-    const allDates = [...new Set(records.map(r => r.date))].sort()
+    const allDates = [...new Set(filteredRecords.map(r => r.date))].sort()
     const data = allDates.map(date => {
       const point: Record<string, string | number | null> = {
         date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })
       }
       for (const ex of top5) {
-        const bestUpTo = records
+        const bestUpTo = filteredRecords
           .filter(r => r.exerciseName === ex && r.date <= date)
           .reduce((best, r) => Math.max(best, estimate1RM(r.weight, r.reps)), 0)
         point[ex] = bestUpTo > 0 ? bestUpTo : null
@@ -192,12 +198,12 @@ export function Progress() {
       return point
     })
     return { data, exercises: top5 }
-  }, [records])
+  }, [filteredRecords])
 
   const strengthMatrix = useMemo(() => {
-    return [...new Map(records.map(r => [r.exerciseName, r])).values()]
+    return [...new Map(filteredRecords.map(r => [r.exerciseName, r])).values()]
       .map(r => {
-        const best = records
+        const best = filteredRecords
           .filter(pr => pr.exerciseName === r.exerciseName)
           .reduce((a, b) => estimate1RM(a.weight, a.reps) > estimate1RM(b.weight, b.reps) ? a : b)
         const e1rm = estimate1RM(best.weight, best.reps)
@@ -207,7 +213,7 @@ export function Progress() {
         return { name: best.exerciseName, best1RM: e1rm, ratio: classification?.ratio ?? 0, level: classification?.level ?? '', color: classification?.color ?? '#6b7280' }
       })
       .sort((a, b) => b.best1RM - a.best1RM)
-  }, [records, latestWeight])
+  }, [filteredRecords, latestWeight])
 
   const exerciseColors = useMemo(() => {
     const exNames = [...new Set(records.map(r => r.exerciseName))]
@@ -216,10 +222,10 @@ export function Progress() {
   }, [records])
 
   const progressionRadarData = useMemo(() => {
-    const exNames = [...new Set(records.map(r => r.exerciseName))]
-    const top6 = exNames.map(ex => ({ ex, count: records.filter(r => r.exerciseName === ex).length })).sort((a, b) => b.count - a.count).slice(0, 6).map(e => e.ex)
+    const exNames = [...new Set(filteredRecords.map(r => r.exerciseName))]
+    const top6 = exNames.map(ex => ({ ex, count: filteredRecords.filter(r => r.exerciseName === ex).length })).sort((a, b) => b.count - a.count).slice(0, 6).map(e => e.ex)
     return top6.map(ex => {
-      const exRecords = records.filter(r => r.exerciseName === ex).sort((a, b) => a.date.localeCompare(b.date))
+      const exRecords = filteredRecords.filter(r => r.exerciseName === ex).sort((a, b) => a.date.localeCompare(b.date))
       const current = exRecords.length > 0 ? estimate1RM(exRecords[exRecords.length - 1].weight, exRecords[exRecords.length - 1].reps) : 0
       const first = exRecords.length > 0 ? estimate1RM(exRecords[0].weight, exRecords[0].reps) : 0
       const ratio = latestWeight && latestWeight > 0 ? parseFloat((current / latestWeight).toFixed(2)) : current
@@ -228,7 +234,7 @@ export function Progress() {
       const isRatio = latestWeight && latestWeight > 0
       return { exercise: ex.replace(/_/g, ' '), ratio, value: ratio, current, first, gain, level: level?.level || '', color: level?.color || '#8b5cf6', isRatio }
     })
-  }, [records, latestWeight])
+  }, [filteredRecords, latestWeight])
 
   const totalVolume = useMemo(() =>
     workouts.length > 0
@@ -240,10 +246,6 @@ export function Progress() {
   const best1RM = useMemo(() => {
     if (records.length === 0) return 0
     return Math.max(...records.map(r => estimate1RM(r.weight, r.reps)))
-  }, [records])
-
-  const filteredRecords = useMemo(() => {
-    return records
   }, [records])
 
   const chartData = useMemo(() => {
@@ -748,6 +750,25 @@ export function Progress() {
                         <span>{m.icon}</span>{m.label}
                       </span>
                       {chartTab === m.key && <span className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/[0.06]" />}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-1 bg-white/[0.03] rounded-lg p-0.5 border border-white/[0.04]">
+                  {[
+                    { key: 'all' as const, label: 'All', icon: '📋' },
+                    { key: 'weight' as const, label: 'Weight', icon: '🏋️' },
+                    { key: 'reps' as const, label: 'Reps', icon: '🔥' },
+                    { key: 'volume' as const, label: 'Volume', icon: '📊' },
+                    { key: 'endurance' as const, label: 'Endurance', icon: '⏱️' },
+                    { key: 'speed' as const, label: 'Speed', icon: '⚡' },
+                  ].map(t => (
+                    <button key={t.key} onClick={() => setRecordType(t.key)}
+                      className={`px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all duration-200 ${
+                        recordType === t.key
+                          ? 'text-white bg-white/[0.08] border border-white/[0.1] shadow-sm'
+                          : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.02] border border-transparent'
+                      }`}>
+                      <span className="flex items-center gap-1">{t.icon}{t.key === 'all' ? 'All' : ''}</span>
                     </button>
                   ))}
                 </div>
