@@ -5,7 +5,7 @@ import {
   Dumbbell, Flame, BarChart3,
   Sparkles, Target, CheckCircle2, Medal,
   Calendar,
-  Brain, ChevronLeft, ChevronRight, RotateCcw,
+  Brain, ChevronLeft, ChevronRight, RotateCcw, Pencil, Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import {
@@ -119,9 +119,10 @@ function estimate1RM(weight: number, reps: number): number {
 }
 
 export function Progress() {
-  const { workouts, bodyMetrics, personalRecords, dataVersion, addPersonalRecord } = useAppStore()
+  const { workouts, bodyMetrics, personalRecords, dataVersion, addPersonalRecord, updatePersonalRecord, deletePersonalRecord } = useAppStore()
   const records = personalRecords
   const [showModal, setShowModal] = useState(false)
+  const [editingRecord, setEditingRecord] = useState<PersonalRecord | null>(null)
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [justAdded, setJustAdded] = useState('')
   const [formData, setFormData] = useState({
@@ -392,8 +393,9 @@ export function Progress() {
     const w = Number(formData.weight)
     const r = Number(formData.reps)
     if (formData.type !== 'endurance' && formData.type !== 'speed' && (w <= 0 || r <= 0) && !formData.duration && !formData.distance) return
-    const newRecord: PersonalRecord = {
-      id: crypto.randomUUID?.() ?? Math.random().toString(36).substring(2, 15),
+    const now = new Date().toISOString()
+    const record: PersonalRecord = {
+      id: editingRecord?.id ?? crypto.randomUUID?.() ?? Math.random().toString(36).substring(2, 15),
       exerciseName: formData.exerciseName.trim(),
       weight: formData.type === 'endurance' ? 0 : (w || 0),
       reps: formData.type === 'endurance' ? 0 : (r || 0),
@@ -403,20 +405,28 @@ export function Progress() {
       duration: Number(formData.duration) || undefined,
       distance: Number(formData.distance) || undefined,
       contextTags: formData.contextTags.length > 0 ? formData.contextTags : undefined,
-      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      createdAt: editingRecord?.createdAt ?? now,
+      updatedAt: now,
     }
-    if (formData.goalWeight) newRecord.goalWeight = Number(formData.goalWeight)
-    if (formData.goalReps) newRecord.goalReps = Number(formData.goalReps)
-    if (formData.goalVolume) newRecord.goalVolume = Number(formData.goalVolume)
-    if (formData.notes) newRecord.notes = formData.notes
-    await addPersonalRecord(newRecord)
+    if (formData.goalWeight) record.goalWeight = Number(formData.goalWeight)
+    if (formData.goalReps) record.goalReps = Number(formData.goalReps)
+    if (formData.goalVolume) record.goalVolume = Number(formData.goalVolume)
+    if (formData.notes) record.notes = formData.notes
+    if (editingRecord) {
+      await updatePersonalRecord(record)
+    } else {
+      await addPersonalRecord(record)
+    }
     setShowModal(false)
+    setEditingRecord(null)
     setFormData({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight', rpe: 0, sets: '', duration: '', distance: '', contextTags: [], goalWeight: '', goalReps: '', goalVolume: '', notes: '' })
-    setConfettiTrigger(prev => prev + 1)
-    setShowPerfCoach(true)
-    setShowPerfScope(true)
-    setJustAdded(`${formData.exerciseName} — ${formData.type === 'endurance' ? `${formData.duration || 0}s` : formData.type === 'speed' ? `${formData.distance || 0}m` : `${w}lbs × ${r} reps`}`)
-    setTimeout(() => setJustAdded(''), 4000)
+    if (!editingRecord) {
+      setConfettiTrigger(prev => prev + 1)
+      setShowPerfCoach(true)
+      setShowPerfScope(true)
+      setJustAdded(`${formData.exerciseName} — ${formData.type === 'endurance' ? `${formData.duration || 0}s` : formData.type === 'speed' ? `${formData.distance || 0}m` : `${w}lbs × ${r} reps`}`)
+      setTimeout(() => setJustAdded(''), 4000)
+    }
   }
 
   return (
@@ -495,7 +505,7 @@ export function Progress() {
               <Trophy className="w-5 h-5" />
             </button>
           )}
-          <Button variant="primary" size="sm" onClick={() => setShowModal(true)}>
+          <Button variant="primary" size="sm" onClick={() => { setFormData({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight', rpe: 0, sets: '', duration: '', distance: '', contextTags: [], goalWeight: '', goalReps: '', goalVolume: '', notes: '' }); setEditingRecord(null); setShowModal(true) }}>
               <Plus className="w-4 h-4 mr-1" />Add PR
             </Button>
           </div>
@@ -1205,7 +1215,7 @@ export function Progress() {
           </motion.div>
           <h3 className="text-xl font-bold text-white mb-2">No Records Yet</h3>
           <p className="text-gray-400 mb-1">Time to crush some PRs!</p>
-          <Button variant="primary" onClick={() => setShowModal(true)} className="mt-4">
+          <Button variant="primary" onClick={() => { setFormData({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight', rpe: 0, sets: '', duration: '', distance: '', contextTags: [], goalWeight: '', goalReps: '', goalVolume: '', notes: '' }); setEditingRecord(null); setShowModal(true) }} className="mt-4">
             <Plus className="w-4 h-4 mr-1.5" />Add Your First PR
           </Button>
         </motion.div>
@@ -1267,11 +1277,19 @@ export function Progress() {
                   </div>
                   {/* Recent info */}
                   {latestPR && (
-                    <div className="mt-2 flex items-center gap-2 text-[9px] text-gray-600">
+                    <div className="mt-2 flex items-center gap-1.5 text-[9px] text-gray-600">
                       <span className="text-[8px] opacity-60">Latest:</span>
                       <span className="text-gray-500">{new Date(latestPR.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                       <span className="text-gray-600">·</span>
                       <span className="text-gray-500">{latestPR.weight}lbs × {latestPR.reps}</span>
+                      <button onClick={(e) => { e.stopPropagation(); setFormData({ exerciseName: latestPR.exerciseName, weight: String(latestPR.weight), reps: String(latestPR.reps), date: latestPR.date, type: latestPR.type || 'weight', rpe: latestPR.rpe || 0, sets: String(latestPR.sets || ''), duration: String(latestPR.duration || ''), distance: String(latestPR.distance || ''), contextTags: latestPR.contextTags || [], goalWeight: String(latestPR.goalWeight || ''), goalReps: String(latestPR.goalReps || ''), goalVolume: String(latestPR.goalVolume || ''), notes: latestPR.notes || '' }); setEditingRecord(latestPR); setShowModal(true) }}
+                        className="ml-auto p-1 rounded-md hover:bg-white/[0.06] text-gray-600 hover:text-amber-400 transition-colors" title="Edit">
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                      <button onClick={async (e) => { e.stopPropagation(); if (window.confirm(`Delete this PR — ${latestPR.weight}lbs × ${latestPR.reps} on ${new Date(latestPR.date).toLocaleDateString()}?`)) { await deletePersonalRecord(latestPR.id) } }}
+                        className="p-1 rounded-md hover:bg-white/[0.06] text-gray-600 hover:text-rose-400 transition-colors" title="Delete">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                     </div>
                   )}
                   {/* Goals — merged display */}
@@ -1317,7 +1335,7 @@ export function Progress() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 overflow-y-auto"
-            onClick={() => { setFormData({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight', rpe: 0, sets: '', duration: '', distance: '', contextTags: [], goalWeight: '', goalReps: '', goalVolume: '', notes: '' }); setShowModal(false) }}
+            onClick={() => { setFormData({ exerciseName: '', weight: '', reps: '', date: new Date().toISOString().split('T')[0], type: 'weight', rpe: 0, sets: '', duration: '', distance: '', contextTags: [], goalWeight: '', goalReps: '', goalVolume: '', notes: '' }); setEditingRecord(null); setShowModal(false) }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.92, y: 30 }}
@@ -1337,8 +1355,8 @@ export function Progress() {
                       <Trophy className="w-4 h-4 text-amber-300" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-white tracking-tight">Log Achievement</h3>
-                      <p className="text-[10px] text-gray-500 mt-0.5">Record what you crushed today</p>
+                      <h3 className="text-base font-bold text-white tracking-tight">{editingRecord ? 'Edit PR' : 'Log Achievement'}</h3>
+                      <p className="text-[10px] text-gray-500 mt-0.5">{editingRecord ? `Updating ${editingRecord.exerciseName} — ${editingRecord.weight}lbs × ${editingRecord.reps}` : 'Record what you crushed today'}</p>
                     </div>
                   </div>
 
@@ -1604,7 +1622,7 @@ export function Progress() {
                       className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-emerald-500/20 border border-amber-500/25 text-amber-300 font-bold text-xs uppercase tracking-widest hover:from-amber-500/25 hover:via-amber-500/15 hover:to-emerald-500/25 transition-all flex items-center justify-center gap-2"
                     >
                       <Trophy className="w-4 h-4" />
-                      Log Achievement
+                      {editingRecord ? 'Update PR' : 'Log Achievement'}
                     </motion.button>
                   </div>
 

@@ -15,6 +15,10 @@ export const createFitnessSlice: StateCreator<AppState, [], [], FitnessSlice> = 
     set((state) => ({ personalRecords: [...state.personalRecords, record], dataVersion: state.dataVersion + 1 }));
     await storage.put('personalRecords', record);
   },
+  updatePersonalRecord: async (record) => {
+    set((state) => ({ personalRecords: state.personalRecords.map(r => r.id === record.id ? record : r), dataVersion: state.dataVersion + 1 }));
+    await storage.put('personalRecords', record);
+  },
   deletePersonalRecord: async (id) => {
     set((state) => ({ personalRecords: state.personalRecords.filter(r => r.id !== id), dataVersion: state.dataVersion + 1 }));
     await storage.delete('personalRecords', id);

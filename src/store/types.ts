@@ -67,6 +67,7 @@ export interface FitnessSlice {
   goals: Goal[];
   personalRecords: PersonalRecord[];
   addPersonalRecord: (record: PersonalRecord) => Promise<void>;
+  updatePersonalRecord: (record: PersonalRecord) => Promise<void>;
   deletePersonalRecord: (id: string) => Promise<void>;
   addWorkout: (workout: Workout) => Promise<void>;
   updateWorkout: (workout: Workout) => Promise<void>;
