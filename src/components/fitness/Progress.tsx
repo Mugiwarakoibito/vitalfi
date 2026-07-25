@@ -174,21 +174,17 @@ export function Progress() {
     return withWeight.sort((a: BodyMetric, b: BodyMetric) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].weight!
   }, [bodyMetrics])
 
-  const weightRecords = useMemo(() => records.filter(r => r.type === 'weight'), [records])
-  const repsRecords = useMemo(() => records.filter(r => r.type === 'reps'), [records])
-  const volumeRecords = useMemo(() => records.filter(r => r.type === 'volume'), [records])
-
   const strengthProgression = useMemo(() => {
-    const top5 = [...new Set(repsRecords.map(r => r.exerciseName))]
-      .map(ex => ({ ex, count: repsRecords.filter(r => r.exerciseName === ex).length }))
+    const top5 = [...new Set(records.map(r => r.exerciseName))]
+      .map(ex => ({ ex, count: records.filter(r => r.exerciseName === ex).length }))
       .sort((a, b) => b.count - a.count).slice(0, 5).map(e => e.ex)
-    const allDates = [...new Set(repsRecords.map(r => r.date))].sort()
+    const allDates = [...new Set(records.map(r => r.date))].sort()
     const data = allDates.map(date => {
       const point: Record<string, string | number | null> = {
         date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })
       }
       for (const ex of top5) {
-        const bestUpTo = repsRecords
+        const bestUpTo = records
           .filter(r => r.exerciseName === ex && r.date <= date)
           .reduce((best, r) => Math.max(best, estimate1RM(r.weight, r.reps)), 0)
         point[ex] = bestUpTo > 0 ? bestUpTo : null
@@ -196,12 +192,12 @@ export function Progress() {
       return point
     })
     return { data, exercises: top5 }
-  }, [repsRecords])
+  }, [records])
 
   const strengthMatrix = useMemo(() => {
-    return [...new Map(volumeRecords.map(r => [r.exerciseName, r])).values()]
+    return [...new Map(records.map(r => [r.exerciseName, r])).values()]
       .map(r => {
-        const best = volumeRecords
+        const best = records
           .filter(pr => pr.exerciseName === r.exerciseName)
           .reduce((a, b) => estimate1RM(a.weight, a.reps) > estimate1RM(b.weight, b.reps) ? a : b)
         const e1rm = estimate1RM(best.weight, best.reps)
@@ -211,7 +207,7 @@ export function Progress() {
         return { name: best.exerciseName, best1RM: e1rm, ratio: classification?.ratio ?? 0, level: classification?.level ?? '', color: classification?.color ?? '#6b7280' }
       })
       .sort((a, b) => b.best1RM - a.best1RM)
-  }, [volumeRecords, latestWeight])
+  }, [records, latestWeight])
 
   const exerciseColors = useMemo(() => {
     const exNames = [...new Set(records.map(r => r.exerciseName))]
@@ -220,10 +216,10 @@ export function Progress() {
   }, [records])
 
   const progressionRadarData = useMemo(() => {
-    const exNames = [...new Set(repsRecords.map(r => r.exerciseName))]
-    const top6 = exNames.map(ex => ({ ex, count: repsRecords.filter(r => r.exerciseName === ex).length })).sort((a, b) => b.count - a.count).slice(0, 6).map(e => e.ex)
+    const exNames = [...new Set(records.map(r => r.exerciseName))]
+    const top6 = exNames.map(ex => ({ ex, count: records.filter(r => r.exerciseName === ex).length })).sort((a, b) => b.count - a.count).slice(0, 6).map(e => e.ex)
     return top6.map(ex => {
-      const exRecords = repsRecords.filter(r => r.exerciseName === ex).sort((a, b) => a.date.localeCompare(b.date))
+      const exRecords = records.filter(r => r.exerciseName === ex).sort((a, b) => a.date.localeCompare(b.date))
       const current = exRecords.length > 0 ? estimate1RM(exRecords[exRecords.length - 1].weight, exRecords[exRecords.length - 1].reps) : 0
       const first = exRecords.length > 0 ? estimate1RM(exRecords[0].weight, exRecords[0].reps) : 0
       const ratio = latestWeight && latestWeight > 0 ? parseFloat((current / latestWeight).toFixed(2)) : current
@@ -232,7 +228,7 @@ export function Progress() {
       const isRatio = latestWeight && latestWeight > 0
       return { exercise: ex.replace(/_/g, ' '), ratio, value: ratio, current, first, gain, level: level?.level || '', color: level?.color || '#8b5cf6', isRatio }
     })
-  }, [repsRecords, latestWeight])
+  }, [records, latestWeight])
 
   const totalVolume = useMemo(() =>
     workouts.length > 0
@@ -246,10 +242,14 @@ export function Progress() {
     return Math.max(...records.map(r => estimate1RM(r.weight, r.reps)))
   }, [records])
 
+  const filteredRecords = useMemo(() => {
+    return records
+  }, [records])
+
   const chartData = useMemo(() => {
     const targetRecords = selectedExercise
-      ? weightRecords.filter(r => r.exerciseName === selectedExercise)
-      : weightRecords
+      ? filteredRecords.filter(r => r.exerciseName === selectedExercise)
+      : filteredRecords
     return targetRecords
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .map(r => ({
@@ -257,7 +257,7 @@ export function Progress() {
         weight: r.weight, reps: r.reps, volume: r.weight * r.reps, estimated1RM: estimate1RM(r.weight, r.reps),
         exerciseName: r.exerciseName,
       }))
-  }, [weightRecords, selectedExercise])
+  }, [filteredRecords, selectedExercise])
 
   const perExerciseBests = useMemo(() => {
     const map: Record<string, { bestWeight: number; bestReps: number; bestVolume: number }> = {}
@@ -732,9 +732,9 @@ export function Progress() {
                 </div>
                 <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
                   {[
-                    { key: 'prs' as const, label: 'Weight PRs', icon: '🏋️' },
-                    { key: 'progression' as const, label: 'Rep Progression', icon: '🔥' },
-                    { key: 'matrix' as const, label: 'Volume Matrix', icon: '📊' },
+                    { key: 'prs' as const, label: 'PRs', icon: '📊' },
+                    { key: 'progression' as const, label: 'Progression', icon: '📈' },
+                    { key: 'matrix' as const, label: 'Matrix', icon: '🎯' },
                   ].map(m => (
                     <button key={m.key} onClick={() => setChartTab(m.key)}
                       className={`relative px-3.5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
@@ -829,7 +829,7 @@ export function Progress() {
                           </ComposedChart>
                         </ResponsiveContainer>
                       ) : (
-                        <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log weight-type PRs to see trends</div>
+                        <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your first PR to see trends</div>
                       )
                     )}
                     {chartTab === 'progression' && (
@@ -906,8 +906,8 @@ export function Progress() {
                           <div className="w-14 h-14 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-center mb-3">
                             <BarChart3 className="w-7 h-7 text-emerald-400/30" />
                           </div>
-                          <p className="text-gray-400 text-sm font-medium mb-1">No rep progression data yet</p>
-                          <p className="text-gray-500 text-xs max-w-[200px]">Log reps-type PRs to see your progression</p>
+                          <p className="text-gray-400 text-sm font-medium mb-1">No progression data yet</p>
+                          <p className="text-gray-500 text-xs max-w-[200px]">Log PRs to see your strength progression over time</p>
                         </div>
                       )
                     )}
@@ -985,7 +985,7 @@ export function Progress() {
                             <Target className="w-7 h-7 text-violet-400/30" />
                           </div>
                           <p className="text-gray-400 text-sm font-medium mb-1">No strength matrix yet</p>
-                          <p className="text-gray-500 text-xs max-w-[200px]">Log volume-type PRs to see your strength matrix</p>
+                          <p className="text-gray-500 text-xs max-w-[200px]">Log your first PR to see your strength matrix</p>
                         </div>
                       )
                     )}
