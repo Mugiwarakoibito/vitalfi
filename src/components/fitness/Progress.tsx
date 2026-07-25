@@ -203,14 +203,18 @@ export function Progress() {
   const strengthMatrix = useMemo(() => {
     return [...new Map(filteredRecords.map(r => [r.exerciseName, r])).values()]
       .map(r => {
-        const best = filteredRecords
-          .filter(pr => pr.exerciseName === r.exerciseName)
-          .reduce((a, b) => estimate1RM(a.weight, a.reps) > estimate1RM(b.weight, b.reps) ? a : b)
+        const allRecords = filteredRecords.filter(pr => pr.exerciseName === r.exerciseName)
+        const best = allRecords.reduce((a, b) => estimate1RM(a.weight, a.reps) > estimate1RM(b.weight, b.reps) ? a : b)
         const e1rm = estimate1RM(best.weight, best.reps)
         const classification = latestWeight
           ? classifyStrength(best.exerciseName, best.weight, latestWeight)
           : null
-        return { name: best.exerciseName, best1RM: e1rm, ratio: classification?.ratio ?? 0, level: classification?.level ?? '', color: classification?.color ?? '#6b7280' }
+        const maxReps = Math.max(...allRecords.map(x => x.reps), 0)
+        const maxVolume = Math.max(...allRecords.map(x => x.weight * x.reps), 0)
+        const maxDuration = Math.max(...allRecords.map(x => x.duration ?? 0), 0)
+        const speeds = allRecords.filter(x => (x.distance ?? 0) > 0 && (x.duration ?? 0) > 0).map(x => x.distance! / (x.duration! / 3600))
+        const maxSpeed = speeds.length > 0 ? Math.max(...speeds) : 0
+        return { name: best.exerciseName, best1RM: e1rm, ratio: classification?.ratio ?? 0, level: classification?.level ?? '', color: classification?.color ?? '#6b7280', maxReps, maxVolume, maxDuration, maxSpeed }
       })
       .sort((a, b) => b.best1RM - a.best1RM)
   }, [filteredRecords, latestWeight])
@@ -232,7 +236,13 @@ export function Progress() {
       const level = classifyStrength(ex, current, latestWeight || 0)
       const gain = current - first
       const isRatio = latestWeight && latestWeight > 0
-      return { exercise: ex.replace(/_/g, ' '), ratio, value: ratio, current, first, gain, level: level?.level || '', color: level?.color || '#8b5cf6', isRatio }
+      const maxReps = Math.max(...exRecords.map(r => r.reps), 0)
+      const maxVolume = Math.max(...exRecords.map(r => r.weight * r.reps), 0)
+      const maxDuration = Math.max(...exRecords.map(r => r.duration ?? 0), 0)
+      const speeds = exRecords.filter(r => (r.distance ?? 0) > 0 && (r.duration ?? 0) > 0).map(r => r.distance! / (r.duration! / 3600))
+      const maxSpeed = speeds.length > 0 ? Math.max(...speeds) : 0
+      const latestRecord = exRecords[exRecords.length - 1]
+      return { exercise: ex.replace(/_/g, ' '), ratio, value: ratio, current, first, gain, level: level?.level || '', color: level?.color || '#8b5cf6', isRatio, maxReps, maxVolume, maxDuration, maxSpeed, latestType: latestRecord?.type ?? 'weight' }
     })
   }, [filteredRecords, latestWeight])
 
@@ -258,6 +268,7 @@ export function Progress() {
         date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }),
         weight: r.weight, reps: r.reps, volume: r.weight * r.reps, estimated1RM: estimate1RM(r.weight, r.reps),
         exerciseName: r.exerciseName,
+        type: r.type, duration: r.duration ?? 0, distance: r.distance ?? 0,
       }))
   }, [filteredRecords, selectedExercise])
 
@@ -809,6 +820,7 @@ export function Progress() {
                               if (!d) return null
                               const max1RM = Math.max(...chartData.map(e => e.estimated1RM))
                               const isBest = d.estimated1RM >= max1RM
+                              const formatDur = (s: number) => { const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}` }
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
                                   className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[190px]">
@@ -821,20 +833,105 @@ export function Progress() {
                                       </div>
                                       {isBest && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 PB</span>}
                                     </div>
-                                    <div className="grid grid-cols-2 gap-1.5">
-                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
-                                        <div className="text-[9px] text-gray-500 mb-0.5">Weight</div>
-                                        <div className="text-sm font-bold text-white">{d.weight}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
-                                      </div>
-                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
-                                        <div className="text-[9px] text-gray-500 mb-0.5">Est 1RM</div>
-                                        <div className={`text-sm font-bold ${isBest ? 'text-amber-400' : 'text-emerald-300'}`}>{d.estimated1RM}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center justify-between text-[10px]">
-                                      <span className="text-gray-500">{d.reps} reps</span>
-                                      <span className="text-gray-500">{d.date}</span>
-                                    </div>
+                                    {recordType === 'all' || recordType === 'weight' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Weight</div>
+                                            <div className="text-sm font-bold text-white">{d.weight}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Est 1RM</div>
+                                            <div className={`text-sm font-bold ${isBest ? 'text-amber-400' : 'text-emerald-300'}`}>{d.estimated1RM}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[10px]">
+                                          <span className="text-gray-500">{d.reps} reps</span>
+                                          <span className="text-gray-500">{d.date}</span>
+                                        </div>
+                                      </>
+                                    ) : recordType === 'reps' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Reps</div>
+                                            <div className="text-sm font-bold text-emerald-400">{d.reps}<span className="text-[9px] font-normal text-gray-500 ml-0.5">reps</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Weight</div>
+                                            <div className="text-sm font-bold text-white">{d.weight}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[10px]">
+                                          <span className="text-gray-500">{d.estimated1RM} est 1RM</span>
+                                          <span className="text-gray-500">{d.date}</span>
+                                        </div>
+                                      </>
+                                    ) : recordType === 'volume' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Volume</div>
+                                            <div className="text-sm font-bold text-violet-400">{d.volume?.toLocaleString()}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Weight</div>
+                                            <div className="text-sm font-bold text-white">{d.weight}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[10px]">
+                                          <span className="text-gray-500">{d.reps} reps</span>
+                                          <span className="text-gray-500">{d.date}</span>
+                                        </div>
+                                      </>
+                                    ) : recordType === 'endurance' ? (
+                                      <>
+                                        <div className="grid grid-cols-1 gap-1.5">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Duration</div>
+                                            <div className="text-sm font-bold text-cyan-400">{formatDur(d.duration)}<span className="text-[9px] font-normal text-gray-500 ml-1">min:sec</span></div>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[10px]">
+                                          <span className="text-gray-500">{d.weight} lbs · {d.reps} reps</span>
+                                          <span className="text-gray-500">{d.date}</span>
+                                        </div>
+                                      </>
+                                    ) : recordType === 'speed' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Distance</div>
+                                            <div className="text-sm font-bold text-amber-400">{d.distance?.toFixed(1) ?? '—'}<span className="text-[9px] font-normal text-gray-500 ml-0.5">mi</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Duration</div>
+                                            <div className="text-sm font-bold text-white">{formatDur(d.duration)}</div>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[10px]">
+                                          <span className="text-gray-500">{d.distance && d.duration > 0 ? `${(d.distance / (d.duration / 3600)).toFixed(1)} mph` : '—'}</span>
+                                          <span className="text-gray-500">{d.date}</span>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Weight</div>
+                                            <div className="text-sm font-bold text-white">{d.weight}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Est 1RM</div>
+                                            <div className={`text-sm font-bold ${isBest ? 'text-amber-400' : 'text-emerald-300'}`}>{d.estimated1RM}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[10px]">
+                                          <span className="text-gray-500">{d.reps} reps</span>
+                                          <span className="text-gray-500">{d.date}</span>
+                                        </div>
+                                      </>
+                                    )}
                                   </div>
                                 </motion.div>
                               )
@@ -879,9 +976,8 @@ export function Progress() {
                               if (!active || !payload?.length) return null
                               const d = payload[0]?.payload as any
                               if (!d) return null
-                              const best = Math.max(...progressionRadarData.map(x => x.ratio))
-                              const isBest = d.ratio >= best
                               const lmap: Record<string, string> = { Elite: '#f59e0b', Advanced: '#ef4444', Intermediate: '#8b5cf6', Novice: '#10b981', Untrained: '#6b7280' }
+                              const formatDur = (s: number) => { const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}` }
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.88, y: 6 }} animate={{ opacity: 1, scale: 1, y: 0 }}
                                   className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[190px]">
@@ -892,30 +988,124 @@ export function Progress() {
                                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color, boxShadow: `0 0 8px ${d.color}66` }} />
                                         <span className="text-white font-bold text-xs">{d.exercise}</span>
                                       </div>
-                                      {isBest && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 BEST</span>}
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
-                                        <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Ratio</div>
-                                        <div className="text-sm font-bold text-white">{d.ratio}x <span className="text-[9px] font-normal text-gray-500">BW</span></div>
-                                      </div>
-                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
-                                        <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">1RM</div>
-                                        <div className="text-sm font-bold text-violet-300">{d.current}<span className="text-[9px] font-normal text-gray-500"> lbs</span></div>
-                                      </div>
-                                    </div>
-                                    {d.level ? (
-                                      <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${(lmap[d.level] || '#6b7280')}12`, border: `1px solid ${(lmap[d.level] || '#6b7280')}20` }}>
-                                        <span className="text-gray-400 text-[10px] font-semibold">Level</span>
-                                        <span className={`font-bold text-[11px] capitalize`} style={{ color: lmap[d.level] || '#6b7280' }}>{d.level}</span>
-                                      </div>
-                                    ) : null}
-                                    <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: d.gain > 0 ? 'rgba(16,185,129,0.08)' : d.gain < 0 ? 'rgba(244,63,94,0.08)' : 'rgba(255,255,255,0.03)', border: `1px solid ${d.gain > 0 ? 'rgba(16,185,129,0.2)' : d.gain < 0 ? 'rgba(244,63,94,0.2)' : 'rgba(255,255,255,0.04)'}` }}>
-                                      <span className="text-gray-400 text-[10px] font-semibold">Change</span>
-                                      <span className={`font-bold text-[11px] ${d.gain > 0 ? 'text-emerald-400' : d.gain < 0 ? 'text-rose-400' : 'text-gray-400'}`}>
-                                        {d.gain >= 0 ? '+' : ''}{d.gain} lbs
-                                      </span>
-                                    </div>
+                                    {recordType === 'all' || recordType === 'weight' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Ratio</div>
+                                            <div className="text-sm font-bold text-white">{d.ratio}x <span className="text-[9px] font-normal text-gray-500">BW</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">1RM</div>
+                                            <div className="text-sm font-bold text-violet-300">{d.current}<span className="text-[9px] font-normal text-gray-500"> lbs</span></div>
+                                          </div>
+                                        </div>
+                                        {d.level ? (
+                                          <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${(lmap[d.level] || '#6b7280')}12`, border: `1px solid ${(lmap[d.level] || '#6b7280')}20` }}>
+                                            <span className="text-gray-400 text-[10px] font-semibold">Level</span>
+                                            <span className={`font-bold text-[11px] capitalize`} style={{ color: lmap[d.level] || '#6b7280' }}>{d.level}</span>
+                                          </div>
+                                        ) : null}
+                                        <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: d.gain > 0 ? 'rgba(16,185,129,0.08)' : d.gain < 0 ? 'rgba(244,63,94,0.08)' : 'rgba(255,255,255,0.03)', border: `1px solid ${d.gain > 0 ? 'rgba(16,185,129,0.2)' : d.gain < 0 ? 'rgba(244,63,94,0.2)' : 'rgba(255,255,255,0.04)'}` }}>
+                                          <span className="text-gray-400 text-[10px] font-semibold">Change</span>
+                                          <span className={`font-bold text-[11px] ${d.gain > 0 ? 'text-emerald-400' : d.gain < 0 ? 'text-rose-400' : 'text-gray-400'}`}>
+                                            {d.gain >= 0 ? '+' : ''}{d.gain} lbs
+                                          </span>
+                                        </div>
+                                      </>
+                                    ) : recordType === 'reps' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Max Reps</div>
+                                            <div className="text-sm font-bold text-emerald-400">{d.maxReps}<span className="text-[9px] font-normal text-gray-500"> reps</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Est 1RM</div>
+                                            <div className="text-sm font-bold text-violet-300">{d.current}<span className="text-[9px] font-normal text-gray-500"> lbs</span></div>
+                                          </div>
+                                        </div>
+                                        {d.level ? (
+                                          <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${(lmap[d.level] || '#6b7280')}12`, border: `1px solid ${(lmap[d.level] || '#6b7280')}20` }}>
+                                            <span className="text-gray-400 text-[10px] font-semibold">Level</span>
+                                            <span className={`font-bold text-[11px] capitalize`} style={{ color: lmap[d.level] || '#6b7280' }}>{d.level}</span>
+                                          </div>
+                                        ) : null}
+                                      </>
+                                    ) : recordType === 'volume' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Max Volume</div>
+                                            <div className="text-sm font-bold text-violet-400">{d.maxVolume?.toLocaleString()}<span className="text-[9px] font-normal text-gray-500"> lbs</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Est 1RM</div>
+                                            <div className="text-sm font-bold text-violet-300">{d.current}<span className="text-[9px] font-normal text-gray-500"> lbs</span></div>
+                                          </div>
+                                        </div>
+                                        {d.level ? (
+                                          <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${(lmap[d.level] || '#6b7280')}12`, border: `1px solid ${(lmap[d.level] || '#6b7280')}20` }}>
+                                            <span className="text-gray-400 text-[10px] font-semibold">Level</span>
+                                            <span className={`font-bold text-[11px] capitalize`} style={{ color: lmap[d.level] || '#6b7280' }}>{d.level}</span>
+                                          </div>
+                                        ) : null}
+                                      </>
+                                    ) : recordType === 'endurance' ? (
+                                      <>
+                                        <div className="grid grid-cols-1 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Max Duration</div>
+                                            <div className="text-sm font-bold text-cyan-400">{formatDur(d.maxDuration)}<span className="text-[9px] font-normal text-gray-500 ml-1">min:sec</span></div>
+                                          </div>
+                                        </div>
+                                        {d.level ? (
+                                          <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${(lmap[d.level] || '#6b7280')}12`, border: `1px solid ${(lmap[d.level] || '#6b7280')}20` }}>
+                                            <span className="text-gray-400 text-[10px] font-semibold">Level</span>
+                                            <span className={`font-bold text-[11px] capitalize`} style={{ color: lmap[d.level] || '#6b7280' }}>{d.level}</span>
+                                          </div>
+                                        ) : null}
+                                      </>
+                                    ) : recordType === 'speed' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Max Speed</div>
+                                            <div className="text-sm font-bold text-amber-400">{d.maxSpeed?.toFixed(1)}<span className="text-[9px] font-normal text-gray-500"> mph</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Max Duration</div>
+                                            <div className="text-sm font-bold text-cyan-400">{formatDur(d.maxDuration)}</div>
+                                          </div>
+                                        </div>
+                                        {d.level ? (
+                                          <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${(lmap[d.level] || '#6b7280')}12`, border: `1px solid ${(lmap[d.level] || '#6b7280')}20` }}>
+                                            <span className="text-gray-400 text-[10px] font-semibold">Level</span>
+                                            <span className={`font-bold text-[11px] capitalize`} style={{ color: lmap[d.level] || '#6b7280' }}>{d.level}</span>
+                                          </div>
+                                        ) : null}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Ratio</div>
+                                            <div className="text-sm font-bold text-white">{d.ratio}x <span className="text-[9px] font-normal text-gray-500">BW</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">1RM</div>
+                                            <div className="text-sm font-bold text-violet-300">{d.current}<span className="text-[9px] font-normal text-gray-500"> lbs</span></div>
+                                          </div>
+                                        </div>
+                                        {d.level ? (
+                                          <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${(lmap[d.level] || '#6b7280')}12`, border: `1px solid ${(lmap[d.level] || '#6b7280')}20` }}>
+                                            <span className="text-gray-400 text-[10px] font-semibold">Level</span>
+                                            <span className={`font-bold text-[11px] capitalize`} style={{ color: lmap[d.level] || '#6b7280' }}>{d.level}</span>
+                                          </div>
+                                        ) : null}
+                                      </>
+                                    )}
                                   </div>
                                 </motion.div>
                               )
@@ -957,6 +1147,7 @@ export function Progress() {
                               const elMap: Record<string, string> = { novice: '🟢', intermediate: '🟡', advanced: '🔴', elite: '🟣' }
                               const idx = strengthMatrix.findIndex(m => m.name === d.name)
                               const avg = strengthMatrix.reduce((s, m) => s + m.best1RM, 0) / strengthMatrix.length
+                              const formatDur = (s: number) => { const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}` }
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
                                   className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[190px]">
@@ -969,24 +1160,95 @@ export function Progress() {
                                       </span>
                                       {idx === 0 && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 #1</span>}
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
-                                        <div className="text-[9px] text-gray-500 mb-0.5">1RM</div>
-                                        <div className="text-sm font-bold text-white">{d.best1RM}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
-                                      </div>
-                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
-                                        <div className="text-[9px] text-gray-500 mb-0.5">vs Avg</div>
-                                        <div className={`text-sm font-bold ${d.best1RM >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                          {d.best1RM >= avg ? '+' : ''}{Math.round(d.best1RM - avg)}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span>
+                                    {recordType === 'all' || recordType === 'weight' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">1RM</div>
+                                            <div className="text-sm font-bold text-white">{d.best1RM}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">vs Avg</div>
+                                            <div className={`text-sm font-bold ${d.best1RM >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                              {d.best1RM >= avg ? '+' : ''}{Math.round(d.best1RM - avg)}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span>
+                                            </div>
+                                          </div>
                                         </div>
-                                      </div>
-                                    </div>
-                                    {d.level && <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${lmap[d.level.toLowerCase()] || '#6b7280'}12`, border: `1px solid ${lmap[d.level.toLowerCase()] || '#6b7280'}20` }}>
-                                      <span className="text-gray-400 text-[10px] font-semibold">Level</span>
-                                      <span className="font-bold capitalize text-[11px]" style={{ color: lmap[d.level.toLowerCase()] || '#6b7280' }}>
-                                        {elMap[d.level.toLowerCase()] || '⚪'} {d.level}
-                                      </span>
-                                    </div>}
+                                        {d.level && <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${lmap[d.level.toLowerCase()] || '#6b7280'}12`, border: `1px solid ${lmap[d.level.toLowerCase()] || '#6b7280'}20` }}>
+                                          <span className="text-gray-400 text-[10px] font-semibold">Level</span>
+                                          <span className="font-bold capitalize text-[11px]" style={{ color: lmap[d.level.toLowerCase()] || '#6b7280' }}>
+                                            {elMap[d.level.toLowerCase()] || '⚪'} {d.level}
+                                          </span>
+                                        </div>}
+                                      </>
+                                    ) : recordType === 'reps' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Max Reps</div>
+                                            <div className="text-sm font-bold text-emerald-400">{d.maxReps}<span className="text-[9px] font-normal text-gray-500 ml-0.5">reps</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">vs Avg</div>
+                                            <div className={`text-sm font-bold ${d.best1RM >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                              {d.best1RM >= avg ? '+' : ''}{Math.round(d.best1RM - avg)}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    ) : recordType === 'volume' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Max Volume</div>
+                                            <div className="text-sm font-bold text-violet-400">{d.maxVolume?.toLocaleString()}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">vs Avg</div>
+                                            <div className={`text-sm font-bold ${d.best1RM >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                              {d.best1RM >= avg ? '+' : ''}{Math.round(d.best1RM - avg)}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    ) : recordType === 'endurance' ? (
+                                      <>
+                                        <div className="grid grid-cols-1 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Max Duration</div>
+                                            <div className="text-sm font-bold text-cyan-400">{formatDur(d.maxDuration)}<span className="text-[9px] font-normal text-gray-500 ml-1">min:sec</span></div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    ) : recordType === 'speed' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Max Speed</div>
+                                            <div className="text-sm font-bold text-amber-400">{d.maxSpeed?.toFixed(1)}<span className="text-[9px] font-normal text-gray-500 ml-0.5">mph</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Max Duration</div>
+                                            <div className="text-sm font-bold text-cyan-400">{formatDur(d.maxDuration)}</div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">1RM</div>
+                                            <div className="text-sm font-bold text-white">{d.best1RM}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">vs Avg</div>
+                                            <div className={`text-sm font-bold ${d.best1RM >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                              {d.best1RM >= avg ? '+' : ''}{Math.round(d.best1RM - avg)}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
                                     <div className="text-center text-[9px] text-gray-500">Rank #{idx + 1} of {strengthMatrix.length}</div>
                                   </div>
                                 </motion.div>
