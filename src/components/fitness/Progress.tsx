@@ -142,7 +142,7 @@ export function Progress() {
   const [perfFocus, setPerfFocus] = useState<'strength' | 'hypertrophy' | 'endurance' | 'power' | 'overall'>('overall')
   const [scopeOffset, setScopeOffset] = useState(0)
   const [chartTab, setChartTab] = useState<'prs' | 'progression' | 'matrix'>('prs')
-
+  const [recordType, setRecordType] = useState<'all' | 'weight' | 'reps' | 'volume' | 'endurance' | 'speed'>('all')
   const [targetDate, setTargetDate] = useState(new Date())
   const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d }, [])
 
@@ -175,18 +175,22 @@ export function Progress() {
     return withWeight.sort((a: BodyMetric, b: BodyMetric) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].weight!
   }, [bodyMetrics])
 
+  const filteredRecords = useMemo(() => {
+    if (recordType === 'all') return records
+    return records.filter(r => r.type === recordType)
+  }, [records, recordType])
 
   const strengthProgression = useMemo(() => {
-    const top5 = [...new Set(records.map(r => r.exerciseName))]
-      .map(ex => ({ ex, count: records.filter(r => r.exerciseName === ex).length }))
+    const top5 = [...new Set(filteredRecords.map(r => r.exerciseName))]
+      .map(ex => ({ ex, count: filteredRecords.filter(r => r.exerciseName === ex).length }))
       .sort((a, b) => b.count - a.count).slice(0, 5).map(e => e.ex)
-    const allDates = [...new Set(records.map(r => r.date))].sort()
+    const allDates = [...new Set(filteredRecords.map(r => r.date))].sort()
     const data = allDates.map(date => {
       const point: Record<string, string | number | null> = {
         date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })
       }
       for (const ex of top5) {
-        const bestUpTo = records
+        const bestUpTo = filteredRecords
           .filter(r => r.exerciseName === ex && r.date <= date)
           .reduce((best, r) => Math.max(best, estimate1RM(r.weight, r.reps)), 0)
         point[ex] = bestUpTo > 0 ? bestUpTo : null
@@ -194,12 +198,12 @@ export function Progress() {
       return point
     })
     return { data, exercises: top5 }
-  }, [records])
+  }, [filteredRecords])
 
   const strengthMatrix = useMemo(() => {
-    return [...new Map(records.map(r => [r.exerciseName, r])).values()]
+    return [...new Map(filteredRecords.map(r => [r.exerciseName, r])).values()]
       .map(r => {
-        const allRecords = records.filter(pr => pr.exerciseName === r.exerciseName)
+        const allRecords = filteredRecords.filter(pr => pr.exerciseName === r.exerciseName)
         const best = allRecords.reduce((a, b) => estimate1RM(a.weight, a.reps) > estimate1RM(b.weight, b.reps) ? a : b)
         const e1rm = estimate1RM(best.weight, best.reps)
         const classification = latestWeight
@@ -213,7 +217,7 @@ export function Progress() {
         return { name: best.exerciseName, best1RM: e1rm, ratio: classification?.ratio ?? 0, level: classification?.level ?? '', color: classification?.color ?? '#6b7280', maxReps, maxVolume, maxDuration, maxSpeed }
       })
       .sort((a, b) => b.best1RM - a.best1RM)
-  }, [records, latestWeight])
+  }, [filteredRecords, latestWeight])
 
   const exerciseColors = useMemo(() => {
     const exNames = [...new Set(records.map(r => r.exerciseName))]
@@ -222,10 +226,10 @@ export function Progress() {
   }, [records])
 
   const progressionRadarData = useMemo(() => {
-    const exNames = [...new Set(records.map(r => r.exerciseName))]
-    const top6 = exNames.map(ex => ({ ex, count: records.filter(r => r.exerciseName === ex).length })).sort((a, b) => b.count - a.count).slice(0, 6).map(e => e.ex)
+    const exNames = [...new Set(filteredRecords.map(r => r.exerciseName))]
+    const top6 = exNames.map(ex => ({ ex, count: filteredRecords.filter(r => r.exerciseName === ex).length })).sort((a, b) => b.count - a.count).slice(0, 6).map(e => e.ex)
     return top6.map(ex => {
-      const exRecords = records.filter(r => r.exerciseName === ex).sort((a, b) => a.date.localeCompare(b.date))
+      const exRecords = filteredRecords.filter(r => r.exerciseName === ex).sort((a, b) => a.date.localeCompare(b.date))
       const current = exRecords.length > 0 ? estimate1RM(exRecords[exRecords.length - 1].weight, exRecords[exRecords.length - 1].reps) : 0
       const first = exRecords.length > 0 ? estimate1RM(exRecords[0].weight, exRecords[0].reps) : 0
       const ratio = latestWeight && latestWeight > 0 ? parseFloat((current / latestWeight).toFixed(2)) : current
@@ -240,7 +244,7 @@ export function Progress() {
       const latestRecord = exRecords[exRecords.length - 1]
       return { exercise: ex.replace(/_/g, ' '), ratio, value: ratio, current, first, gain, level: level?.level || '', color: level?.color || '#8b5cf6', isRatio, maxReps, maxVolume, maxDuration, maxSpeed, latestType: latestRecord?.type ?? 'weight' }
     })
-  }, [records, latestWeight])
+  }, [filteredRecords, latestWeight])
 
   const totalVolume = useMemo(() =>
     workouts.length > 0
@@ -254,11 +258,19 @@ export function Progress() {
     return Math.max(...records.map(r => estimate1RM(r.weight, r.reps)))
   }, [records])
 
+  const metricConfig = useMemo(() => {
+    if (recordType === 'all' || recordType === 'weight') return { barKey: 'weight' as const, barLabel: 'Weight', barUnit: 'lbs', refKey: 'estimated1RM' as const, refLabel: 'Est 1RM', refUnit: 'lbs', matrixKey: 'best1RM' as const, matrixLabel: '1RM', progKey: 'ratio' as const, progLabel: 'Strength Ratio', progUnit: 'x BW', progFormat: (v: number) => `${v}x` }
+    if (recordType === 'reps') return { barKey: 'reps' as const, barLabel: 'Reps', barUnit: 'reps', refKey: 'estimated1RM' as const, refLabel: 'Est 1RM', refUnit: 'lbs', matrixKey: 'maxReps' as const, matrixLabel: 'Max Reps', progKey: 'maxReps' as const, progLabel: 'Max Reps', progUnit: 'reps', progFormat: (v: number) => `${v}` }
+    if (recordType === 'volume') return { barKey: 'volume' as const, barLabel: 'Volume', barUnit: 'lbs', refKey: 'estimated1RM' as const, refLabel: 'Est 1RM', refUnit: 'lbs', matrixKey: 'maxVolume' as const, matrixLabel: 'Max Volume', progKey: 'maxVolume' as const, progLabel: 'Max Volume', progUnit: 'lbs', progFormat: (v: number) => v.toLocaleString() }
+    if (recordType === 'endurance') return { barKey: 'duration' as const, barLabel: 'Duration', barUnit: 'min:sec', refKey: 'estimated1RM' as const, refLabel: 'Est 1RM', refUnit: 'lbs', matrixKey: 'maxDuration' as const, matrixLabel: 'Max Duration', progKey: 'maxDuration' as const, progLabel: 'Max Duration', progUnit: 'min:sec', progFormat: (v: number) => { const m = Math.floor(v / 60); const s = Math.floor(v % 60); return `${m}:${s.toString().padStart(2, '0')}` } }
+    if (recordType === 'speed') return { barKey: 'distance' as const, barLabel: 'Distance', barUnit: 'mi', refKey: 'estimated1RM' as const, refLabel: 'Est 1RM', refUnit: 'lbs', matrixKey: 'maxSpeed' as const, matrixLabel: 'Max Speed', progKey: 'maxSpeed' as const, progLabel: 'Max Speed', progUnit: 'mph', progFormat: (v: number) => `${v.toFixed(1)}` }
+    return { barKey: 'weight' as const, barLabel: 'Weight', barUnit: 'lbs', refKey: 'estimated1RM' as const, refLabel: 'Est 1RM', refUnit: 'lbs', matrixKey: 'best1RM' as const, matrixLabel: '1RM', progKey: 'ratio' as const, progLabel: 'Strength Ratio', progUnit: 'x BW', progFormat: (v: number) => `${v}x` }
+  }, [recordType])
 
   const chartData = useMemo(() => {
     const targetRecords = selectedExercise
-      ? records.filter(r => r.exerciseName === selectedExercise)
-      : records
+      ? filteredRecords.filter(r => r.exerciseName === selectedExercise)
+      : filteredRecords
     return targetRecords
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .map(r => ({
@@ -267,7 +279,7 @@ export function Progress() {
         exerciseName: r.exerciseName,
         type: r.type, duration: r.duration ?? 0, distance: r.distance ?? 0,
       }))
-  }, [records, selectedExercise])
+  }, [filteredRecords, selectedExercise])
 
   const perExerciseBests = useMemo(() => {
     const map: Record<string, { bestWeight: number; bestReps: number; bestVolume: number }> = {}
@@ -439,6 +451,7 @@ export function Progress() {
     }
   }
 
+  const formatDur = (s: number) => { const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}` }
 
   return (
     <div className="space-y-4">
@@ -762,7 +775,25 @@ export function Progress() {
                     </button>
                   ))}
                 </div>
-
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  {[
+                    { key: 'all' as const, label: 'All', icon: '📋' },
+                    { key: 'weight' as const, label: 'Weight', icon: '🏋️' },
+                    { key: 'reps' as const, label: 'Reps', icon: '🔥' },
+                    { key: 'volume' as const, label: 'Volume', icon: '📊' },
+                    { key: 'endurance' as const, label: 'Endurance', icon: '⏱️' },
+                    { key: 'speed' as const, label: 'Speed', icon: '⚡' },
+                  ].map(t => (
+                    <button key={t.key} onClick={() => setRecordType(t.key)}
+                      className={`px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all duration-200 ${
+                        recordType === t.key
+                          ? 'text-white bg-white/[0.08] border border-white/[0.1] shadow-sm'
+                          : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'
+                      }`}>
+                      {t.key === 'all' ? t.label : `${t.icon}`}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Charts */}
@@ -792,13 +823,15 @@ export function Progress() {
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
                             <XAxis dataKey="date" stroke="rgba(255,255,255,0.1)" fontSize={8} fontWeight={700} axisLine={false} tickLine={false} dy={4} interval="preserveStartEnd" />
                             <YAxis stroke="rgba(255,255,255,0.12)" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={30} domain={[0, 'dataMax + 10']} tickFormatter={v => `${v}`} />
-                            <ReferenceLine y={Math.max(...chartData.map(d => d.estimated1RM))} stroke="rgba(251,191,36,0.3)" strokeWidth={1.5} strokeDasharray="6 4"
-                              label={{ value: `🏆 ${Math.max(...chartData.map(d => d.estimated1RM))}`, fill: '#fbbf24', fontSize: 10, fontWeight: 800, position: 'right' }} />
+                            <ReferenceLine y={Math.max(...chartData.map(d => recordType === 'all' || recordType === 'weight' ? d.estimated1RM : (d as any)[metricConfig.barKey] ?? 0))} stroke="rgba(251,191,36,0.3)" strokeWidth={1.5} strokeDasharray="6 4"
+                              label={{ value: `🏆 ${Math.max(...chartData.map(d => recordType === 'all' || recordType === 'weight' ? d.estimated1RM : (d as any)[metricConfig.barKey] ?? 0))}`, fill: '#fbbf24', fontSize: 10, fontWeight: 800, position: 'right' }} />
                             <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
                               const d = payload[0].payload as any
                               if (!d) return null
-                              const isBest = d.estimated1RM >= Math.max(...chartData.map(e => e.estimated1RM ?? 0))
+                              const maxBarVal = Math.max(...chartData.map(e => (e as any)[metricConfig.barKey] ?? 0))
+                              const isBest = (d as any)[metricConfig.barKey] >= maxBarVal
+                              const formatDur = (s: number) => { const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}` }
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
                                   className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[190px]">
@@ -811,6 +844,7 @@ export function Progress() {
                                       </div>
                                       {isBest && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 PB</span>}
                                     </div>
+                                    {recordType === 'all' || recordType === 'weight' ? (
                                       <>
                                         <div className="grid grid-cols-2 gap-1.5">
                                           <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
@@ -827,14 +861,96 @@ export function Progress() {
                                           <span className="text-gray-500">{d.date}</span>
                                         </div>
                                       </>
+                                    ) : recordType === 'reps' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Reps</div>
+                                            <div className="text-sm font-bold text-emerald-400">{d.reps}<span className="text-[9px] font-normal text-gray-500 ml-0.5">reps</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Weight</div>
+                                            <div className="text-sm font-bold text-white">{d.weight}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[10px]">
+                                          <span className="text-gray-500">{d.estimated1RM} est 1RM</span>
+                                          <span className="text-gray-500">{d.date}</span>
+                                        </div>
+                                      </>
+                                    ) : recordType === 'volume' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Volume</div>
+                                            <div className="text-sm font-bold text-violet-400">{d.volume?.toLocaleString()}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Weight</div>
+                                            <div className="text-sm font-bold text-white">{d.weight}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[10px]">
+                                          <span className="text-gray-500">{d.reps} reps</span>
+                                          <span className="text-gray-500">{d.date}</span>
+                                        </div>
+                                      </>
+                                    ) : recordType === 'endurance' ? (
+                                      <>
+                                        <div className="grid grid-cols-1 gap-1.5">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Duration</div>
+                                            <div className="text-sm font-bold text-cyan-400">{formatDur(d.duration)}<span className="text-[9px] font-normal text-gray-500 ml-1">min:sec</span></div>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[10px]">
+                                          <span className="text-gray-500">{d.weight} lbs · {d.reps} reps</span>
+                                          <span className="text-gray-500">{d.date}</span>
+                                        </div>
+                                      </>
+                                    ) : recordType === 'speed' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Distance</div>
+                                            <div className="text-sm font-bold text-amber-400">{d.distance?.toFixed(1) ?? '—'}<span className="text-[9px] font-normal text-gray-500 ml-0.5">mi</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Duration</div>
+                                            <div className="text-sm font-bold text-white">{formatDur(d.duration)}</div>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[10px]">
+                                          <span className="text-gray-500">{d.distance && d.duration > 0 ? `${(d.distance / (d.duration / 3600)).toFixed(1)} mph` : '—'}</span>
+                                          <span className="text-gray-500">{d.date}</span>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Weight</div>
+                                            <div className="text-sm font-bold text-white">{d.weight}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Est 1RM</div>
+                                            <div className={`text-sm font-bold ${isBest ? 'text-amber-400' : 'text-emerald-300'}`}>{d.estimated1RM}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[10px]">
+                                          <span className="text-gray-500">{d.reps} reps</span>
+                                          <span className="text-gray-500">{d.date}</span>
+                                        </div>
+                                      </>
+                                    )}
                                   </div>
                                 </motion.div>
                               )
                             }} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} />
-                            <Bar dataKey={'weight'} radius={[6, 6, 0, 0]} maxBarSize={32} animationDuration={800} animationEasing="ease-out">
+                            <Bar dataKey={metricConfig.barKey} radius={[6, 6, 0, 0]} maxBarSize={32} animationDuration={800} animationEasing="ease-out">
                               {chartData.map((entry, idx) => {
-                                const maxVal = Math.max(...chartData.map(e => e.estimated1RM ?? 0))
-                                const isBest = entry.estimated1RM >= maxVal
+                                const maxVal = Math.max(...chartData.map(e => (e as any)[metricConfig.barKey] ?? 0))
+                                const isBest = (entry as any)[metricConfig.barKey] >= maxVal
                                 return <Cell key={idx} fill={`url(#cmpBar_${entry.exerciseName.replace(/\s/g, '_')})`} filter={isBest ? 'url(#cmpLineGlow)' : undefined} stroke={isBest ? '#fbbf24' : 'rgba(255,255,255,0.04)'} strokeWidth={isBest ? 1.5 : 0} />
                               })}
                             </Bar>
@@ -863,8 +979,8 @@ export function Progress() {
                             </defs>
                             <PolarGrid stroke="rgba(255,255,255,0.05)" gridType="circle" />
                             <PolarAngleAxis dataKey="exercise" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 9, fontWeight: 600 }} axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
-                            <PolarRadiusAxis tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 8 }} axisLine={{ stroke: 'rgba(255,255,255,0.04)' }} tickFormatter={v => `${v}x`} />
-                            <Radar name={'Strength Ratio'} dataKey={'ratio'} stroke="url(#radarRatioStroke)" fill="url(#radarRatioFill)" strokeWidth={2.5}
+                            <PolarRadiusAxis tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 8 }} axisLine={{ stroke: 'rgba(255,255,255,0.04)' }} tickFormatter={v => recordType === 'all' || recordType === 'weight' ? `${v}x` : `${v}`} />
+                            <Radar name={metricConfig.progLabel} dataKey={metricConfig.progKey} stroke="url(#radarRatioStroke)" fill="url(#radarRatioFill)" strokeWidth={2.5}
                               dot={{ r: 3.5, fill: '#a78bfa', stroke: '#7c3aed', strokeWidth: 2, filter: 'url(#radarDotGlow)' }}
                               activeDot={{ r: 7, fill: '#c4b5fd', stroke: '#7c3aed', strokeWidth: 3, filter: 'url(#radarDotGlow)' }} />
                             <Tooltip content={({ active, payload }) => {
@@ -872,6 +988,7 @@ export function Progress() {
                               const d = payload[0]?.payload as any
                               if (!d) return null
                               const lmap: Record<string, string> = { Elite: '#f59e0b', Advanced: '#ef4444', Intermediate: '#8b5cf6', Novice: '#10b981', Untrained: '#6b7280' }
+                              const formatDur = (s: number) => { const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}` }
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.88, y: 6 }} animate={{ opacity: 1, scale: 1, y: 0 }}
                                   className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[190px]">
@@ -883,6 +1000,7 @@ export function Progress() {
                                         <span className="text-white font-bold text-xs">{d.exercise}</span>
                                       </div>
                                     </div>
+                                    {recordType === 'all' || recordType === 'weight' ? (
                                       <>
                                         <div className="grid grid-cols-2 gap-2">
                                           <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
@@ -907,6 +1025,98 @@ export function Progress() {
                                           </span>
                                         </div>
                                       </>
+                                    ) : recordType === 'reps' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Max Reps</div>
+                                            <div className="text-sm font-bold text-emerald-400">{d.maxReps}<span className="text-[9px] font-normal text-gray-500"> reps</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Est 1RM</div>
+                                            <div className="text-sm font-bold text-violet-300">{d.current}<span className="text-[9px] font-normal text-gray-500"> lbs</span></div>
+                                          </div>
+                                        </div>
+                                        {d.level ? (
+                                          <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${(lmap[d.level] || '#6b7280')}12`, border: `1px solid ${(lmap[d.level] || '#6b7280')}20` }}>
+                                            <span className="text-gray-400 text-[10px] font-semibold">Level</span>
+                                            <span className={`font-bold text-[11px] capitalize`} style={{ color: lmap[d.level] || '#6b7280' }}>{d.level}</span>
+                                          </div>
+                                        ) : null}
+                                      </>
+                                    ) : recordType === 'volume' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Max Volume</div>
+                                            <div className="text-sm font-bold text-violet-400">{d.maxVolume?.toLocaleString()}<span className="text-[9px] font-normal text-gray-500"> lbs</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Est 1RM</div>
+                                            <div className="text-sm font-bold text-violet-300">{d.current}<span className="text-[9px] font-normal text-gray-500"> lbs</span></div>
+                                          </div>
+                                        </div>
+                                        {d.level ? (
+                                          <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${(lmap[d.level] || '#6b7280')}12`, border: `1px solid ${(lmap[d.level] || '#6b7280')}20` }}>
+                                            <span className="text-gray-400 text-[10px] font-semibold">Level</span>
+                                            <span className={`font-bold text-[11px] capitalize`} style={{ color: lmap[d.level] || '#6b7280' }}>{d.level}</span>
+                                          </div>
+                                        ) : null}
+                                      </>
+                                    ) : recordType === 'endurance' ? (
+                                      <>
+                                        <div className="grid grid-cols-1 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Max Duration</div>
+                                            <div className="text-sm font-bold text-cyan-400">{formatDur(d.maxDuration)}<span className="text-[9px] font-normal text-gray-500 ml-1">min:sec</span></div>
+                                          </div>
+                                        </div>
+                                        {d.level ? (
+                                          <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${(lmap[d.level] || '#6b7280')}12`, border: `1px solid ${(lmap[d.level] || '#6b7280')}20` }}>
+                                            <span className="text-gray-400 text-[10px] font-semibold">Level</span>
+                                            <span className={`font-bold text-[11px] capitalize`} style={{ color: lmap[d.level] || '#6b7280' }}>{d.level}</span>
+                                          </div>
+                                        ) : null}
+                                      </>
+                                    ) : recordType === 'speed' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Max Speed</div>
+                                            <div className="text-sm font-bold text-amber-400">{d.maxSpeed?.toFixed(1)}<span className="text-[9px] font-normal text-gray-500"> mph</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Max Duration</div>
+                                            <div className="text-sm font-bold text-cyan-400">{formatDur(d.maxDuration)}</div>
+                                          </div>
+                                        </div>
+                                        {d.level ? (
+                                          <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${(lmap[d.level] || '#6b7280')}12`, border: `1px solid ${(lmap[d.level] || '#6b7280')}20` }}>
+                                            <span className="text-gray-400 text-[10px] font-semibold">Level</span>
+                                            <span className={`font-bold text-[11px] capitalize`} style={{ color: lmap[d.level] || '#6b7280' }}>{d.level}</span>
+                                          </div>
+                                        ) : null}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Ratio</div>
+                                            <div className="text-sm font-bold text-white">{d.ratio}x <span className="text-[9px] font-normal text-gray-500">BW</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">1RM</div>
+                                            <div className="text-sm font-bold text-violet-300">{d.current}<span className="text-[9px] font-normal text-gray-500"> lbs</span></div>
+                                          </div>
+                                        </div>
+                                        {d.level ? (
+                                          <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${(lmap[d.level] || '#6b7280')}12`, border: `1px solid ${(lmap[d.level] || '#6b7280')}20` }}>
+                                            <span className="text-gray-400 text-[10px] font-semibold">Level</span>
+                                            <span className={`font-bold text-[11px] capitalize`} style={{ color: lmap[d.level] || '#6b7280' }}>{d.level}</span>
+                                          </div>
+                                        ) : null}
+                                      </>
+                                    )}
                                   </div>
                                 </motion.div>
                               )
@@ -926,7 +1136,7 @@ export function Progress() {
                     {chartTab === 'matrix' && (
                       strengthMatrix.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%" key={`mat-${dataVersion}`}>
-                          <BarChart data={[...strengthMatrix].sort((a, b) => b.best1RM - a.best1RM)} layout="vertical" barGap={2} barCategoryGap="16%" margin={{ left: 72, right: 16, top: 4, bottom: 4 }}>
+                          <BarChart data={[...strengthMatrix].sort((a, b) => (b as any)[metricConfig.matrixKey] - (a as any)[metricConfig.matrixKey])} layout="vertical" barGap={2} barCategoryGap="16%" margin={{ left: 72, right: 16, top: 4, bottom: 4 }}>
                             <defs>
                               {strengthMatrix.map((m, i) => (
                                 <linearGradient key={i} id={`hBarGrad_${i}`} x1="0" y1="0" x2="1" y2="0">
@@ -947,7 +1157,8 @@ export function Progress() {
                               const lmap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
                               const elMap: Record<string, string> = { novice: '🟢', intermediate: '🟡', advanced: '🔴', elite: '🟣' }
                               const idx = strengthMatrix.findIndex(m => m.name === d.name)
-                              const avg = strengthMatrix.reduce((s, m) => s + m.best1RM, 0) / strengthMatrix.length
+                              const avg = strengthMatrix.reduce((s, m) => s + ((m as any)[metricConfig.matrixKey] ?? 0), 0) / strengthMatrix.length
+                              const formatDur = (s: number) => { const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}` }
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
                                   className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[190px]">
@@ -960,6 +1171,7 @@ export function Progress() {
                                       </span>
                                       {idx === 0 && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 #1</span>}
                                     </div>
+                                    {recordType === 'all' || recordType === 'weight' ? (
                                       <>
                                         <div className="grid grid-cols-2 gap-2">
                                           <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
@@ -968,8 +1180,8 @@ export function Progress() {
                                           </div>
                                           <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
                                             <div className="text-[9px] text-gray-500 mb-0.5">vs Avg</div>
-                                            <div className={`text-sm font-bold ${d.best1RM >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                              {d.best1RM >= avg ? '+' : ''}{Math.round(d.best1RM - avg)}
+                                            <div className={`text-sm font-bold ${(d as any)[metricConfig.matrixKey] >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                              {(d as any)[metricConfig.matrixKey] >= avg ? '+' : ''}{Math.round((d as any)[metricConfig.matrixKey] - avg)}
                                             </div>
                                           </div>
                                         </div>
@@ -980,13 +1192,81 @@ export function Progress() {
                                           </span>
                                         </div>}
                                       </>
+                                    ) : recordType === 'reps' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Max Reps</div>
+                                            <div className="text-sm font-bold text-emerald-400">{d.maxReps}<span className="text-[9px] font-normal text-gray-500 ml-0.5">reps</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">vs Avg</div>
+                                            <div className={`text-sm font-bold ${(d as any)[metricConfig.matrixKey] >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                              {(d as any)[metricConfig.matrixKey] >= avg ? '+' : ''}{Math.round((d as any)[metricConfig.matrixKey] - avg)}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    ) : recordType === 'volume' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Max Volume</div>
+                                            <div className="text-sm font-bold text-violet-400">{d.maxVolume?.toLocaleString()}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">vs Avg</div>
+                                            <div className={`text-sm font-bold ${(d as any)[metricConfig.matrixKey] >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                              {(d as any)[metricConfig.matrixKey] >= avg ? '+' : ''}{Math.round((d as any)[metricConfig.matrixKey] - avg)}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    ) : recordType === 'endurance' ? (
+                                      <>
+                                        <div className="grid grid-cols-1 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Max Duration</div>
+                                            <div className="text-sm font-bold text-cyan-400">{formatDur(d.maxDuration)}<span className="text-[9px] font-normal text-gray-500 ml-1">min:sec</span></div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    ) : recordType === 'speed' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Max Speed</div>
+                                            <div className="text-sm font-bold text-amber-400">{d.maxSpeed?.toFixed(1)}<span className="text-[9px] font-normal text-gray-500 ml-0.5">mph</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">Max Duration</div>
+                                            <div className="text-sm font-bold text-cyan-400">{formatDur(d.maxDuration)}</div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">1RM</div>
+                                            <div className="text-sm font-bold text-white">{d.best1RM}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                          </div>
+                                          <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                            <div className="text-[9px] text-gray-500 mb-0.5">vs Avg</div>
+                                            <div className={`text-sm font-bold ${(d as any)[metricConfig.matrixKey] >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                              {(d as any)[metricConfig.matrixKey] >= avg ? '+' : ''}{Math.round((d as any)[metricConfig.matrixKey] - avg)}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
                                     <div className="text-center text-[9px] text-gray-500">Rank #{idx + 1} of {strengthMatrix.length}</div>
                                   </div>
                                 </motion.div>
                               )
                             }} cursor={{ fill: 'rgba(139,92,246,0.08)' }} />
-                            <Bar dataKey={'best1RM'} radius={[0, 8, 8, 0]} maxBarSize={22} animationDuration={800} animationEasing="ease-out">
-                              {[...strengthMatrix].sort((a, b) => b.best1RM - a.best1RM).map((entry, idx) => {
+                            <Bar dataKey={metricConfig.matrixKey} radius={[0, 8, 8, 0]} maxBarSize={22} animationDuration={800} animationEasing="ease-out">
+                              {[...strengthMatrix].sort((a, b) => (b as any)[metricConfig.matrixKey] - (a as any)[metricConfig.matrixKey]).map((entry, idx) => {
                                 const origIdx = strengthMatrix.indexOf(entry)
                                 return <Cell key={idx} fill={`url(#hBarGrad_${origIdx})`} filter={idx === 0 ? 'url(#hBarBestGlow)' : undefined} stroke={idx === 0 ? '#fbbf24' : 'rgba(255,255,255,0.04)'} strokeWidth={idx === 0 ? 1.5 : 0} />
                               })}
@@ -1011,20 +1291,20 @@ export function Progress() {
               {/* Stats strip */}
               {(() => {
                 if (chartTab === 'prs' && chartData.length > 0) {
-                  const values = chartData.map(d => d.weight ?? 0)
-                  const avgW = values.reduce((s, v) => s + v, 0) / values.length
-                  const maxW = Math.max(...values)
-                  const lastW = values[values.length - 1] ?? 0
+                  const values = chartData.map(d => (d as any)[metricConfig.barKey] ?? 0)
+                  const avgV = values.reduce((s, v) => s + v, 0) / values.length
+                  const maxV = Math.max(...values)
+                  const lastV = values[values.length - 1] ?? 0
                   const best1RMVal = Math.max(...chartData.map(d => d.estimated1RM ?? 0))
-                  const pctChange = values.length > 1 ? ((lastW - values[0]) / values[0] * 100).toFixed(1) : null
+                  const pctChange = values.length > 1 ? ((lastV - values[0]) / values[0] * 100).toFixed(1) : null
                   return (
                     <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-r from-rose-500/3 via-transparent to-violet-500/3 pointer-events-none" />
                       <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
-                        <span>📊 Avg <span className="font-semibold text-rose-400">{avgW.toFixed(1)}</span></span>
-                        <span>🏆 Peak <span className="font-semibold text-amber-400">{maxW.toFixed(1)}</span></span>
+                        <span>📊 Avg <span className="font-semibold text-rose-400">{recordType === 'endurance' ? formatDur(avgV) : avgV.toFixed(1)}</span></span>
+                        <span>🏆 Peak <span className="font-semibold text-amber-400">{recordType === 'endurance' ? formatDur(maxV) : maxV.toFixed(1)}</span></span>
                         <span>⚡ Best 1RM <span className="font-semibold text-violet-400">{best1RMVal}</span></span>
-                        <span>📋 Latest <span className="font-semibold text-cyan-400">{lastW.toFixed(1)}</span></span>
+                        <span>📋 Latest <span className="font-semibold text-cyan-400">{recordType === 'endurance' ? formatDur(lastV) : lastV.toFixed(1)}</span></span>
                         {pctChange !== null && <span>📈 Trend <span className={`font-semibold ${Number(pctChange) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{pctChange}%</span></span>}
                         <span>📝 Entries <span className="font-semibold text-indigo-400">{chartData.length}</span></span>
                       </div>
