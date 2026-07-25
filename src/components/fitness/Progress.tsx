@@ -11,8 +11,9 @@ import { Button } from '@/components/ui/Button'
 import {
   ComposedChart, Bar, Line,
   BarChart,
+  PieChart, Pie,
   Cell, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, ReferenceLine, Legend,
+  ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import { useAppStore } from '@/store/useAppStore'
 import type { Workout, BodyMetric, WorkoutExercise, ExerciseSet, PersonalRecord } from '@/types/domain'
@@ -820,68 +821,70 @@ export function Progress() {
                     {chartTab === 'progression' && (
                       progressionRadarData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%" key={`prog-${dataVersion}`}>
-                          <BarChart data={progressionRadarData} barGap={2} barCategoryGap="20%" margin={{ top: 8, right: 12, bottom: 8, left: 8 }}>
+                          <PieChart>
                             <defs>
                               {progressionRadarData.map(d => (
-                                <linearGradient key={d.exercise} id={`progStart_${d.exercise.replace(/\s/g, '_')}`} x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.5} />
-                                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.15} />
+                                <linearGradient key={d.exercise} id={`pieProg_${d.exercise.replace(/\s/g, '_')}`} x1="0" y1="0" x2="1" y2="1">
+                                  <stop offset="0%" stopColor={d.Current > d.First ? '#10b981' : d.Current < d.First ? '#f43f5e' : '#6b7280'} stopOpacity={0.92} />
+                                  <stop offset="100%" stopColor={d.Current > d.First ? '#047857' : d.Current < d.First ? '#be123c' : '#4b5563'} stopOpacity={0.3} />
                                 </linearGradient>
                               ))}
-                              <filter id="progBestGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <filter id="pieProgGlow"><feGaussianBlur stdDeviation="5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
-                            <XAxis dataKey="exercise" stroke="rgba(255,255,255,0.2)" fontSize={9} fontWeight={700} axisLine={false} tickLine={false} dy={6} />
-                            <YAxis stroke="rgba(255,255,255,0.12)" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={30} domain={[0, 'dataMax + 10']} tickFormatter={v => `${v}`} />
-                            <Tooltip content={({ active, payload, label }) => {
+                            <Pie data={progressionRadarData} dataKey="Current" nameKey="exercise" cx="50%" cy="50%" innerRadius={52} outerRadius={98} paddingAngle={4} startAngle={90} endAngle={-270} animationDuration={800} animationEasing="ease-out">
+                              {progressionRadarData.map(d => {
+                                const max = Math.max(...progressionRadarData.map(x => x.Current))
+                                const isBest = d.Current >= max
+                                return <Cell key={d.exercise} fill={`url(#pieProg_${d.exercise.replace(/\s/g, '_')})`} stroke={isBest ? '#fbbf24' : 'rgba(255,255,255,0.04)'} strokeWidth={isBest ? 2.5 : 0.5} filter={isBest ? 'url(#pieProgGlow)' : undefined} />
+                              })}
+                            </Pie>
+                            <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={20} fontWeight={800} style={{ textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
+                              {progressionRadarData.reduce((s, d) => s + d.Current, 0)}
+                            </text>
+                            <text x="50%" y="57%" textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.35)" fontSize={9} fontWeight={700}>
+                              total lbs
+                            </text>
+                            <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
-                              const first = Number(payload.find(p => p.name === 'First')?.value) || 0
-                              const current = Number(payload.find(p => p.name === 'Current')?.value) || 0
-                              const gain = current - first
-                              const pct = first > 0 ? Math.round(gain / first * 100) : 0
+                              const d = payload[0]?.payload as any
+                              if (!d) return null
+                              const gain = d.Current - d.First
+                              const pct = d.First > 0 ? Math.round(gain / d.First * 100) : 0
+                              const total = progressionRadarData.reduce((s, x) => s + x.Current, 0)
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
                                   className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[180px]">
                                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-transparent to-violet-500/5 pointer-events-none" />
                                   <div className="relative space-y-1.5">
                                     <div className="flex items-center justify-between border-b border-white/[0.06] pb-1.5">
-                                      <span className="text-white font-bold text-xs">{label}</span>
+                                      <span className="text-white font-bold text-xs">{d.exercise}</span>
                                       <span className={`text-[10px] font-bold ${gain > 0 ? 'text-emerald-400' : gain < 0 ? 'text-rose-400' : 'text-gray-400'}`}>
-                                        {gain >= 0 ? '+' : ''}{gain}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span>
+                                        {gain >= 0 ? '+' : ''}{gain}
                                       </span>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                       <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
-                                        <div className="text-[9px] text-gray-500 mb-0.5">First PR</div>
-                                        <div className="text-sm font-bold text-violet-400">{first}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                        <div className="text-[9px] text-gray-500 mb-0.5">First</div>
+                                        <div className="text-sm font-bold text-violet-400">{d.First}</div>
                                       </div>
                                       <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
                                         <div className="text-[9px] text-gray-500 mb-0.5">Current</div>
-                                        <div className="text-sm font-bold text-emerald-400">{current}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                        <div className="text-sm font-bold text-emerald-400">{d.Current}</div>
                                       </div>
                                     </div>
-                                    {gain !== 0 && <div className={`flex items-center justify-between rounded-lg px-3 py-1.5 ${gain > 0 ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-rose-500/10 border border-rose-500/20'}`}>
+                                    <div className="flex items-center justify-between text-[9px]">
+                                      <span className="text-gray-500">Share</span>
+                                      <span className="text-gray-400 font-semibold">{total > 0 ? ((d.Current / total) * 100).toFixed(1) : '0'}%</span>
+                                    </div>
+                                    {pct !== 0 && <div className={`flex items-center justify-between rounded-lg px-3 py-1.5 ${gain > 0 ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-rose-500/10 border border-rose-500/20'}`}>
                                       <span className="text-gray-400 text-[10px] font-semibold">Change</span>
                                       <span className={`font-bold text-[11px] ${gain > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{pct > 0 ? '+' : ''}{pct}%</span>
                                     </div>}
                                   </div>
                                 </motion.div>
                               )
-                            }} cursor={{ fill: 'rgba(139,92,246,0.08)' }} />
-                            <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.4)' }} iconType="rect" />
-                            <Bar name="First PR" dataKey="First" radius={[6, 6, 0, 0]} maxBarSize={20} animationDuration={600}>
-                              {progressionRadarData.map(d => (
-                                <Cell key={d.exercise} fill={`url(#progStart_${d.exercise.replace(/\s/g, '_')})`} stroke="rgba(139,92,246,0.2)" strokeWidth={1} />
-                              ))}
-                            </Bar>
-                            <Bar name="Current" dataKey="Current" radius={[6, 6, 0, 0]} maxBarSize={20} animationDuration={600} animationBegin={200}>
-                              {progressionRadarData.map(d => {
-                                const max = Math.max(...progressionRadarData.map(x => x.Current))
-                                const isBest = d.Current >= max
-                                return <Cell key={d.exercise} fill={d.Current > d.First ? '#10b981' : d.Current < d.First ? '#f43f5e' : '#6b7280'} fillOpacity={0.85} filter={isBest ? 'url(#progBestGlow)' : undefined} stroke={isBest ? '#fbbf24' : 'rgba(255,255,255,0.04)'} strokeWidth={isBest ? 1.5 : 0} />
-                              })}
-                            </Bar>
-                          </BarChart>
+                            }} />
+                          </PieChart>
                         </ResponsiveContainer>
                       ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center">
