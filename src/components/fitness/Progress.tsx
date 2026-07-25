@@ -834,7 +834,7 @@ export function Progress() {
                               <filter id="pieProgGlow"><feGaussianBlur stdDeviation="6" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                               <filter id="pieProgActiveGlow"><feGaussianBlur stdDeviation="8" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                             </defs>
-                            <Pie data={progressionRadarData} dataKey="Current" nameKey="exercise" cx="50%" cy="50%" innerRadius={48} outerRadius={88} paddingAngle={3} startAngle={90} endAngle={-270}
+                            <Pie data={progressionRadarData} dataKey="Current" nameKey="exercise" cx="50%" cy="62%" innerRadius={55} outerRadius={105} paddingAngle={2} startAngle={180} endAngle={0}
                               animationDuration={1000} animationEasing="ease-out"
                               activeIndex={progActiveIdx >= 0 ? progActiveIdx : undefined}
                               activeShape={(props: any) => {
@@ -868,13 +868,13 @@ export function Progress() {
                                 return <Cell key={d.exercise} fill={`url(#pieProg_${d.exercise.replace(/\s/g, '_')})`} stroke={isBest ? '#fbbf24' : 'rgba(255,255,255,0.04)'} strokeWidth={isBest ? 2.5 : 0.5} filter={isBest && progActiveIdx < 0 ? 'url(#pieProgGlow)' : undefined} />
                               })}
                             </Pie>
-                            <text x="50%" y="44%" textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={22} fontWeight={800} style={{ textShadow: '0 2px 12px rgba(0,0,0,0.7)' }}>
+                            <text x="50%" y="40%" textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={22} fontWeight={800} style={{ textShadow: '0 2px 12px rgba(0,0,0,0.7)' }}>
                               {progressionRadarData.reduce((s, d) => s + d.Current, 0)}
                             </text>
-                            <text x="50%" y="54%" textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.3)" fontSize={8} fontWeight={700} letterSpacing="0.1em">
+                            <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.3)" fontSize={8} fontWeight={700} letterSpacing="0.1em">
                               TOTAL LBS
                             </text>
-                            <text x="50%" y="62%" textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.15)" fontSize={8} fontWeight={600}>
+                            <text x="50%" y="58%" textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.15)" fontSize={8} fontWeight={600}>
                               {progressionRadarData.length} exercises
                             </text>
                             <Tooltip content={({ active, payload }) => {
