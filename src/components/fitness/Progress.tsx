@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button'
 import {
   ComposedChart, Bar, Line,
   BarChart,
-  PieChart, Pie,
+  PieChart, Pie, Sector,
   Cell, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
 } from 'recharts'
@@ -141,6 +141,7 @@ export function Progress() {
   const [perfFocus, setPerfFocus] = useState<'strength' | 'hypertrophy' | 'endurance' | 'power' | 'overall'>('overall')
   const [scopeOffset, setScopeOffset] = useState(0)
   const [chartTab, setChartTab] = useState<'prs' | 'progression' | 'matrix'>('prs')
+  const [progActiveIdx, setProgActiveIdx] = useState<number>(-1)
   const [targetDate, setTargetDate] = useState(new Date())
   const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d }, [])
 
@@ -825,24 +826,56 @@ export function Progress() {
                             <defs>
                               {progressionRadarData.map(d => (
                                 <linearGradient key={d.exercise} id={`pieProg_${d.exercise.replace(/\s/g, '_')}`} x1="0" y1="0" x2="1" y2="1">
-                                  <stop offset="0%" stopColor={d.Current > d.First ? '#10b981' : d.Current < d.First ? '#f43f5e' : '#6b7280'} stopOpacity={0.92} />
-                                  <stop offset="100%" stopColor={d.Current > d.First ? '#047857' : d.Current < d.First ? '#be123c' : '#4b5563'} stopOpacity={0.3} />
+                                  <stop offset="0%" stopColor={d.Current > d.First ? '#10b981' : d.Current < d.First ? '#f43f5e' : '#6b7280'} stopOpacity={0.95} />
+                                  <stop offset="50%" stopColor={d.Current > d.First ? '#059669' : d.Current < d.First ? '#e11d48' : '#525252'} stopOpacity={0.6} />
+                                  <stop offset="100%" stopColor={d.Current > d.First ? '#047857' : d.Current < d.First ? '#be123c' : '#404040'} stopOpacity={0.15} />
                                 </linearGradient>
                               ))}
-                              <filter id="pieProgGlow"><feGaussianBlur stdDeviation="5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <filter id="pieProgGlow"><feGaussianBlur stdDeviation="6" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <filter id="pieProgActiveGlow"><feGaussianBlur stdDeviation="8" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                             </defs>
-                            <Pie data={progressionRadarData} dataKey="Current" nameKey="exercise" cx="50%" cy="50%" innerRadius={52} outerRadius={98} paddingAngle={4} startAngle={90} endAngle={-270} animationDuration={800} animationEasing="ease-out">
+                            <Pie data={progressionRadarData} dataKey="Current" nameKey="exercise" cx="50%" cy="50%" innerRadius={48} outerRadius={88} paddingAngle={3} startAngle={90} endAngle={-270}
+                              animationDuration={1000} animationEasing="ease-out"
+                              activeIndex={progActiveIdx >= 0 ? progActiveIdx : undefined}
+                              activeShape={(props: any) => {
+                                const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload } = props
+                                const max = Math.max(...progressionRadarData.map(x => x.Current))
+                                const isBest = payload.Current >= max
+                                return (
+                                  <g>
+                                    <Sector cx={cx} cy={cy} innerRadius={innerRadius - 2} outerRadius={outerRadius + 10} startAngle={startAngle} endAngle={endAngle} fill={fill} stroke={isBest ? '#fbbf24' : 'rgba(255,255,255,0.15)'} strokeWidth={isBest ? 3 : 1} filter="url(#pieProgActiveGlow)" />
+                                    <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 6} startAngle={startAngle} endAngle={endAngle} fill={fill} fillOpacity={0.3} stroke="none" />
+                                  </g>
+                                )
+                              }}
+                              onMouseEnter={(_e: any, idx: number) => setProgActiveIdx(idx)}
+                              onMouseLeave={() => setProgActiveIdx(-1)}
+                              label={({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
+                                const rad = (midAngle * Math.PI) / 180
+                                const r = outerRadius + 22
+                                const x = cx + r * Math.cos(rad)
+                                const y = cy + r * Math.sin(rad)
+                                const align = x > cx ? 'start' : 'end'
+                                return (
+                                  <text x={x} y={y} textAnchor={align} dominantBaseline="middle" fill="rgba(255,255,255,0.45)" fontSize={8} fontWeight={700}>
+                                    {`${name} ${(percent * 100).toFixed(0)}%`}
+                                  </text>
+                                )
+                              }}>
                               {progressionRadarData.map(d => {
                                 const max = Math.max(...progressionRadarData.map(x => x.Current))
                                 const isBest = d.Current >= max
-                                return <Cell key={d.exercise} fill={`url(#pieProg_${d.exercise.replace(/\s/g, '_')})`} stroke={isBest ? '#fbbf24' : 'rgba(255,255,255,0.04)'} strokeWidth={isBest ? 2.5 : 0.5} filter={isBest ? 'url(#pieProgGlow)' : undefined} />
+                                return <Cell key={d.exercise} fill={`url(#pieProg_${d.exercise.replace(/\s/g, '_')})`} stroke={isBest ? '#fbbf24' : 'rgba(255,255,255,0.04)'} strokeWidth={isBest ? 2.5 : 0.5} filter={isBest && progActiveIdx < 0 ? 'url(#pieProgGlow)' : undefined} />
                               })}
                             </Pie>
-                            <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={20} fontWeight={800} style={{ textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
+                            <text x="50%" y="44%" textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={22} fontWeight={800} style={{ textShadow: '0 2px 12px rgba(0,0,0,0.7)' }}>
                               {progressionRadarData.reduce((s, d) => s + d.Current, 0)}
                             </text>
-                            <text x="50%" y="57%" textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.35)" fontSize={9} fontWeight={700}>
-                              total lbs
+                            <text x="50%" y="54%" textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.3)" fontSize={8} fontWeight={700} letterSpacing="0.1em">
+                              TOTAL LBS
+                            </text>
+                            <text x="50%" y="62%" textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.15)" fontSize={8} fontWeight={600}>
+                              {progressionRadarData.length} exercises
                             </text>
                             <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
@@ -851,35 +884,45 @@ export function Progress() {
                               const gain = d.Current - d.First
                               const pct = d.First > 0 ? Math.round(gain / d.First * 100) : 0
                               const total = progressionRadarData.reduce((s, x) => s + x.Current, 0)
+                              const max = Math.max(...progressionRadarData.map(x => x.Current))
+                              const isBest = d.Current >= max
                               return (
-                                <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
-                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[180px]">
+                                <motion.div initial={{ opacity: 0, scale: 0.88, y: 6 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[190px]">
                                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-transparent to-violet-500/5 pointer-events-none" />
-                                  <div className="relative space-y-1.5">
+                                  <div className="relative space-y-2">
                                     <div className="flex items-center justify-between border-b border-white/[0.06] pb-1.5">
-                                      <span className="text-white font-bold text-xs">{d.exercise}</span>
-                                      <span className={`text-[10px] font-bold ${gain > 0 ? 'text-emerald-400' : gain < 0 ? 'text-rose-400' : 'text-gray-400'}`}>
-                                        {gain >= 0 ? '+' : ''}{gain}
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: d.Current > d.First ? '#10b981' : '#f43f5e', boxShadow: `0 0 8px ${d.Current > d.First ? '#10b981' : '#f43f5e'}66` }} />
+                                        <span className="text-white font-bold text-xs">{d.exercise}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        {isBest && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 BEST</span>}
+                                        {!isBest && <span className={`text-[10px] font-bold ${gain > 0 ? 'text-emerald-400' : gain < 0 ? 'text-rose-400' : 'text-gray-400'}`}>
+                                          {gain >= 0 ? '+' : ''}{gain}
+                                        </span>}
+                                      </div>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-1.5">
+                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                        <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">First</div>
+                                        <div className="text-xs font-bold text-violet-400">{d.First}</div>
+                                      </div>
+                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                        <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Current</div>
+                                        <div className="text-xs font-bold text-white">{d.Current}</div>
+                                      </div>
+                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                        <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Share</div>
+                                        <div className="text-xs font-bold text-violet-300">{total > 0 ? ((d.Current / total) * 100).toFixed(0) : 0}%</div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${gain > 0 ? 'rgba(16,185,129,0.08)' : 'rgba(244,63,94,0.08)'}`, border: `1px solid ${gain > 0 ? 'rgba(16,185,129,0.2)' : 'rgba(244,63,94,0.2)'}` }}>
+                                      <span className="text-gray-400 text-[10px] font-semibold">Change</span>
+                                      <span className={`font-bold text-[11px] ${gain > 0 ? 'text-emerald-400' : gain < 0 ? 'text-rose-400' : 'text-gray-400'}`}>
+                                        {gain >= 0 ? '+' : ''}{gain} lbs {pct !== 0 ? `(${pct > 0 ? '+' : ''}${pct}%)` : ''}
                                       </span>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
-                                        <div className="text-[9px] text-gray-500 mb-0.5">First</div>
-                                        <div className="text-sm font-bold text-violet-400">{d.First}</div>
-                                      </div>
-                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
-                                        <div className="text-[9px] text-gray-500 mb-0.5">Current</div>
-                                        <div className="text-sm font-bold text-emerald-400">{d.Current}</div>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center justify-between text-[9px]">
-                                      <span className="text-gray-500">Share</span>
-                                      <span className="text-gray-400 font-semibold">{total > 0 ? ((d.Current / total) * 100).toFixed(1) : '0'}%</span>
-                                    </div>
-                                    {pct !== 0 && <div className={`flex items-center justify-between rounded-lg px-3 py-1.5 ${gain > 0 ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-rose-500/10 border border-rose-500/20'}`}>
-                                      <span className="text-gray-400 text-[10px] font-semibold">Change</span>
-                                      <span className={`font-bold text-[11px] ${gain > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{pct > 0 ? '+' : ''}{pct}%</span>
-                                    </div>}
                                   </div>
                                 </motion.div>
                               )
