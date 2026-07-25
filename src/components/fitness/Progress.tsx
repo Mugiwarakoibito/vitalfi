@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button'
 import {
   ComposedChart, Bar, Line,
   BarChart,
-  PieChart, Pie, Sector,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   Cell, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
 } from 'recharts'
@@ -141,7 +141,6 @@ export function Progress() {
   const [perfFocus, setPerfFocus] = useState<'strength' | 'hypertrophy' | 'endurance' | 'power' | 'overall'>('overall')
   const [scopeOffset, setScopeOffset] = useState(0)
   const [chartTab, setChartTab] = useState<'prs' | 'progression' | 'matrix'>('prs')
-  const [progActiveIdx, setProgActiveIdx] = useState<number>(-1)
   const [targetDate, setTargetDate] = useState(new Date())
   const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d }, [])
 
@@ -822,61 +821,26 @@ export function Progress() {
                     {chartTab === 'progression' && (
                       progressionRadarData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%" key={`prog-${dataVersion}`}>
-                          <PieChart>
+                          <RadarChart data={progressionRadarData} cx="50%" cy="50%" outerRadius="72%">
                             <defs>
-                              {progressionRadarData.map(d => (
-                                <linearGradient key={d.exercise} id={`pieProg_${d.exercise.replace(/\s/g, '_')}`} x1="0" y1="0" x2="1" y2="1">
-                                  <stop offset="0%" stopColor={d.Current > d.First ? '#10b981' : d.Current < d.First ? '#f43f5e' : '#6b7280'} stopOpacity={0.95} />
-                                  <stop offset="50%" stopColor={d.Current > d.First ? '#059669' : d.Current < d.First ? '#e11d48' : '#525252'} stopOpacity={0.6} />
-                                  <stop offset="100%" stopColor={d.Current > d.First ? '#047857' : d.Current < d.First ? '#be123c' : '#404040'} stopOpacity={0.15} />
-                                </linearGradient>
-                              ))}
-                              <filter id="pieProgGlow"><feGaussianBlur stdDeviation="6" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                              <filter id="pieProgActiveGlow"><feGaussianBlur stdDeviation="8" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <linearGradient id="radarCurrentFill" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                                <stop offset="50%" stopColor="#a855f7" stopOpacity={0.15} />
+                                <stop offset="100%" stopColor="#06b6d4" stopOpacity={0.04} />
+                              </linearGradient>
+                              <linearGradient id="radarCurrentStroke" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#a78bfa" stopOpacity={1} />
+                                <stop offset="100%" stopColor="#22d3ee" stopOpacity={0.7} />
+                              </linearGradient>
+                              <filter id="radarDotGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                             </defs>
-                            <Pie data={progressionRadarData} dataKey="Current" nameKey="exercise" cx="50%" cy="62%" innerRadius={55} outerRadius={105} paddingAngle={2} startAngle={180} endAngle={0}
-                              animationDuration={1000} animationEasing="ease-out"
-                              activeIndex={progActiveIdx >= 0 ? progActiveIdx : undefined}
-                              activeShape={(props: any) => {
-                                const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload } = props
-                                const max = Math.max(...progressionRadarData.map(x => x.Current))
-                                const isBest = payload.Current >= max
-                                return (
-                                  <g>
-                                    <Sector cx={cx} cy={cy} innerRadius={innerRadius - 2} outerRadius={outerRadius + 10} startAngle={startAngle} endAngle={endAngle} fill={fill} stroke={isBest ? '#fbbf24' : 'rgba(255,255,255,0.15)'} strokeWidth={isBest ? 3 : 1} filter="url(#pieProgActiveGlow)" />
-                                    <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 6} startAngle={startAngle} endAngle={endAngle} fill={fill} fillOpacity={0.3} stroke="none" />
-                                  </g>
-                                )
-                              }}
-                              onMouseEnter={(_e: any, idx: number) => setProgActiveIdx(idx)}
-                              onMouseLeave={() => setProgActiveIdx(-1)}
-                              label={({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
-                                const rad = (midAngle * Math.PI) / 180
-                                const r = outerRadius + 22
-                                const x = cx + r * Math.cos(rad)
-                                const y = cy + r * Math.sin(rad)
-                                const align = x > cx ? 'start' : 'end'
-                                return (
-                                  <text x={x} y={y} textAnchor={align} dominantBaseline="middle" fill="rgba(255,255,255,0.45)" fontSize={8} fontWeight={700}>
-                                    {`${name} ${(percent * 100).toFixed(0)}%`}
-                                  </text>
-                                )
-                              }}>
-                              {progressionRadarData.map(d => {
-                                const max = Math.max(...progressionRadarData.map(x => x.Current))
-                                const isBest = d.Current >= max
-                                return <Cell key={d.exercise} fill={`url(#pieProg_${d.exercise.replace(/\s/g, '_')})`} stroke={isBest ? '#fbbf24' : 'rgba(255,255,255,0.04)'} strokeWidth={isBest ? 2.5 : 0.5} filter={isBest && progActiveIdx < 0 ? 'url(#pieProgGlow)' : undefined} />
-                              })}
-                            </Pie>
-                            <text x="50%" y="40%" textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={22} fontWeight={800} style={{ textShadow: '0 2px 12px rgba(0,0,0,0.7)' }}>
-                              {progressionRadarData.reduce((s, d) => s + d.Current, 0)}
-                            </text>
-                            <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.3)" fontSize={8} fontWeight={700} letterSpacing="0.1em">
-                              TOTAL LBS
-                            </text>
-                            <text x="50%" y="58%" textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.15)" fontSize={8} fontWeight={600}>
-                              {progressionRadarData.length} exercises
-                            </text>
+                            <PolarGrid stroke="rgba(255,255,255,0.05)" gridType="circle" />
+                            <PolarAngleAxis dataKey="exercise" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 9, fontWeight: 600 }} axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
+                            <PolarRadiusAxis tick={false} axisLine={false} />
+                            <Radar name="First" dataKey="First" stroke="rgba(255,255,255,0.06)" fill="rgba(255,255,255,0.02)" strokeWidth={1} dot={false} legendType="none" />
+                            <Radar name="Current" dataKey="Current" stroke="url(#radarCurrentStroke)" fill="url(#radarCurrentFill)" strokeWidth={2.5}
+                              dot={{ r: 3.5, fill: '#a78bfa', stroke: '#7c3aed', strokeWidth: 2, filter: 'url(#radarDotGlow)' }}
+                              activeDot={{ r: 7, fill: '#c4b5fd', stroke: '#7c3aed', strokeWidth: 3, filter: 'url(#radarDotGlow)' }} />
                             <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
                               const d = payload[0]?.payload as any
@@ -889,7 +853,7 @@ export function Progress() {
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.88, y: 6 }} animate={{ opacity: 1, scale: 1, y: 0 }}
                                   className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[190px]">
-                                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-transparent to-violet-500/5 pointer-events-none" />
+                                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/10 via-transparent to-cyan-500/5 pointer-events-none" />
                                   <div className="relative space-y-2">
                                     <div className="flex items-center justify-between border-b border-white/[0.06] pb-1.5">
                                       <div className="flex items-center gap-1.5">
@@ -927,7 +891,7 @@ export function Progress() {
                                 </motion.div>
                               )
                             }} />
-                          </PieChart>
+                          </RadarChart>
                         </ResponsiveContainer>
                       ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center">
