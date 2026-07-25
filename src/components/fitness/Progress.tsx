@@ -219,11 +219,15 @@ export function Progress() {
     const top6 = exNames.map(ex => ({ ex, count: records.filter(r => r.exerciseName === ex).length })).sort((a, b) => b.count - a.count).slice(0, 6).map(e => e.ex)
     return top6.map(ex => {
       const exRecords = records.filter(r => r.exerciseName === ex).sort((a, b) => a.date.localeCompare(b.date))
-      const first = exRecords.length > 0 ? estimate1RM(exRecords[0].weight, exRecords[0].reps) : 0
       const current = exRecords.length > 0 ? estimate1RM(exRecords[exRecords.length - 1].weight, exRecords[exRecords.length - 1].reps) : 0
-      return { exercise: ex.replace(/_/g, ' '), First: first, Current: current }
+      const first = exRecords.length > 0 ? estimate1RM(exRecords[0].weight, exRecords[0].reps) : 0
+      const ratio = latestWeight && latestWeight > 0 ? parseFloat((current / latestWeight).toFixed(2)) : current
+      const level = classifyStrength(ex, current, latestWeight || 0)
+      const gain = current - first
+      const isRatio = latestWeight && latestWeight > 0
+      return { exercise: ex.replace(/_/g, ' '), ratio, value: ratio, current, first, gain, level: level?.level || '', color: level?.color || '#8b5cf6', isRatio }
     })
-  }, [records])
+  }, [records, latestWeight])
 
   const totalVolume = useMemo(() =>
     workouts.length > 0
@@ -823,12 +827,12 @@ export function Progress() {
                         <ResponsiveContainer width="100%" height="100%" key={`prog-${dataVersion}`}>
                           <RadarChart data={progressionRadarData} cx="50%" cy="50%" outerRadius="72%">
                             <defs>
-                              <linearGradient id="radarCurrentFill" x1="0" y1="0" x2="1" y2="1">
+                              <linearGradient id="radarRatioFill" x1="0" y1="0" x2="1" y2="1">
                                 <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
                                 <stop offset="50%" stopColor="#a855f7" stopOpacity={0.15} />
                                 <stop offset="100%" stopColor="#06b6d4" stopOpacity={0.04} />
                               </linearGradient>
-                              <linearGradient id="radarCurrentStroke" x1="0" y1="0" x2="1" y2="1">
+                              <linearGradient id="radarRatioStroke" x1="0" y1="0" x2="1" y2="1">
                                 <stop offset="0%" stopColor="#a78bfa" stopOpacity={1} />
                                 <stop offset="100%" stopColor="#22d3ee" stopOpacity={0.7} />
                               </linearGradient>
@@ -836,20 +840,17 @@ export function Progress() {
                             </defs>
                             <PolarGrid stroke="rgba(255,255,255,0.05)" gridType="circle" />
                             <PolarAngleAxis dataKey="exercise" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 9, fontWeight: 600 }} axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
-                            <PolarRadiusAxis tick={false} axisLine={false} />
-                            <Radar name="First" dataKey="First" stroke="rgba(255,255,255,0.06)" fill="rgba(255,255,255,0.02)" strokeWidth={1} dot={false} legendType="none" />
-                            <Radar name="Current" dataKey="Current" stroke="url(#radarCurrentStroke)" fill="url(#radarCurrentFill)" strokeWidth={2.5}
+                            <PolarRadiusAxis tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 8 }} axisLine={{ stroke: 'rgba(255,255,255,0.04)' }} tickFormatter={v => `${v}x`} />
+                            <Radar name="Strength Ratio" dataKey="ratio" stroke="url(#radarRatioStroke)" fill="url(#radarRatioFill)" strokeWidth={2.5}
                               dot={{ r: 3.5, fill: '#a78bfa', stroke: '#7c3aed', strokeWidth: 2, filter: 'url(#radarDotGlow)' }}
                               activeDot={{ r: 7, fill: '#c4b5fd', stroke: '#7c3aed', strokeWidth: 3, filter: 'url(#radarDotGlow)' }} />
                             <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
                               const d = payload[0]?.payload as any
                               if (!d) return null
-                              const gain = d.Current - d.First
-                              const pct = d.First > 0 ? Math.round(gain / d.First * 100) : 0
-                              const total = progressionRadarData.reduce((s, x) => s + x.Current, 0)
-                              const max = Math.max(...progressionRadarData.map(x => x.Current))
-                              const isBest = d.Current >= max
+                              const best = Math.max(...progressionRadarData.map(x => x.ratio))
+                              const isBest = d.ratio >= best
+                              const lmap: Record<string, string> = { Elite: '#f59e0b', Advanced: '#ef4444', Intermediate: '#8b5cf6', Novice: '#10b981', Untrained: '#6b7280' }
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.88, y: 6 }} animate={{ opacity: 1, scale: 1, y: 0 }}
                                   className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[190px]">
@@ -857,34 +858,31 @@ export function Progress() {
                                   <div className="relative space-y-2">
                                     <div className="flex items-center justify-between border-b border-white/[0.06] pb-1.5">
                                       <div className="flex items-center gap-1.5">
-                                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: d.Current > d.First ? '#10b981' : '#f43f5e', boxShadow: `0 0 8px ${d.Current > d.First ? '#10b981' : '#f43f5e'}66` }} />
+                                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color, boxShadow: `0 0 8px ${d.color}66` }} />
                                         <span className="text-white font-bold text-xs">{d.exercise}</span>
                                       </div>
-                                      <div className="flex items-center gap-1">
-                                        {isBest && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 BEST</span>}
-                                        {!isBest && <span className={`text-[10px] font-bold ${gain > 0 ? 'text-emerald-400' : gain < 0 ? 'text-rose-400' : 'text-gray-400'}`}>
-                                          {gain >= 0 ? '+' : ''}{gain}
-                                        </span>}
+                                      {isBest && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 BEST</span>}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                        <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Ratio</div>
+                                        <div className="text-sm font-bold text-white">{d.ratio}x <span className="text-[9px] font-normal text-gray-500">BW</span></div>
+                                      </div>
+                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                        <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">1RM</div>
+                                        <div className="text-sm font-bold text-violet-300">{d.current}<span className="text-[9px] font-normal text-gray-500"> lbs</span></div>
                                       </div>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-1.5">
-                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
-                                        <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">First</div>
-                                        <div className="text-xs font-bold text-violet-400">{d.First}</div>
+                                    {d.level ? (
+                                      <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${(lmap[d.level] || '#6b7280')}12`, border: `1px solid ${(lmap[d.level] || '#6b7280')}20` }}>
+                                        <span className="text-gray-400 text-[10px] font-semibold">Level</span>
+                                        <span className={`font-bold text-[11px] capitalize`} style={{ color: lmap[d.level] || '#6b7280' }}>{d.level}</span>
                                       </div>
-                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
-                                        <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Current</div>
-                                        <div className="text-xs font-bold text-white">{d.Current}</div>
-                                      </div>
-                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
-                                        <div className="text-[8px] text-gray-500 mb-0.5 font-semibold">Share</div>
-                                        <div className="text-xs font-bold text-violet-300">{total > 0 ? ((d.Current / total) * 100).toFixed(0) : 0}%</div>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${gain > 0 ? 'rgba(16,185,129,0.08)' : 'rgba(244,63,94,0.08)'}`, border: `1px solid ${gain > 0 ? 'rgba(16,185,129,0.2)' : 'rgba(244,63,94,0.2)'}` }}>
+                                    ) : null}
+                                    <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: d.gain > 0 ? 'rgba(16,185,129,0.08)' : d.gain < 0 ? 'rgba(244,63,94,0.08)' : 'rgba(255,255,255,0.03)', border: `1px solid ${d.gain > 0 ? 'rgba(16,185,129,0.2)' : d.gain < 0 ? 'rgba(244,63,94,0.2)' : 'rgba(255,255,255,0.04)'}` }}>
                                       <span className="text-gray-400 text-[10px] font-semibold">Change</span>
-                                      <span className={`font-bold text-[11px] ${gain > 0 ? 'text-emerald-400' : gain < 0 ? 'text-rose-400' : 'text-gray-400'}`}>
-                                        {gain >= 0 ? '+' : ''}{gain} lbs {pct !== 0 ? `(${pct > 0 ? '+' : ''}${pct}%)` : ''}
+                                      <span className={`font-bold text-[11px] ${d.gain > 0 ? 'text-emerald-400' : d.gain < 0 ? 'text-rose-400' : 'text-gray-400'}`}>
+                                        {d.gain >= 0 ? '+' : ''}{d.gain} lbs
                                       </span>
                                     </div>
                                   </div>
