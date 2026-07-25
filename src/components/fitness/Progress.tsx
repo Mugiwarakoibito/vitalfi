@@ -10,7 +10,6 @@ import {
 import { Button } from '@/components/ui/Button'
 import {
   ComposedChart, Bar, Line,
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
   BarChart,
   Cell, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Legend,
@@ -821,52 +820,68 @@ export function Progress() {
                     {chartTab === 'progression' && (
                       progressionRadarData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%" key={`prog-${dataVersion}`}>
-                          <RadarChart data={progressionRadarData} cx="50%" cy="50%" outerRadius="72%">
+                          <BarChart data={progressionRadarData} barGap={2} barCategoryGap="20%" margin={{ top: 8, right: 12, bottom: 8, left: 8 }}>
                             <defs>
-                              <filter id="radarGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              {progressionRadarData.map(d => (
+                                <linearGradient key={d.exercise} id={`progStart_${d.exercise.replace(/\s/g, '_')}`} x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.5} />
+                                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.15} />
+                                </linearGradient>
+                              ))}
+                              <filter id="progBestGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                             </defs>
-                            <PolarGrid stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
-                            <PolarAngleAxis dataKey="exercise" stroke="rgba(255,255,255,0.25)" fontSize={8} fontWeight={700} />
-                            <PolarRadiusAxis angle={30} stroke="rgba(255,255,255,0.08)" fontSize={7} fontWeight={600} tickFormatter={v => `${v}`} domain={[0, 'auto']} />
-                            <Tooltip content={({ active, payload }) => {
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.025)" vertical={false} strokeWidth={1} />
+                            <XAxis dataKey="exercise" stroke="rgba(255,255,255,0.2)" fontSize={9} fontWeight={700} axisLine={false} tickLine={false} dy={6} />
+                            <YAxis stroke="rgba(255,255,255,0.12)" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={30} domain={[0, 'dataMax + 10']} tickFormatter={v => `${v}`} />
+                            <Tooltip content={({ active, payload, label }) => {
                               if (!active || !payload?.length) return null
-                              const d = payload[0]?.payload as any
-                              if (!d) return null
-                              const gain = d.Current - d.First
-                              const pct = d.First > 0 ? Math.round(gain / d.First * 100) : 0
+                              const first = Number(payload.find(p => p.name === 'First')?.value) || 0
+                              const current = Number(payload.find(p => p.name === 'Current')?.value) || 0
+                              const gain = current - first
+                              const pct = first > 0 ? Math.round(gain / first * 100) : 0
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
                                   className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[180px]">
                                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-transparent to-violet-500/5 pointer-events-none" />
                                   <div className="relative space-y-1.5">
                                     <div className="flex items-center justify-between border-b border-white/[0.06] pb-1.5">
-                                      <span className="text-white font-bold text-xs">{d.exercise}</span>
+                                      <span className="text-white font-bold text-xs">{label}</span>
                                       <span className={`text-[10px] font-bold ${gain > 0 ? 'text-emerald-400' : gain < 0 ? 'text-rose-400' : 'text-gray-400'}`}>
                                         {gain >= 0 ? '+' : ''}{gain}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span>
                                       </span>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                       <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
-                                        <div className="text-[9px] text-gray-500 mb-0.5">First</div>
-                                        <div className="text-sm font-bold text-violet-400">{d.First}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                        <div className="text-[9px] text-gray-500 mb-0.5">First PR</div>
+                                        <div className="text-sm font-bold text-violet-400">{first}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
                                       </div>
                                       <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
                                         <div className="text-[9px] text-gray-500 mb-0.5">Current</div>
-                                        <div className="text-sm font-bold text-emerald-400">{d.Current}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                        <div className="text-sm font-bold text-emerald-400">{current}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
                                       </div>
                                     </div>
-                                    {pct !== 0 && <div className={`flex items-center justify-between rounded-lg px-3 py-1.5 ${gain > 0 ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-rose-500/10 border border-rose-500/20'}`}>
+                                    {gain !== 0 && <div className={`flex items-center justify-between rounded-lg px-3 py-1.5 ${gain > 0 ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-rose-500/10 border border-rose-500/20'}`}>
                                       <span className="text-gray-400 text-[10px] font-semibold">Change</span>
                                       <span className={`font-bold text-[11px] ${gain > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{pct > 0 ? '+' : ''}{pct}%</span>
                                     </div>}
                                   </div>
                                 </motion.div>
                               )
-                            }} />
-                            <Radar name="First PR" dataKey="First" stroke="rgba(139,92,246,0.4)" fill="rgba(139,92,246,0.08)" strokeWidth={1.5} strokeDasharray="4 3" animationDuration={800} />
-                            <Radar name="Current" dataKey="Current" stroke="#10b981" fill="rgba(16,185,129,0.12)" strokeWidth={2.5} animationDuration={800} animationBegin={200} filter="url(#radarGlow)" />
-                            <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.5)' }} iconType="circle" formatter={value => <span style={{ color: value === 'Current' ? '#10b981' : 'rgba(139,92,246,0.6)' }}>{value}</span>} />
-                          </RadarChart>
+                            }} cursor={{ fill: 'rgba(139,92,246,0.08)' }} />
+                            <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.4)' }} iconType="rect" />
+                            <Bar name="First PR" dataKey="First" radius={[6, 6, 0, 0]} maxBarSize={20} animationDuration={600}>
+                              {progressionRadarData.map(d => (
+                                <Cell key={d.exercise} fill={`url(#progStart_${d.exercise.replace(/\s/g, '_')})`} stroke="rgba(139,92,246,0.2)" strokeWidth={1} />
+                              ))}
+                            </Bar>
+                            <Bar name="Current" dataKey="Current" radius={[6, 6, 0, 0]} maxBarSize={20} animationDuration={600} animationBegin={200}>
+                              {progressionRadarData.map(d => {
+                                const max = Math.max(...progressionRadarData.map(x => x.Current))
+                                const isBest = d.Current >= max
+                                return <Cell key={d.exercise} fill={d.Current > d.First ? '#10b981' : d.Current < d.First ? '#f43f5e' : '#6b7280'} fillOpacity={0.85} filter={isBest ? 'url(#progBestGlow)' : undefined} stroke={isBest ? '#fbbf24' : 'rgba(255,255,255,0.04)'} strokeWidth={isBest ? 1.5 : 0} />
+                              })}
+                            </Bar>
+                          </BarChart>
                         </ResponsiveContainer>
                       ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center">
