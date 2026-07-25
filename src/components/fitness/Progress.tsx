@@ -9,10 +9,11 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import {
-  ComposedChart, Bar, Line, AreaChart, Area,
+  ComposedChart, Bar, Line,
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
+  BarChart,
   Cell, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, ReferenceLine,
-  Treemap,
+  ResponsiveContainer, ReferenceLine, Legend,
 } from 'recharts'
 import { useAppStore } from '@/store/useAppStore'
 import type { Workout, BodyMetric, WorkoutExercise, ExerciseSet, PersonalRecord } from '@/types/domain'
@@ -211,6 +212,17 @@ export function Progress() {
     const exNames = [...new Set(records.map(r => r.exerciseName))]
     const palette = ['#10b981', '#8b5cf6', '#f59e0b', '#3b82f6', '#f43f5e', '#06b6d4', '#ec4899', '#84cc16']
     return Object.fromEntries(exNames.map((n, i) => [n, palette[i % palette.length]]))
+  }, [records])
+
+  const progressionRadarData = useMemo(() => {
+    const exNames = [...new Set(records.map(r => r.exerciseName))]
+    const top6 = exNames.map(ex => ({ ex, count: records.filter(r => r.exerciseName === ex).length })).sort((a, b) => b.count - a.count).slice(0, 6).map(e => e.ex)
+    return top6.map(ex => {
+      const exRecords = records.filter(r => r.exerciseName === ex).sort((a, b) => a.date.localeCompare(b.date))
+      const first = exRecords.length > 0 ? estimate1RM(exRecords[0].weight, exRecords[0].reps) : 0
+      const current = exRecords.length > 0 ? estimate1RM(exRecords[exRecords.length - 1].weight, exRecords[exRecords.length - 1].reps) : 0
+      return { exercise: ex.replace(/_/g, ' '), First: first, Current: current }
+    })
   }, [records])
 
   const totalVolume = useMemo(() =>
@@ -807,61 +819,54 @@ export function Progress() {
                       )
                     )}
                     {chartTab === 'progression' && (
-                      strengthProgression.data.length > 0 ? (
+                      progressionRadarData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%" key={`prog-${dataVersion}`}>
-                          <AreaChart data={strengthProgression.data} margin={{ top: 8, right: 12, bottom: 8, left: 8 }}>
+                          <RadarChart data={progressionRadarData} cx="50%" cy="50%" outerRadius="72%">
                             <defs>
-                              {strengthProgression.exercises.map(ex => (
-                                <radialGradient key={ex} id={`areaFill_${ex.replace(/\s/g, '_')}`} cx="0.5" cy="0.5" r="0.8">
-                                  <stop offset="0%" stopColor={exerciseColors[ex] || '#8b5cf6'} stopOpacity={0.35} />
-                                  <stop offset="60%" stopColor={exerciseColors[ex] || '#8b5cf6'} stopOpacity={0.12} />
-                                  <stop offset="100%" stopColor={exerciseColors[ex] || '#8b5cf6'} stopOpacity={0.02} />
-                                </radialGradient>
-                              ))}
-                              <filter id="areaDotGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <filter id="radarGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.025)" strokeWidth={1} />
-                            <XAxis dataKey="date" stroke="rgba(255,255,255,0.1)" fontSize={8} fontWeight={700} axisLine={false} tickLine={false} dy={4} interval="preserveStartEnd" />
-                            <YAxis stroke="rgba(255,255,255,0.12)" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} width={30} domain={[0, 'dataMax + 10']} tickFormatter={v => `${v}`} />
-                            <Tooltip content={({ active, payload, label }) => {
+                            <PolarGrid stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
+                            <PolarAngleAxis dataKey="exercise" stroke="rgba(255,255,255,0.25)" fontSize={8} fontWeight={700} />
+                            <PolarRadiusAxis angle={30} stroke="rgba(255,255,255,0.08)" fontSize={7} fontWeight={600} tickFormatter={v => `${v}`} domain={[0, 'auto']} />
+                            <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
-                              const sorted = [...payload].sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0))
-                              const topVal = sorted[0]?.value || 0
+                              const d = payload[0]?.payload as any
+                              if (!d) return null
+                              const gain = d.Current - d.First
+                              const pct = d.First > 0 ? Math.round(gain / d.First * 100) : 0
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
-                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[210px]">
-                                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-transparent to-cyan-500/5 pointer-events-none" />
+                                  className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[180px]">
+                                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-transparent to-violet-500/5 pointer-events-none" />
                                   <div className="relative space-y-1.5">
-                                    <div className="flex items-center justify-between border-b border-white/[0.06] pb-1.5 mb-1.5">
-                                      <span className="text-white font-bold text-xs">{label?.replace(/_/g, ' ')}</span>
-                                      <span className="text-[9px] font-bold text-cyan-400 bg-cyan-500/15 px-2 py-0.5 rounded-full">{sorted.filter(e => e.value).length} active</span>
+                                    <div className="flex items-center justify-between border-b border-white/[0.06] pb-1.5">
+                                      <span className="text-white font-bold text-xs">{d.exercise}</span>
+                                      <span className={`text-[10px] font-bold ${gain > 0 ? 'text-emerald-400' : gain < 0 ? 'text-rose-400' : 'text-gray-400'}`}>
+                                        {gain >= 0 ? '+' : ''}{gain}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span>
+                                      </span>
                                     </div>
-                                    {sorted.map((entry, idx) => {
-                                      if (!entry.value) return null
-                                      return (
-                                        <div key={idx} className="flex items-center gap-2 py-0.5">
-                                          <div className="w-3 h-3 rounded flex items-center justify-center" style={{ backgroundColor: `${entry.color}22` }}>
-                                            <span className="w-1.5 h-1.5 rounded-sm" style={{ backgroundColor: entry.color }} />
-                                          </div>
-                                          <span className="text-gray-400 text-[10px] truncate flex-1">{String(entry.name ?? '').replace(/_/g, ' ')}</span>
-                                          <span className={`font-bold tabular-nums text-[11px] ${entry.value === topVal ? 'text-emerald-400' : 'text-white/80'}`}>
-                                            {entry.value}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span>
-                                          </span>
-                                          {entry.value === topVal && <span className="text-[10px]">🏆</span>}
-                                        </div>
-                                      )
-                                    })}
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                        <div className="text-[9px] text-gray-500 mb-0.5">First</div>
+                                        <div className="text-sm font-bold text-violet-400">{d.First}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                      </div>
+                                      <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
+                                        <div className="text-[9px] text-gray-500 mb-0.5">Current</div>
+                                        <div className="text-sm font-bold text-emerald-400">{d.Current}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
+                                      </div>
+                                    </div>
+                                    {pct !== 0 && <div className={`flex items-center justify-between rounded-lg px-3 py-1.5 ${gain > 0 ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-rose-500/10 border border-rose-500/20'}`}>
+                                      <span className="text-gray-400 text-[10px] font-semibold">Change</span>
+                                      <span className={`font-bold text-[11px] ${gain > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{pct > 0 ? '+' : ''}{pct}%</span>
+                                    </div>}
                                   </div>
                                 </motion.div>
                               )
-                            }} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} />
-                            {strengthProgression.exercises.map(ex => (
-                              <Area key={ex} type="monotone" dataKey={ex} stroke={exerciseColors[ex] || '#8b5cf6'} strokeWidth={2.5}
-                                fill={`url(#areaFill_${ex.replace(/\s/g, '_')})`} fillOpacity={0.8}
-                                dot={{ r: 0 }} activeDot={{ r: 5, fill: exerciseColors[ex] || '#8b5cf6', stroke: '#0f172a', strokeWidth: 2, filter: 'url(#areaDotGlow)' }}
-                                connectNulls animationDuration={800} />
-                            ))}
-                          </AreaChart>
+                            }} />
+                            <Radar name="First PR" dataKey="First" stroke="rgba(139,92,246,0.4)" fill="rgba(139,92,246,0.08)" strokeWidth={1.5} strokeDasharray="4 3" animationDuration={800} />
+                            <Radar name="Current" dataKey="Current" stroke="#10b981" fill="rgba(16,185,129,0.12)" strokeWidth={2.5} animationDuration={800} animationBegin={200} filter="url(#radarGlow)" />
+                            <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.5)' }} iconType="circle" formatter={value => <span style={{ color: value === 'Current' ? '#10b981' : 'rgba(139,92,246,0.6)' }}>{value}</span>} />
+                          </RadarChart>
                         </ResponsiveContainer>
                       ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center">
@@ -876,16 +881,20 @@ export function Progress() {
                     {chartTab === 'matrix' && (
                       strengthMatrix.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%" key={`mat-${dataVersion}`}>
-                          <Treemap data={strengthMatrix.map(m => ({ ...m, value: m.best1RM }))} dataKey="value" nameKey="name" aspectRatio={4/3} stroke="rgba(255,255,255,0.06)" fill="#6b7280" animationDuration={800}>
+                          <BarChart data={[...strengthMatrix].sort((a, b) => b.best1RM - a.best1RM)} layout="vertical" barGap={2} barCategoryGap="16%" margin={{ left: 72, right: 16, top: 4, bottom: 4 }}>
                             <defs>
                               {strengthMatrix.map((m, i) => (
-                                <linearGradient key={i} id={`treeGrad_${i}`} x1="0" y1="0" x2="1" y2="1">
-                                  <stop offset="0%" stopColor={m.color} stopOpacity={0.95} />
-                                  <stop offset="100%" stopColor={m.color} stopOpacity={0.45} />
+                                <linearGradient key={i} id={`hBarGrad_${i}`} x1="0" y1="0" x2="1" y2="0">
+                                  <stop offset="0%" stopColor={m.color} stopOpacity={0.92} />
+                                  <stop offset="60%" stopColor={m.color} stopOpacity={0.65} />
+                                  <stop offset="100%" stopColor={m.color} stopOpacity={0.12} />
                                 </linearGradient>
                               ))}
-                              <filter id="treeBestGlow"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <filter id="hBarBestGlow"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                             </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.025)" horizontal={false} strokeWidth={1} />
+                            <XAxis type="number" stroke="rgba(255,255,255,0.12)" fontSize={9} fontWeight={600} axisLine={false} tickLine={false} domain={[0, 'dataMax + 15']} tickFormatter={v => `${v}`} />
+                            <YAxis type="category" dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={9} fontWeight={700} axisLine={false} tickLine={false} width={70} tickFormatter={v => v.replace(/_/g, ' ')} />
                             <Tooltip content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
                               const d = payload[0]?.payload as any
@@ -893,8 +902,7 @@ export function Progress() {
                               const lmap: Record<string, string> = { novice: '#10b981', intermediate: '#f59e0b', advanced: '#f43f5e', elite: '#8b5cf6' }
                               const elMap: Record<string, string> = { novice: '🟢', intermediate: '🟡', advanced: '🔴', elite: '🟣' }
                               const idx = strengthMatrix.findIndex(m => m.name === d.name)
-                              const total = strengthMatrix.reduce((s, m) => s + m.best1RM, 0)
-                              const pct = total > 0 ? ((d.best1RM / total) * 100).toFixed(1) : '0'
+                              const avg = strengthMatrix.reduce((s, m) => s + m.best1RM, 0) / strengthMatrix.length
                               return (
                                 <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
                                   className="bg-gray-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-4 py-3.5 text-[11px] shadow-2xl shadow-black/40 min-w-[190px]">
@@ -902,10 +910,10 @@ export function Progress() {
                                   <div className="relative space-y-2">
                                     <div className="flex items-center justify-between border-b border-white/[0.06] pb-1.5">
                                       <span className="text-white font-bold text-xs flex items-center gap-1.5">
-                                        <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: d.color, boxShadow: `0 0 8px ${d.color}66` }} />
+                                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color, boxShadow: `0 0 8px ${d.color}66` }} />
                                         {d.name.replace(/_/g, ' ')}
                                       </span>
-                                      {idx === 0 && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 BEST</span>}
+                                      {idx === 0 && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">🏆 #1</span>}
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                       <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
@@ -913,8 +921,10 @@ export function Progress() {
                                         <div className="text-sm font-bold text-white">{d.best1RM}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span></div>
                                       </div>
                                       <div className="rounded-lg bg-white/[0.03] p-2 text-center border border-white/[0.04]">
-                                        <div className="text-[9px] text-gray-500 mb-0.5">Share</div>
-                                        <div className="text-sm font-bold text-violet-300">{pct}<span className="text-[9px] font-normal text-gray-500 ml-0.5">%</span></div>
+                                        <div className="text-[9px] text-gray-500 mb-0.5">vs Avg</div>
+                                        <div className={`text-sm font-bold ${d.best1RM >= avg ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                          {d.best1RM >= avg ? '+' : ''}{Math.round(d.best1RM - avg)}<span className="text-[9px] font-normal text-gray-500 ml-0.5">lbs</span>
+                                        </div>
                                       </div>
                                     </div>
                                     {d.level && <div className="flex items-center justify-between rounded-lg px-3 py-1.5" style={{ backgroundColor: `${lmap[d.level.toLowerCase()] || '#6b7280'}12`, border: `1px solid ${lmap[d.level.toLowerCase()] || '#6b7280'}20` }}>
@@ -923,19 +933,18 @@ export function Progress() {
                                         {elMap[d.level.toLowerCase()] || '⚪'} {d.level}
                                       </span>
                                     </div>}
-                                    <div className="flex items-center justify-between text-[9px]">
-                                      <span className="text-gray-500">Area</span>
-                                      <span className="text-gray-400 font-semibold">{(d.best1RM / (strengthMatrix[0]?.best1RM || 1) * 100).toFixed(0)}% of max</span>
-                                    </div>
+                                    <div className="text-center text-[9px] text-gray-500">Rank #{idx + 1} of {strengthMatrix.length}</div>
                                   </div>
                                 </motion.div>
                               )
-                            }} />
-                            {strengthMatrix.map((m, idx) => {
-                              const isBest = m.best1RM === Math.max(...strengthMatrix.map(x => x.best1RM))
-                              return <Cell key={idx} fill={`url(#treeGrad_${idx})`} stroke={isBest ? '#fbbf24' : 'rgba(255,255,255,0.06)'} strokeWidth={isBest ? 2.5 : 0.5} filter={isBest ? 'url(#treeBestGlow)' : undefined} />
-                            })}
-                          </Treemap>
+                            }} cursor={{ fill: 'rgba(139,92,246,0.08)' }} />
+                            <Bar dataKey="best1RM" radius={[0, 8, 8, 0]} maxBarSize={22} animationDuration={800} animationEasing="ease-out">
+                              {[...strengthMatrix].sort((a, b) => b.best1RM - a.best1RM).map((entry, idx) => {
+                                const origIdx = strengthMatrix.indexOf(entry)
+                                return <Cell key={idx} fill={`url(#hBarGrad_${origIdx})`} filter={idx === 0 ? 'url(#hBarBestGlow)' : undefined} stroke={idx === 0 ? '#fbbf24' : 'rgba(255,255,255,0.04)'} strokeWidth={idx === 0 ? 1.5 : 0} />
+                              })}
+                            </Bar>
+                          </BarChart>
                         </ResponsiveContainer>
                       ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center">
