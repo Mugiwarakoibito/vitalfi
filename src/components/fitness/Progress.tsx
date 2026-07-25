@@ -968,7 +968,7 @@ export function Progress() {
                           </ComposedChart>
                         </ResponsiveContainer>
                       ) : (
-                        <div className="h-full flex items-center justify-center text-gray-500 text-sm">Log your first PR to see trends</div>
+                        <div className="h-full flex items-center justify-center text-gray-500 text-sm">{scopeOffset !== 0 && records.length > 0 ? 'No PRs logged in this week' : 'Log your first PR to see trends'}</div>
                       )
                     )}
                     {chartTab === 'progression' && (
@@ -1138,8 +1138,8 @@ export function Progress() {
                           <div className="w-14 h-14 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-center mb-3">
                             <BarChart3 className="w-7 h-7 text-emerald-400/30" />
                           </div>
-                          <p className="text-gray-400 text-sm font-medium mb-1">No progression data yet</p>
-                          <p className="text-gray-500 text-xs max-w-[200px]">Log PRs to see your strength progression over time</p>
+                          <p className="text-gray-400 text-sm font-medium mb-1">{scopeOffset !== 0 && records.length > 0 ? 'No PRs logged in this week' : 'No progression data yet'}</p>
+                          <p className="text-gray-500 text-xs max-w-[200px]">{scopeOffset !== 0 && records.length > 0 ? 'Navigate to a different week or view This Week' : 'Log PRs to see your strength progression over time'}</p>
                         </div>
                       )
                     )}
@@ -1288,8 +1288,8 @@ export function Progress() {
                           <div className="w-14 h-14 rounded-2xl bg-violet-500/5 border border-violet-500/10 flex items-center justify-center mb-3">
                             <Target className="w-7 h-7 text-violet-400/30" />
                           </div>
-                          <p className="text-gray-400 text-sm font-medium mb-1">No strength matrix yet</p>
-                          <p className="text-gray-500 text-xs max-w-[200px]">Log your first PR to see your strength matrix</p>
+                          <p className="text-gray-400 text-sm font-medium mb-1">{scopeOffset !== 0 && records.length > 0 ? 'No PRs logged in this week' : 'No strength matrix yet'}</p>
+                          <p className="text-gray-500 text-xs max-w-[200px]">{scopeOffset !== 0 && records.length > 0 ? 'Navigate to a different week or view This Week' : 'Log your first PR to see your strength matrix'}</p>
                         </div>
                       )
                     )}
