@@ -142,7 +142,7 @@ export function Progress() {
   const [perfFocus, setPerfFocus] = useState<'strength' | 'hypertrophy' | 'endurance' | 'power' | 'overall'>('overall')
   const [scopeOffset, setScopeOffset] = useState(0)
   const [chartTab, setChartTab] = useState<'prs' | 'progression' | 'matrix'>('prs')
-  const [recordType, setRecordType] = useState<'all' | 'weight' | 'reps' | 'volume' | 'endurance' | 'speed'>('all')
+  const [recordType, setRecordType] = useState<'all' | 'weight' | 'reps' | 'volume' | 'endurance' | 'speed'>('weight')
   const [targetDate, setTargetDate] = useState(new Date())
   const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d }, [])
 
@@ -777,7 +777,6 @@ export function Progress() {
                 </div>
                 <div className="flex items-center gap-1.5 mt-1.5">
                   {[
-                    { key: 'all' as const, label: 'All', icon: '📋' },
                     { key: 'weight' as const, label: 'Weight', icon: '🏋️' },
                     { key: 'reps' as const, label: 'Reps', icon: '🔥' },
                     { key: 'volume' as const, label: 'Volume', icon: '📊' },
@@ -790,7 +789,7 @@ export function Progress() {
                           ? 'text-white bg-white/[0.08] border border-white/[0.1] shadow-sm'
                           : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'
                       }`}>
-                      {t.key === 'all' ? t.label : `${t.icon}`}
+                      {`${t.icon}`}
                     </button>
                   ))}
                 </div>
