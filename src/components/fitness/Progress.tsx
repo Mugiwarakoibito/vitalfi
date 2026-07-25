@@ -168,15 +168,11 @@ export function Progress() {
   const isScopeCurrentWeek = useMemo(() => scopeOffset === 0, [scopeOffset])
 
   const scopedRecords = useMemo(() => {
-    if (scopeOffset === 0) return records
-    const start = new Date(scopeWeek.start)
-    const end = new Date(scopeWeek.end)
-    end.setHours(23, 59, 59, 999)
-    return records.filter(r => {
-      const d = new Date(r.date)
-      return d >= start && d <= end
-    })
-  }, [records, scopeOffset, scopeWeek])
+    const fmt = (d: Date) => `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`
+    const startStr = fmt(scopeWeek.start)
+    const endStr = fmt(scopeWeek.end)
+    return records.filter(r => r.date >= startStr && r.date <= endStr)
+  }, [records, scopeWeek])
 
   const exercises = useMemo(() => [...new Set(records.map(r => r.exerciseName))].sort(), [records])
 
