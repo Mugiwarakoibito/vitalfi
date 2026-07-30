@@ -71,3 +71,34 @@
 
 ### Deployed to
 - **GitHub:** https://github.com/Mugiwarakoibito/vitalfi
+
+---
+
+## Session: Fix Analytics charts not rendering in Habits.tsx
+
+### What was done
+- Added 3 Recharts charts to the Analytics section of Habits.tsx (Streaks, History, Goals tabs)
+- Strukts tab: Daily Completion bar chart (week scope, per-habit completion count, violet/gray Cell coloring)
+- History tab: Monthly Workout Trend area chart (last 12 months, amber gradient)
+- Goals tab: Habit Balance radar chart (6-axis score distribution, emerald fill)
+
+### Debugging journey
+- All 3 charts silently failed to render in the live build — no TS errors
+- Suspected Recharts `ResponsiveContainer` width resolution inside the analytics card
+- Simplified to plain `<div>` placeholders — containers were present but Recharts elements invisible
+- After adding Recharts back, hit `TS1005: ')' expected` at the history chart IIFE closing
+- Root cause: the history section originally had TWO separate `{chartTab === 'history' && (() => { ... })()}` IIFE expressions (timeline + chart). The TypeScript JSX parser got confused by consecutive IIFE patterns for the same tab condition
+- Fix: combined both timeline and chart into a SINGLE IIFE returning a Fragment `<>...</>`
+- The closing pattern `)})()` must include the `)` for `return (...)` wrapper (streaks and goals chart IIFEs already used this pattern correctly)
+
+### Key decisions
+- All three charts live in their own IIFEs within the same `{chartTab === 'X' && ...}` expression — no Fragments for tab-level content
+- Single `chartTab === 'history' && (() => { ... })()` IIFE contains both timeline and trend chart inside `<>...</>` Fragment
+- Removed `overflow-hidden` and `h-full` from content area to prevent chart clipping
+- All data guards removed — charts always render with whatever data is available
+
+### Files modified
+- `src/components/fitness/Habits.tsx` — added 3 charts, combined history tab IIFE, adjusted imports
+
+### Next steps
+- Deploy to Vercel and verify charts render on live site

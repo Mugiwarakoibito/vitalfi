@@ -224,11 +224,8 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
   const activeMeasureFields = useMemo(() => measurementFields.filter(f => measureChartData.some(d => d[f.key] != null)), [measureChartData])
 
   const availableBodyTabs: ('weight' | 'measurements' | 'composition')[] = useMemo(() => {
-    const tabs: ('weight' | 'measurements' | 'composition')[] = ['weight']
-    if (activeMeasureFields.length > 0) tabs.push('measurements')
-    if (leanMass != null || fatMass != null) tabs.push('composition')
-    return tabs
-  }, [activeMeasureFields, leanMass, fatMass])
+    return ['weight', 'measurements', 'composition']
+  }, [])
 
   useEffect(() => {
     if (!availableBodyTabs.includes(chartTab as typeof availableBodyTabs[number])) {
@@ -640,7 +637,7 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                           : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'
                       }`}>
                       <span className="relative z-10 flex items-center gap-1.5">
-                        <span className={chartTab === mode ? '' : 'opacity-50'}>{mode === 'weight' ? '📊' : mode === 'measurements' ? '📏' : '⚖️'}</span>
+                        <span className={chartTab === mode ? '' : 'opacity-50'}>{mode === 'weight' ? '📈' : mode === 'measurements' ? '📏' : '⚖️'}</span>
                         {mode === 'weight' ? 'Weight' : mode === 'measurements' ? 'Meas.' : 'Comp.'}
                       </span>
                       {chartTab === mode && <span className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/[0.06]" />}
@@ -649,8 +646,9 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
                 </div>
               </div>
 
-              {/* Charts */}
-              <div className="h-64 rounded-2xl bg-gradient-to-br from-black/60 via-white/[0.02] to-transparent border border-white/[0.06] p-4 shadow-inner shadow-white/5 relative overflow-hidden" style={{ minHeight: '260px' }}>
+              {/* Chart */}
+            </div>
+            <div className="h-64 rounded-2xl bg-gradient-to-br from-black/60 via-white/[0.02] to-transparent border border-white/[0.06] p-4 shadow-inner shadow-white/5 relative overflow-hidden" style={{ minHeight: '260px' }}>
                 <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
                 <div className="absolute -top-16 -right-16 w-44 h-44 bg-rose-500/8 rounded-full blur-3xl pointer-events-none" />
                 <div className="absolute -bottom-16 -left-16 w-44 h-44 bg-violet-500/8 rounded-full blur-3xl pointer-events-none" />
@@ -881,44 +879,33 @@ export function BodyMetricsTracker({ heightCm = 175 }: { heightCm?: number }) {
               </div>
 
               {/* Stats strip */}
-              {(() => {
-                if (filteredChartData.length === 0) return null
-                const avgWeight = filteredChartData.reduce((s, d) => s + (d.weight ?? 0), 0) / filteredChartData.length
-                const minW = Math.min(...filteredChartData.filter(d => d.weight != null).map(d => d.weight!))
-                const maxW = Math.max(...filteredChartData.filter(d => d.weight != null).map(d => d.weight!))
-                return (
-                  <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
-                    <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
-                      {chartTab === 'weight' && (
-                        <>
-                          <span>📊 Avg <span className="font-semibold text-rose-400">{avgWeight.toFixed(1)}</span> kg</span>
-                          <span>📈 High <span className="font-semibold text-gray-300">{maxW.toFixed(1)}</span> kg</span>
-                          <span>📉 Low <span className="font-semibold text-gray-300">{minW.toFixed(1)}</span> kg</span>
-                          <span>📋 Entries <span className="font-semibold text-indigo-400">{filteredChartData.length}</span></span>
-                        </>
-                      )}
-                      {chartTab === 'measurements' && (
-                        <>
-                          <span>📏 Fields <span className="font-semibold text-cyan-400">{activeMeasureFields.length}</span></span>
-                          <span>📋 Entries <span className="font-semibold text-indigo-400">{measureChartData.length}</span></span>
-                        </>
-                      )}
-                      {chartTab === 'composition' && (
-                        <>
-                          <span>⚖️ Lean <span className="font-semibold text-emerald-400">{leanMass?.toFixed(1) ?? '--'}</span> kg</span>
-                          <span>🟡 Fat <span className="font-semibold text-amber-400">{fatMass?.toFixed(1) ?? '--'}</span> kg</span>
-                          {leanMass && fatMass && <span>📊 Ratio <span className="font-semibold text-violet-400">{(leanMass / fatMass).toFixed(1)}</span>:1</span>}
-                        </>
-                      )}
-                    </div>
-                    <div className="relative h-0.5 bg-white/[0.03]">
-                      <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(bodyMetrics.length / 30 * 100, 100)}%` }} />
-                    </div>
-                  </div>
-                )
-              })()}
-            </div>
+              <div className="relative mt-4 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-violet-500/3 via-transparent to-cyan-500/3 pointer-events-none" />
+                <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-4 py-3 text-[10px] text-gray-500">
+                  {filteredChartData.length > 0 && (() => {
+                    const avgWeight = filteredChartData.reduce((s, d) => s + (d.weight ?? 0), 0) / filteredChartData.length
+                    const minW = Math.min(...filteredChartData.filter(d => d.weight != null).map(d => d.weight!))
+                    const maxW = Math.max(...filteredChartData.filter(d => d.weight != null).map(d => d.weight!))
+                    return (<>
+                      <span>📊 Avg <span className="font-semibold text-rose-400">{avgWeight.toFixed(1)}</span> kg</span>
+                      <span>📈 High <span className="font-semibold text-gray-300">{maxW.toFixed(1)}</span> kg</span>
+                      <span>📉 Low <span className="font-semibold text-gray-300">{minW.toFixed(1)}</span> kg</span>
+                      <span>📋 Entries <span className="font-semibold text-indigo-400">{filteredChartData.length}</span></span>
+                    </>)
+                  })()}
+                  {activeMeasureFields.length > 0 && (
+                    <span>📏 Fields <span className="font-semibold text-cyan-400">{activeMeasureFields.length}</span></span>
+                  )}
+                  {leanMass != null && fatMass != null && (<>
+                    <span>⚖️ Lean <span className="font-semibold text-emerald-400">{leanMass.toFixed(1)}</span> kg</span>
+                    <span>🟡 Fat <span className="font-semibold text-amber-400">{fatMass.toFixed(1)}</span> kg</span>
+                    <span>📊 Ratio <span className="font-semibold text-violet-400">{(leanMass / fatMass).toFixed(1)}</span>:1</span>
+                  </>)}
+                </div>
+                <div className="relative h-0.5 bg-white/[0.03]">
+                  <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(bodyMetrics.length / 30 * 100, 100)}%` }} />
+                </div>
+              </div>
         </motion.div>
       )}
       </AnimatePresence>
