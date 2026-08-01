@@ -2,6 +2,23 @@
 
 ## Last Updated: August 1, 2026
 
+## Session: Differentiate Goals tab from Milestones panel
+
+### What was done
+- User reported the Milestones panel and 🎯 Goals tab showed the same data (Level card + similar streak milestones)
+- 🎯 Goals tab now shows ONLY week-scoped data: "This Week" card (week workout goal bar + 7 day dots + week streak power X/42 + all-time context + pace-based 🏆 100 by {date} ETA) + Habit Balance radar; removed the Level card and streak milestones grid (and their now-unused locals: level/nextLevel/levelProgress/estimateDate/milestoneTargets/milestones; paceEta now checks `stats.totalWorkouts < 100` directly)
+- Milestones panel unchanged: Level card (all-time progression) + Achievements + Active Challenges + Workout Diversity — completely different data from Goals now
+- Verified via Playwright: 11/12 checks (Goals has no level/milestones text, Milestones has no week card; "Workout Diversity" guard hides section when seed has no exercises — expected)
+
+### Files modified
+- `src/components/fitness/Habits.tsx` — goals IIFE trimmed (~172 → ~77 lines), file now 1227 lines
+
+### Deployed to
+- **GitHub:** https://github.com/Mugiwarakoibito/vitalfi (commit `8a805a8`)
+- **Vercel:** https://vitalfi.vercel.app
+
+---
+
 ## Session: Make Analytics tabs week-scoped (Streaks / History / Goals)
 
 ### What was done
