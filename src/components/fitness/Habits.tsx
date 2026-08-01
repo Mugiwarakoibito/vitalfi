@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import type { Workout, Meal, SleepEntry, HydrationEntry } from '@/types/domain'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Cell } from 'recharts'
+import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts'
 
 interface RecoveryEntry { id: string; date: string }
 interface SupplementLog { id: string; date: string }
@@ -660,48 +660,6 @@ export function Habits() {
                     </div>
                     )})()
                   }
-                  {chartTab === 'streaks' && (() => {
-                    const dailyData = scopeWeek.map(day => ({
-                      label: day.label === 'Today' ? 'Now' : day.weekday.slice(0, 3),
-                      completed: HABIT_TYPES.filter(h => {
-                        if (h.key === 'workout') return workouts.some((w: Workout) => w.date === day.fullDate)
-                        if (h.key === 'nutrition') return meals.some((m: Meal) => m.date === day.fullDate && m.calories > 0)
-                        if (h.key === 'sleep') return sleep.some((s: SleepEntry) => s.date === day.fullDate)
-                        if (h.key === 'hydration') return hydration.some((h2: HydrationEntry) => h2.date === day.fullDate)
-                        if (h.key === 'recovery') return recoveryEntries.some((r: RecoveryEntry) => r.date === day.fullDate)
-                        if (h.key === 'supplements') return supplementLogs.some((s: SupplementLog) => s.date === day.fullDate)
-                        return false
-                      }).length
-                    }))
-                    return (
-                    <div className="mt-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <BarChart3 className="w-3 h-3 text-violet-400" />
-                        <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Daily Completion</span>
-                        <span className="text-[8px] text-gray-600">· habits done per day</span>
-                      </div>
-                      <div className="h-40">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={dailyData} barCategoryGap={8}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                            <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
-                            <YAxis domain={[0, 6]} ticks={[0, 2, 4, 6]} tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} width={20} />
-                            <Tooltip
-                              contentStyle={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 8, fontSize: 11, boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}
-                              itemStyle={{ color: '#e5e7eb' }} labelStyle={{ color: '#9ca3af', fontWeight: 700, fontSize: 10, marginBottom: 4 }}
-                              formatter={(v: number) => [`${v}/6 habits`, 'Completed']} />
-                            <Bar dataKey="completed" radius={[6, 6, 0, 0]} maxBarSize={32} animationDuration={600} animationEasing="ease-out">
-                              {dailyData.map((entry, i) => (
-                                <Cell key={i} fill={entry.completed >= 4 ? '#a855f7' : entry.completed >= 2 ? '#8b5cf6' : '#6b7280'}
-                                  style={{ filter: entry.completed >= 4 ? 'drop-shadow(0 0 6px rgba(168,85,247,0.4))' : 'none' }} />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                    )})()
-                  }
                   {chartTab === 'history' && (() => {
                     type StreakSegment = { label: string; color: string; icon: typeof Dumbbell; start: string; end: string; length: number; isActive: boolean }
                     const buildSegments = (dates: string[]) => {
@@ -727,9 +685,6 @@ export function Habits() {
                       const key = s.end.slice(0, 7); if (!acc[key]) acc[key] = []; acc[key].push(s); return acc
                     }, {} as Record<string, StreakSegment[]>)
                     const sortedGroups = Object.entries(grouped).sort((a, b) => b[0].localeCompare(a[0]))
-                    const months: Record<string, number> = {}
-                    workouts.forEach((w: Workout) => { const m = w.date.slice(0, 7); months[m] = (months[m] || 0) + 1 })
-                    const monthlyTrend = Object.entries(months).sort((a, b) => a[0].localeCompare(b[0])).slice(-12).map(([m, c]) => ({ label: new Date(m + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), workouts: c }))
                     return <>
                       {allSegments.length > 0 ? (
                         <div className="overflow-y-auto space-y-4 pr-1">
@@ -788,33 +743,6 @@ export function Habits() {
                           })}
                         </div>
                       ) : <div className="flex items-center justify-center py-8"><div className="text-center"><p className="text-gray-500 text-sm">No streaks yet</p><p className="text-[10px] text-gray-600 mt-1">Start logging to build your streak history</p></div></div>}
-                      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 mt-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <TrendingUp className="w-3 h-3 text-amber-400" />
-                          <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Monthly Workout Trend</span>
-                          <span className="text-[8px] text-gray-600">· last 12 months</span>
-                        </div>
-                        <div className="h-40">
-                          <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={monthlyTrend}>
-                            <defs>
-                              <linearGradient id="monthlyTrendGrad" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.3} />
-                                <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                            <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                            <YAxis tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} width={20} allowDecimals={false} />
-                            <Tooltip
-                              contentStyle={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8, fontSize: 11, boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}
-                              itemStyle={{ color: '#e5e7eb' }} labelStyle={{ color: '#9ca3af', fontWeight: 700, fontSize: 10, marginBottom: 4 }}
-                              formatter={(v: number) => [`${v} workouts`, 'Total']} />
-                            <Area type="monotone" dataKey="workouts" stroke="#f59e0b" strokeWidth={2} fill="url(#monthlyTrendGrad)" dot={{ fill: '#f59e0b', r: 2.5, strokeWidth: 0 }} activeDot={{ r: 4, fill: '#f59e0b', stroke: '#000', strokeWidth: 2 }} />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                        </div>
-                      </div>
                     </>})()
                   }
                   {chartTab === 'goals' && (() => {
@@ -933,27 +861,6 @@ export function Habits() {
                                   <motion.div initial={{ width: 0 }} animate={{ width: `${pct * 100}%` }} transition={{ duration: 0.8, delay: 0.1 }}
                                     className="h-full rounded-full" style={{ background: m.achieved ? '#10b981' : m.color, boxShadow: m.achieved ? '0 0 6px rgba(16,185,129,0.3)' : 'none' }} />
                                 </div>
-                              </motion.div>
-                            )
-                          })}
-                        </div>
-
-                        {/* Achievements */}
-                        <div className="flex items-center gap-2 pt-1">
-                          <Award className="w-3 h-3 text-amber-400" />
-                          <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Achievements</span>
-                          <span className="text-[8px] text-white font-bold ml-auto bg-white/[0.04] px-2 py-0.5 rounded-full border border-white/[0.06] tabular-nums">{unlocked.size}/{ACHIEVEMENTS.length}</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {ACHIEVEMENTS.map(a => {
-                            const isUnlocked = unlocked.has(a.id)
-                            return (
-                              <motion.div key={a.id} whileHover={isUnlocked ? { scale: 1.05, y: -1 } : {}}
-                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border transition-all duration-300 ${isUnlocked ? 'border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent shadow-sm shadow-emerald-500/5' : 'border-white/[0.04] bg-white/[0.02] opacity-35 hover:opacity-50'}`}>
-                                {isUnlocked && <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.06),transparent_70%)] pointer-events-none" />}
-                                <span className="text-xs drop-shadow-sm">{a.icon}</span>
-                                <span className={`text-[7px] font-bold ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>{a.name}</span>
-                                {isUnlocked && <div className="w-1 h-1 rounded-full bg-emerald-400 shadow-[0_0_4px_rgba(16,185,129,0.6)]" />}
                               </motion.div>
                             )
                           })}
