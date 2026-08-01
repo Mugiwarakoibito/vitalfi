@@ -1,6 +1,32 @@
 # Sentience Engine — Session Memory
 
-## Last Updated: July 16, 2026
+## Last Updated: August 1, 2026
+
+## Session: Make Analytics tabs week-scoped (Streaks / History / Goals)
+
+### What was done
+- All three Analytics tabs in `Habits.tsx` now reflect the **selected week** (scopeOffset/scopeWeek navigation in the Analytics header), not just all-time data
+- **🏆 Streaks:** each habit row now shows the streak *as of the end of the selected week* (current week = live streak; past weeks = week-end streak), adds a `wk N/7` chip, header shows scopeWeekLabel + "X/6 in week", footer X/42 is now week-scoped, and a new per-day habit bar strip (7 bars, weekday letters, title tooltips) was added
+- **📋 History:** now TWO panels — "Week Snapshot" (per-habit N/7 coverage bars + heat status: 🔥N-day streak / ⚡ / scattered / off) and "Segments in this week" (streak segments filtered to intersect the selected week, month-grouped, longest-N chip, Live badges) with a proper empty state per week
+- **🎯 Goals:** kept all-time Level card (added "+N this week" chip), replaced old "Total Streak Power" with a new "This Week" card (week workout goal bar `X/{max(round(weeklyAverage),3)}`, 7 workout day dots, week streak power X/42 + all-time context, pace-based "🏆 100 by {date}" ETA), milestones grid unchanged
+- **Habit Balance radar** is now week-scoped: each axis = (days done in week / 7) × max, header shows `· {scopeWeekLabel}` + X/100 chip
+- Helper pattern: each IIFE defines local `getDates(habit)` (habit → date array), `countInWeek(dates)`, `streakAt(dates, weekEnd)` — no new memos needed
+
+### Key decisions
+- `weeklyCompletion` (rolling last-7-days) was NOT week-scoped — replaced its usage inside the streaks IIFE with week-set-based `countInWeek`; memo still used by the dashboard panel (line 433), so kept
+- `scoreBreakdown` (90-day) kept for the dashboard mini panel; the radar IIFE computes week values locally
+- `overallTarget` variable removed (no longer used); `Flame` icon no longer used in goals (still used at line 355 dashboard)
+- Scope weeks only go to the past (offset ≤ 0), future weeks impossible by design
+- Verified locally via Playwright (msedge channel — NO playwright browsers installed; `chromium.launch({ channel: 'msedge' })`): 17/17 checks passed, zero console errors; seed must set `vitalfi_seeded=true` (demo data) + `lifesync_license_email` (license gate) + `settings.onboardingComplete` (onboarding gate) + hydration entries need `drinkType` (seed.ts cleanup deletes entries without it); navigate to `/fitness?tab=habits`; analytics toggle button is icon-only → click via `getByTitle('Analytics')`; CSS `uppercase` classes transform innerText (match case-insensitively)
+
+### Files modified
+- `src/components/fitness/Habits.tsx` — 4 IIFEs rewritten (streaks 575–685, history 686–835, goals 836–1008, radar 1009–1054), ~1331 lines total
+
+### Deployed to
+- **GitHub:** https://github.com/Mugiwarakoibito/vitalfi (commit `4b61167`)
+- **Vercel:** https://vitalfi.vercel.app
+
+---
 
 ## Session: Fix BodyMetricsTracker not appearing in build
 
