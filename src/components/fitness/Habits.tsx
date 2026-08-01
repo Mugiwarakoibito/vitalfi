@@ -834,8 +834,6 @@ export function Habits() {
                     )})()
                   }
                   {chartTab === 'goals' && (() => {
-                    const overallProgress = HABIT_TYPES.reduce((sum, h) => sum + habitStats[h.key].current, 0)
-                    const weekEnd = scopeWeek[6].fullDate
                     const weekSet = new Set(scopeWeek.map(d => d.fullDate))
                     const getDates = (h: typeof HABIT_TYPES[number]): string[] =>
                       h.key === 'workout' ? workouts.map((w: Workout) => w.date) :
@@ -844,60 +842,65 @@ export function Habits() {
                       h.key === 'hydration' ? hydration.map((x: HydrationEntry) => x.date) :
                       h.key === 'recovery' ? recoveryEntries.map((r: RecoveryEntry) => r.date) :
                       supplementLogs.map((s: SupplementLog) => s.date)
-                    const streakAt = (dates: string[], endDate: string) => {
-                      const set = new Set(dates); let n = 0; const d = new Date(endDate)
-                      while (set.has(d.toISOString().split('T')[0])) { n++; d.setDate(d.getDate() - 1) }
-                      return n
+                    const weeklyTargets: Record<string, number> = {
+                      workout: Math.max(Math.round(stats.weeklyAverage), 3),
+                      nutrition: 6, sleep: 7, hydration: 5, recovery: 3, supplements: 6,
                     }
-                    const workoutDates = workouts.map((w: Workout) => w.date)
-                    const weekWorkouts = workoutDates.filter(d => weekSet.has(d)).length
-                    const weeklyGoal = Math.max(Math.round(stats.weeklyAverage), 3)
-                    const weekStreakSum = HABIT_TYPES.reduce((s, h) => s + streakAt(getDates(h), weekEnd), 0)
-                    const pacePerDay = weekWorkouts / 7
-                    const paceEta = pacePerDay > 0 && stats.totalWorkouts < 100
-                      ? (() => { const rem = 100 - stats.totalWorkouts; const d = new Date(); d.setDate(d.getDate() + Math.ceil(rem / pacePerDay)); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) })()
-                      : ''
-                    const workDayDots: boolean[] = scopeWeek.map(day => workoutDates.includes(day.fullDate))
+                    const rows = HABIT_TYPES.map(h => {
+                      const done = getDates(h).filter(d => weekSet.has(d)).length
+                      const target = weeklyTargets[h.key]
+                      const pct = Math.min(done / target, 1)
+                      const status = done >= target ? { label: 'goal met', icon: '✅', color: '#10b981' }
+                        : done >= target * 0.8 ? { label: 'almost there', icon: '🔥', color: '#f59e0b' }
+                        : done >= target * 0.5 ? { label: 'halfway', icon: '⚡', color: '#06b6d4' }
+                        : done > 0 ? { label: 'started', icon: '🌱', color: '#8b5cf6' }
+                        : { label: 'no days', icon: '💤', color: '#6b7280' }
+                      return { habit: h, done, target, pct, status }
+                    })
+                    const totalDone = rows.reduce((s, r) => s + r.done, 0)
+                    const totalTarget = rows.reduce((s, r) => s + r.target, 0)
+                    const metCount = rows.filter(r => r.done >= r.target).length
                     return (
-                      <div className="space-y-2.5">
-                        {/* This Week */}
-                        <div className="relative overflow-hidden rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-cyan-500/3 to-transparent p-3.5">
-                          <div className="absolute -top-10 -right-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl" />
-                          <div className="relative">
-                            <div className="flex items-center gap-2 mb-2.5">
-                              <div className="p-1 rounded-lg bg-cyan-500/20"><Zap className="w-3 h-3 text-cyan-400" /></div>
-                              <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">This Week</span>
-                              <span className="text-[8px] text-gray-600">· {scopeWeekLabel}</span>
-                              <div className="flex-1" />
-                              <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-gray-400 tabular-nums">{weekWorkouts}/{weeklyGoal} workouts</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="flex-1">
-                                <div className="flex items-center justify-between mb-1.5">
-                                  <span className="text-[8px] text-gray-500"><span className="text-white font-bold tabular-nums">{weekWorkouts}</span> workouts done</span>
-                                  <span className="text-[8px] text-cyan-300 tabular-nums">{Math.min(weekWorkouts, weeklyGoal)}/{weeklyGoal}</span>
+                      <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-cyan-500/3 to-transparent overflow-hidden">
+                        <div className="flex items-center gap-2 px-3 pt-3 pb-2">
+                          <div className="p-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.15)]"><Zap className="w-3 h-3 text-cyan-400" /></div>
+                          <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Weekly Goals</span>
+                          <span className="text-[8px] text-gray-600">· {scopeWeekLabel}</span>
+                          <div className="flex-1" />
+                          <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 tabular-nums">{metCount}/{HABIT_TYPES.length} met</span>
+                        </div>
+                        <div className="divide-y divide-white/[0.04]">
+                          {rows.map((row, idx) => (
+                            <motion.div key={row.habit.key} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }}
+                              className="flex items-center gap-3 px-3 py-2.5 group hover:bg-white/[0.02] transition-colors duration-300">
+                              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105"
+                                style={{ background: `${row.habit.color}16`, boxShadow: `inset 0 0 0 1px ${row.habit.color}30` }}>
+                                <row.habit.icon size={15} style={{ color: row.habit.color, filter: `drop-shadow(0 0 4px ${row.habit.glow})` }} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span className="text-[11px] font-bold text-white">{row.habit.label}</span>
+                                  <span className="text-[7px] font-bold px-1.5 py-px rounded-full uppercase tracking-wider bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">goal {row.target}</span>
                                 </div>
-                                <div className="h-[5px] rounded-full bg-white/[0.06] overflow-hidden">
-                                  <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((weekWorkouts / weeklyGoal) * 100, 100)}%` }} transition={{ duration: 1 }}
-                                    className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-sky-400" style={{ boxShadow: '0 0 8px rgba(34,211,238,0.35)' }} />
-                                </div>
-                                <div className="flex items-center gap-1 mt-2">
-                                  {workDayDots.map((done, j) => (
-                                    <div key={j} className="flex-1 flex flex-col items-center gap-0.5" title={`${scopeWeek[j].weekday}: ${done ? 'worked out' : 'rest'}`}>
-                                      <div className={`w-full h-[6px] rounded-[2px] transition-all duration-300 ${done ? '' : 'bg-white/[0.05]'}`} style={{ background: done ? '#06b6d4' : '', boxShadow: done ? '0 0 4px rgba(6,182,212,0.4)' : 'none' }} />
-                                      <span className={`text-[6px] font-bold ${done ? 'text-cyan-300/80' : 'text-gray-700'}`}>{scopeWeek[j].weekday[0]}</span>
-                                    </div>
-                                  ))}
+                                <div className="h-[4px] rounded-full bg-white/[0.06] overflow-hidden">
+                                  <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(row.pct * 100, row.done > 0 ? 6 : 0)}%` }} transition={{ duration: 0.8, delay: 0.15 + idx * 0.04 }}
+                                    className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${row.habit.color}, ${row.habit.color}66)`, boxShadow: row.done > 0 ? `0 0 6px ${row.habit.glow}` : 'none' }} />
                                 </div>
                               </div>
-                              <div className="shrink-0 border-l border-white/[0.06] pl-3 flex flex-col items-start gap-1.5">
-                                <span className="text-[8px] text-gray-600">streak power (week)</span>
-                                <span className="text-lg font-black text-white tabular-nums leading-none">{weekStreakSum}<span className="text-[8px] text-gray-600 font-normal">/42d</span></span>
-                                <span className="text-[7px] text-gray-600">all-time <span className="text-gray-400 font-bold tabular-nums">{overallProgress}d</span></span>
-                                {paceEta && <span className="text-[7px] font-bold text-cyan-400 mt-1">🏆 100 by {paceEta}</span>}
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                <span className="text-sm font-black text-white tabular-nums leading-none drop-shadow-sm">{row.done}<span className="text-[8px] text-gray-600 font-normal">/{row.target}</span></span>
+                                <span className="text-[7px] font-bold px-1.5 py-px rounded-full" style={{ background: `${row.status.color}16`, color: row.status.color, boxShadow: `inset 0 0 0 1px ${row.status.color}30` }}>{row.status.icon} {row.status.label}</span>
                               </div>
-                            </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-2.5 px-3 py-2 border-t border-white/[0.04] bg-white/[0.01]">
+                          <span className="text-[8px] text-gray-600 uppercase tracking-wider font-semibold shrink-0">Total</span>
+                          <div className="flex-1 h-[5px] rounded-full bg-white/[0.06] overflow-hidden">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((totalDone / totalTarget) * 100, 100)}%` }} transition={{ duration: 1, delay: 0.3 }}
+                              className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-sky-400" style={{ boxShadow: '0 0 8px rgba(34,211,238,0.35)' }} />
                           </div>
+                          <span className="text-[8px] font-bold text-cyan-300 tabular-nums shrink-0">{totalDone}/{totalTarget}</span>
                         </div>
                       </div>
                     )})()
