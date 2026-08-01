@@ -573,91 +573,40 @@ export function Habits() {
                 <div className="absolute -bottom-16 -left-16 w-44 h-44 bg-violet-500/8 rounded-full blur-3xl pointer-events-none" />
                 <div className="relative z-10">
                   {chartTab === 'streaks' && (() => {
-                    const streakLevel = (days: number) =>
-                      days >= 30 ? { label: 'Platinum', color: '#a855f7', icon: '💎' } :
-                      days >= 14 ? { label: 'Gold', color: '#f59e0b', icon: '🥇' } :
-                      days >= 7 ? { label: 'Silver', color: '#9ca3af', icon: '🥈' } :
-                      days >= 3 ? { label: 'Bronze', color: '#d97706', icon: '🥉' } :
-                      { label: 'Starter', color: '#6b7280', icon: '🌱' }
-                    const streakStatus = (current: number) =>
-                      current >= 14 ? { label: 'On Fire', icon: '🔥', color: '#f43f5e' } :
-                      current >= 7 ? { label: 'Blazing', icon: '⚡', color: '#f59e0b' } :
-                      current >= 3 ? { label: 'Building', icon: '🚀', color: '#06b6d4' } :
-                      current >= 1 ? { label: 'Started', icon: '🌱', color: '#10b981' } :
-                      { label: 'Inactive', icon: '💤', color: '#6b7280' }
+                    const habitChartData = HABIT_TYPES.map(h => ({
+                      key: h.label.slice(0, 3).toUpperCase(),
+                      current: habitStats[h.key].current,
+                      best: habitStats[h.key].longest,
+                      week: weeklyCompletion[h.key],
+                      color: h.color,
+                    }))
                     return (
-                      <div className="space-y-2">
+                      <div className="mt-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">All Habits</span>
-                          <span className="text-[9px] text-gray-600">· streak levels & weekly view</span>
+                          <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Habit Streaks</span>
+                          <span className="text-[8px] text-gray-600">· current vs best · this week</span>
                         </div>
-                        {HABIT_TYPES.map((habit, idx) => {
-                        const hs = habitStats[habit.key]
-                        const wk = weeklyCompletion[habit.key]
-                        const level = streakLevel(hs.current)
-                        const status = streakStatus(hs.current)
-                        const ringSize = 36; const radius = (ringSize - 4) / 2; const circ = 2 * Math.PI * radius
-                        const progress = Math.min(hs.current / Math.max(hs.longest, 1), 1)
-                        const weekDays: boolean[] = scopeWeek.map(day => habit.key === 'workout' ? workouts.some((w: Workout) => w.date === day.fullDate) : habit.key === 'nutrition' ? meals.some((m: Meal) => m.date === day.fullDate && m.calories > 0) : habit.key === 'sleep' ? sleep.some((s: SleepEntry) => s.date === day.fullDate) : habit.key === 'hydration' ? hydration.some((h: HydrationEntry) => h.date === day.fullDate) : habit.key === 'recovery' ? recoveryEntries.some((r: RecoveryEntry) => r.date === day.fullDate) : supplementLogs.some((s: SupplementLog) => s.date === day.fullDate))
-                        return (
-                          <motion.div key={habit.key} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
-                            className="relative overflow-hidden rounded-xl border transition-all duration-300 hover:scale-[1.01]"
-                            style={{ borderColor: `${habit.color}25`, background: `linear-gradient(135deg, ${habit.color}10, ${habit.color}02 80%)` }}>
-                            <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-20" style={{ background: `radial-gradient(circle, ${habit.color}40, transparent)` }} />
-                            <div className="relative p-3">
-                              <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-xl" style={{ background: `${habit.color}20`, boxShadow: `0 0 10px ${habit.glow}20` }}>
-                                  <habit.icon size={14} style={{ color: habit.color }} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between flex-wrap gap-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs font-bold text-white">{habit.label}</span>
-                                      <span className="text-[7px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider" style={{ background: `${level.color}20`, color: level.color, border: `1px solid ${level.color}30` }}>{level.icon} {level.label}</span>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-3 mt-1.5">
-                                    <div className="flex items-baseline gap-1">
-                                      <span className="text-2xl font-black text-white tabular-nums drop-shadow-lg">{hs.current}</span>
-                                      <span className="text-[8px] text-gray-500">days</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md" style={{ background: `${status.color}15` }}>
-                                      <span className="text-[9px]">{status.icon}</span>
-                                      <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: status.color }}>{status.label}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <svg width={ringSize} height={ringSize} className="-rotate-90 shrink-0">
-                                  <circle cx={ringSize / 2} cy={ringSize / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
-                                  <motion.circle cx={ringSize / 2} cy={ringSize / 2} r={radius} fill="none" stroke={habit.color} strokeWidth="3" strokeLinecap="round"
-                                    strokeDasharray={circ} initial={{ strokeDashoffset: circ }} animate={{ strokeDashoffset: circ * (1 - progress) }}
-                                    transition={{ duration: 1, delay: 0.2 + idx * 0.05, ease: 'easeOut' }}
-                                    style={{ filter: `drop-shadow(0 0 4px ${habit.color}55)` }} />
-                                </svg>
-                              </div>
-                              <div className="flex items-center gap-4 mt-2 pt-2 border-t border-white/[0.04]">
-                                <div className="flex items-center gap-1 text-[8px] text-gray-600">
-                                  <span className="font-medium text-gray-500">Best:</span>
-                                  <span className="font-bold text-white tabular-nums">{hs.longest}d</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-[8px] text-gray-600">
-                                  <span className="font-medium text-gray-500">This week:</span>
-                                  <span className="font-bold text-white tabular-nums">{wk}/7</span>
-                                </div>
-                                <div className="flex-1" />
-                                <div className="flex items-center gap-[3px]">
-                                  {weekDays.map((done, j) => (
-                                    <div key={j} className={`w-[7px] h-[7px] rounded-sm transition-all duration-300 ${done ? '' : 'bg-white/[0.04] border border-white/[0.04]'}`}
-                                      style={{ background: done ? habit.color : '', boxShadow: done ? `0 0 4px ${habit.glow}` : 'none' }}
-                                      title={done ? 'Completed' : 'Missed'} />
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        )
-                      })}
-                    </div>
+                        <div className="h-44">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={habitChartData} layout="vertical" barCategoryGap={7} barGap={2}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" horizontal={false} />
+                              <XAxis type="number" domain={[0, 'auto']} tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
+                              <YAxis type="category" dataKey="key" width={42} tick={{ fill: '#9ca3af', fontSize: 9 }} axisLine={false} tickLine={false} />
+                              <Tooltip
+                                contentStyle={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 8, fontSize: 11, boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}
+                                itemStyle={{ color: '#e5e7eb' }} labelStyle={{ color: '#9ca3af', fontWeight: 700, fontSize: 10, marginBottom: 4 }}
+                                formatter={(v: number, name: string) => [`${v}d`, name === 'current' ? 'Current' : name === 'best' ? 'Best' : 'This week']} />
+                              <Bar dataKey="best" name="best" radius={[0, 6, 6, 0]} barSize={6} fill="rgba(255,255,255,0.08)" animationDuration={600} />
+                              <Bar dataKey="current" name="current" radius={[0, 6, 6, 0]} barSize={9} animationDuration={600} animationEasing="ease-out">
+                                {habitChartData.map((d, i) => (
+                                  <Cell key={i} fill={d.color} style={{ filter: d.current > 0 ? `drop-shadow(0 0 5px ${d.color}55)` : 'none' }} />
+                                ))}
+                              </Bar>
+                              <Bar dataKey="week" name="week" radius={[0, 6, 6, 0]} barSize={4} fill="#a78bfa" opacity={0.65} animationDuration={600} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
                     )})()
                   }
                   {chartTab === 'streaks' && (() => {
@@ -722,72 +671,35 @@ export function Habits() {
                       const lastDate = allDates.pop()
                       return buildSegments(dates).map(s => ({ ...s, label: h.label, color: h.color, icon: h.icon, isActive: s.end === lastDate && (new Date(s.end).getTime() >= Date.now() - 86400000 * 2 || dates.some(d => d === new Date().toISOString().split('T')[0])) }))
                     }).sort((a, b) => new Date(b.end).getTime() - new Date(a.end).getTime()).slice(0, 40)
-                    const maxLen = Math.max(...allSegments.map(s => s.length), 1)
-                    const grouped = allSegments.reduce((acc, s) => {
-                      const key = s.end.slice(0, 7); if (!acc[key]) acc[key] = []; acc[key].push(s); return acc
-                    }, {} as Record<string, StreakSegment[]>)
-                    const sortedGroups = Object.entries(grouped).sort((a, b) => b[0].localeCompare(a[0]))
+                    const timelineData = allSegments.slice(0, 14).map(s => ({ ...s, yLabel: `${s.label} · ${new Date(s.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${s.isActive ? ' ⚡' : ''}` }))
                     const months: Record<string, number> = {}
                     workouts.forEach((w: Workout) => { const m = w.date.slice(0, 7); months[m] = (months[m] || 0) + 1 })
                     const monthlyTrend = Object.entries(months).sort((a, b) => a[0].localeCompare(b[0])).slice(-12).map(([m, c]) => ({ label: new Date(m + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), workouts: c }))
                     return <>
-                      {allSegments.length > 0 ? (
-                        <div className="overflow-y-auto space-y-4 pr-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Streak Timeline</span>
-                            <span className="text-[9px] text-gray-600">· all time</span>
-                          </div>
-                          {sortedGroups.map(([month, streaks]) => {
-                            const d = new Date(month + '-01')
-                            return (
-                              <div key={month}>
-                                <div className="flex items-center gap-2 mb-2 sticky top-0 z-10 pb-1" style={{ background: '#0f0f13' }}>
-                                  <div className="h-px flex-1 bg-white/[0.04]" />
-                                  <span className="text-[8px] font-bold text-gray-600 uppercase tracking-wider px-2">{d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
-                                  <div className="h-px flex-1 bg-white/[0.04]" />
-                                </div>
-                                <div className="space-y-1.5">
-                                  {streaks.map((s, i) => {
-                                    const pct = s.length / maxLen
-                                    return (
-                                      <motion.div key={`${s.label}-${s.start}`} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
-                                        className="relative overflow-hidden rounded-xl border border-white/[0.04] transition-all duration-300 hover:border-white/[0.08]"
-                                        style={{ background: `linear-gradient(135deg, ${s.color}08, transparent 80%)` }}>
-                                        <div className="absolute left-0 top-0 bottom-0 w-0.5" style={{ background: `linear-gradient(180deg, ${s.color}, ${s.color}44)`, boxShadow: s.isActive ? `0 0 6px ${s.color}` : 'none' }} />
-                                        <div className="pl-3 pr-3 py-2.5">
-                                          <div className="flex items-center gap-2.5">
-                                            <s.icon size={12} style={{ color: s.color }} />
-                                            <span className="text-[9px] font-bold text-gray-400 w-12 shrink-0">{s.label}</span>
-                                            <div className="flex-1 h-4 relative">
-                                              <div className="absolute inset-0 rounded-full bg-white/[0.03]" />
-                                              <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(pct * 100, 1)}%` }} transition={{ duration: 0.5, delay: i * 0.03 }}
-                                                className="h-full rounded-full relative overflow-hidden"
-                                                style={{ background: `linear-gradient(90deg, ${s.color}, ${s.color}66)`, boxShadow: s.isActive ? `0 0 8px ${s.color}44` : 'none' }}>
-                                                <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent)] animate-shimmer" />
-                                              </motion.div>
-                                            </div>
-                                            <div className="flex items-center gap-2 shrink-0">
-                                              <span className="text-xs font-black text-white tabular-nums drop-shadow-sm">{s.length}<span className="text-[8px] text-gray-600 font-normal">d</span></span>
-                                              {s.isActive ? (
-                                                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/20">
-                                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_4px_rgba(52,211,153,0.6)]" />
-                                                  <span className="text-[7px] font-bold text-emerald-400 uppercase tracking-wider">Live</span>
-                                                </span>
-                                              ) : (
-                                                <span className="text-[7px] text-gray-600 w-14 text-right tabular-nums">{new Date(s.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(s.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </motion.div>
-                                    )
-                                  })}
-                                </div>
-                              </div>
-                            )
-                          })}
+                      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Streak Timeline</span>
+                          <span className="text-[8px] text-gray-600">· all time · latest first</span>
                         </div>
-                      ) : <div className="flex items-center justify-center py-8"><div className="text-center"><p className="text-gray-500 text-sm">No streaks yet</p><p className="text-[10px] text-gray-600 mt-1">Start logging to build your streak history</p></div></div>}
+                        <div className="h-44">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={timelineData} layout="vertical" barCategoryGap={5}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" horizontal={false} />
+                              <XAxis type="number" domain={[0, 'auto']} tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} />
+                              <YAxis type="category" dataKey="yLabel" width={110} tick={{ fill: '#9ca3af', fontSize: 8 }} axisLine={false} tickLine={false} />
+                              <Tooltip
+                                contentStyle={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 8, fontSize: 11, boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}
+                                itemStyle={{ color: '#e5e7eb' }} labelStyle={{ color: '#9ca3af', fontWeight: 700, fontSize: 10, marginBottom: 4 }}
+                                formatter={(v: number) => [`${v} days`, 'Streak']} />
+                              <Bar dataKey="length" radius={[0, 6, 6, 0]} barSize={9} animationDuration={600}>
+                                {timelineData.map((s, i) => (
+                                  <Cell key={i} fill={s.color} style={{ filter: s.isActive ? `drop-shadow(0 0 6px ${s.color}66)` : 'none' }} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
                       <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 mt-3">
                         <div className="flex items-center gap-2 mb-2">
                           <TrendingUp className="w-3 h-3 text-amber-400" />
@@ -904,38 +816,41 @@ export function Habits() {
                           </div>
                         </div>
 
-                        {/* Milestones Grid */}
-                        <div className="grid grid-cols-2 gap-2">
-                          {milestones.map(m => {
-                            const pct = Math.min(m.current / m.target, 1)
-                            return (
-                              <motion.div key={m.label} whileHover={{ scale: 1.02 }}
-                                className={`relative overflow-hidden rounded-xl border p-3 transition-all duration-300 ${m.achieved ? 'border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent shadow-lg shadow-emerald-500/5' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}>
-                                {m.achieved && <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full -mr-6 -mt-6 blur-xl" />}
-                                <div className="relative flex items-center justify-between mb-1.5">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-xs">{m.icon}</span>
-                                    <span className="text-[8px] font-bold text-gray-500 uppercase tracking-wider">{m.label}</span>
-                                  </div>
-                                  {m.achieved ? (
-                                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 10 }}
-                                      className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shadow-[0_0_8px_rgba(16,185,129,0.3)]">
-                                      <span className="text-[7px]">✓</span>
-                                    </motion.div>
-                                  ) : (
-                                    <span className="text-[7px] text-gray-600 bg-white/[0.04] px-1.5 py-0.5 rounded-full">
-                                      {estimateDate(m.target)}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-xl font-black text-white tabular-nums drop-shadow-sm">{m.current}<span className="text-[10px] text-gray-600 font-normal">/{m.target}</span></div>
-                                <div className="mt-1.5 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                                  <motion.div initial={{ width: 0 }} animate={{ width: `${pct * 100}%` }} transition={{ duration: 0.8, delay: 0.1 }}
-                                    className="h-full rounded-full" style={{ background: m.achieved ? '#10b981' : m.color, boxShadow: m.achieved ? '0 0 6px rgba(16,185,129,0.3)' : 'none' }} />
-                                </div>
-                              </motion.div>
-                            )
-                          })}
+                        {/* Milestones */}
+                        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Milestones</span>
+                            <span className="text-[8px] text-gray-600">· streak & workout goals</span>
+                          </div>
+                          <div className="h-40">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={milestones} barCategoryGap={12}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0}
+                                  tick={({ x, y, payload }: { x: number; y: number; payload: { value: string; index: number } }) => {
+                                    const m = milestones[payload.index]
+                                    return (
+                                      <g transform={`translate(${x},${y})`}>
+                                        <text x={0} y={10} textAnchor="middle" fill="#9ca3af" fontSize={7} fontWeight={700}>{m.label}</text>
+                                        <text x={0} y={19} textAnchor="middle" fill={m.achieved ? '#34d399' : '#6b7280'} fontSize={6}>
+                                          {m.achieved ? 'ACHIEVED' : `est. ${estimateDate(m.target)}`}
+                                        </text>
+                                      </g>
+                                    )
+                                  }} />
+                                <YAxis domain={[0, 'auto']} tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} width={20} />
+                                <Tooltip
+                                  contentStyle={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, fontSize: 11, boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}
+                                  itemStyle={{ color: '#e5e7eb' }} labelStyle={{ color: '#9ca3af', fontWeight: 700, fontSize: 10, marginBottom: 4 }}
+                                  formatter={(v: number) => [`${v}`, 'Progress']} />
+                                <Bar dataKey="current" radius={[6, 6, 0, 0]} barSize={28} animationDuration={600}>
+                                  {milestones.map((m, i) => (
+                                    <Cell key={i} fill={m.achieved ? '#10b981' : m.color} style={{ filter: m.achieved ? 'drop-shadow(0 0 6px rgba(16,185,129,0.4))' : 'none' }} />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
 
                         {/* Achievements */}
