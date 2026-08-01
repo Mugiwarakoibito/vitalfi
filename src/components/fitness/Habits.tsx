@@ -573,94 +573,6 @@ export function Habits() {
                 <div className="absolute -bottom-16 -left-16 w-44 h-44 bg-violet-500/8 rounded-full blur-3xl pointer-events-none" />
                 <div className="relative z-10">
                   {chartTab === 'streaks' && (() => {
-                    const streakLevel = (days: number) =>
-                      days >= 30 ? { label: 'Platinum', color: '#a855f7', icon: '💎' } :
-                      days >= 14 ? { label: 'Gold', color: '#f59e0b', icon: '🥇' } :
-                      days >= 7 ? { label: 'Silver', color: '#9ca3af', icon: '🥈' } :
-                      days >= 3 ? { label: 'Bronze', color: '#d97706', icon: '🥉' } :
-                      { label: 'Starter', color: '#6b7280', icon: '🌱' }
-                    const streakStatus = (current: number) =>
-                      current >= 14 ? { label: 'On Fire', icon: '🔥', color: '#f43f5e' } :
-                      current >= 7 ? { label: 'Blazing', icon: '⚡', color: '#f59e0b' } :
-                      current >= 3 ? { label: 'Building', icon: '🚀', color: '#06b6d4' } :
-                      current >= 1 ? { label: 'Started', icon: '🌱', color: '#10b981' } :
-                      { label: 'Inactive', icon: '💤', color: '#6b7280' }
-                    return (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">All Habits</span>
-                          <span className="text-[9px] text-gray-600">· streak levels & weekly view</span>
-                        </div>
-                        {HABIT_TYPES.map((habit, idx) => {
-                        const hs = habitStats[habit.key]
-                        const wk = weeklyCompletion[habit.key]
-                        const level = streakLevel(hs.current)
-                        const status = streakStatus(hs.current)
-                        const ringSize = 36; const radius = (ringSize - 4) / 2; const circ = 2 * Math.PI * radius
-                        const progress = Math.min(hs.current / Math.max(hs.longest, 1), 1)
-                        const weekDays: boolean[] = scopeWeek.map(day => habit.key === 'workout' ? workouts.some((w: Workout) => w.date === day.fullDate) : habit.key === 'nutrition' ? meals.some((m: Meal) => m.date === day.fullDate && m.calories > 0) : habit.key === 'sleep' ? sleep.some((s: SleepEntry) => s.date === day.fullDate) : habit.key === 'hydration' ? hydration.some((h: HydrationEntry) => h.date === day.fullDate) : habit.key === 'recovery' ? recoveryEntries.some((r: RecoveryEntry) => r.date === day.fullDate) : supplementLogs.some((s: SupplementLog) => s.date === day.fullDate))
-                        return (
-                          <motion.div key={habit.key} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
-                            className="relative overflow-hidden rounded-xl border transition-all duration-300 hover:scale-[1.01]"
-                            style={{ borderColor: `${habit.color}25`, background: `linear-gradient(135deg, ${habit.color}10, ${habit.color}02 80%)` }}>
-                            <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-20" style={{ background: `radial-gradient(circle, ${habit.color}40, transparent)` }} />
-                            <div className="relative p-3">
-                              <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-xl" style={{ background: `${habit.color}20`, boxShadow: `0 0 10px ${habit.glow}20` }}>
-                                  <habit.icon size={14} style={{ color: habit.color }} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between flex-wrap gap-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs font-bold text-white">{habit.label}</span>
-                                      <span className="text-[7px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider" style={{ background: `${level.color}20`, color: level.color, border: `1px solid ${level.color}30` }}>{level.icon} {level.label}</span>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-3 mt-1.5">
-                                    <div className="flex items-baseline gap-1">
-                                      <span className="text-2xl font-black text-white tabular-nums drop-shadow-lg">{hs.current}</span>
-                                      <span className="text-[8px] text-gray-500">days</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md" style={{ background: `${status.color}15` }}>
-                                      <span className="text-[9px]">{status.icon}</span>
-                                      <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: status.color }}>{status.label}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <svg width={ringSize} height={ringSize} className="-rotate-90 shrink-0">
-                                  <circle cx={ringSize / 2} cy={ringSize / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
-                                  <motion.circle cx={ringSize / 2} cy={ringSize / 2} r={radius} fill="none" stroke={habit.color} strokeWidth="3" strokeLinecap="round"
-                                    strokeDasharray={circ} initial={{ strokeDashoffset: circ }} animate={{ strokeDashoffset: circ * (1 - progress) }}
-                                    transition={{ duration: 1, delay: 0.2 + idx * 0.05, ease: 'easeOut' }}
-                                    style={{ filter: `drop-shadow(0 0 4px ${habit.color}55)` }} />
-                                </svg>
-                              </div>
-                              <div className="flex items-center gap-4 mt-2 pt-2 border-t border-white/[0.04]">
-                                <div className="flex items-center gap-1 text-[8px] text-gray-600">
-                                  <span className="font-medium text-gray-500">Best:</span>
-                                  <span className="font-bold text-white tabular-nums">{hs.longest}d</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-[8px] text-gray-600">
-                                  <span className="font-medium text-gray-500">This week:</span>
-                                  <span className="font-bold text-white tabular-nums">{wk}/7</span>
-                                </div>
-                                <div className="flex-1" />
-                                <div className="flex items-center gap-[3px]">
-                                  {weekDays.map((done, j) => (
-                                    <div key={j} className={`w-[7px] h-[7px] rounded-sm transition-all duration-300 ${done ? '' : 'bg-white/[0.04] border border-white/[0.04]'}`}
-                                      style={{ background: done ? habit.color : '', boxShadow: done ? `0 0 4px ${habit.glow}` : 'none' }}
-                                      title={done ? 'Completed' : 'Missed'} />
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        )
-                      })}
-                    </div>
-                    )})()
-                  }
-                  {chartTab === 'streaks' && (() => {
                     const dailyData = scopeWeek.map(day => ({
                       label: day.label === 'Today' ? 'Now' : day.weekday.slice(0, 3),
                       completed: HABIT_TYPES.filter(h => {
@@ -699,97 +611,39 @@ export function Habits() {
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-2 border-t border-white/[0.04]">
+                        {HABIT_TYPES.map(h => {
+                          const hs = habitStats[h.key]
+                          return (
+                            <div key={h.key} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.05]"
+                              title={`${h.label} · current ${hs.current}d · best ${hs.longest}d`}>
+                              <h.icon size={10} style={{ color: h.color }} />
+                              <span className="text-[9px] font-bold text-white tabular-nums">{hs.current}<span className="text-[7px] text-gray-600 font-normal">d</span></span>
+                            </div>
+                          )
+                        })}
+                        <div className="flex-1" />
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-violet-500/10 border border-violet-500/20">
+                          <span className="text-[8px] font-bold text-violet-400 uppercase tracking-wider">Current</span>
+                          <span className="text-[9px] font-black text-white tabular-nums">{stats.currentStreak}d</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                          <span className="text-[8px] font-bold text-amber-400 uppercase tracking-wider">Best</span>
+                          <span className="text-[9px] font-black text-white tabular-nums">{stats.longestStreak}d</span>
+                        </div>
+                      </div>
                     </div>
                     )})()
                   }
                   {chartTab === 'history' && (() => {
-                    type StreakSegment = { label: string; color: string; icon: typeof Dumbbell; start: string; end: string; length: number; isActive: boolean }
-                    const buildSegments = (dates: string[]) => {
-                      const unique = [...new Set(dates)].sort()
-                      if (unique.length === 0) return []
-                      const segs: { start: string; end: string; length: number }[] = []
-                      let rs = unique[0]
-                      for (let i = 1; i < unique.length; i++) {
-                        const diff = Math.round((new Date(unique[i]).getTime() - new Date(unique[i-1]).getTime()) / 86400000)
-                        if (diff > 1) { segs.push({ start: rs, end: unique[i-1], length: i - unique.indexOf(rs) }); rs = unique[i] }
-                      }
-                      segs.push({ start: rs, end: unique[unique.length-1], length: unique.length - unique.indexOf(rs) })
-                      return segs
-                    }
-                    const allSegments: StreakSegment[] = HABIT_TYPES.flatMap(h => {
-                      const dates = h.key === 'workout' ? workouts.map((w: Workout) => w.date) : h.key === 'nutrition' ? meals.filter((m: Meal) => m.calories > 0).map((m: Meal) => m.date) : h.key === 'sleep' ? sleep.map((s: SleepEntry) => s.date) : h.key === 'hydration' ? hydration.map((h2: HydrationEntry) => h2.date) : h.key === 'recovery' ? recoveryEntries.map((r: RecoveryEntry) => r.date) : supplementLogs.map((s: SupplementLog) => s.date)
-                      const allDates = [...new Set(dates)].sort()
-                      const lastDate = allDates.pop()
-                      return buildSegments(dates).map(s => ({ ...s, label: h.label, color: h.color, icon: h.icon, isActive: s.end === lastDate && (new Date(s.end).getTime() >= Date.now() - 86400000 * 2 || dates.some(d => d === new Date().toISOString().split('T')[0])) }))
-                    }).sort((a, b) => new Date(b.end).getTime() - new Date(a.end).getTime()).slice(0, 40)
-                    const maxLen = Math.max(...allSegments.map(s => s.length), 1)
-                    const grouped = allSegments.reduce((acc, s) => {
-                      const key = s.end.slice(0, 7); if (!acc[key]) acc[key] = []; acc[key].push(s); return acc
-                    }, {} as Record<string, StreakSegment[]>)
-                    const sortedGroups = Object.entries(grouped).sort((a, b) => b[0].localeCompare(a[0]))
                     const months: Record<string, number> = {}
                     workouts.forEach((w: Workout) => { const m = w.date.slice(0, 7); months[m] = (months[m] || 0) + 1 })
                     const monthlyTrend = Object.entries(months).sort((a, b) => a[0].localeCompare(b[0])).slice(-12).map(([m, c]) => ({ label: new Date(m + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), workouts: c }))
-                    return <>
-                      {allSegments.length > 0 ? (
-                        <div className="overflow-y-auto space-y-4 pr-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Streak Timeline</span>
-                            <span className="text-[9px] text-gray-600">· all time</span>
-                          </div>
-                          {sortedGroups.map(([month, streaks]) => {
-                            const d = new Date(month + '-01')
-                            return (
-                              <div key={month}>
-                                <div className="flex items-center gap-2 mb-2 sticky top-0 z-10 pb-1" style={{ background: '#0f0f13' }}>
-                                  <div className="h-px flex-1 bg-white/[0.04]" />
-                                  <span className="text-[8px] font-bold text-gray-600 uppercase tracking-wider px-2">{d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
-                                  <div className="h-px flex-1 bg-white/[0.04]" />
-                                </div>
-                                <div className="space-y-1.5">
-                                  {streaks.map((s, i) => {
-                                    const pct = s.length / maxLen
-                                    return (
-                                      <motion.div key={`${s.label}-${s.start}`} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
-                                        className="relative overflow-hidden rounded-xl border border-white/[0.04] transition-all duration-300 hover:border-white/[0.08]"
-                                        style={{ background: `linear-gradient(135deg, ${s.color}08, transparent 80%)` }}>
-                                        <div className="absolute left-0 top-0 bottom-0 w-0.5" style={{ background: `linear-gradient(180deg, ${s.color}, ${s.color}44)`, boxShadow: s.isActive ? `0 0 6px ${s.color}` : 'none' }} />
-                                        <div className="pl-3 pr-3 py-2.5">
-                                          <div className="flex items-center gap-2.5">
-                                            <s.icon size={12} style={{ color: s.color }} />
-                                            <span className="text-[9px] font-bold text-gray-400 w-12 shrink-0">{s.label}</span>
-                                            <div className="flex-1 h-4 relative">
-                                              <div className="absolute inset-0 rounded-full bg-white/[0.03]" />
-                                              <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(pct * 100, 1)}%` }} transition={{ duration: 0.5, delay: i * 0.03 }}
-                                                className="h-full rounded-full relative overflow-hidden"
-                                                style={{ background: `linear-gradient(90deg, ${s.color}, ${s.color}66)`, boxShadow: s.isActive ? `0 0 8px ${s.color}44` : 'none' }}>
-                                                <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent)] animate-shimmer" />
-                                              </motion.div>
-                                            </div>
-                                            <div className="flex items-center gap-2 shrink-0">
-                                              <span className="text-xs font-black text-white tabular-nums drop-shadow-sm">{s.length}<span className="text-[8px] text-gray-600 font-normal">d</span></span>
-                                              {s.isActive ? (
-                                                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/20">
-                                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_4px_rgba(52,211,153,0.6)]" />
-                                                  <span className="text-[7px] font-bold text-emerald-400 uppercase tracking-wider">Live</span>
-                                                </span>
-                                              ) : (
-                                                <span className="text-[7px] text-gray-600 w-14 text-right tabular-nums">{new Date(s.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(s.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </motion.div>
-                                    )
-                                  })}
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      ) : <div className="flex items-center justify-center py-8"><div className="text-center"><p className="text-gray-500 text-sm">No streaks yet</p><p className="text-[10px] text-gray-600 mt-1">Start logging to build your streak history</p></div></div>}
-                      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 mt-3">
-                        <div className="flex items-center gap-2 mb-2">
+                    const trendAvg = monthlyTrend.length > 0 ? monthlyTrend.reduce((s, p) => s + p.workouts, 0) / monthlyTrend.length : 0
+                    const trendPeak = monthlyTrend.reduce((best, p) => p.workouts > best.workouts ? p : best, { label: '—', workouts: 0 })
+                    return (
+                    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                      <div className="flex items-center gap-2 mb-2">
                           <TrendingUp className="w-3 h-3 text-amber-400" />
                           <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Monthly Workout Trend</span>
                           <span className="text-[8px] text-gray-600">· last 12 months</span>
@@ -814,154 +668,34 @@ export function Habits() {
                           </AreaChart>
                         </ResponsiveContainer>
                         </div>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-2 border-t border-white/[0.04]">
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+                          <span className="text-[8px] font-bold text-gray-500 uppercase tracking-wider">Total</span>
+                          <span className="text-[9px] font-black text-white tabular-nums">{stats.totalWorkouts}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+                          <span className="text-[8px] font-bold text-gray-500 uppercase tracking-wider">Avg</span>
+                          <span className="text-[9px] font-black text-white tabular-nums">{trendAvg.toFixed(1)}<span className="text-[7px] text-gray-600 font-normal">/mo</span></span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                          <span className="text-[8px] font-bold text-amber-400 uppercase tracking-wider">Peak</span>
+                          <span className="text-[9px] font-black text-white tabular-nums">{trendPeak.workouts} <span className="text-[7px] text-gray-500 font-normal">{trendPeak.label}</span></span>
+                        </div>
+                        <div className="flex-1" />
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                          <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-wider">Consistency</span>
+                          <span className="text-[9px] font-black text-white tabular-nums">{stats.consistency}%</span>
+                        </div>
                       </div>
-                    </>})()
+                    </div>
+                    )})()
                   }
                   {chartTab === 'goals' && (() => {
                     const level = LEVEL_THRESHOLDS.slice().reverse().find(t => stats.totalWorkouts >= t.min) || LEVEL_THRESHOLDS[0]
                     const nextLevel = LEVEL_THRESHOLDS.find(t => t.min > stats.totalWorkouts)
                     const levelProgress = nextLevel ? ((stats.totalWorkouts - level.min) / (nextLevel.min - level.min)) * 100 : 100
-                    const estimateDate = (target: number) => {
-                      if (stats.weeklyAverage <= 0) return '—'
-                      const remaining = target - stats.totalWorkouts
-                      if (remaining <= 0) return 'Achieved!'
-                      const weeks = Math.ceil(remaining / stats.weeklyAverage)
-                      const d = new Date(); d.setDate(d.getDate() + weeks * 7)
-                      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                    }
-                    const milestoneTargets = [7, 14, 30, 50, 100]
-                    const milestones = milestoneTargets.map(t => ({
-                      target: t, current: stats.longestStreak, achieved: stats.longestStreak >= t,
-                      color: t <= 7 ? '#f59e0b' : t <= 14 ? '#f97316' : t <= 30 ? '#f43f5e' : t <= 50 ? '#8b5cf6' : '#10b981',
-                      icon: t <= 7 ? '🌟' : t <= 14 ? '🔥' : t <= 30 ? '⚡' : t <= 50 ? '💎' : '👑',
-                      label: `${t}-Day Streak`
-                    })).concat({ target: 100, current: stats.totalWorkouts, achieved: stats.totalWorkouts >= 100, color: '#06b6d4', icon: '🏆', label: '100 Workouts' })
                     const overallProgress = HABIT_TYPES.reduce((sum, h) => sum + habitStats[h.key].current, 0)
                     const overallTarget = HABIT_TYPES.length * 30
-                    return (
-                      <div className="space-y-2.5">
-                        {/* Level Card — Gamified */}
-                        <div className="relative overflow-hidden rounded-xl border border-amber-500/25 bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent p-4">
-                          <div className="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl" />
-                          <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl" />
-                          <div className="relative flex items-center gap-4">
-                            <div className="relative">
-                              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400/30 to-amber-600/10 border border-amber-500/20 flex items-center justify-center shadow-xl shadow-amber-500/15">
-                                <span className="text-3xl drop-shadow-xl">{level.icon}</span>
-                              </div>
-                              <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 border-2 border-gray-900 flex items-center justify-center shadow-lg">
-                                <span className="text-[6px] font-black text-gray-900">{level.level}</span>
-                              </div>
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between mb-0.5">
-                                <span className="text-sm font-bold text-white">{level.title}</span>
-                                {nextLevel && (
-                                  <span className="flex items-center gap-1.5 text-[8px] text-gray-500 bg-white/[0.04] px-2 py-0.5 rounded-full border border-white/[0.06]">
-                                    Next: {nextLevel.icon} {nextLevel.title}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="h-2.5 rounded-full bg-white/10 overflow-hidden shadow-inner relative mt-1.5">
-                                <motion.div initial={{ width: 0 }} animate={{ width: `${levelProgress}%` }} transition={{ duration: 1.2, ease: 'easeOut' }}
-                                  className="h-full rounded-full relative" style={{ background: 'linear-gradient(90deg, #f59e0b, #f97316, #ef4444)', boxShadow: '0 0 12px rgba(251,191,36,0.3)' }}>
-                                  <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent)] animate-shimmer" />
-                                </motion.div>
-                              </div>
-                              <div className="flex justify-between mt-1 text-[8px]">
-                                <span className="text-gray-500"><span className="text-white font-bold tabular-nums">{stats.totalWorkouts}</span> workouts</span>
-                                {nextLevel && <span className="text-gray-600">Goal: <span className="text-gray-400 font-semibold">{nextLevel.min}</span></span>}
-                              </div>
-                            </div>
-                          </div>
-                          {/* Level Dots */}
-                          <div className="flex items-center gap-1.5 mt-3 pt-2 border-t border-white/[0.04]">
-                            {LEVEL_THRESHOLDS.filter(t => t.min > 0).map(t => {
-                              const reached = stats.totalWorkouts >= t.min
-                              return (
-                                <div key={t.level} className="flex-1 flex flex-col items-center gap-0.5">
-                                  <div className={`w-2 h-2 rounded-full transition-all duration-500 ${reached ? 'shadow-[0_0_6px_rgba(251,191,36,0.5)]' : 'bg-white/10'}`}
-                                    style={{ background: reached ? 'linear-gradient(135deg, #f59e0b, #ef4444)' : '' }} />
-                                  <span className={`text-[6px] font-bold ${reached ? 'text-amber-400/80' : 'text-gray-600'}`}>{t.icon}</span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-
-                        {/* Overall Streak Pulse */}
-                        <div className="rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-transparent p-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Flame className="w-3.5 h-3.5 text-violet-400" />
-                              <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Total Streak Power</span>
-                            </div>
-                            <span className="text-sm font-black text-white tabular-nums">{overallProgress}<span className="text-[9px] text-gray-600 font-normal">/{overallTarget}</span></span>
-                          </div>
-                          <div className="mt-1.5 h-2 rounded-full bg-white/10 overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((overallProgress / overallTarget) * 100, 100)}%` }} transition={{ duration: 1 }}
-                              className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-400" style={{ boxShadow: '0 0 8px rgba(139,92,246,0.3)' }} />
-                          </div>
-                        </div>
-
-                        {/* Milestones Grid */}
-                        <div className="grid grid-cols-2 gap-2">
-                          {milestones.map(m => {
-                            const pct = Math.min(m.current / m.target, 1)
-                            return (
-                              <motion.div key={m.label} whileHover={{ scale: 1.02 }}
-                                className={`relative overflow-hidden rounded-xl border p-3 transition-all duration-300 ${m.achieved ? 'border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent shadow-lg shadow-emerald-500/5' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}>
-                                {m.achieved && <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full -mr-6 -mt-6 blur-xl" />}
-                                <div className="relative flex items-center justify-between mb-1.5">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-xs">{m.icon}</span>
-                                    <span className="text-[8px] font-bold text-gray-500 uppercase tracking-wider">{m.label}</span>
-                                  </div>
-                                  {m.achieved ? (
-                                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 10 }}
-                                      className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shadow-[0_0_8px_rgba(16,185,129,0.3)]">
-                                      <span className="text-[7px]">✓</span>
-                                    </motion.div>
-                                  ) : (
-                                    <span className="text-[7px] text-gray-600 bg-white/[0.04] px-1.5 py-0.5 rounded-full">
-                                      {estimateDate(m.target)}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-xl font-black text-white tabular-nums drop-shadow-sm">{m.current}<span className="text-[10px] text-gray-600 font-normal">/{m.target}</span></div>
-                                <div className="mt-1.5 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                                  <motion.div initial={{ width: 0 }} animate={{ width: `${pct * 100}%` }} transition={{ duration: 0.8, delay: 0.1 }}
-                                    className="h-full rounded-full" style={{ background: m.achieved ? '#10b981' : m.color, boxShadow: m.achieved ? '0 0 6px rgba(16,185,129,0.3)' : 'none' }} />
-                                </div>
-                              </motion.div>
-                            )
-                          })}
-                        </div>
-
-                        {/* Achievements */}
-                        <div className="flex items-center gap-2 pt-1">
-                          <Award className="w-3 h-3 text-amber-400" />
-                          <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Achievements</span>
-                          <span className="text-[8px] text-white font-bold ml-auto bg-white/[0.04] px-2 py-0.5 rounded-full border border-white/[0.06] tabular-nums">{unlocked.size}/{ACHIEVEMENTS.length}</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {ACHIEVEMENTS.map(a => {
-                            const isUnlocked = unlocked.has(a.id)
-                            return (
-                              <motion.div key={a.id} whileHover={isUnlocked ? { scale: 1.05, y: -1 } : {}}
-                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border transition-all duration-300 ${isUnlocked ? 'border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent shadow-sm shadow-emerald-500/5' : 'border-white/[0.04] bg-white/[0.02] opacity-35 hover:opacity-50'}`}>
-                                {isUnlocked && <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.06),transparent_70%)] pointer-events-none" />}
-                                <span className="text-xs drop-shadow-sm">{a.icon}</span>
-                                <span className={`text-[7px] font-bold ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>{a.name}</span>
-                                {isUnlocked && <div className="w-1 h-1 rounded-full bg-emerald-400 shadow-[0_0_4px_rgba(16,185,129,0.6)]" />}
-                              </motion.div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )})()
-                  }
-                  {chartTab === 'goals' && (() => {
                     return (
                       <div className="mt-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
                         <div className="flex items-center gap-2 mb-1">
@@ -981,6 +715,22 @@ export function Habits() {
                             <Radar name="Score" dataKey="value" stroke="#10b981" strokeWidth={2} fill="#10b981" fillOpacity={0.15} />
                           </RadarChart>
                         </ResponsiveContainer>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-2 border-t border-white/[0.04]">
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                            <span className="text-[10px]">{level.icon}</span>
+                            <span className="text-[8px] font-bold text-amber-400 uppercase tracking-wider">Lv {level.level}</span>
+                            <span className="text-[9px] font-black text-white">{level.title}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-violet-500/10 border border-violet-500/20">
+                            <span className="text-[8px] font-bold text-violet-400 uppercase tracking-wider">Streak Power</span>
+                            <span className="text-[9px] font-black text-white tabular-nums">{overallProgress}<span className="text-[7px] text-gray-500 font-normal">/{overallTarget}</span></span>
+                          </div>
+                          <div className="flex-1" />
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                            <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-wider">Next</span>
+                            <span className="text-[9px] font-black text-white tabular-nums">{nextLevel ? `${levelProgress.toFixed(0)}% → ${nextLevel.title}` : 'Max Level'}</span>
+                          </div>
                         </div>
                       </div>
                     )})()
