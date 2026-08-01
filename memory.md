@@ -102,29 +102,3 @@
 
 ### Next steps
 - Deploy to Vercel and verify charts render on live site
-
----
-
-## Session: Analytics tabs — data merged into charts (remove standalone data blocks)
-
-### What was done
-- User request: "only wanna see charts, merge data with charts" — removed all standalone data-card blocks from the Analytics tabs in Habits.tsx; each tab now shows ONLY its chart with key stats merged into a chip footer inside the chart card
-- **Streaks tab:** removed the "All Habits" 6-card block (streak levels, weekly dots, rings). Daily Completion bar chart now has a footer: 6 per-habit current-streak chips (icon + Nd) + CURRENT (stats.currentStreak) + BEST (stats.longestStreak)
-- **History tab:** removed the Streak Timeline list (buildSegments/allSegments/grouped/sortedGroups all deleted). Monthly Workout Trend area chart now has a footer: TOTAL (stats.totalWorkouts), AVG (trendAvg computed from monthlyTrend), PEAK (best month), CONSISTENCY (stats.consistency)
-- **Goals tab:** removed Level Card + Total Streak Power + Milestones Grid + Achievements blocks (first `chartTab === 'goals'` IIFE deleted via line-range splice). Habit Balance radar now has a footer: LV chip (level.icon + level.level + level.title), STREAK POWER (overallProgress/overallTarget), NEXT (levelProgress % → nextLevel.title)
-
-### Debugging journey
-- After restructuring, `tsc` failed: TS2657 (JSX must have one parent) + TS1005 at history tab — root cause: edit placed the merged footer OUTSIDE the chart card div (extra `</div>` before footer, stray `</div>` after). Fixed by removing the early close so the footer lives inside the card
-- First Playwright verification (inspect9) returned all-false text checks — false alarm: chart header spans use Tailwind `uppercase`, so `body.innerText` returns "DAILY COMPLETION" not "Daily Completion". Re-verified with `.toUpperCase()` comparisons
-- Verified on local `vite preview` (port 4173) with seeded IndexedDB workouts: all 3 tabs render 1 chart wrapper each, merged chips present, zero console errors, and all removed blocks confirmed gone from DOM
-
-### Key decisions
-- Merged stats live in a `flex flex-wrap` chip row: `mt-3 pt-2 border-t border-white/[0.04]` inside each chart card
-- Line-range splice via PowerShell was used to delete the 144-line first goals IIFE cleanly (file is LF, no BOM — must write back with UTF8Encoding($false))
-- `playwright-core` kept as devDependency for future local verification; all `inspect*.cjs` scratch scripts deleted
-
-### Files modified
-- `src/components/fitness/Habits.tsx` — removed 3 data blocks, added merged chip footers to all 3 chart cards
-
-### Next steps
-- Deploy to Vercel and verify merged charts on live site
