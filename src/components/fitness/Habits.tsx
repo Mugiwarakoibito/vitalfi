@@ -51,17 +51,11 @@ const ACHIEVEMENTS: { id: string; name: string; icon: string; desc: string; cate
   { id: 'dedicated', name: 'Dedicated', icon: '🎯', desc: 'Complete 30 workouts total', category: 'Milestones', check: s => s.totalWorkouts >= 30, progress: s => ({ current: Math.min(s.totalWorkouts, 30), target: 30 }), color: '#8b5cf6' },
   { id: 'century_club', name: 'Century Club', icon: '🏆', desc: 'Complete 100 workouts total', category: 'Milestones', check: s => s.totalWorkouts >= 100, progress: s => ({ current: Math.min(s.totalWorkouts, 100), target: 100 }), color: '#f59e0b' },
   { id: 'double_century', name: 'Double Century', icon: '💯', desc: 'Complete 200 workouts total', category: 'Milestones', check: s => s.totalWorkouts >= 200, progress: s => ({ current: Math.min(s.totalWorkouts, 200), target: 200 }), color: '#ec4899' },
-  { id: 'veteran', name: 'Veteran', icon: '🗓️', desc: 'Stay active for a full year', category: 'Milestones', check: s => s.daysSinceFirst >= 365, progress: s => ({ current: Math.min(s.daysSinceFirst, 365), target: 365 }), color: '#94a3b8' },
   { id: 'iron_will', name: 'Iron Will', icon: '🔥', desc: 'Reach a 7-day streak', category: 'Streaks', check: s => s.longestStreak >= 7, progress: s => ({ current: Math.min(s.longestStreak, 7), target: 7 }), color: '#f97316' },
   { id: 'unstoppable', name: 'Unstoppable', icon: '⚡', desc: 'Reach a 14-day streak', category: 'Streaks', check: s => s.longestStreak >= 14, progress: s => ({ current: Math.min(s.longestStreak, 14), target: 14 }), color: '#ef4444' },
   { id: 'legendary', name: 'Legendary', icon: '👑', desc: 'Reach a 30-day streak', category: 'Streaks', check: s => s.longestStreak >= 30, progress: s => ({ current: Math.min(s.longestStreak, 30), target: 30 }), color: '#a855f7' },
-  { id: 'unbreakable', name: 'Unbreakable', icon: '🔗', desc: 'Reach a 50-day streak', category: 'Streaks', check: s => s.longestStreak >= 50, progress: s => ({ current: Math.min(s.longestStreak, 50), target: 50 }), color: '#7c3aed' },
-  { id: 'busy_month', name: 'Busy Month', icon: '📅', desc: 'Train 10 times in a month', category: 'Monthly', check: s => s.thisMonthWorkouts >= 10, progress: s => ({ current: Math.min(s.thisMonthWorkouts, 10), target: 10 }), color: '#3b82f6' },
   { id: 'monthly_master', name: 'Monthly Master', icon: '📆', desc: 'Train 20 times in a month', category: 'Monthly', check: s => s.thisMonthWorkouts >= 20, progress: s => ({ current: Math.min(s.thisMonthWorkouts, 20), target: 20 }), color: '#2563eb' },
-  { id: 'rhythm', name: 'Rhythm', icon: '⚖️', desc: 'Keep a 50% training consistency', category: 'Consistency', check: s => s.consistency >= 50, progress: s => ({ current: Math.min(s.consistency, 50), target: 50 }), color: '#22c55e' },
   { id: 'locked_in', name: 'Locked In', icon: '🔒', desc: 'Keep a 75% training consistency', category: 'Consistency', check: s => s.consistency >= 75, progress: s => ({ current: Math.min(s.consistency, 75), target: 75 }), color: '#16a34a' },
-  { id: 'explorer', name: 'Explorer', icon: '🧭', desc: 'Train on 30 unique days', category: 'Consistency', check: s => s.uniqueDays >= 30, progress: s => ({ current: Math.min(s.uniqueDays, 30), target: 30 }), color: '#0ea5e9' },
-  { id: 'pace_setter', name: 'Pace Setter', icon: '🏃', desc: 'Average 4 workouts per week', category: 'Consistency', check: s => s.weeklyAverage >= 4, progress: s => ({ current: Math.min(s.weeklyAverage, 4), target: 4 }), color: '#14b8a6' },
 ]
 
 function computeHabitStreak(dates: string[]): { current: number; longest: number } {
@@ -139,7 +133,6 @@ export function Habits() {
   const [recoveryEntries, setRecoveryEntries] = useState<RecoveryEntry[]>(loadRecoveryEntries)
   const [supplementLogs, setSupplementLogs] = useState<SupplementLog[]>(loadSupplementLogs)
   const [scopeOffset, setScopeOffset] = useState(0)
-  const [achFilter, setAchFilter] = useState<'all' | 'unlocked' | 'progress'>('all')
 
   const scopeWeek = useMemo(() => {
     const days: { fullDate: string; weekday: string; label: string }[] = []
@@ -1086,69 +1079,81 @@ export function Habits() {
                 </div>
               </motion.div>
 
-              {/* Achievements Grid */}
+              {/* Unified Milestone Path */}
               {(() => {
                 const nextUp = ACHIEVEMENTS
                   .filter(a => !unlocked.has(a.id))
                   .map(a => ({ a, p: a.progress(stats) }))
                   .filter(x => x.p.current > 0)
                   .sort((x, y) => (y.p.current / y.p.target) - (x.p.current / x.p.target))[0]
-                const filtered = ACHIEVEMENTS.filter(a => {
-                  if (achFilter === 'unlocked') return unlocked.has(a.id)
-                  if (achFilter === 'progress') return !unlocked.has(a.id) && a.progress(stats).current > 0
-                  return true
-                })
                 return (
                   <div className="mb-6">
-                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <Award className="w-4 h-4 text-orange-400" />
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Achievements</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Milestone Path</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-0.5 bg-white/[0.03] rounded-lg p-0.5 border border-white/[0.06]">
-                          {(['all', 'unlocked', 'progress'] as const).map(f => (
-                            <button key={f} onClick={() => setAchFilter(f)}
-                              className={`px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-wider transition-all duration-300 ${achFilter === f ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20 shadow-sm shadow-orange-500/10' : 'text-gray-500 hover:text-gray-300 border border-transparent'}`}>
-                              {f === 'all' ? `All (${ACHIEVEMENTS.length})` : f === 'unlocked' ? `Unlocked (${unlocked.size})` : `In progress (${ACHIEVEMENTS.filter(a => !unlocked.has(a.id) && a.progress(stats).current > 0).length})`}
-                            </button>
+                      <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10">
+                        <div className="flex">
+                          {ACHIEVEMENTS.map((a) => (
+                            <div key={a.id} className={`w-1.5 h-1.5 rounded-full -ml-0.5 first:ml-0 ${unlocked.has(a.id) ? 'bg-emerald-400' : 'bg-white/10'}`} />
                           ))}
                         </div>
-                        <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10">
-                          <div className="flex">
-                            {ACHIEVEMENTS.map((a) => (
-                              <div key={a.id} className={`w-1.5 h-1.5 rounded-full -ml-0.5 first:ml-0 ${unlocked.has(a.id) ? 'bg-emerald-400' : 'bg-white/10'}`} />
-                            ))}
-                          </div>
-                          <span className="text-[9px] text-gray-400 font-medium tabular-nums">{unlocked.size}/{ACHIEVEMENTS.length}</span>
-                        </div>
+                        <span className="text-[9px] text-gray-400 font-medium tabular-nums">{unlocked.size}/{ACHIEVEMENTS.length}</span>
                       </div>
                     </div>
 
-                    {/* Next up tracker */}
-                    {nextUp && (
-                      <div className="flex items-center gap-3 px-3 py-2 rounded-xl border border-amber-500/20 bg-gradient-to-r from-amber-500/10 via-amber-500/[0.04] to-transparent mb-3">
-                        <span className="text-base drop-shadow">{nextUp.a.icon}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[9px] font-bold text-amber-300 truncate">Next up: {nextUp.a.name} · {nextUp.a.category}</span>
-                            <span className="text-[8px] text-gray-500 tabular-nums ml-2 shrink-0">{Math.min(nextUp.p.current, nextUp.p.target)}/{nextUp.p.target} · {Math.min(Math.round((nextUp.p.current / nextUp.p.target) * 100), 100)}%</span>
+                    {/* Current Mission spotlight */}
+                    {nextUp && (() => {
+                      const pct = Math.min(Math.round((nextUp.p.current / nextUp.p.target) * 100), 100)
+                      const left = nextUp.p.target - Math.min(nextUp.p.current, nextUp.p.target)
+                      const unit = nextUp.a.category === 'Streaks' ? 'days' : nextUp.a.category === 'Monthly' ? 'workouts this month' : nextUp.a.category === 'Consistency' ? '% consistency' : 'workouts'
+                      return (
+                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                          className="relative overflow-hidden rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/15 via-amber-500/[0.05] to-transparent p-4 mb-3">
+                          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(251,191,36,0.1),transparent_60%)]" />
+                          <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 rounded-full -mr-16 -mt-16 blur-3xl" />
+                          <div className="relative flex items-center gap-4">
+                            <motion.div animate={{ scale: [1, 1.06, 1] }} transition={{ repeat: Infinity, duration: 2.5 }}
+                              className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/30 to-amber-500/5 border border-amber-500/30 flex items-center justify-center text-2xl shrink-0 shadow-lg shadow-amber-500/10">
+                              {nextUp.a.icon}
+                              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+                            </motion.div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <div>
+                                  <p className="text-[7px] font-black uppercase tracking-[0.2em] text-amber-400/80">Current Mission</p>
+                                  <p className="text-sm font-bold text-white truncate">{nextUp.a.name} <span className="text-[9px] text-gray-500 font-medium">· {nextUp.a.category}</span></p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-lg font-black text-amber-300 tabular-nums leading-none">{pct}%</p>
+                                  <p className="text-[8px] text-gray-500">{left > 0 ? `${left} more ${unit} to go` : 'Almost there'}</p>
+                                </div>
+                              </div>
+                              <div className="h-2 rounded-full bg-white/[0.07] overflow-hidden mt-2 shadow-inner">
+                                <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1.2, ease: 'easeOut' }}
+                                  className="h-full rounded-full relative" style={{ background: 'linear-gradient(90deg, #f59e0b, #f97316, #ef4444)', boxShadow: '0 0 12px rgba(251,191,36,0.4)' }}>
+                                  <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)] animate-shimmer" />
+                                </motion.div>
+                              </div>
+                              <div className="flex items-center justify-between mt-1">
+                                <p className="text-[9px] text-gray-500 truncate">{nextUp.a.desc}</p>
+                                <p className="text-[8px] text-gray-600 tabular-nums ml-2 shrink-0">{Math.min(nextUp.p.current, nextUp.p.target)}/{nextUp.p.target}</p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="h-[4px] rounded-full bg-white/[0.06] overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(Math.round((nextUp.p.current / nextUp.p.target) * 100), 100)}%` }} transition={{ duration: 1 }}
-                              className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-400" style={{ boxShadow: '0 0 6px rgba(251,191,36,0.4)' }} />
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                        </motion.div>
+                      )
+                    })()}
 
+                    {/* Achievement cards */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {filtered.map((ach) => {
+                      {ACHIEVEMENTS.map((ach) => {
                         const isUnlocked = unlocked.has(ach.id)
                         const p = ach.progress(stats)
                         const pct = Math.min(Math.round((p.current / p.target) * 100), 100)
                         return (
-                          <motion.div key={ach.id} layout whileHover={{ scale: 1.03, y: -2 }}
+                          <motion.div key={ach.id} whileHover={{ scale: 1.03, y: -2 }}
                             title={`${ach.desc}\n${isUnlocked ? 'Unlocked' : `${Math.min(p.current, p.target)}/${p.target} · ${pct}%`}`}
                             className={`relative overflow-hidden rounded-xl p-2.5 text-center border transition-all duration-500 ${
                               isUnlocked ? 'border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent shadow-lg shadow-emerald-500/5 hover:shadow-emerald-500/15' : 'border-white/[0.04] bg-white/[0.02] opacity-80 hover:opacity-100 hover:border-white/[0.12]'
@@ -1171,11 +1176,6 @@ export function Habits() {
                                 <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, delay: 0.1 }}
                                   className="h-full rounded-full" style={{ background: isUnlocked ? '#10b981' : ach.color, boxShadow: pct > 0 ? `0 0 4px ${ach.color}88` : 'none' }} />
                               </div>
-                              {!isUnlocked && nextUp && nextUp.a.id === ach.id && (
-                                <div className="absolute -top-1.5 -right-1.5 px-1 py-px rounded-full bg-amber-500/20 border border-amber-500/40">
-                                  <span className="text-[6px] font-black text-amber-300 uppercase tracking-wider">Next</span>
-                                </div>
-                              )}
                             </div>
                           </motion.div>
                         )
@@ -1185,11 +1185,15 @@ export function Habits() {
                 )
               })()}
 
-              {/* Active Challenges */}
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <CalendarCheck className="w-4 h-4 text-emerald-400" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Active Challenges</span>
+              {/* Challenges */}
+              <div className="mt-6 mb-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-px flex-1 bg-white/[0.06]" />
+                  <div className="flex items-center gap-2">
+                    <CalendarCheck className="w-4 h-4 text-emerald-400" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Challenges</span>
+                  </div>
+                  <div className="h-px flex-1 bg-white/[0.06]" />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {activeChallenges.map((ch) => {
