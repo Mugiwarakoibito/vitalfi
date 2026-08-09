@@ -2,6 +2,23 @@
 
 ## Last Updated: August 1, 2026
 
+## Session: Goals tab → per-habit weekly goals
+
+### What was done
+- User asked to change the kind of data the 🎯 Goals tab shows
+- Replaced the single workout-goal "This Week" card with a **Weekly Goals** panel: all 6 habits × smart weekly targets (workout = max(round(weeklyAverage), 3) dynamic; nutrition 6, sleep 7, hydration 5, recovery 3, supplements 6 fixed), per-habit progress bar + `done/target` + status chip (✅ goal met / 🔥 almost there / ⚡ halfway / 🌱 started / 💤 no days), header "X/6 met" chip, footer total bar `X/31`; week-scoped via scopeWeek
+- Habit Balance radar unchanged (week-scoped)
+- Verified via Playwright: rows/goal chips/met count/total all present, zero console errors (note: with seed data weeklyAverage 3.7 → workout goal 4 → no "goal met" in current week — expected)
+
+### Files modified
+- `src/components/fitness/Habits.tsx` — goals IIFE rewritten (1230 lines total)
+
+### Deployed to
+- **GitHub:** https://github.com/Mugiwarakoibito/vitalfi (commit `3a534b4`)
+- **Vercel:** https://vitalfi.vercel.app
+
+---
+
 ## Session: Differentiate Goals tab from Milestones panel
 
 ### What was done
