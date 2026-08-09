@@ -1,6 +1,30 @@
 # Sentience Engine — Session Memory
 
-## Last Updated: August 1, 2026
+## Last Updated: August 9, 2026
+
+## Session: Expand Achievements section (Milestones panel)
+
+### What was done
+- User asked to make the Achievements section in Milestones more developed with helpful options/data
+- `ACHIEVEMENTS` array grown 8 → **16 achievements** with 4 categories (Milestones / Streaks / Monthly / Consistency): added Double Century 💯, Veteran 🗓️ (365 days since first), Unbreakable 🔗 (50-day streak), Busy Month 📅 (10/month), Rhythm ⚖️ (50% consistency), Locked In 🔒 (75%), Explorer 🧭 (30 unique days), Pace Setter 🏃 (4/wk avg). New type shape adds `desc`, `category`, `progress: (s) => { current, target }`, `color` — unlock effect unchanged (uses `check`)
+- Every card now shows: icon + ✓ badge (unlocked) or **percent label** (locked), name, category chip, and an animated **progress bar** in the achievement's accent color; `title` tooltip = desc + current/target · pct
+- **Next Up tracker** bar (amber, animated): closest unearned achievement by % (computed once, drives both bar and "NEXT" badge on the card)
+- **Filter tabs**: All (16) / Unlocked (n) / In progress (n) via `achFilter` state; framer `layout` animates filtering
+- Verified locally + on live Vercel via Playwright (msedge headless): 16 cards, chip 3/16, per-card pct correct (Dedicated 9/30 · 30%, Pace Setter 3.9/4 · 98%, Veteran 16/365 · 4%), Unlocked filter = 3 (First Step/Week Warrior/Rhythm), In-progress = 13 (no unlocked cards), back to All = 16, zero console errors
+
+### Key learnings (verification)
+- **Seed must write settings row with id `app_settings`** + `onboardingComplete: true` (NOT `id: 'onboarding'`) — otherwise app shows onboarding screen and panels never render (failed both locally and live)
+- Card selector trick: cards have `title` with a `\n` — must filter in JS (`title.includes('\n')`), newline in CSS attribute selector is invalid; `[` in `.text-[7px]` classes also invalid in querySelectorAll → walk DOM instead
+- `node verify.cjs` must run from repo root (playwright-core resolution); vite preview via `Start-Process node -ArgumentList 'node_modules/vite/bin/vite.js','preview','--port','4173'` — server dies if spawned in a separate bash call; run server + test in the SAME call; preview process must be killed after
+
+### Files modified
+- `src/components/fitness/Habits.tsx` — ACHIEVEMENTS const (16 entries, new shape), `achFilter` state, Achievements Grid rewritten (filters, Next Up tracker, progress bars, category chips, ✓ badges), file now 1302 lines
+
+### Deployed to
+- **GitHub:** https://github.com/Mugiwarakoibito/vitalfi (commit `787f4c6`)
+- **Vercel:** https://vitalfi.vercel.app
+
+---
 
 ## Session: Goals tab → per-habit weekly goals
 
