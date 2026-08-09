@@ -45,15 +45,23 @@ interface OverallStats {
   consistency: number; bestMonthName: string; daysSinceFirst: number
 }
 
-const ACHIEVEMENTS: { id: string; name: string; icon: string; check: (s: OverallStats) => boolean; color: string }[] = [
-  { id: 'first_step', name: 'First Step', icon: '🌟', check: s => s.totalWorkouts >= 1, color: '#10b981' },
-  { id: 'week_warrior', name: 'Week Warrior', icon: '⚔️', check: s => s.totalWorkouts >= 7, color: '#06b6d4' },
-  { id: 'dedicated', name: 'Dedicated', icon: '🎯', check: s => s.totalWorkouts >= 30, color: '#8b5cf6' },
-  { id: 'century_club', name: 'Century Club', icon: '🏆', check: s => s.totalWorkouts >= 100, color: '#f59e0b' },
-  { id: 'iron_will', name: 'Iron Will', icon: '🔥', check: s => s.longestStreak >= 7, color: '#f97316' },
-  { id: 'unstoppable', name: 'Unstoppable', icon: '⚡', check: s => s.longestStreak >= 14, color: '#ef4444' },
-  { id: 'legendary', name: 'Legendary', icon: '👑', check: s => s.longestStreak >= 30, color: '#a855f7' },
-  { id: 'monthly_master', name: 'Monthly Master', icon: '📅', check: s => s.thisMonthWorkouts >= 20, color: '#3b82f6' },
+const ACHIEVEMENTS: { id: string; name: string; icon: string; desc: string; category: string; check: (s: OverallStats) => boolean; progress: (s: OverallStats) => { current: number; target: number }; color: string }[] = [
+  { id: 'first_step', name: 'First Step', icon: '🌟', desc: 'Log your very first workout', category: 'Milestones', check: s => s.totalWorkouts >= 1, progress: s => ({ current: Math.min(s.totalWorkouts, 1), target: 1 }), color: '#10b981' },
+  { id: 'week_warrior', name: 'Week Warrior', icon: '⚔️', desc: 'Complete 7 workouts total', category: 'Milestones', check: s => s.totalWorkouts >= 7, progress: s => ({ current: Math.min(s.totalWorkouts, 7), target: 7 }), color: '#06b6d4' },
+  { id: 'dedicated', name: 'Dedicated', icon: '🎯', desc: 'Complete 30 workouts total', category: 'Milestones', check: s => s.totalWorkouts >= 30, progress: s => ({ current: Math.min(s.totalWorkouts, 30), target: 30 }), color: '#8b5cf6' },
+  { id: 'century_club', name: 'Century Club', icon: '🏆', desc: 'Complete 100 workouts total', category: 'Milestones', check: s => s.totalWorkouts >= 100, progress: s => ({ current: Math.min(s.totalWorkouts, 100), target: 100 }), color: '#f59e0b' },
+  { id: 'double_century', name: 'Double Century', icon: '💯', desc: 'Complete 200 workouts total', category: 'Milestones', check: s => s.totalWorkouts >= 200, progress: s => ({ current: Math.min(s.totalWorkouts, 200), target: 200 }), color: '#ec4899' },
+  { id: 'veteran', name: 'Veteran', icon: '🗓️', desc: 'Stay active for a full year', category: 'Milestones', check: s => s.daysSinceFirst >= 365, progress: s => ({ current: Math.min(s.daysSinceFirst, 365), target: 365 }), color: '#94a3b8' },
+  { id: 'iron_will', name: 'Iron Will', icon: '🔥', desc: 'Reach a 7-day streak', category: 'Streaks', check: s => s.longestStreak >= 7, progress: s => ({ current: Math.min(s.longestStreak, 7), target: 7 }), color: '#f97316' },
+  { id: 'unstoppable', name: 'Unstoppable', icon: '⚡', desc: 'Reach a 14-day streak', category: 'Streaks', check: s => s.longestStreak >= 14, progress: s => ({ current: Math.min(s.longestStreak, 14), target: 14 }), color: '#ef4444' },
+  { id: 'legendary', name: 'Legendary', icon: '👑', desc: 'Reach a 30-day streak', category: 'Streaks', check: s => s.longestStreak >= 30, progress: s => ({ current: Math.min(s.longestStreak, 30), target: 30 }), color: '#a855f7' },
+  { id: 'unbreakable', name: 'Unbreakable', icon: '🔗', desc: 'Reach a 50-day streak', category: 'Streaks', check: s => s.longestStreak >= 50, progress: s => ({ current: Math.min(s.longestStreak, 50), target: 50 }), color: '#7c3aed' },
+  { id: 'busy_month', name: 'Busy Month', icon: '📅', desc: 'Train 10 times in a month', category: 'Monthly', check: s => s.thisMonthWorkouts >= 10, progress: s => ({ current: Math.min(s.thisMonthWorkouts, 10), target: 10 }), color: '#3b82f6' },
+  { id: 'monthly_master', name: 'Monthly Master', icon: '📆', desc: 'Train 20 times in a month', category: 'Monthly', check: s => s.thisMonthWorkouts >= 20, progress: s => ({ current: Math.min(s.thisMonthWorkouts, 20), target: 20 }), color: '#2563eb' },
+  { id: 'rhythm', name: 'Rhythm', icon: '⚖️', desc: 'Keep a 50% training consistency', category: 'Consistency', check: s => s.consistency >= 50, progress: s => ({ current: Math.min(s.consistency, 50), target: 50 }), color: '#22c55e' },
+  { id: 'locked_in', name: 'Locked In', icon: '🔒', desc: 'Keep a 75% training consistency', category: 'Consistency', check: s => s.consistency >= 75, progress: s => ({ current: Math.min(s.consistency, 75), target: 75 }), color: '#16a34a' },
+  { id: 'explorer', name: 'Explorer', icon: '🧭', desc: 'Train on 30 unique days', category: 'Consistency', check: s => s.uniqueDays >= 30, progress: s => ({ current: Math.min(s.uniqueDays, 30), target: 30 }), color: '#0ea5e9' },
+  { id: 'pace_setter', name: 'Pace Setter', icon: '🏃', desc: 'Average 4 workouts per week', category: 'Consistency', check: s => s.weeklyAverage >= 4, progress: s => ({ current: Math.min(s.weeklyAverage, 4), target: 4 }), color: '#14b8a6' },
 ]
 
 function computeHabitStreak(dates: string[]): { current: number; longest: number } {
@@ -131,6 +139,7 @@ export function Habits() {
   const [recoveryEntries, setRecoveryEntries] = useState<RecoveryEntry[]>(loadRecoveryEntries)
   const [supplementLogs, setSupplementLogs] = useState<SupplementLog[]>(loadSupplementLogs)
   const [scopeOffset, setScopeOffset] = useState(0)
+  const [achFilter, setAchFilter] = useState<'all' | 'unlocked' | 'progress'>('all')
 
   const scopeWeek = useMemo(() => {
     const days: { fullDate: string; weekday: string; label: string }[] = []
@@ -1078,39 +1087,103 @@ export function Habits() {
               </motion.div>
 
               {/* Achievements Grid */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Award className="w-4 h-4 text-orange-400" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Achievements</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white/5 border border-white/10">
-                    <div className="flex">
-                      {ACHIEVEMENTS.map((a) => (
-                        <div key={a.id} className={`w-1.5 h-1.5 rounded-full -ml-0.5 first:ml-0 ${unlocked.has(a.id) ? 'bg-emerald-400' : 'bg-white/10'}`} />
-                      ))}
-                    </div>
-                    <span className="text-[9px] text-gray-400 font-medium">{unlocked.size}/{ACHIEVEMENTS.length}</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-                  {ACHIEVEMENTS.map((ach) => {
-                    const isUnlocked = unlocked.has(ach.id)
-                    return (
-                      <motion.div key={ach.id} whileHover={isUnlocked ? { scale: 1.08, y: -2 } : {}}
-                        className={`relative overflow-hidden rounded-xl p-2.5 text-center border transition-all duration-500 ${
-                          isUnlocked ? 'border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent shadow-lg shadow-emerald-500/5 hover:shadow-emerald-500/15' : 'border-white/[0.04] bg-white/[0.02] opacity-35 hover:opacity-50'
-                        }`}>
-                        {isUnlocked && <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.08),transparent_70%)] pointer-events-none" />}
-                        <div className="relative">
-                          <span className="text-xl block mb-1 drop-shadow-lg">{ach.icon}</span>
-                          <p className={`text-[7px] font-bold leading-tight ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>{ach.name}</p>
+              {(() => {
+                const nextUp = ACHIEVEMENTS
+                  .filter(a => !unlocked.has(a.id))
+                  .map(a => ({ a, p: a.progress(stats) }))
+                  .filter(x => x.p.current > 0)
+                  .sort((x, y) => (y.p.current / y.p.target) - (x.p.current / x.p.target))[0]
+                const filtered = ACHIEVEMENTS.filter(a => {
+                  if (achFilter === 'unlocked') return unlocked.has(a.id)
+                  if (achFilter === 'progress') return !unlocked.has(a.id) && a.progress(stats).current > 0
+                  return true
+                })
+                return (
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <Award className="w-4 h-4 text-orange-400" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Achievements</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-0.5 bg-white/[0.03] rounded-lg p-0.5 border border-white/[0.06]">
+                          {(['all', 'unlocked', 'progress'] as const).map(f => (
+                            <button key={f} onClick={() => setAchFilter(f)}
+                              className={`px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-wider transition-all duration-300 ${achFilter === f ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20 shadow-sm shadow-orange-500/10' : 'text-gray-500 hover:text-gray-300 border border-transparent'}`}>
+                              {f === 'all' ? `All (${ACHIEVEMENTS.length})` : f === 'unlocked' ? `Unlocked (${unlocked.size})` : `In progress (${ACHIEVEMENTS.filter(a => !unlocked.has(a.id) && a.progress(stats).current > 0).length})`}
+                            </button>
+                          ))}
                         </div>
-                      </motion.div>
-                    )
-                  })}
-                </div>
-              </div>
+                        <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10">
+                          <div className="flex">
+                            {ACHIEVEMENTS.map((a) => (
+                              <div key={a.id} className={`w-1.5 h-1.5 rounded-full -ml-0.5 first:ml-0 ${unlocked.has(a.id) ? 'bg-emerald-400' : 'bg-white/10'}`} />
+                            ))}
+                          </div>
+                          <span className="text-[9px] text-gray-400 font-medium tabular-nums">{unlocked.size}/{ACHIEVEMENTS.length}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Next up tracker */}
+                    {nextUp && (
+                      <div className="flex items-center gap-3 px-3 py-2 rounded-xl border border-amber-500/20 bg-gradient-to-r from-amber-500/10 via-amber-500/[0.04] to-transparent mb-3">
+                        <span className="text-base drop-shadow">{nextUp.a.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[9px] font-bold text-amber-300 truncate">Next up: {nextUp.a.name} · {nextUp.a.category}</span>
+                            <span className="text-[8px] text-gray-500 tabular-nums ml-2 shrink-0">{Math.min(nextUp.p.current, nextUp.p.target)}/{nextUp.p.target} · {Math.min(Math.round((nextUp.p.current / nextUp.p.target) * 100), 100)}%</span>
+                          </div>
+                          <div className="h-[4px] rounded-full bg-white/[0.06] overflow-hidden">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(Math.round((nextUp.p.current / nextUp.p.target) * 100), 100)}%` }} transition={{ duration: 1 }}
+                              className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-400" style={{ boxShadow: '0 0 6px rgba(251,191,36,0.4)' }} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {filtered.map((ach) => {
+                        const isUnlocked = unlocked.has(ach.id)
+                        const p = ach.progress(stats)
+                        const pct = Math.min(Math.round((p.current / p.target) * 100), 100)
+                        return (
+                          <motion.div key={ach.id} layout whileHover={{ scale: 1.03, y: -2 }}
+                            title={`${ach.desc}\n${isUnlocked ? 'Unlocked' : `${Math.min(p.current, p.target)}/${p.target} · ${pct}%`}`}
+                            className={`relative overflow-hidden rounded-xl p-2.5 text-center border transition-all duration-500 ${
+                              isUnlocked ? 'border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent shadow-lg shadow-emerald-500/5 hover:shadow-emerald-500/15' : 'border-white/[0.04] bg-white/[0.02] opacity-80 hover:opacity-100 hover:border-white/[0.12]'
+                            }`}>
+                            {isUnlocked && <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.08),transparent_70%)] pointer-events-none" />}
+                            <div className="relative">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-lg leading-none drop-shadow-lg">{ach.icon}</span>
+                                {isUnlocked ? (
+                                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center">
+                                    <span className="text-[7px] text-emerald-400 font-black leading-none">✓</span>
+                                  </span>
+                                ) : (
+                                  <span className={`text-[7px] font-bold tabular-nums ${pct > 0 ? 'text-amber-400/90' : 'text-gray-600'}`}>{pct > 0 ? `${pct}%` : '—'}</span>
+                                )}
+                              </div>
+                              <p className={`text-[8px] font-bold leading-tight ${isUnlocked ? 'text-white' : 'text-gray-400'}`}>{ach.name}</p>
+                              <p className={`text-[6px] uppercase tracking-wider mt-0.5 ${isUnlocked ? 'text-emerald-400/70' : 'text-gray-600'}`}>{ach.category}</p>
+                              <div className="mt-1.5 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
+                                <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, delay: 0.1 }}
+                                  className="h-full rounded-full" style={{ background: isUnlocked ? '#10b981' : ach.color, boxShadow: pct > 0 ? `0 0 4px ${ach.color}88` : 'none' }} />
+                              </div>
+                              {!isUnlocked && nextUp && nextUp.a.id === ach.id && (
+                                <div className="absolute -top-1.5 -right-1.5 px-1 py-px rounded-full bg-amber-500/20 border border-amber-500/40">
+                                  <span className="text-[6px] font-black text-amber-300 uppercase tracking-wider">Next</span>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Active Challenges */}
               <div className="mb-6">
