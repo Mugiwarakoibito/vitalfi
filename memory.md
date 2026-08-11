@@ -1,6 +1,57 @@
 # Sentience Engine — Session Memory
 
-## Last Updated: August 9, 2026
+## Last Updated: August 11, 2026
+
+## Session: Milestone Path — one smart tool (Milestones panel final form)
+
+### What was done
+- User: "too much data, fewer options, merge them into ONE smart tool, come up with a new spirit" → Milestones panel is now **Milestone Path**, a single glanceable tool with NO sections:
+  - **Header**: "Milestone Path" + "One mission · one path · keep moving" + dot strip X/10 chip
+  - **Mission card** (the whole point): rank row (icon, title, rank N, slim level bar X/next-min) + **SVG progress ring** (animated gradient stroke, % in center) + mission name/category, "N more % consistency to go", X/target chip, ETA chip, LIVE badge, and the 🤖 coach line folded inside the card (truncated >150 chars)
+  - **The Path**: one horizontal track — 10 connected nodes (✓ emerald glow for earned, pulsing amber for current mission, dim for rest); per-node tooltip = name — desc + progress; no per-card data visible
+  - **Quick stats**: single inline chip row (Streak · This month · Pace) — consistency dropped (it's the mission %)
+- **Removed entirely**: badge grid, 4-card live-stats grid, Quests section (6 challenge cards), `activeChallenges` useMemo, `Award` import
+- Verified live via Playwright (17/17 PASS, zero console errors): header, MISSION label, Locked In mission, ring %, ETA ~Sep 22, LIVE, coach line, THE PATH, 2/10 milestones, 10 nodes/2 unlocked, Streak/This month/Pace chips, no Quests, no badge grid
+
+### Key learnings (verification — CRITICAL)
+- **Storage is IndexedDB `LifeSyncDB` (v5), NOT localStorage** — seeding localStorage is useless; seed via `indexedDB.open('LifeSyncDB', 5)` in `addInitScript` (onupgradeneeded creates the 16 stores w/ keyPath 'id'; onsuccess puts settings row `app_settings` + workouts). Old memory entries claiming localStorage seeding were wrong in practice
+- Landing `/` shows a country/currency onboarding modal (Continue disabled until country picked + name filled) only for fresh profiles; direct `https://vitalfi.vercel.app/fitness?tab=habits` skips it once IDB-seeded
+- **Milestones toggle is an ICON button** — text selectors fail; use `button[title="Milestones"]`; also the page is reached via the `habits` tab (not "Workout Logger" click)
+- CSS `uppercase` classes transform innerText → always match case-insensitively (MISSION / THE PATH / STREAK)
+- Final round-trip: commit + push + `npx vercel --prod --yes` (≥600s) → verify live → delete probe scripts
+
+### Files modified
+- `src/components/fitness/Habits.tsx` — Milestone Path replaces Engine (commit `fee55f4`; glanceable-flow intermediate was `2b27f62`), file now ~1160 lines
+
+### Deployed to
+- **GitHub:** https://github.com/Mugiwarakoibito/vitalfi (commits `2b27f62`, `fee55f4`)
+- **Vercel:** https://vitalfi.vercel.app
+
+---
+
+## Session: Unified Milestone Path (Milestones panel redesign)
+
+### What was done
+- User: "too many options" → trimmed ACHIEVEMENTS 16 → **10** (removed Veteran, Unbreakable, Busy Month, Rhythm, Explorer, Pace Setter); unlocked rhythm gone → chip math for seed = 2/10
+- User: "Levels, achievements & challenges in ONE well developed option, like the most powerful tool" → Milestones panel now a single unified flow:
+  - **Level Hero** (unchanged, all-time progression)
+  - **Milestone Path** section: header + unlock dot strip + X/10 chip, then a **Current Mission spotlight** card — the closest unearned achievement: pulsing icon tile with glowing dot, "CURRENT MISSION" label, big % counter, "N more workouts/days/% consistency to go" ETA, animated gradient progress bar with shimmer (unit derived from category: Milestones→workouts, Streaks→days, Monthly→workouts this month, Consistency→% consistency)
+  - **Achievement grid** below (10 cards, progress bars, ✓ badges, category chips, tooltips) — **filter tabs REMOVED** (and `achFilter` state deleted)
+  - **Challenges** divider (hairline + centered label) merges Active Challenges into the same flow
+- Verified on live Vercel via Playwright (msedge headless + app_settings seed): 10 cards with exact names, removed ones absent, Milestone Path header ✓, Current Mission label ✓, filter buttons gone ✓, Challenges divider ✓, chip 2/10, zero console errors
+
+### Key learnings (infra)
+- **vite preview via Start-Process gets killed when the bash tool call ends** — background servers do NOT survive between calls (worked once by timing luck). Local verification now unreliable → **deploy first, then verify against https://vitalfi.vercel.app directly** (works every time)
+- Foreground `node node_modules/vite/bin/vite.js preview --port 4173` works fine (killed by tool timeout — expected)
+
+### Files modified
+- `src/components/fitness/Habits.tsx` — ACHIEVEMENTS 16→10 entries; Achievements Grid IIFE replaced with unified Milestone Path (mission spotlight + grid); Active Challenges → Challenges divider header; `achFilter` state removed; file now ~1295 lines
+
+### Deployed to
+- **GitHub:** https://github.com/Mugiwarakoibito/vitalfi (commit `431234c`; trim itself was uncommitted when redesign landed — single commit covers both)
+- **Vercel:** https://vitalfi.vercel.app
+
+---
 
 ## Session: Expand Achievements section (Milestones panel)
 
