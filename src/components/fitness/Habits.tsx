@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Flame, Zap, Target, Award, TrendingUp,
+  Flame, Zap, Target, TrendingUp,
   BarChart3, Crown, Activity, CalendarCheck, CheckCircle2,
   Dumbbell, Utensils, Moon, Droplets, Heart, Pill,
   Layers, Hash, ChevronLeft, ChevronRight, RotateCcw,
@@ -226,20 +226,6 @@ export function Habits() {
     const sortedCats = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])
     return { categoryCount: categories.size, uniqueExercises: exerciseIds.size, topCategory: sortedCats[0]?.[0] || '', topCategoryCount: sortedCats[0]?.[1] || 0 }
   }, [workouts])
-
-  const activeChallenges = useMemo(() => {
-    const thisMonth = today.slice(0, 7)
-    const thisMonthCount = workouts.filter((w: Workout) => w.date.startsWith(thisMonth)).length
-    const cs = stats.currentStreak
-    return [
-      { id: 'month_10', name: '10 in a Month', target: 10, current: thisMonthCount, icon: '📅', color: '#06b6d4' },
-      { id: 'month_15', name: '15 in a Month', target: 15, current: thisMonthCount, icon: '🔥', color: '#f97316' },
-      { id: 'month_20', name: '20 in a Month', target: 20, current: thisMonthCount, icon: '⚡', color: '#f59e0b' },
-      { id: 'streak_7', name: '7-Day Streak', target: 7, current: cs, icon: '🔗', color: '#8b5cf6' },
-      { id: 'streak_14', name: '14-Day Streak', target: 14, current: cs, icon: '⛓️', color: '#ef4444' },
-      { id: 'streak_30', name: '30-Day Streak', target: 30, current: cs, icon: '👑', color: '#a855f7' },
-    ]
-  }, [workouts, stats.currentStreak, today])
 
   const habitScore = useMemo(() => {
     const days = 90; const todayD = new Date(); const dates: string[] = []
@@ -1020,7 +1006,7 @@ export function Habits() {
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-violet-500/5 pointer-events-none" />
             <div className="absolute bottom-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
             <div className="relative">
-              {/* Milestones — one glanceable tool */}
+              {/* Milestone Path — one smart tool */}
               {(() => {
                 const nextUp = ACHIEVEMENTS
                   .filter(a => !unlocked.has(a.id))
@@ -1039,15 +1025,15 @@ export function Habits() {
                   : 'All achievements unlocked — you are a legend. Keep the journey going.'
                 return (
                   <>
-                    {/* Engine header */}
+                    {/* Milestone Path header */}
                     <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400/25 to-amber-500/5 border border-amber-500/25 flex items-center justify-center shadow-lg shadow-amber-500/10">
                           <Crown className="w-5 h-5 text-amber-400" />
                         </div>
                         <div>
-                          <span className="text-sm font-black text-white tracking-wide">Milestones Engine</span>
-                          <p className="text-[10px] text-gray-500">Where you are · what's next · how you're doing</p>
+                          <span className="text-sm font-black text-white tracking-wide">Milestone Path</span>
+                          <p className="text-[10px] text-gray-500">One mission · one path · keep moving</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10">
@@ -1060,180 +1046,116 @@ export function Habits() {
                       </div>
                     </div>
 
-                    {/* Level hero — you are here */}
+                    {/* Mission — you are here */}
                     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent p-5 mb-6">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(251,191,36,0.08),transparent_60%)]" />
-                <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/8 rounded-full -mr-20 -mt-20 blur-3xl" />
-                <div className="relative flex items-center gap-5">
-                  <div className="p-3.5 rounded-2xl bg-gradient-to-br from-amber-500/25 to-amber-600/10 shadow-xl shadow-amber-500/15 border border-amber-500/15">
-                    <Crown className="w-7 h-7 text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.5)]" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4">
-                      <span className="text-4xl drop-shadow-xl">{levelData.current.icon}</span>
-                      <div>
-                        <p className="text-xl font-bold text-white">{levelData.current.title}</p>
-                        <p className="text-xs text-gray-500">{stats.totalWorkouts} total workouts</p>
-                      </div>
-                    </div>
-                    {levelData.next && (
-                      <div className="mt-4">
-                        <div className="flex justify-between text-[10px] text-gray-500 mb-1.5">
-                          <span>Next: <span className="text-white font-semibold">{levelData.next.icon} {levelData.next.title}</span></span>
-                          <span className="font-bold text-white">{stats.totalWorkouts}<span className="text-gray-600 font-normal">/{levelData.next.min}</span></span>
-                        </div>
-                        <div className="h-2.5 rounded-full bg-white/10 overflow-hidden shadow-inner relative">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${levelData.progress}%` }} transition={{ duration: 1.5, ease: 'easeOut' }}
-                            className="h-full rounded-full relative" style={{ background: 'linear-gradient(90deg, #f59e0b, #f97316, #ef4444)', boxShadow: '0 0 12px rgba(251,191,36,0.3)' }}>
-                            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent)] animate-shimmer" />
-                          </motion.div>
-                        </div>
-                      </div>
-                    )}
-                    {/* Level milestones */}
-                    {stats.totalWorkouts > 0 && (
-                      <div className="flex items-center gap-1 mt-3">
-                        {LEVEL_THRESHOLDS.filter(t => t.min > 0).map(t => {
-                          const reached = stats.totalWorkouts >= t.min
-                          return (
-                            <div key={t.level} className="flex-1 flex flex-col items-center gap-0.5">
-                              <div className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${reached ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.5)]' : 'bg-white/10'}`} />
-                              <span className={`text-[6px] font-bold ${reached ? 'text-amber-400/80' : 'text-gray-600'}`}>L{t.level}</span>
+                      className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-transparent to-violet-500/5 p-5 mb-6">
+                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(251,191,36,0.08),transparent_60%)]" />
+                      <div className="relative">
+                        <div className="flex items-center justify-between flex-wrap gap-3">
+                          <div className="flex items-center gap-3">
+                            <span className="text-3xl drop-shadow-lg">{levelData.current.icon}</span>
+                            <div>
+                              <p className="text-base font-bold text-white">{levelData.current.title}</p>
+                              <p className="text-[10px] text-gray-500">{stats.totalWorkouts} workouts · rank {levelData.current.level}</p>
                             </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-
-                    {/* Next Goal */}
-                    {nextUp && (
-                      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                        className="relative overflow-hidden rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/15 via-amber-500/[0.04] to-transparent p-4 mb-5">
-                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(251,191,36,0.1),transparent_60%)]" />
-                        <div className="relative flex items-center gap-4">
-                          <motion.div animate={{ scale: [1, 1.06, 1] }} transition={{ repeat: Infinity, duration: 2.5 }}
-                            className="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500/30 to-amber-500/5 border border-amber-500/30 flex items-center justify-center text-xl shrink-0 shadow-lg shadow-amber-500/10">
-                            {nextUp.a.icon}
-                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
-                          </motion.div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="text-[8px] font-black uppercase tracking-[0.2em] text-amber-400/80">Next goal</p>
-                                <p className="text-sm font-bold text-white truncate">{nextUp.a.icon} {nextUp.a.name} <span className="text-[10px] text-gray-500 font-medium">· {nextUp.a.category}</span></p>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <p className="text-xl font-black text-amber-300 tabular-nums leading-none">{pct}%</p>
-                                <p className="text-[8px] text-gray-500 mt-0.5">{eta ? `ETA ~${eta.date}` : 'Almost there'}</p>
-                              </div>
-                            </div>
-                            <div className="h-2.5 rounded-full bg-white/[0.07] overflow-hidden mt-2 shadow-inner">
-                              <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1.2, ease: 'easeOut' }}
-                                className="h-full rounded-full relative" style={{ background: 'linear-gradient(90deg, #f59e0b, #f97316, #ef4444)', boxShadow: '0 0 12px rgba(251,191,36,0.4)' }}>
-                                <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)] animate-shimmer" />
-                              </motion.div>
-                            </div>
-                            <p className="text-[9px] text-gray-500 mt-1.5 truncate">{left > 0 ? `${Math.min(nextUp.p.current, nextUp.p.target)}/${nextUp.p.target} · ${left} more ${unit} to go` : ''}</p>
                           </div>
+                          {levelData.next && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-28 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                                <motion.div initial={{ width: 0 }} animate={{ width: `${levelData.progress}%` }} transition={{ duration: 1.2, ease: 'easeOut' }}
+                                  className="h-full rounded-full" style={{ background: 'linear-gradient(90deg,#f59e0b,#f97316)', boxShadow: '0 0 8px rgba(251,191,36,0.4)' }} />
+                              </div>
+                              <span className="text-[9px] text-gray-500 tabular-nums font-semibold">{stats.totalWorkouts}/{levelData.next.min}</span>
+                            </div>
+                          )}
                         </div>
-                      </motion.div>
-                    )}
 
-                    {/* Badge strip */}
-                    <div className="mb-5">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Award className="w-3.5 h-3.5 text-orange-400" />
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">Badges</span>
+                        <div className="mt-5 flex items-center gap-5">
+                          <div className="relative w-16 h-16 shrink-0">
+                            <svg viewBox="0 0 64 64" className="w-16 h-16 -rotate-90">
+                              <defs>
+                                <linearGradient id="mpGrad" x1="0" y1="0" x2="1" y2="1">
+                                  <stop offset="0%" stopColor="#f59e0b" />
+                                  <stop offset="100%" stopColor="#ef4444" />
+                                </linearGradient>
+                              </defs>
+                              <circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
+                              <motion.circle cx="32" cy="32" r="27" fill="none" stroke="url(#mpGrad)" strokeWidth="6" strokeLinecap="round"
+                                strokeDasharray={2 * Math.PI * 27} initial={{ strokeDashoffset: 2 * Math.PI * 27 }}
+                                animate={{ strokeDashoffset: 2 * Math.PI * 27 * (1 - pct / 100) }} transition={{ duration: 1.4, ease: 'easeOut' }} />
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-base font-black text-white tabular-nums leading-none">{pct}<span className="text-[8px] text-gray-500 font-semibold">%</span></span>
+                            </div>
+                          </div>
+                          {nextUp ? (
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[8px] font-black uppercase tracking-[0.25em] text-amber-400/80">Mission</p>
+                              <p className="text-sm font-bold text-white truncate">{nextUp.a.icon} {nextUp.a.name} <span className="text-[10px] text-gray-500 font-medium">· {nextUp.a.category}</span></p>
+                              <p className="text-[10px] text-gray-400 mt-1">{left > 0 ? `${left} more ${unit} to go` : 'Almost there'}</p>
+                              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                <span className="px-2 py-0.5 rounded-md bg-white/[0.05] border border-white/10 text-[9px] text-gray-400 font-semibold tabular-nums">{Math.min(nextUp.p.current, nextUp.p.target)}/{nextUp.p.target}</span>
+                                {eta && <span className="px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/25 text-[9px] text-amber-300 font-bold">ETA ~{eta.date}</span>}
+                                <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-500/15 border border-violet-500/25 text-[9px] font-bold text-violet-300">
+                                  <span className="w-1 h-1 rounded-full bg-violet-400 animate-pulse" />LIVE
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-white">All achievements unlocked</p>
+                              <p className="text-[10px] text-gray-400 mt-1">You are a legend — keep the journey going.</p>
+                            </div>
+                          )}
                         </div>
-                        <span className="text-[9px] text-gray-400 font-medium tabular-nums">{unlocked.size}/{ACHIEVEMENTS.length} earned</span>
+
+                        <p className="text-[10px] text-gray-300 leading-relaxed mt-4 border-t border-white/5 pt-3">🤖 {coachMessage.length > 150 ? `${coachMessage.slice(0, 147)}…` : coachMessage}</p>
                       </div>
-                      <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
-                        {ACHIEVEMENTS.map((ach) => {
+                    </motion.div>
+
+                    {/* The path */}
+                    <div className="mb-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">The path</span>
+                        <span className="text-[9px] text-gray-500 font-medium tabular-nums">{unlocked.size}/{ACHIEVEMENTS.length} milestones</span>
+                      </div>
+                      <div className="flex items-center">
+                        {ACHIEVEMENTS.map((ach, i) => {
                           const isUnlocked = unlocked.has(ach.id)
+                          const isNext = nextUp !== undefined && nextUp.a.id === ach.id
                           const p = ach.progress(stats)
                           const pct = Math.min(Math.round((p.current / p.target) * 100), 100)
                           return (
-                            <motion.div key={ach.id} whileHover={{ scale: 1.1, y: -2 }}
-                              title={`${ach.desc}\n${isUnlocked ? 'Unlocked' : `${Math.min(p.current, p.target)}/${p.target} · ${pct}%`}`}
-                              className={`relative rounded-xl border p-1.5 text-center transition-all duration-300 ${isUnlocked ? 'border-emerald-500/40 bg-emerald-500/15 shadow-lg shadow-emerald-500/10' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05]'}`}>
-                              {isUnlocked && <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.8)]" />}
-                              <span className="block text-base leading-none mb-1 drop-shadow">{ach.icon}</span>
-                              <p className={`text-[6px] font-bold leading-tight truncate ${isUnlocked ? 'text-emerald-300' : pct > 0 ? 'text-amber-300/90' : 'text-gray-600'}`}>{isUnlocked ? '✓ earned' : pct > 0 ? `${pct}%` : ach.name}</p>
-                            </motion.div>
+                            <div key={ach.id} className="flex items-center flex-1 last:flex-none">
+                              <motion.div whileHover={{ scale: 1.2, y: -2 }} transition={{ type: 'spring', stiffness: 300 }}
+                                title={`${ach.name} — ${ach.desc}\n${isUnlocked ? 'Unlocked ✓' : `${Math.min(p.current, p.target)}/${p.target} · ${pct}%`}`}
+                                className={`relative w-7 h-7 rounded-full flex items-center justify-center text-[11px] border transition-all duration-500 ${isUnlocked ? 'bg-emerald-500/20 border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : isNext ? 'bg-amber-500/25 border-amber-400/70 shadow-[0_0_12px_rgba(251,191,36,0.4)]' : 'bg-white/[0.03] border-white/10 hover:border-white/25'}`}>
+                                <span className={`leading-none ${isUnlocked ? '' : 'opacity-80'}`}>{isUnlocked ? '✓' : ach.icon}</span>
+                                {isNext && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 animate-pulse shadow-[0_0_6px_rgba(251,191,36,0.8)]" />}
+                              </motion.div>
+                              {i < ACHIEVEMENTS.length - 1 && (
+                                <div className={`flex-1 h-[2px] mx-1 rounded-full ${isUnlocked ? 'bg-emerald-500/40' : 'bg-white/[0.06]'}`} />
+                              )}
+                            </div>
                           )
                         })}
                       </div>
                     </div>
 
-                    {/* Coach insight */}
-                    <div className="flex items-center gap-3 rounded-xl border border-violet-500/20 bg-white/[0.02] px-3.5 py-3 mb-5">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/25 to-violet-500/5 border border-violet-500/25 flex items-center justify-center text-sm shrink-0">🤖</div>
-                      <p className="text-[10px] text-gray-300 leading-relaxed flex-1">{coachMessage}</p>
-                      <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-violet-500/15 border border-violet-500/25 text-[8px] font-bold text-violet-300 shrink-0">
-                        <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />LIVE
-                      </span>
-                    </div>
-
-                    {/* Live stats */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
+                    {/* Quick stats */}
+                    <div className="flex items-center gap-2 flex-wrap">
                       {[
-                        { icon: '🔥', label: 'Streak', value: `${stats.currentStreak}`, suffix: 'days', color: 'from-orange-500/15 to-orange-500/5 border-orange-500/25' },
-                        { icon: '📆', label: 'This month', value: `${stats.thisMonthWorkouts}`, suffix: 'wkts', color: 'from-blue-500/15 to-blue-500/5 border-blue-500/25' },
-                        { icon: '⚡', label: 'Pace', value: `${pace.toFixed(1)}`, suffix: '/wk', color: 'from-cyan-500/15 to-cyan-500/5 border-cyan-500/25' },
-                        { icon: '🎯', label: 'Consistency', value: `${stats.consistency}`, suffix: '%', color: 'from-emerald-500/15 to-emerald-500/5 border-emerald-500/25' },
+                        { icon: '🔥', label: 'Streak', value: `${stats.currentStreak}d` },
+                        { icon: '📆', label: 'This month', value: `${stats.thisMonthWorkouts}` },
+                        { icon: '⚡', label: 'Pace', value: `${pace.toFixed(1)}/wk` },
                       ].map((s) => (
-                        <motion.div key={s.label} whileHover={{ y: -2 }}
-                          className={`relative overflow-hidden rounded-xl border bg-gradient-to-br p-3 text-center transition-all duration-300 hover:border-white/20 ${s.color}`}>
-                          <p className="text-sm leading-none mb-1.5 drop-shadow">{s.icon}</p>
-                          <p className="text-sm font-black text-white tabular-nums leading-none">{s.value}<span className="text-[8px] text-gray-500 font-semibold ml-0.5">{s.suffix}</span></p>
-                          <p className="text-[8px] text-gray-500 mt-1 font-bold uppercase tracking-wider">{s.label}</p>
-                        </motion.div>
+                        <div key={s.label} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/10 transition-colors hover:bg-white/[0.06]">
+                          <span className="text-[10px] leading-none">{s.icon}</span>
+                          <span className="text-[10px] font-bold text-white tabular-nums leading-none">{s.value}</span>
+                          <span className="text-[8px] text-gray-500 font-semibold uppercase tracking-wider">{s.label}</span>
+                        </div>
                       ))}
                     </div>
-
-                    
-
-                    {/* Quests */}
-                    <div className="flex items-center gap-2 mb-4">
-                      <CalendarCheck className="w-4 h-4 text-emerald-400" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Quests</span>
-                    </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {activeChallenges.map((ch) => {
-                            const progress = Math.min(ch.current / ch.target, 1)
-                            const isCompleted = ch.current >= ch.target
-                            return (
-                              <motion.div key={ch.id} whileHover={{ y: -2, scale: 1.01 }}
-                                className={`relative overflow-hidden rounded-xl border p-4 transition-all duration-300 ${isCompleted ? 'border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-transparent shadow-lg shadow-emerald-500/5' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10'}`}>
-                                {isCompleted && <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full -mr-8 -mt-8 blur-2xl" />}
-                                <div className="relative flex items-center gap-3">
-                                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg ${isCompleted ? 'bg-emerald-500/20' : 'bg-white/5'}`}>
-                                    {ch.icon}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5">
-                                      <p className={`text-xs font-bold ${isCompleted ? 'text-emerald-400' : 'text-white'}`}>{ch.name}</p>
-                                      {isCompleted && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-2">
-                                      <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                                        <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(progress * 100, 100)}%` }} transition={{ duration: 1, delay: 0.2, ease: 'easeOut' }}
-                                          className={`h-full rounded-full ${isCompleted ? 'bg-emerald-500' : 'bg-gradient-to-r from-emerald-500 to-emerald-400'}`}
-                                          style={isCompleted ? {} : { boxShadow: '0 0 8px rgba(16,185,129,0.3)' }} />
-                                      </div>
-                                      <span className="text-[9px] text-gray-500 font-medium shrink-0 tabular-nums">{ch.current}/{ch.target}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </motion.div>
-                            )
-                          })}
-                        </div>
                   </>
                 )
               })()}
