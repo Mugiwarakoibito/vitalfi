@@ -636,8 +636,8 @@ export function Habits() {
                   <defs>
                     {HABIT_TYPES.map(h => (
                       <linearGradient key={h.key} id={`grad-${h.key}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={h.color} stopOpacity={0.9} />
-                        <stop offset="100%" stopColor={h.color} stopOpacity={0.3} />
+                        <stop offset="0%" stopColor={h.color} stopOpacity={1} />
+                        <stop offset="100%" stopColor={h.color} stopOpacity={0.5} />
                       </linearGradient>
                     ))}
                     <linearGradient id="radarFill" x1="0" y1="0" x2="1" y2="1">
@@ -680,7 +680,7 @@ export function Habits() {
                                   {streakData.map((entry, i) => <Cell key={i} fill={`url(#grad-${entry.key})`} />)}
                                 </Bar>
                                 <Bar dataKey="longest" name="Best" radius={[6, 6, 0, 0]} maxBarSize={32}>
-                                  {streakData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.15} />)}
+                                  {streakData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.45} />)}
                                 </Bar>
                               </BarChart>
                             </ResponsiveContainer>
@@ -803,7 +803,7 @@ export function Habits() {
                                   {goalData.map((entry, i) => <Cell key={i} fill={`url(#grad-${entry.key})`} fillOpacity={entry.done >= entry.target ? 1 : 0.6} />)}
                                 </Bar>
                                 <Bar dataKey="target" name="Target" radius={[0, 6, 6, 0]} maxBarSize={20}>
-                                  {goalData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.1} />)}
+                                  {goalData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.35} />)}
                                 </Bar>
                               </BarChart>
                             </ResponsiveContainer>
