@@ -133,6 +133,7 @@ export function Habits() {
   const [recoveryEntries, setRecoveryEntries] = useState<RecoveryEntry[]>(loadRecoveryEntries)
   const [supplementLogs, setSupplementLogs] = useState<SupplementLog[]>(loadSupplementLogs)
   const [scopeOffset, setScopeOffset] = useState(0)
+  const [scoreRange, setScoreRange] = useState<number | 'all'>(90)
 
   const scopeWeek = useMemo(() => {
     const days: { fullDate: string; weekday: string; label: string }[] = []
@@ -163,14 +164,36 @@ export function Habits() {
 
   const today = new Date().toISOString().split('T')[0]
 
-  const habitStats = useMemo(() => ({
-    workout: computeHabitStreak(workouts.map((w: Workout) => w.date)),
-    nutrition: computeHabitStreak(meals.filter((m: Meal) => m.calories > 0).map((m: Meal) => m.date)),
-    sleep: computeHabitStreak(sleep.map((s: SleepEntry) => s.date)),
-    hydration: computeHabitStreak(hydration.map((h: HydrationEntry) => h.date)),
-    recovery: computeHabitStreak(recoveryEntries.map((r: RecoveryEntry) => r.date)),
-    supplements: computeHabitStreak(supplementLogs.map((s: SupplementLog) => s.date)),
-  }), [workouts, meals, sleep, hydration, recoveryEntries, supplementLogs])
+  const rangeDates = useMemo(() => {
+    const allDates = [
+      ...workouts.map((w: Workout) => w.date),
+      ...meals.filter((m: Meal) => m.calories > 0).map((m: Meal) => m.date),
+      ...sleep.map((s: SleepEntry) => s.date),
+      ...hydration.map((h: HydrationEntry) => h.date),
+      ...recoveryEntries.map((r: RecoveryEntry) => r.date),
+      ...supplementLogs.map((s: SupplementLog) => s.date),
+    ]
+    if (allDates.length === 0) return { days: 0, cutoff: '' }
+    const todayD = new Date()
+    const days = scoreRange === 'all'
+      ? Math.max(1, Math.ceil((todayD.getTime() - new Date(allDates.reduce((a, b) => a < b ? a : b)).getTime()) / 86400000) + 1)
+      : scoreRange
+    const cutoff = new Date(todayD)
+    cutoff.setDate(cutoff.getDate() - days)
+    return { days, cutoff: cutoff.toISOString().split('T')[0] }
+  }, [workouts, meals, sleep, hydration, recoveryEntries, supplementLogs, scoreRange])
+
+  const habitStats = useMemo(() => {
+    const filter = (dates: string[]) => rangeDates.days === 0 ? dates : dates.filter(d => d >= rangeDates.cutoff)
+    return {
+      workout: computeHabitStreak(filter(workouts.map((w: Workout) => w.date))),
+      nutrition: computeHabitStreak(filter(meals.filter((m: Meal) => m.calories > 0).map((m: Meal) => m.date))),
+      sleep: computeHabitStreak(filter(sleep.map((s: SleepEntry) => s.date))),
+      hydration: computeHabitStreak(filter(hydration.map((h: HydrationEntry) => h.date))),
+      recovery: computeHabitStreak(filter(recoveryEntries.map((r: RecoveryEntry) => r.date))),
+      supplements: computeHabitStreak(filter(supplementLogs.map((s: SupplementLog) => s.date))),
+    }
+  }, [workouts, meals, sleep, hydration, recoveryEntries, supplementLogs, rangeDates])
 
   const habitsDoneToday = {
     workout: workouts.some((w: Workout) => w.date === today),
@@ -183,10 +206,10 @@ export function Habits() {
 
   const weeklyCompletion = useMemo(() => {
     const now = new Date()
-    const oneWeek = 7
+    const lookback = Math.min(7, rangeDates.days || 7)
     const getCount = (dates: string[]) => {
       const set = new Set(dates); let count = 0
-      for (let i = 0; i < oneWeek; i++) { const d = new Date(now); d.setDate(d.getDate() - i); if (set.has(d.toISOString().split('T')[0])) count++ }
+      for (let i = 0; i < lookback; i++) { const d = new Date(now); d.setDate(d.getDate() - i); if (set.has(d.toISOString().split('T')[0])) count++ }
       return count
     }
     return {
@@ -197,7 +220,7 @@ export function Habits() {
       recovery: getCount(recoveryEntries.map((r: RecoveryEntry) => r.date)),
       supplements: getCount(supplementLogs.map((s: SupplementLog) => s.date)),
     }
-  }, [workouts, meals, sleep, hydration, recoveryEntries, supplementLogs])
+  }, [workouts, meals, sleep, hydration, recoveryEntries, supplementLogs, rangeDates])
 
   const stats = useMemo(() => computeStats(workouts), [workouts])
 
@@ -228,7 +251,20 @@ export function Habits() {
   }, [workouts])
 
   const habitScore = useMemo(() => {
-    const days = 90; const todayD = new Date(); const dates: string[] = []
+    const allDates = [
+      ...workouts.map((w: Workout) => w.date),
+      ...meals.filter((m: Meal) => m.calories > 0).map((m: Meal) => m.date),
+      ...sleep.map((s: SleepEntry) => s.date),
+      ...hydration.map((h: HydrationEntry) => h.date),
+      ...recoveryEntries.map((r: RecoveryEntry) => r.date),
+      ...supplementLogs.map((s: SupplementLog) => s.date),
+    ]
+    if (allDates.length === 0) return 0
+    const todayD = new Date()
+    const days = scoreRange === 'all'
+      ? Math.max(1, Math.ceil((todayD.getTime() - new Date(allDates.reduce((a, b) => a < b ? a : b)).getTime()) / 86400000) + 1)
+      : scoreRange
+    const dates: string[] = []
     for (let i = 0; i < days; i++) { const d = new Date(todayD); d.setDate(d.getDate() - i); dates.push(d.toISOString().split('T')[0]) }
     const wSet = new Set(workouts.map((w: Workout) => w.date))
     const mSet = new Set(meals.filter((m: Meal) => m.calories > 0).map((m: Meal) => m.date))
@@ -239,10 +275,23 @@ export function Habits() {
     let wd = 0, nd = 0, sd = 0, hd = 0, rd = 0, supd = 0
     dates.forEach(d => { if (wSet.has(d)) wd++; if (mSet.has(d)) nd++; if (sSet.has(d)) sd++; if (hSet.has(d)) hd++; if (rSet.has(d)) rd++; if (supSet.has(d)) supd++ })
     return Math.round((wd / days) * 25 + (nd / days) * 20 + (sd / days) * 20 + (hd / days) * 15 + (rd / days) * 10 + (supd / days) * 10)
-  }, [workouts, meals, sleep, hydration, recoveryEntries, supplementLogs])
+  }, [workouts, meals, sleep, hydration, recoveryEntries, supplementLogs, scoreRange])
 
   const scoreBreakdown = useMemo(() => {
-    const days = 90; const todayD = new Date(); const dates: string[] = []
+    const allDates = [
+      ...workouts.map((w: Workout) => w.date),
+      ...meals.filter((m: Meal) => m.calories > 0).map((m: Meal) => m.date),
+      ...sleep.map((s: SleepEntry) => s.date),
+      ...hydration.map((h: HydrationEntry) => h.date),
+      ...recoveryEntries.map((r: RecoveryEntry) => r.date),
+      ...supplementLogs.map((s: SupplementLog) => s.date),
+    ]
+    if (allDates.length === 0) return []
+    const todayD = new Date()
+    const days = scoreRange === 'all'
+      ? Math.max(1, Math.ceil((todayD.getTime() - new Date(allDates.reduce((a, b) => a < b ? a : b)).getTime()) / 86400000) + 1)
+      : scoreRange
+    const dates: string[] = []
     for (let i = 0; i < days; i++) { const d = new Date(todayD); d.setDate(d.getDate() - i); dates.push(d.toISOString().split('T')[0]) }
     const wSet = new Set(workouts.map((w: Workout) => w.date))
     const mSet = new Set(meals.filter((m: Meal) => m.calories > 0).map((m: Meal) => m.date))
@@ -260,7 +309,7 @@ export function Habits() {
       { key: 'recovery', label: 'Recovery', value: Math.round((rd / days) * 10), max: 10, color: '#10b981', icon: Heart },
       { key: 'supplements', label: 'Supps', value: Math.round((supd / days) * 10), max: 10, color: '#a855f7', icon: Pill },
     ]
-  }, [workouts, meals, sleep, hydration, recoveryEntries, supplementLogs])
+  }, [workouts, meals, sleep, hydration, recoveryEntries, supplementLogs, scoreRange])
 
   const correlations = useMemo(() => {
     const allDates = [...new Set([...workouts.map((w: Workout) => w.date), ...meals.filter((m: Meal) => m.calories > 0).map((m: Meal) => m.date), ...sleep.map((s: SleepEntry) => s.date), ...hydration.map((h: HydrationEntry) => h.date), ...recoveryEntries.map((r: RecoveryEntry) => r.date), ...supplementLogs.map((s: SupplementLog) => s.date)])].sort()
@@ -415,8 +464,20 @@ export function Habits() {
                 </div>
               </div>
 
-              {/* Hero Score Ring */}
-              <div className="flex justify-center mb-8">
+              {/* Hero Score Ring + Range Selector */}
+              <div className="flex flex-col items-center mb-8">
+                <div className="flex gap-1 mb-5 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
+                  {[7, 30, 90, 'all' as const].map(r => (
+                    <button key={r} onClick={() => setScoreRange(r)}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
+                        scoreRange === r
+                          ? 'text-amber-300 bg-gradient-to-b from-amber-500/20 to-amber-500/5 border border-amber-500/25 shadow-lg'
+                          : 'text-gray-500 hover:text-gray-300 border border-transparent'
+                      }`}>
+                      {r === 'all' ? 'All' : `${r}D`}
+                    </button>
+                  ))}
+                </div>
                 <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.6, ease: 'easeOut' }}
                   className="relative w-[180px] h-[180px]">
                   <svg width="180" height="180" className="-rotate-90">
@@ -438,7 +499,9 @@ export function Habits() {
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-5xl font-black text-white drop-shadow-lg tabular-nums">{habitScore}</span>
                     <span className="text-[10px] text-gray-500 mt-0.5">/ 100</span>
-                    <span className="text-[9px] text-gray-500 mt-1 uppercase tracking-widest">90-Day Health Score</span>
+                    <span className="text-[9px] text-gray-500 mt-1 uppercase tracking-widest">
+                      {scoreRange === 'all' ? 'All-Time' : `${scoreRange}-Day`} Health Score
+                    </span>
                   </div>
                 </motion.div>
               </div>
@@ -451,6 +514,7 @@ export function Habits() {
                   const scoreItem = scoreBreakdown.find(s => s.key === habit.key)
                   const scoreVal = scoreItem?.value ?? 0
                   const scoreMax = scoreItem?.max ?? 1
+                  const wkMax = Math.min(7, rangeDates.days || 7)
                   return (
                     <motion.div key={habit.key} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + idx * 0.07 }}
                       whileHover={{ y: -4, scale: 1.02 }} className="relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 group cursor-default"
@@ -485,7 +549,7 @@ export function Habits() {
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-[10px] text-gray-500">Best: <span className="text-white font-semibold">{hs.longest}</span></span>
                               <span className="w-1 h-1 rounded-full bg-gray-600" />
-                              <span className="text-[10px] text-gray-500">Wk: <span className="text-white font-semibold">{wk}/7</span></span>
+                              <span className="text-[10px] text-gray-500">Wk: <span className="text-white font-semibold">{wk}/{wkMax}</span></span>
                             </div>
                           </div>
                         </div>
