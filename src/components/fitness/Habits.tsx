@@ -4,7 +4,7 @@ import {
   Flame, Zap, Target, TrendingUp,
   BarChart3, Crown, Activity, CalendarCheck, CheckCircle2,
   Dumbbell, Utensils, Moon, Droplets, Heart, Pill,
-  Layers, Hash, ChevronLeft, ChevronRight, RotateCcw,
+  Layers, ChevronLeft, ChevronRight, RotateCcw,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import type { Workout, Meal, SleepEntry, HydrationEntry } from '@/types/domain'
@@ -379,7 +379,7 @@ export function Habits() {
         </div>
       </motion.div>
 
-      {/* PANEL 1: Streak Dashboard */}
+      {/* PANEL 1: Streak Dashboard — Unified with Score */}
       <AnimatePresence>
         {workouts.length > 0 && activePanel === 'dashboard' && (
           <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
@@ -387,6 +387,7 @@ export function Habits() {
             <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-orange-500/5 pointer-events-none" />
             <div className="absolute top-0 left-1/3 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
             <div className="relative">
+              {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400/20 to-amber-500/20 border border-amber-500/20 flex items-center justify-center shadow-lg shadow-amber-500/10">
@@ -397,7 +398,6 @@ export function Habits() {
                     <p className="text-[10px] text-gray-500 mt-0.5">Today's progress & habit overview</p>
                   </div>
                 </div>
-                {/* Today's Ring */}
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-gray-500">Today</span>
                   <div className="relative">
@@ -415,17 +415,50 @@ export function Habits() {
                 </div>
               </div>
 
-              {/* 6 Habit Streak Cards — Premium */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mb-6">
-                {HABIT_TYPES.map((habit) => {
+              {/* Hero Score Ring */}
+              <div className="flex justify-center mb-8">
+                <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.6, ease: 'easeOut' }}
+                  className="relative w-[180px] h-[180px]">
+                  <svg width="180" height="180" className="-rotate-90">
+                    <circle cx="90" cy="90" r="80" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+                    <circle cx="90" cy="90" r="68" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="4" />
+                    <motion.circle cx="90" cy="90" r="80" fill="none" stroke="url(#scoreGrad)" strokeWidth="8" strokeLinecap="round"
+                      strokeDasharray={502.65} initial={{ strokeDashoffset: 502.65 }}
+                      animate={{ strokeDashoffset: 502.65 * (1 - habitScore / 100) }}
+                      transition={{ duration: 1.5, ease: 'easeOut' }}
+                      style={{ filter: 'drop-shadow(0 0 12px rgba(251,191,36,0.5))' }} />
+                  </svg>
+                  <svg width="0" height="0"><defs>
+                    <linearGradient id="scoreGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#f59e0b" />
+                      <stop offset="50%" stopColor="#f97316" />
+                      <stop offset="100%" stopColor="#10b981" />
+                    </linearGradient>
+                  </defs></svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-5xl font-black text-white drop-shadow-lg tabular-nums">{habitScore}</span>
+                    <span className="text-[10px] text-gray-500 mt-0.5">/ 100</span>
+                    <span className="text-[9px] text-gray-500 mt-1 uppercase tracking-widest">90-Day Health Score</span>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* 6 Habit Cards — Streak + Score Integrated */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+                {HABIT_TYPES.map((habit, idx) => {
                   const hs = habitStats[habit.key]; const done = habitsDoneToday[habit.key]; const wk = weeklyCompletion[habit.key]
                   const ringMax = Math.max(hs.longest, 1)
+                  const scoreItem = scoreBreakdown.find(s => s.key === habit.key)
+                  const scoreVal = scoreItem?.value ?? 0
+                  const scoreMax = scoreItem?.max ?? 1
                   return (
-                    <motion.div key={habit.key} whileHover={{ y: -4, scale: 1.02 }} className="relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 group cursor-default"
+                    <motion.div key={habit.key} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + idx * 0.07 }}
+                      whileHover={{ y: -4, scale: 1.02 }} className="relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 group cursor-default"
                       style={{ borderColor: `${habit.color}25`, background: `linear-gradient(160deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)`, boxShadow: `0 4px 20px ${habit.glow}15` }}>
                       <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full opacity-20 group-hover:opacity-30 transition-opacity duration-500" style={{ background: `radial-gradient(circle, ${habit.color}30, transparent 70%)` }} />
                       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `linear-gradient(135deg, ${habit.color}08, transparent 50%)` }} />
                       <div className="relative">
+                        {/* Icon + Name + Done */}
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-2">
                             <div className="p-2 rounded-xl transition-all duration-300 group-hover:scale-110" style={{ background: `${habit.color}20`, boxShadow: `0 0 12px ${habit.glow}20` }}>
@@ -441,64 +474,38 @@ export function Habits() {
                             <div className="w-5 h-5 rounded-full bg-white/5 border border-white/10" />
                           )}
                         </div>
-                        <div className="flex items-center gap-4">
-                          <StreakRing value={hs.current} max={ringMax} size={52} strokeWidth={3.5} color={habit.color} />
+                        {/* Streak Ring + Numbers */}
+                        <div className="flex items-center gap-3">
+                          <StreakRing value={hs.current} max={ringMax} size={48} strokeWidth={3} color={habit.color} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-baseline gap-1">
-                              <span className="text-3xl font-black text-white drop-shadow-lg tabular-nums">{hs.current}</span>
+                              <span className="text-2xl font-black text-white drop-shadow-lg tabular-nums">{hs.current}</span>
                               <span className="text-[10px] text-gray-500">days</span>
                             </div>
-                            <div className="flex items-center gap-2 mt-1.5">
+                            <div className="flex items-center gap-2 mt-1">
                               <span className="text-[10px] text-gray-500">Best: <span className="text-white font-semibold">{hs.longest}</span></span>
                               <span className="w-1 h-1 rounded-full bg-gray-600" />
                               <span className="text-[10px] text-gray-500">Wk: <span className="text-white font-semibold">{wk}/7</span></span>
                             </div>
                           </div>
                         </div>
-                        <div className="mt-4 h-1 rounded-full bg-white/10 overflow-hidden">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${(hs.current / ringMax) * 100}%` }} transition={{ duration: 1.2, delay: 0.2, ease: 'easeOut' }}
-                            className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${habit.color}, ${habit.color}88)`, boxShadow: `0 0 8px ${habit.glow}` }} />
+                        {/* Score Contribution Bar */}
+                        <div className="mt-4">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[9px] text-gray-500 uppercase tracking-wider">Score</span>
+                            <span className="text-[10px] font-bold text-white">{scoreVal}<span className="text-gray-600 font-normal">/{scoreMax}</span></span>
+                          </div>
+                          <div className="h-2 rounded-full bg-white/10 overflow-hidden relative">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${(scoreVal / scoreMax) * 100}%` }} transition={{ duration: 1, delay: 0.4 + idx * 0.07, ease: 'easeOut' }}
+                              className="h-full rounded-full relative" style={{ background: `linear-gradient(90deg, ${habit.color}, ${habit.color}66)`, boxShadow: `0 0 8px ${habit.color}44` }}>
+                              <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent)] animate-shimmer" />
+                            </motion.div>
+                          </div>
                         </div>
                       </div>
                     </motion.div>
                   )
                 })}
-              </div>
-
-              {/* Score Breakdown */}
-              <div className="rounded-2xl border border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent p-5 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-40 h-40 bg-amber-500/5 rounded-full -ml-20 -mt-20 blur-2xl pointer-events-none" />
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <Hash className="w-4 h-4 text-amber-400" />
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Score Breakdown</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white/5 border border-white/10">
-                      <span className="text-xs font-bold text-white">{habitScore}</span>
-                      <span className="text-[9px] text-gray-500">/ 100</span>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    {scoreBreakdown.map((item, idx) => (
-                      <motion.div key={item.key} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.08 }}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="flex items-center gap-2">
-                            <item.icon size={10} style={{ color: item.color }} />
-                            <span className="text-[11px] text-gray-400 font-medium">{item.label}</span>
-                          </div>
-                          <span className="text-[11px] font-bold text-white">{item.value}<span className="text-gray-600 font-normal">/{item.max}</span></span>
-                        </div>
-                        <div className="h-2.5 rounded-full bg-white/10 overflow-hidden relative">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${(item.value / item.max) * 100}%` }} transition={{ duration: 1, delay: 0.3 + idx * 0.08, ease: 'easeOut' }}
-                            className="h-full rounded-full relative" style={{ background: `linear-gradient(90deg, ${item.color}, ${item.color}66)`, boxShadow: `0 0 8px ${item.color}44` }}>
-                            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent)] animate-shimmer" />
-                          </motion.div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
               </div>
             </div>
           </motion.div>
