@@ -1,6 +1,32 @@
 # Sentience Engine — Session Memory
 
-## Last Updated: August 11, 2026
+## Last Updated: September 2, 2026
+
+## Session: Merge Score Breakdown into Streak Dashboard + Dynamic Range Selector
+
+### What was done
+- Merged the standalone **Score Breakdown** section into the **Streak Dashboard** — one unified panel instead of two stacked sections
+- Added a **Hero Score Ring**: large animated SVG donut (habitScore/100) with gradient stroke, centered at top of dashboard
+- Each of the 6 habit cards now includes a **score contribution bar** (value/max) with shimmer animation — no separate breakdown section
+- Added **dynamic range selector** (7D / 30D / 90D / All) above the hero ring — user can pick the time window
+- Hero ring label updates dynamically: "7-Day Health Score", "30-Day Health Score", "All-Time Health Score"
+- Streak stats (current streak, best streak, days count) now **scope to the selected range** — `computeHabitStreak` only receives dates within the cutoff
+- Weekly completion count now uses the full range (not capped at 7), label changed from "Wk" to "Days" (e.g. "Days: 12/30")
+- Removed standalone Score Breakdown section and `Hash` import (no longer used)
+
+### Key learnings
+- `weeklyCompletion` was hardcoded to `Math.min(7, ...)` — always showed /7 regardless of range. Fixed to use `rangeDates.days` directly
+- `habitStats` streak calculation via `computeHabitStreak` works correctly when dates are pre-filtered by range cutoff
+- Range selector pills use the same glassmorphism tab pattern as other toggles in the app
+
+### Files modified
+- `src/components/fitness/Habits.tsx` — unified dashboard, added `scoreRange` state, refactored `habitScore`/`scoreBreakdown`/`habitStats`/`weeklyCompletion` memos to be range-aware, added hero ring + range selector UI
+
+### Deployed to
+- **GitHub:** https://github.com/Mugiwarakoibito/vitalfi (commits `db168ec`, `40f990f`, `73d5241`)
+- **Vercel:** https://vitalfi.vercel.app
+
+---
 
 ## Session: Milestone Path — one smart tool (Milestones panel final form)
 

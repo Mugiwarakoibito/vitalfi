@@ -206,10 +206,9 @@ export function Habits() {
 
   const weeklyCompletion = useMemo(() => {
     const now = new Date()
-    const lookback = rangeDates.days || 7
     const getCount = (dates: string[]) => {
       const set = new Set(dates); let count = 0
-      for (let i = 0; i < lookback; i++) { const d = new Date(now); d.setDate(d.getDate() - i); if (set.has(d.toISOString().split('T')[0])) count++ }
+      for (let i = 0; i < 7; i++) { const d = new Date(now); d.setDate(d.getDate() - i); if (set.has(d.toISOString().split('T')[0])) count++ }
       return count
     }
     return {
@@ -220,7 +219,7 @@ export function Habits() {
       recovery: getCount(recoveryEntries.map((r: RecoveryEntry) => r.date)),
       supplements: getCount(supplementLogs.map((s: SupplementLog) => s.date)),
     }
-  }, [workouts, meals, sleep, hydration, recoveryEntries, supplementLogs, rangeDates])
+  }, [workouts, meals, sleep, hydration, recoveryEntries, supplementLogs])
 
   const stats = useMemo(() => computeStats(workouts), [workouts])
 
@@ -514,7 +513,7 @@ export function Habits() {
                   const scoreItem = scoreBreakdown.find(s => s.key === habit.key)
                   const scoreVal = scoreItem?.value ?? 0
                   const scoreMax = scoreItem?.max ?? 1
-                  const wkMax = rangeDates.days || 7
+                  const wkMax = 7
                   return (
                     <motion.div key={habit.key} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + idx * 0.07 }}
                       whileHover={{ y: -4, scale: 1.02 }} className="relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 group cursor-default"
