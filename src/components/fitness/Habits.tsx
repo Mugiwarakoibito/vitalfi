@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import type { Workout, Meal, SleepEntry, HydrationEntry } from '@/types/domain'
-import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts'
+import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell } from 'recharts'
 
 interface RecoveryEntry { id: string; date: string }
 interface SupplementLog { id: string; date: string }
@@ -632,19 +632,9 @@ export function Habits() {
                 <div className="absolute -bottom-16 -left-16 w-44 h-44 bg-violet-500/8 rounded-full blur-3xl pointer-events-none" />
                 <div className="relative z-10">
                   {chartTab === 'streaks' && (() => {
-                    const streakLevel = (days: number) =>
-                      days >= 30 ? { label: 'Platinum', color: '#a855f7', icon: '💎' } :
-                      days >= 14 ? { label: 'Gold', color: '#f59e0b', icon: '🥇' } :
-                      days >= 7 ? { label: 'Silver', color: '#9ca3af', icon: '🥈' } :
-                      days >= 3 ? { label: 'Bronze', color: '#d97706', icon: '🥉' } :
-                      { label: 'Starter', color: '#6b7280', icon: '🌱' }
-                    const streakStatus = (current: number) =>
-                      current >= 14 ? { label: 'On Fire', icon: '🔥', color: '#f43f5e' } :
-                      current >= 7 ? { label: 'Blazing', icon: '⚡', color: '#f59e0b' } :
-                      current >= 3 ? { label: 'Building', icon: '🚀', color: '#06b6d4' } :
-                      current >= 1 ? { label: 'Started', icon: '🌱', color: '#10b981' } :
-                      { label: 'Inactive', icon: '💤', color: '#6b7280' }
-                    const weekEnd = scopeWeek[6].fullDate
+                    const streakData = HABIT_TYPES.map(h => ({
+                      name: h.label, current: habitStats[h.key].current, longest: habitStats[h.key].longest, color: h.color,
+                    }))
                     const weekSet = new Set(scopeWeek.map(d => d.fullDate))
                     const getDates = (h: typeof HABIT_TYPES[number]): string[] =>
                       h.key === 'workout' ? workouts.map((w: Workout) => w.date) :
@@ -653,100 +643,65 @@ export function Habits() {
                       h.key === 'hydration' ? hydration.map((x: HydrationEntry) => x.date) :
                       h.key === 'recovery' ? recoveryEntries.map((r: RecoveryEntry) => r.date) :
                       supplementLogs.map((s: SupplementLog) => s.date)
-                    const countInWeek = (dates: string[]) => { let n = 0; dates.forEach(d => { if (weekSet.has(d)) n++ }); return n }
-                    const streakAt = (dates: string[], endDate: string) => {
-                      const set = new Set(dates); let n = 0; const d = new Date(endDate)
-                      while (set.has(d.toISOString().split('T')[0])) { n++; d.setDate(d.getDate() - 1) }
-                      return n
-                    }
-                    const weekTotal = HABIT_TYPES.reduce((s, h) => s + countInWeek(getDates(h)), 0)
-                    const dayTotals = scopeWeek.map(day => HABIT_TYPES.filter(h => getDates(h).includes(day.fullDate)).length)
-                    const maxDay = Math.max(...dayTotals, 1)
+                    const radarData = HABIT_TYPES.map(h => ({ label: h.label, value: Math.round((getDates(h).filter(d => weekSet.has(d)).length / 7) * 100) }))
+                    const weekTotal = HABIT_TYPES.reduce((s, h) => s + getDates(h).filter(d => weekSet.has(d)).length, 0)
                     return (
-                      <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
-                        <div className="flex items-center gap-2 px-3 pt-3 pb-2">
-                          <div className="p-1.5 rounded-lg bg-violet-500/15 border border-violet-500/20 shadow-[0_0_10px_rgba(139,92,246,0.15)]"><Activity className="w-3 h-3 text-violet-400" /></div>
-                          <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Habit Streaks</span>
-                          <span className="text-[8px] text-gray-600">{isScopeCurrentWeek ? '· live · best · week' : '· streak at week end'}</span>
-                          <div className="flex-1" />
-                          <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-gray-400 tabular-nums">{scopeWeekLabel}</span>
-                          <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 tabular-nums">{HABIT_TYPES.filter(h => countInWeek(getDates(h)) > 0).length}/6 in week</span>
-                        </div>
-                        <div className="divide-y divide-white/[0.04]">
-                          {HABIT_TYPES.map((habit, idx) => {
-                            const hs = habitStats[habit.key]
-                            const dates = getDates(habit)
-                            const wk = countInWeek(dates)
-                            const ws = streakAt(dates, weekEnd)
-                            const display = isScopeCurrentWeek ? hs.current : ws
-                            const level = streakLevel(display)
-                            const status = streakStatus(display)
-                            const pct = Math.min(display / Math.max(hs.longest, 1), 1)
-                            const weekDays: boolean[] = scopeWeek.map(day => dates.includes(day.fullDate))
-                            return (
-                              <motion.div key={habit.key} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }}
-                                className="flex items-center gap-3 px-3 py-2.5 group hover:bg-white/[0.02] transition-colors duration-300">
-                                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105"
-                                  style={{ background: `${habit.color}16`, boxShadow: `inset 0 0 0 1px ${habit.color}30` }}>
-                                  <habit.icon size={15} style={{ color: habit.color, filter: `drop-shadow(0 0 4px ${habit.glow})` }} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[11px] font-bold text-white">{habit.label}</span>
-                                    <span className="text-[7px] font-bold px-1.5 py-px rounded-full uppercase tracking-wider" style={{ background: `${level.color}18`, color: level.color, boxShadow: `inset 0 0 0 1px ${level.color}35` }}>{level.icon} {level.label}</span>
-                                    {wk > 0 && <span className="text-[7px] font-bold px-1.5 py-px rounded-full uppercase tracking-wider bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">wk {wk}/7</span>}
-                                  </div>
-                                  <div className="flex items-center gap-2 mt-1.5">
-                                    <div className="flex-1 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
-                                      <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(pct * 100, display > 0 ? 8 : 0)}%` }} transition={{ duration: 0.8, delay: 0.15 + idx * 0.04 }}
-                                        className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${habit.color}, ${habit.color}55)`, boxShadow: display > 0 ? `0 0 6px ${habit.glow}` : 'none' }} />
-                                    </div>
-                                    <span className="text-[7px] text-gray-600 tabular-nums shrink-0">best {hs.longest}d</span>
-                                  </div>
-                                </div>
-                                <div className="flex flex-col items-end gap-1.5 shrink-0">
-                                  <div className="flex items-baseline gap-1">
-                                    <span className="text-lg font-black text-white tabular-nums drop-shadow-sm leading-none">{display}<span className="text-[8px] text-gray-600 font-normal">d</span></span>
-                                    <span className="text-[9px] leading-none" style={{ filter: `drop-shadow(0 0 4px ${status.color})` }}>{status.icon}</span>
-                                  </div>
-                                  <div className="flex items-center gap-[3px]" title={`Week of ${scopeWeekLabel}: ${wk}/7 days`}>
-                                    {weekDays.map((done, j) => (
-                                      <div key={j} className={`w-[6px] h-[6px] rounded-[2px] transition-all duration-300 ${done ? '' : 'bg-white/[0.05] scale-90'}`}
-                                        style={{ background: done ? habit.color : '', boxShadow: done ? `0 0 4px ${habit.glow}` : 'none' }} />
-                                    ))}
-                                  </div>
-                                </div>
-                              </motion.div>
-                            )
-                          })}
-                        </div>
-                        <div className="px-3 py-2.5 border-t border-white/[0.04] bg-white/[0.01]">
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-[8px] text-gray-600 uppercase tracking-wider font-semibold shrink-0">Week</span>
-                            <div className="flex-1 h-[5px] rounded-full bg-white/[0.06] overflow-hidden">
-                              <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((weekTotal / (HABIT_TYPES.length * 7)) * 100, 100)}%` }} transition={{ duration: 1, delay: 0.3 }}
-                                className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-400" style={{ boxShadow: '0 0 8px rgba(139,92,246,0.35)' }} />
-                            </div>
-                            <span className="text-[8px] font-bold text-violet-300 tabular-nums shrink-0">{weekTotal}/42</span>
+                      <div className="space-y-3">
+                        <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
+                          <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+                            <div className="p-1.5 rounded-lg bg-violet-500/15 border border-violet-500/20"><Activity className="w-3 h-3 text-violet-400" /></div>
+                            <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Current Streaks</span>
+                            <div className="flex-1" />
+                            <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-gray-400 tabular-nums">{scopeWeekLabel}</span>
                           </div>
-                          <div className="flex items-end gap-1.5 mt-2 h-4" title="Habit-days per day of the selected week">
-                            {dayTotals.map((t, j) => (
-                              <div key={j} className="flex-1 flex flex-col items-center gap-0.5">
-                                <div className="w-full rounded-t-[3px] bg-gradient-to-t from-violet-500/40 to-violet-400/80 transition-all duration-500"
-                                  style={{ height: `${Math.max((t / maxDay) * 14, 1)}px`, boxShadow: t > 0 ? '0 0 6px rgba(139,92,246,0.3)' : 'none' }} title={`${scopeWeek[j].weekday}: ${t}/6`} />
-                                <span className={`text-[6px] font-bold ${t > 0 ? 'text-violet-300/80' : 'text-gray-700'}`}>{scopeWeek[j].weekday[0]}</span>
-                              </div>
-                            ))}
+                          <div className="h-48 px-2 pb-2">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={streakData} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                                <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 9 }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
+                                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                                  contentStyle={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 8, fontSize: 11 }}
+                                  labelStyle={{ color: '#9ca3af', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
+                                <Bar dataKey="current" name="Current" radius={[4, 4, 0, 0]} maxBarSize={36}>
+                                  {streakData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.8} />)}
+                                </Bar>
+                                <Bar dataKey="longest" name="Best" radius={[4, 4, 0, 0]} maxBarSize={36}>
+                                  {streakData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.25} />)}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
+                          <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+                            <div className="p-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/20"><Target className="w-3 h-3 text-emerald-400" /></div>
+                            <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Weekly Consistency</span>
+                            <div className="flex-1" />
+                            <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 tabular-nums">{weekTotal}/42</span>
+                          </div>
+                          <div className="h-52 relative">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="72%">
+                                <PolarGrid stroke="rgba(255,255,255,0.07)" />
+                                <PolarAngleAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 9 }} />
+                                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#6b7280', fontSize: 8 }} tickCount={4} />
+                                <Tooltip contentStyle={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, fontSize: 11 }} />
+                                <Radar name="Consistency %" dataKey="value" stroke="#10b981" strokeWidth={2} fill="#10b981" fillOpacity={0.18} />
+                              </RadarChart>
+                            </ResponsiveContainer>
                           </div>
                         </div>
                       </div>
                     )})()
                   }
                   {chartTab === 'history' && (() => {
-                    type StreakSegment = { label: string; color: string; icon: typeof Dumbbell; start: string; end: string; length: number; isActive: boolean }
-                    const weekEnd = scopeWeek[6].fullDate
-                    const weekStart = scopeWeek[0].fullDate
-                    const weekSet = new Set(scopeWeek.map(d => d.fullDate))
+                    const weeks: { label: string; start: Date; end: Date }[] = []
+                    for (let i = 7; i >= 0; i--) {
+                      const d = new Date(); d.setDate(d.getDate() - d.getDay() - (i * 7))
+                      const e = new Date(d); e.setDate(e.getDate() + 6)
+                      weeks.push({ label: `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, start: d, end: e })
+                    }
                     const getDates = (h: typeof HABIT_TYPES[number]): string[] =>
                       h.key === 'workout' ? workouts.map((w: Workout) => w.date) :
                       h.key === 'nutrition' ? meals.filter((m: Meal) => m.calories > 0).map((m: Meal) => m.date) :
@@ -754,140 +709,44 @@ export function Habits() {
                       h.key === 'hydration' ? hydration.map((x: HydrationEntry) => x.date) :
                       h.key === 'recovery' ? recoveryEntries.map((r: RecoveryEntry) => r.date) :
                       supplementLogs.map((s: SupplementLog) => s.date)
-                    const streakAt = (dates: string[], endDate: string) => {
-                      const set = new Set(dates); let n = 0; const d = new Date(endDate)
-                      while (set.has(d.toISOString().split('T')[0])) { n++; d.setDate(d.getDate() - 1) }
-                      return n
-                    }
-                    const buildSegments = (dates: string[]) => {
-                      const unique = [...new Set(dates)].sort()
-                      if (unique.length === 0) return []
-                      const segs: { start: string; end: string; length: number }[] = []
-                      let rs = unique[0]
-                      for (let i = 1; i < unique.length; i++) {
-                        const diff = Math.round((new Date(unique[i]).getTime() - new Date(unique[i-1]).getTime()) / 86400000)
-                        if (diff > 1) { segs.push({ start: rs, end: unique[i-1], length: i - unique.indexOf(rs) }); rs = unique[i] }
-                      }
-                      segs.push({ start: rs, end: unique[unique.length-1], length: unique.length - unique.indexOf(rs) })
-                      return segs
-                    }
-                    const allSegments: StreakSegment[] = HABIT_TYPES.flatMap(h => {
-                      const dates = getDates(h)
-                      const allDates = [...new Set(dates)].sort()
-                      const lastDate = allDates.pop()
-                      return buildSegments(dates).map(s => ({ ...s, label: h.label, color: h.color, icon: h.icon, isActive: s.end === lastDate && (new Date(s.end).getTime() >= Date.now() - 86400000 * 2 || dates.some(d => d === new Date().toISOString().split('T')[0])) }))
-                    }).sort((a, b) => new Date(b.end).getTime() - new Date(a.end).getTime())
-                    const weekSegments = allSegments.filter(s => s.start <= weekEnd && s.end >= weekStart)
-                    const maxLen = Math.max(...weekSegments.map(s => s.length), 1)
-                    const grouped = weekSegments.reduce((acc, s) => {
-                      const key = s.end.slice(0, 7); if (!acc[key]) acc[key] = []; acc[key].push(s); return acc
-                    }, {} as Record<string, StreakSegment[]>)
-                    const sortedGroups = Object.entries(grouped).sort((a, b) => b[0].localeCompare(a[0]))
-                    const snapshot = HABIT_TYPES.map(h => {
-                      const dates = getDates(h)
-                      const wk = dates.filter(d => weekSet.has(d)).length
-                      const ws = streakAt(dates, weekEnd)
-                      return { habit: h, wk, ws }
+                    const historyData = weeks.map(w => {
+                      const row: Record<string, string | number> = { week: w.label }
+                      HABIT_TYPES.forEach(h => {
+                        const dates = getDates(h)
+                        row[h.key] = dates.filter(d => d >= w.start.toISOString().split('T')[0] && d <= w.end.toISOString().split('T')[0]).length
+                      })
+                      return row
                     })
-                    const snapTotal = snapshot.reduce((s, x) => s + x.wk, 0)
                     return (
-                      <div className="space-y-2.5">
-                        <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
-                          <div className="flex items-center gap-2 px-3 pt-3 pb-2">
-                            <div className="p-1.5 rounded-lg bg-amber-500/15 border border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.15)]"><CalendarCheck className="w-3 h-3 text-amber-400" /></div>
-                            <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Week Snapshot</span>
-                            <span className="text-[8px] text-gray-600">· {scopeWeekLabel}</span>
-                            <div className="flex-1" />
-                            <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-gray-400 tabular-nums">{snapTotal}/42 habit-days</span>
-                          </div>
-                          <div className="divide-y divide-white/[0.04] px-3 py-1">
-                            {snapshot.map(({ habit, wk, ws }, idx) => {
-                              const pct = Math.min(wk / 7, 1)
-                              const heat = ws >= 3 ? { label: `${ws}d streak`, color: '#f59e0b', icon: '🔥' } : ws >= 1 ? { label: `${ws}d streak`, color: '#06b6d4', icon: '⚡' } : wk > 0 ? { label: 'scattered', color: '#6b7280', icon: '…' } : { label: 'off', color: '#4b5563', icon: '—' }
-                              return (
-                                <motion.div key={habit.key} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.03 }}
-                                  className="flex items-center gap-2.5 py-1.5 group hover:bg-white/[0.02] transition-colors duration-300">
-                                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${habit.color}14`, boxShadow: `inset 0 0 0 1px ${habit.color}28` }}>
-                                    <habit.icon size={12} style={{ color: habit.color }} />
-                                  </div>
-                                  <span className="text-[9px] font-bold text-gray-300 w-16 shrink-0">{habit.label}</span>
-                                  <div className="flex-1 h-[4px] rounded-full bg-white/[0.05] overflow-hidden">
-                                    <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(pct * 100, wk > 0 ? 6 : 0)}%` }} transition={{ duration: 0.6, delay: idx * 0.03 }}
-                                      className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${habit.color}, ${habit.color}66)` }} />
-                                  </div>
-                                  <span className="text-[8px] font-bold text-gray-400 tabular-nums shrink-0 w-7 text-right">{wk}/7</span>
-                                  <span className="text-[7px] font-bold px-1.5 py-px rounded-full shrink-0" style={{ background: `${heat.color}16`, color: heat.color, boxShadow: `inset 0 0 0 1px ${heat.color}30` }}>{heat.icon} {heat.label}</span>
-                                </motion.div>
-                              )
-                            })}
-                          </div>
+                      <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
+                        <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+                          <div className="p-1.5 rounded-lg bg-amber-500/15 border border-amber-500/20"><CalendarCheck className="w-3 h-3 text-amber-400" /></div>
+                          <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">8-Week Trend</span>
+                          <div className="flex-1" />
+                          <span className="text-[8px] text-gray-600">days per habit per week</span>
                         </div>
-                        <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
-                          {weekSegments.length > 0 ? (
-                            <>
-                              <div className="flex items-center gap-2 px-3 pt-3 pb-2">
-                                <div className="p-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08]"><Layers className="w-3 h-3 text-gray-400" /></div>
-                                <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Segments in this week</span>
-                                <div className="flex-1" />
-                                <span className="text-[8px] text-gray-600 tabular-nums">longest {maxLen}d</span>
-                              </div>
-                              <div className="max-h-56 overflow-y-auto">
-                                {sortedGroups.map(([month, streaks]) => {
-                                  const d = new Date(month + '-01')
-                                  return (
-                                    <div key={month}>
-                                      <div className="sticky top-0 z-10 flex items-center gap-2 px-3 py-1.5" style={{ background: 'linear-gradient(180deg, #0f0f13, #0f0f13d9)' }}>
-                                        <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/[0.08]" />
-                                        <span className="text-[8px] font-bold text-gray-500 uppercase tracking-[0.2em]">{d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
-                                        <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/[0.08]" />
-                                      </div>
-                                      <div className="divide-y divide-white/[0.04]">
-                                        {streaks.map((s, i) => {
-                                          const pct = s.length / maxLen
-                                          return (
-                                            <motion.div key={`${s.label}-${s.start}`} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
-                                              className="flex items-center gap-3 px-3 py-2 group hover:bg-white/[0.02] transition-colors duration-300">
-                                              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${s.color}14`, boxShadow: `inset 0 0 0 1px ${s.color}28` }}>
-                                                <s.icon size={13} style={{ color: s.color }} />
-                                              </div>
-                                              <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-1">
-                                                  <span className="text-[10px] font-bold text-gray-300">{s.label}</span>
-                                                  <span className="text-[8px] text-gray-600 tabular-nums">{new Date(s.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(s.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                                                </div>
-                                                <div className="h-[5px] rounded-full bg-white/[0.05] overflow-hidden relative">
-                                                  <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(pct * 100, 1)}%` }} transition={{ duration: 0.6, delay: i * 0.03 }}
-                                                    className="h-full rounded-full relative overflow-hidden"
-                                                    style={{ background: `linear-gradient(90deg, ${s.color}, ${s.color}66)`, boxShadow: s.isActive ? `0 0 8px ${s.color}55` : 'none' }}>
-                                                    {s.isActive && <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent)] animate-shimmer" />}
-                                                  </motion.div>
-                                                </div>
-                                              </div>
-                                              <div className="flex flex-col items-end gap-1 shrink-0">
-                                                <span className="text-sm font-black text-white tabular-nums leading-none drop-shadow-sm">{s.length}<span className="text-[8px] text-gray-600 font-normal">d</span></span>
-                                                {s.isActive ? (
-                                                  <span className="flex items-center gap-1 px-1.5 py-px rounded-full bg-emerald-500/10 border border-emerald-500/25">
-                                                    <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_4px_rgba(52,211,153,0.7)]" />
-                                                    <span className="text-[6px] font-bold text-emerald-400 uppercase tracking-wider">Live</span>
-                                                  </span>
-                                                ) : <span className="text-[7px] text-gray-600 tabular-nums">streak</span>}
-                                              </div>
-                                            </motion.div>
-                                          )
-                                        })}
-                                      </div>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            </>
-                          ) : (
-                            <div className="py-8 flex flex-col items-center justify-center gap-2">
-                              <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center"><Layers className="w-4 h-4 text-gray-600" /></div>
-                              <p className="text-sm font-semibold text-gray-400">No streaks in {scopeWeekLabel.toLowerCase()}</p>
-                              <p className="text-[10px] text-gray-600">Navigate weeks to explore your streak history</p>
+                        <div className="h-64 px-2 pb-2">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={historyData} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                              <XAxis dataKey="week" tick={{ fill: '#9ca3af', fontSize: 8 }} axisLine={false} tickLine={false} interval={0} angle={-30} textAnchor="end" height={36} />
+                              <YAxis tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} domain={[0, 7]} />
+                              <Tooltip cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                                contentStyle={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8, fontSize: 11 }}
+                                labelStyle={{ color: '#9ca3af', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
+                              {HABIT_TYPES.map(h => (
+                                <Bar key={h.key} dataKey={h.key} name={h.label} fill={h.color} fillOpacity={0.75} radius={[2, 2, 0, 0]} maxBarSize={14} />
+                              ))}
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 px-3 pb-2">
+                          {HABIT_TYPES.map(h => (
+                            <div key={h.key} className="flex items-center gap-1.5">
+                              <div className="w-2 h-2 rounded-sm" style={{ background: h.color }} />
+                              <span className="text-[8px] text-gray-500">{h.label}</span>
                             </div>
-                          )}
+                          ))}
                         </div>
                       </div>
                     )})()
@@ -902,103 +761,72 @@ export function Habits() {
                       h.key === 'recovery' ? recoveryEntries.map((r: RecoveryEntry) => r.date) :
                       supplementLogs.map((s: SupplementLog) => s.date)
                     const weeklyTargets: Record<string, number> = {
-                      workout: Math.max(Math.round(stats.weeklyAverage), 3),
-                      nutrition: 6, sleep: 7, hydration: 5, recovery: 3, supplements: 6,
+                      workout: Math.max(Math.round(stats.weeklyAverage), 3), nutrition: 6, sleep: 7, hydration: 5, recovery: 3, supplements: 6,
                     }
-                    const rows = HABIT_TYPES.map(h => {
+                    const goalData = HABIT_TYPES.map(h => {
                       const done = getDates(h).filter(d => weekSet.has(d)).length
-                      const target = weeklyTargets[h.key]
-                      const pct = Math.min(done / target, 1)
-                      const status = done >= target ? { label: 'goal met', icon: '✅', color: '#10b981' }
-                        : done >= target * 0.8 ? { label: 'almost there', icon: '🔥', color: '#f59e0b' }
-                        : done >= target * 0.5 ? { label: 'halfway', icon: '⚡', color: '#06b6d4' }
-                        : done > 0 ? { label: 'started', icon: '🌱', color: '#8b5cf6' }
-                        : { label: 'no days', icon: '💤', color: '#6b7280' }
-                      return { habit: h, done, target, pct, status }
+                      return { name: h.label, done, target: weeklyTargets[h.key], color: h.color }
                     })
-                    const totalDone = rows.reduce((s, r) => s + r.done, 0)
-                    const totalTarget = rows.reduce((s, r) => s + r.target, 0)
-                    const metCount = rows.filter(r => r.done >= r.target).length
+                    const totalDone = goalData.reduce((s, r) => s + r.done, 0)
+                    const totalTarget = goalData.reduce((s, r) => s + r.target, 0)
+                    const weekBalance = goalData.reduce((s, r) => s + Math.round((r.done / r.target) * (r.name === 'Workout' ? 25 : r.name === 'Nutrition' ? 20 : r.name === 'Sleep' ? 20 : r.name === 'Hydration' ? 15 : 10)), 0)
+                    const radarData = HABIT_TYPES.map(h => ({ label: h.label, value: Math.round((getDates(h).filter(d => weekSet.has(d)).length / 7) * 100) }))
                     return (
-                      <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-cyan-500/3 to-transparent overflow-hidden">
-                        <div className="flex items-center gap-2 px-3 pt-3 pb-2">
-                          <div className="p-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.15)]"><Zap className="w-3 h-3 text-cyan-400" /></div>
-                          <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Weekly Goals</span>
-                          <span className="text-[8px] text-gray-600">· {scopeWeekLabel}</span>
-                          <div className="flex-1" />
-                          <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 tabular-nums">{metCount}/{HABIT_TYPES.length} met</span>
-                        </div>
-                        <div className="divide-y divide-white/[0.04]">
-                          {rows.map((row, idx) => (
-                            <motion.div key={row.habit.key} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }}
-                              className="flex items-center gap-3 px-3 py-2.5 group hover:bg-white/[0.02] transition-colors duration-300">
-                              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105"
-                                style={{ background: `${row.habit.color}16`, boxShadow: `inset 0 0 0 1px ${row.habit.color}30` }}>
-                                <row.habit.icon size={15} style={{ color: row.habit.color, filter: `drop-shadow(0 0 4px ${row.habit.glow})` }} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1.5">
-                                  <span className="text-[11px] font-bold text-white">{row.habit.label}</span>
-                                  <span className="text-[7px] font-bold px-1.5 py-px rounded-full uppercase tracking-wider bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">goal {row.target}</span>
-                                </div>
-                                <div className="h-[4px] rounded-full bg-white/[0.06] overflow-hidden">
-                                  <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(row.pct * 100, row.done > 0 ? 6 : 0)}%` }} transition={{ duration: 0.8, delay: 0.15 + idx * 0.04 }}
-                                    className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${row.habit.color}, ${row.habit.color}66)`, boxShadow: row.done > 0 ? `0 0 6px ${row.habit.glow}` : 'none' }} />
-                                </div>
-                              </div>
-                              <div className="flex flex-col items-end gap-1 shrink-0">
-                                <span className="text-sm font-black text-white tabular-nums leading-none drop-shadow-sm">{row.done}<span className="text-[8px] text-gray-600 font-normal">/{row.target}</span></span>
-                                <span className="text-[7px] font-bold px-1.5 py-px rounded-full" style={{ background: `${row.status.color}16`, color: row.status.color, boxShadow: `inset 0 0 0 1px ${row.status.color}30` }}>{row.status.icon} {row.status.label}</span>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-2.5 px-3 py-2 border-t border-white/[0.04] bg-white/[0.01]">
-                          <span className="text-[8px] text-gray-600 uppercase tracking-wider font-semibold shrink-0">Total</span>
-                          <div className="flex-1 h-[5px] rounded-full bg-white/[0.06] overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((totalDone / totalTarget) * 100, 100)}%` }} transition={{ duration: 1, delay: 0.3 }}
-                              className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-sky-400" style={{ boxShadow: '0 0 8px rgba(34,211,238,0.35)' }} />
+                      <div className="space-y-3">
+                        <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-cyan-500/3 to-transparent overflow-hidden">
+                          <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+                            <div className="p-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/20"><Zap className="w-3 h-3 text-cyan-400" /></div>
+                            <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Weekly Goals</span>
+                            <span className="text-[8px] text-gray-600">· {scopeWeekLabel}</span>
+                            <div className="flex-1" />
+                            <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 tabular-nums">{goalData.filter(r => r.done >= r.target).length}/{HABIT_TYPES.length} met</span>
                           </div>
-                          <span className="text-[8px] font-bold text-cyan-300 tabular-nums shrink-0">{totalDone}/{totalTarget}</span>
+                          <div className="h-52 px-2 pb-2">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={goalData} layout="vertical" margin={{ top: 4, right: 32, bottom: 4, left: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
+                                <XAxis type="number" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
+                                <YAxis type="category" dataKey="name" tick={{ fill: '#9ca3af', fontSize: 9 }} axisLine={false} tickLine={false} width={68} />
+                                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                                  contentStyle={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(6,182,212,0.2)', borderRadius: 8, fontSize: 11 }}
+                                  formatter={(value: number, _name: string, props: { payload?: { target: number } }) => [`${value} / ${props.payload?.target ?? '?'}`, 'Done / Target']}
+                                  labelStyle={{ color: '#9ca3af', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
+                                <Bar dataKey="done" name="Done" radius={[0, 4, 4, 0]} maxBarSize={20}>
+                                  {goalData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={entry.done >= entry.target ? 0.9 : 0.5} />)}
+                                </Bar>
+                                <Bar dataKey="target" name="Target" radius={[0, 4, 4, 0]} maxBarSize={20}>
+                                  {goalData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.12} />)}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="flex items-center gap-2.5 px-3 py-2 border-t border-white/[0.04] bg-white/[0.01]">
+                            <span className="text-[8px] text-gray-600 uppercase tracking-wider font-semibold shrink-0">Total</span>
+                            <div className="flex-1 h-[5px] rounded-full bg-white/[0.06] overflow-hidden">
+                              <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((totalDone / totalTarget) * 100, 100)}%` }} transition={{ duration: 1, delay: 0.3 }}
+                                className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-sky-400" style={{ boxShadow: '0 0 8px rgba(34,211,238,0.35)' }} />
+                            </div>
+                            <span className="text-[8px] font-bold text-cyan-300 tabular-nums shrink-0">{totalDone}/{totalTarget}</span>
+                          </div>
                         </div>
-                      </div>
-                    )})()
-                  }
-                  {chartTab === 'goals' && (() => {
-                    const weekSet = new Set(scopeWeek.map(d => d.fullDate))
-                    const weekData = scoreBreakdown.map(a => {
-                      const dates = a.key === 'workout' ? workouts.map((w: Workout) => w.date) :
-                        a.key === 'nutrition' ? meals.filter((m: Meal) => m.calories > 0).map((m: Meal) => m.date) :
-                        a.key === 'sleep' ? sleep.map((s: SleepEntry) => s.date) :
-                        a.key === 'hydration' ? hydration.map((x: HydrationEntry) => x.date) :
-                        a.key === 'recovery' ? recoveryEntries.map((r: RecoveryEntry) => r.date) :
-                        supplementLogs.map((s: SupplementLog) => s.date)
-                      const done = dates.filter(d => weekSet.has(d)).length
-                      return { ...a, value: Math.round((done / 7) * a.max) }
-                    })
-                    const weekBalanceTotal = weekData.reduce((s, a) => s + a.value, 0)
-                    return (
-                      <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className="p-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.12)]"><Target className="w-3 h-3 text-emerald-400" /></div>
-                          <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Habit Balance</span>
-                          <span className="text-[8px] text-gray-600">· {scopeWeekLabel}</span>
-                          <div className="flex-1" />
-                          <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 tabular-nums">{weekBalanceTotal}/100</span>
-                        </div>
-                        <div className="h-52 relative">
-                          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.05),transparent_65%)] pointer-events-none" />
-                          <ResponsiveContainer width="100%" height="100%">
-                            <RadarChart data={weekData} cx="50%" cy="50%" outerRadius="72%">
-                              <PolarGrid stroke="rgba(255,255,255,0.07)" />
-                              <PolarAngleAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 9 }} />
-                              <PolarRadiusAxis angle={90} domain={[0, 'auto']} tick={{ fill: '#6b7280', fontSize: 8 }} tickCount={4} />
-                              <Tooltip
-                                contentStyle={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, fontSize: 11, boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}
-                                itemStyle={{ color: '#e5e7eb' }} labelStyle={{ color: '#9ca3af', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
-                              <Radar name="Score" dataKey="value" stroke="#10b981" strokeWidth={2} fill="#10b981" fillOpacity={0.18} />
-                            </RadarChart>
-                          </ResponsiveContainer>
+                        <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
+                          <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+                            <div className="p-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/20"><Target className="w-3 h-3 text-emerald-400" /></div>
+                            <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Habit Balance</span>
+                            <div className="flex-1" />
+                            <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 tabular-nums">{Math.min(weekBalance, 100)}/100</span>
+                          </div>
+                          <div className="h-52 relative">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="72%">
+                                <PolarGrid stroke="rgba(255,255,255,0.07)" />
+                                <PolarAngleAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 9 }} />
+                                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#6b7280', fontSize: 8 }} tickCount={4} />
+                                <Tooltip contentStyle={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, fontSize: 11 }} />
+                                <Radar name="Score" dataKey="value" stroke="#10b981" strokeWidth={2} fill="#10b981" fillOpacity={0.18} />
+                              </RadarChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
                       </div>
                     )})()
