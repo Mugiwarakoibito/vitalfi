@@ -626,14 +626,30 @@ export function Habits() {
               </div>
 
               {/* Content Area */}
-              <div className="rounded-2xl bg-gradient-to-br from-black/60 via-white/[0.02] to-transparent border border-white/[0.06] p-3 md:p-4 shadow-inner shadow-white/5 relative">
+              <div className="rounded-2xl bg-gradient-to-br from-black/60 via-white/[0.02] to-transparent border border-white/[0.06] p-3 md:p-4 shadow-inner shadow-white/5 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-transparent to-cyan-500/5 pointer-events-none rounded-2xl" />
-                <div className="absolute -top-16 -right-16 w-44 h-44 bg-amber-500/8 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute -bottom-16 -left-16 w-44 h-44 bg-violet-500/8 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -top-16 -right-16 w-44 h-44 bg-amber-500/8 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDuration: '4s' }} />
+                <div className="absolute -bottom-16 -left-16 w-44 h-44 bg-violet-500/8 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDuration: '6s' }} />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-cyan-500/5 rounded-full blur-[80px] pointer-events-none animate-pulse" style={{ animationDuration: '5s' }} />
+                {/* SVG Defs for all charts */}
+                <svg width="0" height="0" className="absolute">
+                  <defs>
+                    {HABIT_TYPES.map(h => (
+                      <linearGradient key={h.key} id={`grad-${h.key}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={h.color} stopOpacity={0.9} />
+                        <stop offset="100%" stopColor={h.color} stopOpacity={0.3} />
+                      </linearGradient>
+                    ))}
+                    <linearGradient id="radarFill" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="#06b6d4" stopOpacity={0.1} />
+                    </linearGradient>
+                  </defs>
+                </svg>
                 <div className="relative z-10">
                   {chartTab === 'streaks' && (() => {
                     const streakData = HABIT_TYPES.map(h => ({
-                      name: h.label, current: habitStats[h.key].current, longest: habitStats[h.key].longest, color: h.color,
+                      name: h.label, current: habitStats[h.key].current, longest: habitStats[h.key].longest, color: h.color, key: h.key,
                     }))
                     const weekSet = new Set(scopeWeek.map(d => d.fullDate))
                     const getDates = (h: typeof HABIT_TYPES[number]): string[] =>
@@ -643,55 +659,69 @@ export function Habits() {
                       h.key === 'hydration' ? hydration.map((x: HydrationEntry) => x.date) :
                       h.key === 'recovery' ? recoveryEntries.map((r: RecoveryEntry) => r.date) :
                       supplementLogs.map((s: SupplementLog) => s.date)
-                    const radarData = HABIT_TYPES.map(h => ({ label: h.label, value: Math.round((getDates(h).filter(d => weekSet.has(d)).length / 7) * 100) }))
+                    const radarData = HABIT_TYPES.map(h => ({ label: h.label, value: Math.round((getDates(h).filter(d => weekSet.has(d)).length / 7) * 100), color: h.color }))
                     const weekTotal = HABIT_TYPES.reduce((s, h) => s + getDates(h).filter(d => weekSet.has(d)).length, 0)
+                    const bestStreak = Math.max(...streakData.map(s => s.current), 0)
                     return (
                       <div className="space-y-3">
-                        <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
-                          <div className="flex items-center gap-2 px-3 pt-3 pb-1">
-                            <div className="p-1.5 rounded-lg bg-violet-500/15 border border-violet-500/20"><Activity className="w-3 h-3 text-violet-400" /></div>
-                            <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Current Streaks</span>
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+                          className="rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 via-black/40 to-transparent overflow-hidden relative group">
+                          <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+                          <div className="flex items-center gap-2 px-4 pt-4 pb-1 relative">
+                            <div className="p-2 rounded-xl bg-violet-500/20 border border-violet-500/30 shadow-lg shadow-violet-500/20"><Activity className="w-4 h-4 text-violet-400" /></div>
+                            <div>
+                              <span className="text-[10px] font-black text-violet-300 uppercase tracking-[0.2em]">Current Streaks</span>
+                              <p className="text-[8px] text-gray-500">best: {bestStreak}d</p>
+                            </div>
                             <div className="flex-1" />
-                            <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-gray-400 tabular-nums">{scopeWeekLabel}</span>
+                            <span className="text-[8px] font-bold px-3 py-1 rounded-full bg-violet-500/15 border border-violet-500/25 text-violet-300 tabular-nums shadow-lg shadow-violet-500/10">{scopeWeekLabel}</span>
                           </div>
-                          <div className="h-48 px-2 pb-2">
+                          <div className="h-52 px-3 pb-3 relative">
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={streakData} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
+                              <BarChart data={streakData} margin={{ top: 12, right: 12, bottom: 0, left: -16 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                                <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 9 }} axisLine={false} tickLine={false} />
+                                <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
-                                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                                  contentStyle={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 8, fontSize: 11 }}
-                                  labelStyle={{ color: '#9ca3af', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
-                                <Bar dataKey="current" name="Current" radius={[4, 4, 0, 0]} maxBarSize={36}>
-                                  {streakData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.8} />)}
+                                <Tooltip cursor={{ fill: 'rgba(139,92,246,0.06)' }}
+                                  contentStyle={{ background: 'rgba(10,10,15,0.95)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 12, fontSize: 11, boxShadow: '0 8px 32px rgba(139,92,246,0.2), inset 0 1px 0 rgba(255,255,255,0.05)' }}
+                                  labelStyle={{ color: '#c4b5fd', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
+                                <Bar dataKey="current" name="Current" radius={[6, 6, 0, 0]} maxBarSize={32}>
+                                  {streakData.map((entry, i) => <Cell key={i} fill={`url(#grad-${entry.key})`} />)}
                                 </Bar>
-                                <Bar dataKey="longest" name="Best" radius={[4, 4, 0, 0]} maxBarSize={36}>
-                                  {streakData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.25} />)}
+                                <Bar dataKey="longest" name="Best" radius={[6, 6, 0, 0]} maxBarSize={32}>
+                                  {streakData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.15} />)}
                                 </Bar>
                               </BarChart>
                             </ResponsiveContainer>
                           </div>
-                        </div>
-                        <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
-                          <div className="flex items-center gap-2 px-3 pt-3 pb-1">
-                            <div className="p-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/20"><Target className="w-3 h-3 text-emerald-400" /></div>
-                            <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Weekly Consistency</span>
+                        </motion.div>
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
+                          className="rounded-xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-black/40 to-transparent overflow-hidden relative group">
+                          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                          <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none" />
+                          <div className="flex items-center gap-2 px-4 pt-4 pb-1 relative">
+                            <div className="p-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 shadow-lg shadow-emerald-500/20"><Target className="w-4 h-4 text-emerald-400" /></div>
+                            <div>
+                              <span className="text-[10px] font-black text-emerald-300 uppercase tracking-[0.2em]">Weekly Consistency</span>
+                              <p className="text-[8px] text-gray-500">habits active this week</p>
+                            </div>
                             <div className="flex-1" />
-                            <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 tabular-nums">{weekTotal}/42</span>
+                            <span className="text-[8px] font-bold px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 tabular-nums shadow-lg shadow-emerald-500/10">{weekTotal}/42</span>
                           </div>
-                          <div className="h-52 relative">
+                          <div className="h-56 relative">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.06),transparent_65%)] pointer-events-none" />
                             <ResponsiveContainer width="100%" height="100%">
-                              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="72%">
-                                <PolarGrid stroke="rgba(255,255,255,0.07)" />
-                                <PolarAngleAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 9 }} />
+                              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
+                                <PolarGrid stroke="rgba(255,255,255,0.06)" />
+                                <PolarAngleAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
                                 <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#6b7280', fontSize: 8 }} tickCount={4} />
-                                <Tooltip contentStyle={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, fontSize: 11 }} />
-                                <Radar name="Consistency %" dataKey="value" stroke="#10b981" strokeWidth={2} fill="#10b981" fillOpacity={0.18} />
+                                <Tooltip contentStyle={{ background: 'rgba(10,10,15,0.95)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 12, fontSize: 11, boxShadow: '0 8px 32px rgba(16,185,129,0.2)' }} />
+                                <Radar name="Consistency %" dataKey="value" stroke="#10b981" strokeWidth={2.5} fill="url(#radarFill)" />
                               </RadarChart>
                             </ResponsiveContainer>
                           </div>
-                        </div>
+                        </motion.div>
                       </div>
                     )})()
                   }
@@ -717,38 +747,47 @@ export function Habits() {
                       })
                       return row
                     })
+                    const totals = HABIT_TYPES.map(h => ({
+                      label: h.label, color: h.color, total: historyData.reduce((s, row) => s + (row[h.key] as number), 0)
+                    })).sort((a, b) => b.total - a.total)
                     return (
-                      <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
-                        <div className="flex items-center gap-2 px-3 pt-3 pb-1">
-                          <div className="p-1.5 rounded-lg bg-amber-500/15 border border-amber-500/20"><CalendarCheck className="w-3 h-3 text-amber-400" /></div>
-                          <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">8-Week Trend</span>
+                      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+                        className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-black/40 to-transparent overflow-hidden relative group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-transparent to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                        <div className="absolute top-0 left-1/3 w-48 h-48 bg-amber-500/8 rounded-full blur-3xl pointer-events-none" />
+                        <div className="flex items-center gap-2 px-4 pt-4 pb-1 relative">
+                          <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-500/30 shadow-lg shadow-amber-500/20"><CalendarCheck className="w-4 h-4 text-amber-400" /></div>
+                          <div>
+                            <span className="text-[10px] font-black text-amber-300 uppercase tracking-[0.2em]">8-Week Trend</span>
+                            <p className="text-[8px] text-gray-500">days per habit per week</p>
+                          </div>
                           <div className="flex-1" />
-                          <span className="text-[8px] text-gray-600">days per habit per week</span>
+                          <span className="text-[8px] font-bold px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/25 text-amber-300 tabular-nums shadow-lg shadow-amber-500/10">{totals[0]?.label || '—'} lead</span>
                         </div>
-                        <div className="h-64 px-2 pb-2">
+                        <div className="h-64 px-3 pb-2 relative">
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={historyData} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
+                            <BarChart data={historyData} margin={{ top: 12, right: 12, bottom: 0, left: -16 }}>
                               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                              <XAxis dataKey="week" tick={{ fill: '#9ca3af', fontSize: 8 }} axisLine={false} tickLine={false} interval={0} angle={-30} textAnchor="end" height={36} />
+                              <XAxis dataKey="week" tick={{ fill: '#9ca3af', fontSize: 8, fontWeight: 600 }} axisLine={false} tickLine={false} interval={0} angle={-30} textAnchor="end" height={36} />
                               <YAxis tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} domain={[0, 7]} />
-                              <Tooltip cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                                contentStyle={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8, fontSize: 11 }}
-                                labelStyle={{ color: '#9ca3af', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
+                              <Tooltip cursor={{ fill: 'rgba(245,158,11,0.06)' }}
+                                contentStyle={{ background: 'rgba(10,10,15,0.95)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 12, fontSize: 11, boxShadow: '0 8px 32px rgba(245,158,11,0.2), inset 0 1px 0 rgba(255,255,255,0.05)' }}
+                                labelStyle={{ color: '#fcd34d', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
                               {HABIT_TYPES.map(h => (
-                                <Bar key={h.key} dataKey={h.key} name={h.label} fill={h.color} fillOpacity={0.75} radius={[2, 2, 0, 0]} maxBarSize={14} />
+                                <Bar key={h.key} dataKey={h.key} name={h.label} fill={`url(#grad-${h.key})`} radius={[3, 3, 0, 0]} maxBarSize={12} />
                               ))}
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
-                        <div className="flex flex-wrap gap-x-3 gap-y-1 px-3 pb-2">
+                        <div className="flex flex-wrap gap-x-4 gap-y-1.5 px-4 pb-3">
                           {HABIT_TYPES.map(h => (
-                            <div key={h.key} className="flex items-center gap-1.5">
-                              <div className="w-2 h-2 rounded-sm" style={{ background: h.color }} />
-                              <span className="text-[8px] text-gray-500">{h.label}</span>
+                            <div key={h.key} className="flex items-center gap-1.5 group/chip">
+                              <div className="w-2.5 h-2.5 rounded-md shadow-lg group-hover/chip:scale-125 transition-transform" style={{ background: h.color, boxShadow: `0 0 8px ${h.color}44` }} />
+                              <span className="text-[8px] text-gray-400 font-semibold group-hover/chip:text-white transition-colors">{h.label}</span>
                             </div>
                           ))}
                         </div>
-                      </div>
+                      </motion.div>
                     )})()
                   }
                   {chartTab === 'goals' && (() => {
@@ -765,69 +804,86 @@ export function Habits() {
                     }
                     const goalData = HABIT_TYPES.map(h => {
                       const done = getDates(h).filter(d => weekSet.has(d)).length
-                      return { name: h.label, done, target: weeklyTargets[h.key], color: h.color }
+                      return { name: h.label, done, target: weeklyTargets[h.key], color: h.color, key: h.key }
                     })
                     const totalDone = goalData.reduce((s, r) => s + r.done, 0)
                     const totalTarget = goalData.reduce((s, r) => s + r.target, 0)
                     const weekBalance = goalData.reduce((s, r) => s + Math.round((r.done / r.target) * (r.name === 'Workout' ? 25 : r.name === 'Nutrition' ? 20 : r.name === 'Sleep' ? 20 : r.name === 'Hydration' ? 15 : 10)), 0)
-                    const radarData = HABIT_TYPES.map(h => ({ label: h.label, value: Math.round((getDates(h).filter(d => weekSet.has(d)).length / 7) * 100) }))
+                    const radarData = HABIT_TYPES.map(h => ({ label: h.label, value: Math.round((getDates(h).filter(d => weekSet.has(d)).length / 7) * 100), color: h.color }))
+                    const metCount = goalData.filter(r => r.done >= r.target).length
+                    const overallPct = totalTarget > 0 ? Math.round((totalDone / totalTarget) * 100) : 0
                     return (
                       <div className="space-y-3">
-                        <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-cyan-500/3 to-transparent overflow-hidden">
-                          <div className="flex items-center gap-2 px-3 pt-3 pb-1">
-                            <div className="p-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/20"><Zap className="w-3 h-3 text-cyan-400" /></div>
-                            <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Weekly Goals</span>
-                            <span className="text-[8px] text-gray-600">· {scopeWeekLabel}</span>
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+                          className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-black/40 to-transparent overflow-hidden relative group">
+                          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-transparent to-sky-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+                          <div className="flex items-center gap-2 px-4 pt-4 pb-1 relative">
+                            <div className="p-2 rounded-xl bg-cyan-500/20 border border-cyan-500/30 shadow-lg shadow-cyan-500/20"><Zap className="w-4 h-4 text-cyan-400" /></div>
+                            <div>
+                              <span className="text-[10px] font-black text-cyan-300 uppercase tracking-[0.2em]">Weekly Goals</span>
+                              <p className="text-[8px] text-gray-500">{scopeWeekLabel}</p>
+                            </div>
                             <div className="flex-1" />
-                            <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 tabular-nums">{goalData.filter(r => r.done >= r.target).length}/{HABIT_TYPES.length} met</span>
+                            <span className={`text-[8px] font-bold px-3 py-1 rounded-full border tabular-nums shadow-lg ${metCount >= 4 ? 'bg-emerald-500/15 border-emerald-500/25 text-emerald-300 shadow-emerald-500/10' : metCount >= 2 ? 'bg-amber-500/15 border-amber-500/25 text-amber-300 shadow-amber-500/10' : 'bg-white/5 border-white/10 text-gray-400'}`}>{metCount}/{HABIT_TYPES.length} met</span>
                           </div>
-                          <div className="h-52 px-2 pb-2">
+                          <div className="h-56 px-3 pb-2 relative">
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={goalData} layout="vertical" margin={{ top: 4, right: 32, bottom: 4, left: 0 }}>
+                              <BarChart data={goalData} layout="vertical" margin={{ top: 4, right: 36, bottom: 4, left: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
                                 <XAxis type="number" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
-                                <YAxis type="category" dataKey="name" tick={{ fill: '#9ca3af', fontSize: 9 }} axisLine={false} tickLine={false} width={68} />
-                                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                                  contentStyle={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(6,182,212,0.2)', borderRadius: 8, fontSize: 11 }}
+                                <YAxis type="category" dataKey="name" tick={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} width={68} />
+                                <Tooltip cursor={{ fill: 'rgba(6,182,212,0.06)' }}
+                                  contentStyle={{ background: 'rgba(10,10,15,0.95)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 12, fontSize: 11, boxShadow: '0 8px 32px rgba(6,182,212,0.2), inset 0 1px 0 rgba(255,255,255,0.05)' }}
                                   formatter={(value: number, _name: string, props: { payload?: { target: number } }) => [`${value} / ${props.payload?.target ?? '?'}`, 'Done / Target']}
-                                  labelStyle={{ color: '#9ca3af', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
-                                <Bar dataKey="done" name="Done" radius={[0, 4, 4, 0]} maxBarSize={20}>
-                                  {goalData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={entry.done >= entry.target ? 0.9 : 0.5} />)}
+                                  labelStyle={{ color: '#67e8f9', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
+                                <Bar dataKey="done" name="Done" radius={[0, 6, 6, 0]} maxBarSize={20}>
+                                  {goalData.map((entry, i) => <Cell key={i} fill={`url(#grad-${entry.key})`} fillOpacity={entry.done >= entry.target ? 1 : 0.6} />)}
                                 </Bar>
-                                <Bar dataKey="target" name="Target" radius={[0, 4, 4, 0]} maxBarSize={20}>
-                                  {goalData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.12} />)}
+                                <Bar dataKey="target" name="Target" radius={[0, 6, 6, 0]} maxBarSize={20}>
+                                  {goalData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.1} />)}
                                 </Bar>
                               </BarChart>
                             </ResponsiveContainer>
                           </div>
-                          <div className="flex items-center gap-2.5 px-3 py-2 border-t border-white/[0.04] bg-white/[0.01]">
-                            <span className="text-[8px] text-gray-600 uppercase tracking-wider font-semibold shrink-0">Total</span>
-                            <div className="flex-1 h-[5px] rounded-full bg-white/[0.06] overflow-hidden">
-                              <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((totalDone / totalTarget) * 100, 100)}%` }} transition={{ duration: 1, delay: 0.3 }}
-                                className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-sky-400" style={{ boxShadow: '0 0 8px rgba(34,211,238,0.35)' }} />
+                          <div className="flex items-center gap-3 px-4 py-3 border-t border-white/[0.04] bg-white/[0.01] relative">
+                            <span className="text-[8px] text-gray-500 uppercase tracking-wider font-bold shrink-0">Total</span>
+                            <div className="flex-1 h-2 rounded-full bg-white/[0.06] overflow-hidden relative">
+                              <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(overallPct, 100)}%` }} transition={{ duration: 1.2, delay: 0.3, ease: 'easeOut' }}
+                                className="h-full rounded-full relative overflow-hidden"
+                                style={{ background: 'linear-gradient(90deg, #06b6d4, #3b82f6, #8b5cf6)' }}>
+                                <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)] animate-shimmer" />
+                              </motion.div>
                             </div>
-                            <span className="text-[8px] font-bold text-cyan-300 tabular-nums shrink-0">{totalDone}/{totalTarget}</span>
+                            <span className="text-[10px] font-black text-cyan-300 tabular-nums shrink-0 drop-shadow-lg">{overallPct}%</span>
                           </div>
-                        </div>
-                        <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
-                          <div className="flex items-center gap-2 px-3 pt-3 pb-1">
-                            <div className="p-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/20"><Target className="w-3 h-3 text-emerald-400" /></div>
-                            <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Habit Balance</span>
+                        </motion.div>
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
+                          className="rounded-xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-black/40 to-transparent overflow-hidden relative group">
+                          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                          <div className="absolute bottom-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-16 -mb-16 pointer-events-none" />
+                          <div className="flex items-center gap-2 px-4 pt-4 pb-1 relative">
+                            <div className="p-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 shadow-lg shadow-emerald-500/20"><Target className="w-4 h-4 text-emerald-400" /></div>
+                            <div>
+                              <span className="text-[10px] font-black text-emerald-300 uppercase tracking-[0.2em]">Habit Balance</span>
+                              <p className="text-[8px] text-gray-500">overall health score</p>
+                            </div>
                             <div className="flex-1" />
-                            <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 tabular-nums">{Math.min(weekBalance, 100)}/100</span>
+                            <span className="text-[8px] font-bold px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 tabular-nums shadow-lg shadow-emerald-500/10">{Math.min(weekBalance, 100)}/100</span>
                           </div>
-                          <div className="h-52 relative">
+                          <div className="h-56 relative">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.06),transparent_65%)] pointer-events-none" />
                             <ResponsiveContainer width="100%" height="100%">
-                              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="72%">
-                                <PolarGrid stroke="rgba(255,255,255,0.07)" />
-                                <PolarAngleAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 9 }} />
+                              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
+                                <PolarGrid stroke="rgba(255,255,255,0.06)" />
+                                <PolarAngleAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
                                 <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#6b7280', fontSize: 8 }} tickCount={4} />
-                                <Tooltip contentStyle={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, fontSize: 11 }} />
-                                <Radar name="Score" dataKey="value" stroke="#10b981" strokeWidth={2} fill="#10b981" fillOpacity={0.18} />
+                                <Tooltip contentStyle={{ background: 'rgba(10,10,15,0.95)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 12, fontSize: 11, boxShadow: '0 8px 32px rgba(16,185,129,0.2)' }} />
+                                <Radar name="Score" dataKey="value" stroke="#10b981" strokeWidth={2.5} fill="url(#radarFill)" />
                               </RadarChart>
                             </ResponsiveContainer>
                           </div>
-                        </div>
+                        </motion.div>
                       </div>
                     )})()
                   }
