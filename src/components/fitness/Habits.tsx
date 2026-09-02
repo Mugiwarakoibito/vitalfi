@@ -680,7 +680,7 @@ export function Habits() {
                                   {streakData.map((entry, i) => <Cell key={i} fill={`url(#grad-${entry.key})`} />)}
                                 </Bar>
                                 <Bar dataKey="longest" name="Best" radius={[6, 6, 0, 0]} maxBarSize={32}>
-                                  {streakData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.45} />)}
+                                  {streakData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.7} />)}
                                 </Bar>
                               </BarChart>
                             </ResponsiveContainer>
@@ -800,13 +800,24 @@ export function Habits() {
                                   formatter={(value: number, _name: string, props: { payload?: { target: number } }) => [`${value} / ${props.payload?.target ?? '?'}`, 'Done / Target']}
                                   labelStyle={{ color: '#67e8f9', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
                                 <Bar dataKey="done" name="Done" radius={[0, 6, 6, 0]} maxBarSize={20}>
-                                  {goalData.map((entry, i) => <Cell key={i} fill={`url(#grad-${entry.key})`} fillOpacity={entry.done >= entry.target ? 1 : 0.6} />)}
-                                </Bar>
-                                <Bar dataKey="target" name="Target" radius={[0, 6, 6, 0]} maxBarSize={20}>
-                                  {goalData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.35} />)}
+                                  {goalData.map((entry, i) => <Cell key={i} fill={`url(#grad-${entry.key})`} fillOpacity={entry.done >= entry.target ? 1 : 0.8} />)}
                                 </Bar>
                               </BarChart>
                             </ResponsiveContainer>
+                            {/* Target markers */}
+                            <div className="absolute top-[4px] bottom-[2px] pointer-events-none" style={{ right: 36, left: 68 }}>
+                              {goalData.map((entry, i) => {
+                                const maxVal = Math.max(...goalData.map(g => g.target), 1)
+                                const pct = (entry.target / maxVal) * 100
+                                const rowH = 100 / goalData.length
+                                const top = (i * rowH) + (rowH / 2)
+                                return (
+                                  <div key={entry.key} className="absolute flex items-center" style={{ top: `${top}%`, left: `${pct}%`, transform: 'translate(-50%, -50%)' }}>
+                                    <div className="w-2 h-2 rotate-45 border-2" style={{ borderColor: entry.color, backgroundColor: 'rgba(0,0,0,0.6)' }} />
+                                  </div>
+                                )
+                              })}
+                            </div>
                           </div>
                           <div className="flex items-center gap-3 px-4 py-3 border-t border-white/[0.04] bg-white/[0.01] relative">
                             <span className="text-[8px] text-gray-500 uppercase tracking-wider font-bold shrink-0">Total</span>
