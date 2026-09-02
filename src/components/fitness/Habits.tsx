@@ -206,7 +206,7 @@ export function Habits() {
 
   const weeklyCompletion = useMemo(() => {
     const now = new Date()
-    const lookback = Math.min(7, rangeDates.days || 7)
+    const lookback = rangeDates.days || 7
     const getCount = (dates: string[]) => {
       const set = new Set(dates); let count = 0
       for (let i = 0; i < lookback; i++) { const d = new Date(now); d.setDate(d.getDate() - i); if (set.has(d.toISOString().split('T')[0])) count++ }
@@ -514,7 +514,7 @@ export function Habits() {
                   const scoreItem = scoreBreakdown.find(s => s.key === habit.key)
                   const scoreVal = scoreItem?.value ?? 0
                   const scoreMax = scoreItem?.max ?? 1
-                  const wkMax = Math.min(7, rangeDates.days || 7)
+                  const wkMax = rangeDates.days || 7
                   return (
                     <motion.div key={habit.key} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + idx * 0.07 }}
                       whileHover={{ y: -4, scale: 1.02 }} className="relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 group cursor-default"
@@ -549,7 +549,7 @@ export function Habits() {
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-[10px] text-gray-500">Best: <span className="text-white font-semibold">{hs.longest}</span></span>
                               <span className="w-1 h-1 rounded-full bg-gray-600" />
-                              <span className="text-[10px] text-gray-500">Wk: <span className="text-white font-semibold">{wk}/{wkMax}</span></span>
+                              <span className="text-[10px] text-gray-500">Days: <span className="text-white font-semibold">{wk}/{wkMax}</span></span>
                             </div>
                           </div>
                         </div>
