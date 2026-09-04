@@ -799,7 +799,6 @@ export function Habits() {
                                 <YAxis type="category" dataKey="name" tick={{ fill: '#e5e7eb', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} width={68} />
                                 <Tooltip cursor={{ fill: 'rgba(6,182,212,0.06)' }}
                                   contentStyle={{ background: 'rgba(10,10,15,0.95)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 12, fontSize: 11, boxShadow: '0 8px 32px rgba(6,182,212,0.2), inset 0 1px 0 rgba(255,255,255,0.05)' }}
-                                  formatter={(value: number, _name: string, props: { payload?: { target: number } }) => [`${value} / ${props.payload?.target ?? '?'}`, 'Done / Target']}
                                   labelStyle={{ color: '#67e8f9', fontWeight: 700, fontSize: 10, marginBottom: 4 }}
                                   itemStyle={{ color: '#e5e7eb' }} />
                                 <Bar dataKey="done" name="Done" radius={[0, 6, 6, 0]} maxBarSize={20}>
