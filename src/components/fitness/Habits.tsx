@@ -637,7 +637,7 @@ export function Habits() {
                     {HABIT_TYPES.map(h => (
                       <linearGradient key={h.key} id={`grad-${h.key}`} x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={h.color} stopOpacity={1} />
-                        <stop offset="100%" stopColor={h.color} stopOpacity={0.5} />
+                        <stop offset="100%" stopColor={h.color} stopOpacity={0.75} />
                       </linearGradient>
                     ))}
                     <linearGradient id="radarFill" x1="0" y1="0" x2="1" y2="1">
@@ -680,7 +680,7 @@ export function Habits() {
                                   {streakData.map((entry, i) => <Cell key={i} fill={`url(#grad-${entry.key})`} />)}
                                 </Bar>
                                 <Bar dataKey="longest" name="Best" radius={[6, 6, 0, 0]} maxBarSize={32}>
-                                  {streakData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.7} />)}
+                                  {streakData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.9} />)}
                                 </Bar>
                               </BarChart>
                             </ResponsiveContainer>
@@ -800,24 +800,13 @@ export function Habits() {
                                   formatter={(value: number, _name: string, props: { payload?: { target: number } }) => [`${value} / ${props.payload?.target ?? '?'}`, 'Done / Target']}
                                   labelStyle={{ color: '#67e8f9', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
                                 <Bar dataKey="done" name="Done" radius={[0, 6, 6, 0]} maxBarSize={20}>
-                                  {goalData.map((entry, i) => <Cell key={i} fill={`url(#grad-${entry.key})`} fillOpacity={entry.done >= entry.target ? 1 : 0.8} />)}
+                                  {goalData.map((entry, i) => <Cell key={i} fill={`url(#grad-${entry.key})`} fillOpacity={1} />)}
+                                </Bar>
+                                <Bar dataKey="target" name="Target" radius={[0, 6, 6, 0]} maxBarSize={20}>
+                                  {goalData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.5} />)}
                                 </Bar>
                               </BarChart>
                             </ResponsiveContainer>
-                            {/* Target markers */}
-                            <div className="absolute top-[4px] bottom-[2px] pointer-events-none" style={{ right: 36, left: 68 }}>
-                              {goalData.map((entry, i) => {
-                                const maxVal = Math.max(...goalData.map(g => g.target), 1)
-                                const pct = (entry.target / maxVal) * 100
-                                const rowH = 100 / goalData.length
-                                const top = (i * rowH) + (rowH / 2)
-                                return (
-                                  <div key={entry.key} className="absolute flex items-center" style={{ top: `${top}%`, left: `${pct}%`, transform: 'translate(-50%, -50%)' }}>
-                                    <div className="w-2 h-2 rotate-45 border-2" style={{ borderColor: entry.color, backgroundColor: 'rgba(0,0,0,0.6)' }} />
-                                  </div>
-                                )
-                              })}
-                            </div>
                           </div>
                           <div className="flex items-center gap-3 px-4 py-3 border-t border-white/[0.04] bg-white/[0.01] relative">
                             <span className="text-[8px] text-gray-500 uppercase tracking-wider font-bold shrink-0">Total</span>
