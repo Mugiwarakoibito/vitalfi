@@ -28,6 +28,13 @@ function loadRecoveryEntries(): RecoveryEntry[] {
 function loadSupplementLogs(): SupplementLog[] {
   try { const raw = localStorage.getItem('supplementLogs'); return raw ? JSON.parse(raw) : [] } catch { return [] }
 }
+const DEFAULT_TARGETS: Record<string, number> = { workout: 3, nutrition: 6, sleep: 7, hydration: 5, recovery: 3, supplements: 6 }
+function loadCustomTargets(): Record<string, number> {
+  try { const raw = localStorage.getItem('vitalfi_custom_targets'); return raw ? JSON.parse(raw) : {} } catch { return {} }
+}
+function saveCustomTargets(targets: Record<string, number>) {
+  localStorage.setItem('vitalfi_custom_targets', JSON.stringify(targets))
+}
 
 const LEVEL_THRESHOLDS = [
   { level: 1, min: 0, title: 'Beginner', icon: '🌱', color: '#6b7280' },
@@ -134,6 +141,9 @@ export function Habits() {
   const [supplementLogs, setSupplementLogs] = useState<SupplementLog[]>(loadSupplementLogs)
   const [scopeOffset, setScopeOffset] = useState(0)
   const [scoreRange, setScoreRange] = useState<number | 'all'>(90)
+  const [customTargets, setCustomTargets] = useState<Record<string, number>>(loadCustomTargets)
+  const [showTargetEditor, setShowTargetEditor] = useState(false)
+  const [editTargets, setEditTargets] = useState<Record<string, number>>({})
 
   const scopeWeek = useMemo(() => {
     const days: { fullDate: string; weekday: string; label: string }[] = []
@@ -765,9 +775,10 @@ export function Habits() {
                       h.key === 'hydration' ? hydration.map((x: HydrationEntry) => x.date) :
                       h.key === 'recovery' ? recoveryEntries.map((r: RecoveryEntry) => r.date) :
                       supplementLogs.map((s: SupplementLog) => s.date)
-                    const weeklyTargets: Record<string, number> = {
-                      workout: Math.max(Math.round(stats.weeklyAverage), 3), nutrition: 6, sleep: 7, hydration: 5, recovery: 3, supplements: 6,
-                    }
+                    const weeklyTargets: Record<string, number> = HABIT_TYPES.reduce((acc, h) => {
+                      acc[h.key] = customTargets[h.key] ?? (h.key === 'workout' ? Math.max(Math.round(stats.weeklyAverage), 3) : DEFAULT_TARGETS[h.key])
+                      return acc
+                    }, {} as Record<string, number>)
                     const goalData = HABIT_TYPES.map(h => {
                       const done = getDates(h).filter(d => weekSet.has(d)).length
                       return { name: h.label, done, target: weeklyTargets[h.key], color: h.color, key: h.key }
@@ -789,6 +800,10 @@ export function Habits() {
                               <p className="text-[8px] text-gray-500">{scopeWeekLabel}</p>
                             </div>
                             <div className="flex-1" />
+                            <button onClick={() => { setEditTargets({ ...weeklyTargets }); setShowTargetEditor(true) }}
+                              className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-all" title="Edit goals">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                            </button>
                             <span className={`text-[8px] font-bold px-3 py-1 rounded-full border tabular-nums shadow-lg ${metCount >= 4 ? 'bg-emerald-500/15 border-emerald-500/25 text-emerald-300 shadow-emerald-500/10' : metCount >= 2 ? 'bg-amber-500/15 border-amber-500/25 text-amber-300 shadow-amber-500/10' : 'bg-white/5 border-white/10 text-gray-400'}`}>{metCount}/{HABIT_TYPES.length} met</span>
                           </div>
                           <div className="h-52 px-3 pb-2 relative">
@@ -827,6 +842,49 @@ export function Habits() {
                   }
                 </div>
               </div>
+
+              {/* Target Editor Modal */}
+              <AnimatePresence>
+                {showTargetEditor && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                    onClick={() => setShowTargetEditor(false)}>
+                    <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                      className="w-full max-w-sm rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-[#0a0a12] to-[#0a0a12] p-5 shadow-2xl"
+                      onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="p-2 rounded-xl bg-cyan-500/20 border border-cyan-500/30"><Zap className="w-4 h-4 text-cyan-400" /></div>
+                        <span className="text-xs font-black text-cyan-300 uppercase tracking-wider">Weekly Targets</span>
+                      </div>
+                      <div className="space-y-3">
+                        {HABIT_TYPES.map(h => (
+                          <div key={h.key} className="flex items-center gap-3">
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: h.color, boxShadow: `0 0 6px ${h.color}66` }} />
+                            <span className="text-[11px] text-gray-300 font-semibold flex-1">{h.label}</span>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => setEditTargets(p => ({ ...p, [h.key]: Math.max(0, (p[h.key] ?? DEFAULT_TARGETS[h.key]) - 1) }))}
+                                className="w-6 h-6 rounded-md bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 flex items-center justify-center text-xs font-bold transition-all">-</button>
+                              <input type="number" min={0} max={30}
+                                value={editTargets[h.key] ?? DEFAULT_TARGETS[h.key]}
+                                onChange={e => setEditTargets(p => ({ ...p, [h.key]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                className="w-10 h-6 text-center text-[11px] font-bold text-white bg-white/5 border border-white/10 rounded-md focus:outline-none focus:border-cyan-500/50 tabular-nums" />
+                              <button onClick={() => setEditTargets(p => ({ ...p, [h.key]: (p[h.key] ?? DEFAULT_TARGETS[h.key]) + 1 }))}
+                                className="w-6 h-6 rounded-md bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 flex items-center justify-center text-xs font-bold transition-all">+</button>
+                            </div>
+                            <span className="text-[9px] text-gray-500 w-8 text-right">/wk</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex gap-2 mt-5">
+                        <button onClick={() => setShowTargetEditor(false)}
+                          className="flex-1 h-8 rounded-lg bg-white/5 border border-white/10 text-gray-400 text-[11px] font-semibold hover:bg-white/10 transition-all">Cancel</button>
+                        <button onClick={() => { saveCustomTargets(editTargets); setCustomTargets(editTargets); setShowTargetEditor(false) }}
+                          className="flex-1 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-[11px] font-bold hover:bg-cyan-500/30 transition-all">Save</button>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Insights Row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
