@@ -657,13 +657,15 @@ export function Habits() {
                   </defs>
                 </svg>
                 <div className="relative z-10">
+                  <AnimatePresence mode="wait">
                   {chartTab === 'streaks' && (() => {
                     const streakData = HABIT_TYPES.map(h => ({
                       name: h.label, current: habitStats[h.key].current, longest: habitStats[h.key].longest, color: h.color, key: h.key,
                     }))
                     const bestStreak = Math.max(...streakData.map(s => s.current), 0)
                     return (
-                      <div className="space-y-3">
+                      <motion.div key="streaks" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }}
+                        className="space-y-3">
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
                           className="rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 via-transparent to-transparent overflow-hidden relative group">
                           <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
@@ -697,7 +699,7 @@ export function Habits() {
                             </ResponsiveContainer>
                           </div>
                         </motion.div>
-                      </div>
+                      </motion.div>
                     )})()
                   }
                   {chartTab === 'history' && (() => {
@@ -726,7 +728,7 @@ export function Habits() {
                       label: h.label, color: h.color, total: historyData.reduce((s, row) => s + (row[h.key] as number), 0)
                     })).sort((a, b) => b.total - a.total)
                     return (
-                      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+                      <motion.div key="history" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }}
                         className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-transparent to-transparent overflow-hidden relative group">
                         <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-transparent to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
                         <div className="absolute top-0 left-1/3 w-48 h-48 bg-amber-500/8 rounded-full blur-3xl pointer-events-none" />
@@ -788,7 +790,8 @@ export function Habits() {
                     const metCount = goalData.filter(r => r.done >= r.target).length
                     const overallPct = totalTarget > 0 ? Math.round((totalDone / totalTarget) * 100) : 0
                     return (
-                      <div className="space-y-3">
+                      <motion.div key="goals" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }}
+                        className="space-y-3">
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
                           className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-transparent to-transparent overflow-hidden relative group">
                           <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-transparent to-sky-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
@@ -837,9 +840,10 @@ export function Habits() {
                             <span className="text-[10px] font-black text-cyan-300 tabular-nums shrink-0 drop-shadow-lg">{overallPct}%</span>
                           </div>
                         </motion.div>
-                      </div>
+                      </motion.div>
                     )})()
                   }
+                  </AnimatePresence>
                 </div>
               </div>
 
