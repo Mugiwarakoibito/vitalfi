@@ -675,7 +675,8 @@ export function Habits() {
                                 <YAxis tick={{ fill: '#d1d5db', fontSize: 8 }} axisLine={false} tickLine={false} />
                                 <Tooltip cursor={{ fill: 'rgba(139,92,246,0.06)' }}
                                   contentStyle={{ background: 'rgba(10,10,15,0.95)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 12, fontSize: 11, boxShadow: '0 8px 32px rgba(139,92,246,0.2), inset 0 1px 0 rgba(255,255,255,0.05)' }}
-                                  labelStyle={{ color: '#c4b5fd', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
+                                  labelStyle={{ color: '#c4b5fd', fontWeight: 700, fontSize: 10, marginBottom: 4 }}
+                                  itemStyle={{ color: '#e5e7eb' }} />
                                 <Bar dataKey="current" name="Current" radius={[6, 6, 0, 0]} maxBarSize={32}>
                                   {streakData.map((entry, i) => <Cell key={i} fill={`url(#grad-${entry.key})`} />)}
                                 </Bar>
@@ -734,9 +735,10 @@ export function Habits() {
                               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
                               <XAxis dataKey="week" tick={{ fill: '#e5e7eb', fontSize: 8, fontWeight: 600 }} axisLine={false} tickLine={false} interval={0} angle={-30} textAnchor="end" height={36} />
                               <YAxis tick={{ fill: '#d1d5db', fontSize: 8 }} axisLine={false} tickLine={false} domain={[0, 7]} />
-                              <Tooltip cursor={{ fill: 'rgba(245,158,11,0.06)' }}
-                                contentStyle={{ background: 'rgba(10,10,15,0.95)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 12, fontSize: 11, boxShadow: '0 8px 32px rgba(245,158,11,0.2), inset 0 1px 0 rgba(255,255,255,0.05)' }}
-                                labelStyle={{ color: '#fcd34d', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
+                                <Tooltip cursor={{ fill: 'rgba(245,158,11,0.06)' }}
+                                  contentStyle={{ background: 'rgba(10,10,15,0.95)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 12, fontSize: 11, boxShadow: '0 8px 32px rgba(245,158,11,0.2), inset 0 1px 0 rgba(255,255,255,0.05)' }}
+                                  labelStyle={{ color: '#fcd34d', fontWeight: 700, fontSize: 10, marginBottom: 4 }}
+                                  itemStyle={{ color: '#e5e7eb' }} />
                               {HABIT_TYPES.map(h => (
                                 <Bar key={h.key} dataKey={h.key} name={h.label} fill={`url(#grad-${h.key})`} radius={[3, 3, 0, 0]} maxBarSize={12} />
                               ))}
@@ -798,7 +800,8 @@ export function Habits() {
                                 <Tooltip cursor={{ fill: 'rgba(6,182,212,0.06)' }}
                                   contentStyle={{ background: 'rgba(10,10,15,0.95)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 12, fontSize: 11, boxShadow: '0 8px 32px rgba(6,182,212,0.2), inset 0 1px 0 rgba(255,255,255,0.05)' }}
                                   formatter={(value: number, _name: string, props: { payload?: { target: number } }) => [`${value} / ${props.payload?.target ?? '?'}`, 'Done / Target']}
-                                  labelStyle={{ color: '#67e8f9', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
+                                  labelStyle={{ color: '#67e8f9', fontWeight: 700, fontSize: 10, marginBottom: 4 }}
+                                  itemStyle={{ color: '#e5e7eb' }} />
                                 <Bar dataKey="done" name="Done" radius={[0, 6, 6, 0]} maxBarSize={20}>
                                   {goalData.map((entry, i) => <Cell key={i} fill={`url(#grad-${entry.key})`} fillOpacity={1} />)}
                                 </Bar>
