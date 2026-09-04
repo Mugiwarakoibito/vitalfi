@@ -671,8 +671,8 @@ export function Habits() {
                             <ResponsiveContainer width="100%" height="100%">
                               <BarChart data={streakData} margin={{ top: 12, right: 12, bottom: 0, left: -16 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                                <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} />
+                                <XAxis dataKey="name" tick={{ fill: '#e5e7eb', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fill: '#d1d5db', fontSize: 8 }} axisLine={false} tickLine={false} />
                                 <Tooltip cursor={{ fill: 'rgba(139,92,246,0.06)' }}
                                   contentStyle={{ background: 'rgba(10,10,15,0.95)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 12, fontSize: 11, boxShadow: '0 8px 32px rgba(139,92,246,0.2), inset 0 1px 0 rgba(255,255,255,0.05)' }}
                                   labelStyle={{ color: '#c4b5fd', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
@@ -732,8 +732,8 @@ export function Habits() {
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={historyData} margin={{ top: 12, right: 12, bottom: 0, left: -16 }}>
                               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                              <XAxis dataKey="week" tick={{ fill: '#9ca3af', fontSize: 8, fontWeight: 600 }} axisLine={false} tickLine={false} interval={0} angle={-30} textAnchor="end" height={36} />
-                              <YAxis tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} domain={[0, 7]} />
+                              <XAxis dataKey="week" tick={{ fill: '#e5e7eb', fontSize: 8, fontWeight: 600 }} axisLine={false} tickLine={false} interval={0} angle={-30} textAnchor="end" height={36} />
+                              <YAxis tick={{ fill: '#d1d5db', fontSize: 8 }} axisLine={false} tickLine={false} domain={[0, 7]} />
                               <Tooltip cursor={{ fill: 'rgba(245,158,11,0.06)' }}
                                 contentStyle={{ background: 'rgba(10,10,15,0.95)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 12, fontSize: 11, boxShadow: '0 8px 32px rgba(245,158,11,0.2), inset 0 1px 0 rgba(255,255,255,0.05)' }}
                                 labelStyle={{ color: '#fcd34d', fontWeight: 700, fontSize: 10, marginBottom: 4 }} />
@@ -747,7 +747,7 @@ export function Habits() {
                           {HABIT_TYPES.map(h => (
                             <div key={h.key} className="flex items-center gap-1.5 group/chip">
                               <div className="w-2.5 h-2.5 rounded-md shadow-lg group-hover/chip:scale-125 transition-transform" style={{ background: h.color, boxShadow: `0 0 8px ${h.color}44` }} />
-                              <span className="text-[8px] text-gray-400 font-semibold group-hover/chip:text-white transition-colors">{h.label}</span>
+                              <span className="text-[8px] text-gray-300 font-semibold group-hover/chip:text-white transition-colors">{h.label}</span>
                             </div>
                           ))}
                         </div>
@@ -793,8 +793,8 @@ export function Habits() {
                             <ResponsiveContainer width="100%" height="100%">
                               <BarChart data={goalData} layout="vertical" margin={{ top: 4, right: 36, bottom: 4, left: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
-                                <XAxis type="number" tick={{ fill: '#6b7280', fontSize: 8 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
-                                <YAxis type="category" dataKey="name" tick={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} width={68} />
+                                <XAxis type="number" tick={{ fill: '#d1d5db', fontSize: 8 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
+                                <YAxis type="category" dataKey="name" tick={{ fill: '#e5e7eb', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} width={68} />
                                 <Tooltip cursor={{ fill: 'rgba(6,182,212,0.06)' }}
                                   contentStyle={{ background: 'rgba(10,10,15,0.95)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 12, fontSize: 11, boxShadow: '0 8px 32px rgba(6,182,212,0.2), inset 0 1px 0 rgba(255,255,255,0.05)' }}
                                   formatter={(value: number, _name: string, props: { payload?: { target: number } }) => [`${value} / ${props.payload?.target ?? '?'}`, 'Done / Target']}
@@ -809,7 +809,7 @@ export function Habits() {
                             </ResponsiveContainer>
                           </div>
                           <div className="flex items-center gap-3 px-4 py-3 border-t border-white/[0.04] bg-white/[0.01] relative">
-                            <span className="text-[8px] text-gray-500 uppercase tracking-wider font-bold shrink-0">Total</span>
+                            <span className="text-[8px] text-gray-300 uppercase tracking-wider font-bold shrink-0">Total</span>
                             <div className="flex-1 h-2 rounded-full bg-white/[0.06] overflow-hidden relative">
                               <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(overallPct, 100)}%` }} transition={{ duration: 1.2, delay: 0.3, ease: 'easeOut' }}
                                 className="h-full rounded-full relative overflow-hidden"
