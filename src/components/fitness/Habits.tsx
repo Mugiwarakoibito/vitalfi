@@ -667,7 +667,7 @@ export function Habits() {
                             <div className="flex-1" />
                             <span className="text-[8px] font-bold px-3 py-1 rounded-full bg-violet-500/15 border border-violet-500/25 text-violet-300 tabular-nums shadow-lg shadow-violet-500/10">{scopeWeekLabel}</span>
                           </div>
-                          <div className="h-52 px-3 pb-3 relative">
+                          <div className="h-44 px-3 pb-3 relative">
                             <ResponsiveContainer width="100%" height="100%">
                               <BarChart data={streakData} margin={{ top: 12, right: 12, bottom: 0, left: -16 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
@@ -729,7 +729,7 @@ export function Habits() {
                           <div className="flex-1" />
                           <span className="text-[8px] font-bold px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/25 text-amber-300 tabular-nums shadow-lg shadow-amber-500/10">{totals[0]?.label || '—'} lead</span>
                         </div>
-                        <div className="h-64 px-3 pb-2 relative">
+                        <div className="h-72 px-3 pb-2 relative">
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={historyData} margin={{ top: 12, right: 12, bottom: 0, left: -16 }}>
                               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
@@ -791,7 +791,7 @@ export function Habits() {
                             <div className="flex-1" />
                             <span className={`text-[8px] font-bold px-3 py-1 rounded-full border tabular-nums shadow-lg ${metCount >= 4 ? 'bg-emerald-500/15 border-emerald-500/25 text-emerald-300 shadow-emerald-500/10' : metCount >= 2 ? 'bg-amber-500/15 border-amber-500/25 text-amber-300 shadow-amber-500/10' : 'bg-white/5 border-white/10 text-gray-400'}`}>{metCount}/{HABIT_TYPES.length} met</span>
                           </div>
-                          <div className="h-56 px-3 pb-2 relative">
+                          <div className="h-52 px-3 pb-2 relative">
                             <ResponsiveContainer width="100%" height="100%">
                               <BarChart data={goalData} layout="vertical" margin={{ top: 4, right: 36, bottom: 4, left: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
