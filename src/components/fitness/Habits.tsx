@@ -626,7 +626,7 @@ export function Habits() {
               </div>
 
               {/* Content Area */}
-              <div className="rounded-2xl bg-gradient-to-br from-black/60 via-white/[0.02] to-transparent border border-white/[0.06] p-3 md:p-4 shadow-inner shadow-white/5 relative overflow-hidden">
+              <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] via-transparent to-transparent border border-white/[0.06] p-3 md:p-4 shadow-inner shadow-white/5 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-transparent to-cyan-500/5 pointer-events-none rounded-2xl" />
                 <div className="absolute -top-16 -right-16 w-44 h-44 bg-amber-500/8 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDuration: '4s' }} />
                 <div className="absolute -bottom-16 -left-16 w-44 h-44 bg-violet-500/8 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDuration: '6s' }} />
@@ -637,7 +637,7 @@ export function Habits() {
                     {HABIT_TYPES.map(h => (
                       <linearGradient key={h.key} id={`grad-${h.key}`} x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={h.color} stopOpacity={1} />
-                        <stop offset="100%" stopColor={h.color} stopOpacity={0.75} />
+                        <stop offset="100%" stopColor={h.color} stopOpacity={1} />
                       </linearGradient>
                     ))}
                     <linearGradient id="radarFill" x1="0" y1="0" x2="1" y2="1">
@@ -680,7 +680,7 @@ export function Habits() {
                                   {streakData.map((entry, i) => <Cell key={i} fill={`url(#grad-${entry.key})`} />)}
                                 </Bar>
                                 <Bar dataKey="longest" name="Best" radius={[6, 6, 0, 0]} maxBarSize={32}>
-                                  {streakData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.9} />)}
+                                  {streakData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={1} />)}
                                 </Bar>
                               </BarChart>
                             </ResponsiveContainer>
@@ -803,7 +803,7 @@ export function Habits() {
                                   {goalData.map((entry, i) => <Cell key={i} fill={`url(#grad-${entry.key})`} fillOpacity={1} />)}
                                 </Bar>
                                 <Bar dataKey="target" name="Target" radius={[0, 6, 6, 0]} maxBarSize={20}>
-                                  {goalData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.5} />)}
+                                  {goalData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={1} />)}
                                 </Bar>
                               </BarChart>
                             </ResponsiveContainer>
