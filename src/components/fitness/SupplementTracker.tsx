@@ -3,12 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Pill, Plus, Check, Clock, X, AlertTriangle,
   Trash2, Sunrise, Sunset, Moon, Sun, Sparkles, Target, Flame, Activity,
-  DollarSign, Layers, CalendarCheck, Download, Settings,
+  DollarSign, Layers, CalendarCheck,
   Brain, ShieldCheck, ShieldAlert, Info, Zap, Package,
   CheckCircle2, Dumbbell, TrendingUp, BarChart3,
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { generateId, cn } from '@/lib/utils'
@@ -24,52 +23,52 @@ interface SupplementLog { id: string; supplementId: string; takenAt: string; dat
 const TIMES_OF_DAY = ['Morning', 'Afternoon', 'Evening', 'Night'] as const
 type TimeOfDay = (typeof TIMES_OF_DAY)[number]
 const TIME_ICONS: Record<TimeOfDay, typeof Sun> = { Morning: Sun, Afternoon: Sunrise, Evening: Sunset, Night: Moon }
+const TIME_GRADIENTS: Record<TimeOfDay, string> = {
+  Morning: 'from-amber-500/20 to-orange-500/10 border-amber-500/25 text-amber-300',
+  Afternoon: 'from-yellow-500/20 to-amber-500/10 border-yellow-500/25 text-yellow-300',
+  Evening: 'from-orange-500/20 to-rose-500/10 border-orange-500/25 text-orange-300',
+  Night: 'from-indigo-500/20 to-violet-500/10 border-indigo-500/25 text-indigo-300',
+}
 
 const commonSupplements = [
-  { name: 'Vitamin D3', dosage: '5000 IU' }, { name: 'Omega-3 Fish Oil', dosage: '2000mg' },
-  { name: 'Creatine', dosage: '5g' }, { name: 'Whey Protein', dosage: '30g' },
-  { name: 'Magnesium', dosage: '400mg' }, { name: 'Zinc', dosage: '30mg' },
-  { name: 'Multivitamin', dosage: '1 tablet' }, { name: 'Collagen', dosage: '10g' },
-  { name: 'Pre-workout', dosage: '1 scoop' }, { name: 'BCAA', dosage: '5g' },
+  { name: 'Vitamin D3', dosage: '5000 IU', emoji: '\u2600\uFE0F' },
+  { name: 'Omega-3 Fish Oil', dosage: '2000mg', emoji: '\uD83D\uDC1F' },
+  { name: 'Creatine', dosage: '5g', emoji: '\uD83D\uDCAA' },
+  { name: 'Whey Protein', dosage: '30g', emoji: '\uD83E\uDDC0' },
+  { name: 'Magnesium', dosage: '400mg', emoji: '\u2728' },
+  { name: 'Zinc', dosage: '30mg', emoji: '\uD83D\uDD11' },
+  { name: 'Multivitamin', dosage: '1 tablet', emoji: '\uD83D\uDD36' },
+  { name: 'Collagen', dosage: '10g', emoji: '\uD83D\uDC8D' },
+  { name: 'Pre-workout', dosage: '1 scoop', emoji: '\u26A1' },
+  { name: 'BCAA', dosage: '5g', emoji: '\uD83D\uDCA8' },
 ]
 
 const SUPP_INTERACTIONS: { a: string; b: string; type: 'synergy' | 'conflict' | 'timing'; message: string }[] = [
   { a: 'Vitamin D3', b: 'Magnesium', type: 'synergy', message: 'Magnesium activates Vitamin D' },
-  { a: 'Vitamin D3', b: 'Omega-3 Fish Oil', type: 'synergy', message: 'Fat-soluble — take together' },
+  { a: 'Vitamin D3', b: 'Omega-3 Fish Oil', type: 'synergy', message: 'Fat-soluble \u2014 take together' },
   { a: 'Creatine', b: 'Whey Protein', type: 'synergy', message: 'Mix together post-workout' },
-  { a: 'Zinc', b: 'Magnesium', type: 'synergy', message: 'Both support sleep — night combo' },
+  { a: 'Zinc', b: 'Magnesium', type: 'synergy', message: 'Both support sleep \u2014 night combo' },
   { a: 'Melatonin', b: 'Magnesium', type: 'synergy', message: 'Perfect nighttime duo' },
   { a: 'Collagen', b: 'Vitamin C', type: 'synergy', message: 'Vitamin C is essential for collagen' },
   { a: 'Iron', b: 'Vitamin C', type: 'synergy', message: 'Vitamin C 6x boosts iron absorption' },
-  { a: 'Iron', b: 'Calcium', type: 'conflict', message: 'Calcium blocks iron — separate 2hrs' },
-  { a: 'Zinc', b: 'Iron', type: 'conflict', message: 'Compete for absorption — separate' },
+  { a: 'Iron', b: 'Calcium', type: 'conflict', message: 'Calcium blocks iron \u2014 separate 2hrs' },
+  { a: 'Zinc', b: 'Iron', type: 'conflict', message: 'Compete for absorption \u2014 separate' },
   { a: 'Magnesium', b: 'Calcium', type: 'timing', message: 'Ca in AM, Mg at night' },
   { a: 'Vitamin D3', b: 'Calcium', type: 'synergy', message: 'Vitamin D helps absorb calcium' },
-  { a: 'Multivitamin', b: 'Iron', type: 'timing', message: 'Multi has iron — avoid doubling' },
-  { a: 'Collagen', b: 'Whey Protein', type: 'timing', message: 'Both protein — spread across meals' },
+  { a: 'Multivitamin', b: 'Iron', type: 'timing', message: 'Multi has iron \u2014 avoid doubling' },
+  { a: 'Collagen', b: 'Whey Protein', type: 'timing', message: 'Both protein \u2014 spread across meals' },
   { a: 'Zinc', b: 'Vitamin C', type: 'synergy', message: 'Vitamin C improves zinc uptake' },
   { a: 'Pre-workout', b: 'Whey Protein', type: 'timing', message: 'Pre 30min before, protein after' },
 ]
 
-function exportCSV(supplements: Supplement[], logs: SupplementLog[]) {
-  const headers = 'Supplement,Dosage,Frequency,Times,Stack,Cost,TotalServings,LogCount\n'
-  const rows = supplements.map(s => {
-    const logCount = logs.filter(l => l.supplementId === s.id).length
-    return `${s.name},${s.dosage},${s.frequency},${s.times.join(';')},${s.stack ?? ''},${s.cost ?? ''},${s.totalServings ?? ''},${logCount}`
-  }).join('\n')
-  const blob = new Blob([headers + rows], { type: 'text/csv' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a'); a.href = url; a.download = `vitalfi_supps_${new Date().toISOString().split('T')[0]}.csv`
-  a.click(); URL.revokeObjectURL(url)
-}
+const fadeUp = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } }
+const fadeIn = { initial: { opacity: 0, scale: 0.95 }, animate: { opacity: 1, scale: 1 } }
 
 export function SupplementTracker() {
   const [supplements, setSupplements] = useState<Supplement[]>([])
   const [logs, setLogs] = useState<SupplementLog[]>([])
   const [showModal, setShowModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Supplement | null>(null)
-  const [showSettings, setShowSettings] = useState(false)
-  const [confirmClear, setConfirmClear] = useState(false)
   const [formData, setFormData] = useState({
     name: '', dosage: '', frequency: 'daily' as Supplement['frequency'],
     times: [] as TimeOfDay[], notes: '', refillDays: '', stack: '', cost: '', totalServings: '',
@@ -179,20 +178,20 @@ export function SupplementTracker() {
     const total = scheduleToday.length
     const taken = takenTodayCount
     const pct = total > 0 ? Math.round((taken / total) * 100) : 0
-    const matched: { icon: typeof Dumbbell; title: string; text: string; category: string; priority: number }[] = []
+    const matched: { icon: typeof Dumbbell; title: string; text: string; category: string; priority: number; gradient: string }[] = []
     if (totalCount === 0) {
-      matched.push({ icon: Pill, title: 'Get Started', text: 'Add your first supplement to begin tracking and unlock AI-powered insights.', category: 'General', priority: 10 })
+      matched.push({ icon: Pill, title: 'Get Started', text: 'Add your first supplement to begin tracking and unlock AI-powered insights.', category: 'General', priority: 10, gradient: 'from-gray-500/20 to-gray-600/10' })
     } else if (pct === 100) {
-      matched.push({ icon: CheckCircle2, title: 'Perfect Day', text: `All ${total} supplements taken. You're operating at peak efficiency.`, category: 'Performance', priority: 10 })
+      matched.push({ icon: CheckCircle2, title: 'Perfect Day', text: `All ${total} supplements taken. You\u2019re operating at peak efficiency.`, category: 'Performance', priority: 10, gradient: 'from-emerald-500/20 to-emerald-600/10' })
     } else if (pct >= 50) {
-      matched.push({ icon: Zap, title: 'Almost There', text: `${taken}/${total} done. ${total - taken} more to complete today's stack.`, category: 'Performance', priority: 8 })
+      matched.push({ icon: Zap, title: 'Almost There', text: `${taken}/${total} done. ${total - taken} more to complete today\u2019s stack.`, category: 'Performance', priority: 8, gradient: 'from-amber-500/20 to-amber-600/10' })
     } else if (total > 0) {
-      matched.push({ icon: AlertTriangle, title: 'Low Adherence', text: `Only ${taken}/${total} taken. Consistency compounds — each day matters.`, category: 'Recovery', priority: 9 })
+      matched.push({ icon: AlertTriangle, title: 'Low Adherence', text: `Only ${taken}/${total} taken. Consistency compounds \u2014 each day matters.`, category: 'Recovery', priority: 9, gradient: 'from-red-500/20 to-red-600/10' })
     }
-    if (suppStreak >= 7) matched.push({ icon: Flame, title: 'Streak Master', text: `${suppStreak}-day perfect streak. You're in the top tier of supplement discipline.`, category: 'Performance', priority: 7 })
-    if (suppStreak >= 3 && suppStreak < 7) matched.push({ icon: Flame, title: 'Building Momentum', text: `${suppStreak}-day streak. 4 more days to hit the weekly milestone.`, category: 'Performance', priority: 6 })
-    if (monthlyCost > 30) matched.push({ icon: DollarSign, title: 'Cost Optimization', text: `$${monthlyCost.toFixed(0)}/mo estimated. Consider stacking to reduce redundancy.`, category: 'Nutrition', priority: 5 })
-    if (remainingCount > 0 && remainingCount <= 2) matched.push({ icon: Target, title: 'Final Push', text: `Just ${remainingCount} more — don't break the chain today.`, category: 'Performance', priority: 8 })
+    if (suppStreak >= 7) matched.push({ icon: Flame, title: 'Streak Master', text: `${suppStreak}-day perfect streak. You\u2019re in the top tier of supplement discipline.`, category: 'Performance', priority: 7, gradient: 'from-orange-500/20 to-orange-600/10' })
+    if (suppStreak >= 3 && suppStreak < 7) matched.push({ icon: Flame, title: 'Building Momentum', text: `${suppStreak}-day streak. 4 more days to hit the weekly milestone.`, category: 'Performance', priority: 6, gradient: 'from-orange-500/20 to-orange-600/10' })
+    if (monthlyCost > 30) matched.push({ icon: DollarSign, title: 'Cost Optimization', text: `$${monthlyCost.toFixed(0)}/mo estimated. Consider stacking to reduce redundancy.`, category: 'Nutrition', priority: 5, gradient: 'from-violet-500/20 to-violet-600/10' })
+    if (remainingCount > 0 && remainingCount <= 2) matched.push({ icon: Target, title: 'Final Push', text: `Just ${remainingCount} more \u2014 don\u2019t break the chain today.`, category: 'Performance', priority: 8, gradient: 'from-cyan-500/20 to-cyan-600/10' })
     return matched.sort((a, b) => b.priority - a.priority).slice(0, 5)
   }, [scheduleToday, takenTodayCount, suppStreak, monthlyCost, totalCount, remainingCount])
 
@@ -221,120 +220,117 @@ export function SupplementTracker() {
 
   const adherenceScore = totalCount > 0 ? Math.round((takenTodayCount / totalCount) * 100) : 0
   const scoreColor = adherenceScore >= 80 ? '#10b981' : adherenceScore >= 50 ? '#f59e0b' : '#ef4444'
-  const scoreGlow = adherenceScore >= 80 ? 'shadow-emerald-500/30' : adherenceScore >= 50 ? 'shadow-amber-500/30' : 'shadow-red-500/30'
+  const scoreGlow = adherenceScore >= 80 ? 'shadow-[0_0_40px_rgba(16,185,129,0.3)]' : adherenceScore >= 50 ? 'shadow-[0_0_40px_rgba(245,158,11,0.3)]' : 'shadow-[0_0_40px_rgba(239,68,68,0.3)]'
   const circumference = 2 * Math.PI * 54
   const strokeDashoffset = circumference - (adherenceScore / 100) * circumference
 
   const timeOfDayNow = new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : new Date().getHours() < 21 ? 'Evening' : 'Night'
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Toolbar */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
+      <motion.div {...fadeUp} transition={{ duration: 0.4 }} className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">Supplements</h2>
-          <p className="text-sm text-gray-400 mt-0.5">{totalCount} supplements tracked</p>
+          <h2 className="text-3xl font-black text-white tracking-tight bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent">Supplements</h2>
+          <p className="text-sm text-gray-500 mt-1 font-medium">{totalCount} supplement{totalCount !== 1 ? 's' : ''} tracked</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {totalCount > 0 && (
-            <button className={`p-2 rounded-xl border transition-all ${activePanel === 'patterns' ? 'bg-violet-500/15 border-violet-500/30 text-violet-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              className={`relative p-2.5 rounded-2xl border transition-all duration-300 ${activePanel === 'patterns' ? 'bg-violet-500/20 border-violet-500/40 text-violet-400 shadow-lg shadow-violet-500/20' : 'bg-white/[0.04] border-white/[0.08] text-gray-400 hover:text-white hover:bg-white/[0.08] hover:border-white/20'}`}
               onClick={() => setActivePanel(p => p === 'patterns' ? null : 'patterns')} title="Weekly Patterns">
               <BarChart3 className="w-5 h-5" />
-            </button>
+            </motion.button>
           )}
           {totalCount > 0 && (
-            <button className={`p-2 rounded-xl border transition-all ${activePanel === 'coach' ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              className={`relative p-2.5 rounded-2xl border transition-all duration-300 ${activePanel === 'coach' ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-400 shadow-lg shadow-cyan-500/20' : 'bg-white/[0.04] border-white/[0.08] text-gray-400 hover:text-white hover:bg-white/[0.08] hover:border-white/20'}`}
               onClick={() => setActivePanel(p => p === 'coach' ? null : 'coach')} title="AI Coach">
               <Brain className="w-5 h-5" />
-            </button>
+            </motion.button>
           )}
-          {supplements.length > 0 && (
-            <button onClick={() => exportCSV(supplements, logs)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-              <Download className="w-4 h-4" />
-            </button>
-          )}
-          <button onClick={() => setShowSettings(true)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-            <Settings className="w-4 h-4" />
-          </button>
-          <Button variant="primary" size="sm" onClick={() => { resetForm(); setShowModal(true) }}>
-            <Plus className="w-4 h-4 mr-1" />Add
-          </Button>
+          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+            onClick={() => { resetForm(); setShowModal(true) }}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/30 transition-all duration-300 border border-violet-500/30">
+            <Plus className="w-4 h-4" />Add
+          </motion.button>
         </div>
       </motion.div>
 
       {/* Hero Ring */}
       {totalCount > 0 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-black/80 via-gray-900/80 to-black/80 backdrop-blur-xl p-6">
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.04] via-transparent to-cyan-500/[0.04] pointer-events-none" />
-          <div className="absolute -top-24 -right-24 w-48 h-48 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative flex items-center gap-6">
+        <motion.div {...fadeUp} transition={{ duration: 0.5, delay: 0.1 }}
+          className="relative overflow-hidden rounded-[28px] border border-white/[0.08] bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 backdrop-blur-2xl p-7 shadow-2xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.03] via-transparent to-cyan-500/[0.03] pointer-events-none" />
+          <div className="absolute -top-32 -right-32 w-64 h-64 bg-violet-500/[0.06] rounded-full blur-[80px] pointer-events-none" />
+          <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-cyan-500/[0.06] rounded-full blur-[80px] pointer-events-none" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-px bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
+          <div className="relative flex items-center gap-8">
             {/* SVG Ring */}
-            <div className={`relative w-32 h-32 shrink-0 drop-shadow-2xl ${scoreGlow}`}>
-              <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
+            <div className={`relative w-36 h-36 shrink-0 ${scoreGlow} rounded-full`}>
+              <div className="absolute inset-1 rounded-full bg-gradient-to-br from-white/[0.03] to-transparent" />
+              <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90 relative z-10">
                 <defs>
-                  <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor={scoreColor} stopOpacity="0.3" />
+                  <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor={scoreColor} stopOpacity="0.4" />
+                    <stop offset="50%" stopColor={scoreColor} stopOpacity="0.8" />
                     <stop offset="100%" stopColor={scoreColor} stopOpacity="1" />
                   </linearGradient>
                   <filter id="ringGlow">
-                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feGaussianBlur stdDeviation="4" result="blur" />
                     <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                   </filter>
                 </defs>
-                <circle cx="60" cy="60" r="54" fill="transparent" stroke="rgba(255,255,255,0.04)" strokeWidth="5" />
+                <circle cx="60" cy="60" r="54" fill="transparent" stroke="rgba(255,255,255,0.04)" strokeWidth="6" />
                 <motion.circle cx="60" cy="60" r="54" fill="transparent"
-                  stroke="url(#ringGradient)" strokeWidth="5" strokeLinecap="round"
+                  stroke="url(#ringGrad)" strokeWidth="6" strokeLinecap="round"
                   strokeDasharray={circumference}
                   initial={{ strokeDashoffset: circumference }}
                   animate={{ strokeDashoffset }}
-                  transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ duration: 1.8, ease: [0.16, 1, 0.3, 1] }}
                   filter="url(#ringGlow)" />
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <motion.span initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3, duration: 0.5 }}
-                  className="text-4xl font-black text-white drop-shadow-lg">{adherenceScore}</motion.span>
-                <span className="text-[9px] text-gray-400 uppercase tracking-widest font-medium">percent</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+                <motion.span initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4, duration: 0.6, type: 'spring' }}
+                  className="text-5xl font-black text-white drop-shadow-2xl">{adherenceScore}</motion.span>
+                <span className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-semibold mt-0.5">percent</span>
               </div>
             </div>
             {/* Stats Grid */}
             <div className="flex-1 grid grid-cols-2 gap-3">
-              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
-                className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4 hover:bg-white/[0.05] transition-colors">
-                <div className="flex items-center gap-1.5 mb-2"><Check className="w-3.5 h-3.5 text-emerald-400" /><span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider">Taken</span></div>
-                <p className="text-2xl font-black text-emerald-300">{takenTodayCount}</p>
-                <p className="text-[9px] text-gray-500 mt-0.5">of {totalCount} today</p>
-              </motion.div>
-              <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}
-                className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4 hover:bg-white/[0.05] transition-colors">
-                <div className="flex items-center gap-1.5 mb-2"><Target className="w-3.5 h-3.5 text-amber-400" /><span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider">Left</span></div>
-                <p className="text-2xl font-black text-amber-300">{remainingCount}</p>
-                <p className="text-[9px] text-gray-500 mt-0.5">remaining</p>
-              </motion.div>
-              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
-                className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4 hover:bg-white/[0.05] transition-colors">
-                <div className="flex items-center gap-1.5 mb-2"><Flame className="w-3.5 h-3.5 text-orange-400" /><span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider">Streak</span></div>
-                <p className="text-2xl font-black text-orange-300">{suppStreak}<span className="text-sm font-normal text-gray-500 ml-1">d</span></p>
-                <p className="text-[9px] text-gray-500 mt-0.5">perfect days</p>
-              </motion.div>
-              <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }}
-                className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4 hover:bg-white/[0.05] transition-colors">
-                <div className="flex items-center gap-1.5 mb-2"><DollarSign className="w-3.5 h-3.5 text-violet-400" /><span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider">Cost</span></div>
-                <p className="text-2xl font-black text-violet-300">${monthlyCost.toFixed(0)}</p>
-                <p className="text-[9px] text-gray-500 mt-0.5">per month</p>
-              </motion.div>
+              {[
+                { icon: Check, label: 'Taken', value: takenTodayCount, sub: `of ${totalCount} today`, color: 'emerald', delay: 0.15 },
+                { icon: Target, label: 'Left', value: remainingCount, sub: 'remaining', color: 'amber', delay: 0.2 },
+                { icon: Flame, label: 'Streak', value: suppStreak, sub: 'perfect days', color: 'orange', delay: 0.25, suffix: 'd' },
+                { icon: DollarSign, label: 'Cost', value: `$${monthlyCost.toFixed(0)}`, sub: 'per month', color: 'violet', delay: 0.3 },
+              ].map((stat) => (
+                <motion.div key={stat.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: stat.delay, duration: 0.4 }}
+                  className={`group relative rounded-2xl bg-gradient-to-br from-white/[0.03] to-white/[0.01] border border-white/[0.06] p-4 hover:from-white/[0.05] hover:to-white/[0.03] hover:border-white/[0.12] transition-all duration-300 cursor-default`}>
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                    style={{ background: `radial-gradient(circle at 50% 0%, var(--tw-gradient-stops))` }} />
+                  <div className="flex items-center gap-1.5 mb-2.5">
+                    <div className={`p-1 rounded-lg bg-${stat.color}-500/10`}>
+                      <stat.icon className={`w-3 h-3 text-${stat.color}-400`} />
+                    </div>
+                    <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.15em]">{stat.label}</span>
+                  </div>
+                  <p className={`text-3xl font-black text-${stat.color}-300`}>{stat.value}{stat.suffix && <span className="text-sm font-medium text-gray-500 ml-0.5">{stat.suffix}</span>}</p>
+                  <p className="text-[10px] text-gray-600 mt-1">{stat.sub}</p>
+                </motion.div>
+              ))}
             </div>
           </div>
           {/* Adherence bar */}
-          <div className="mt-5">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Daily Progress</span>
-              <span className="text-[9px] font-bold" style={{ color: scoreColor }}>{adherenceScore}%</span>
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] text-gray-500 uppercase tracking-[0.15em] font-semibold">Daily Progress</span>
+              <span className="text-xs font-black" style={{ color: scoreColor }}>{adherenceScore}%</span>
             </div>
-            <div className="h-2 bg-white/[0.05] rounded-full overflow-hidden">
-              <motion.div initial={{ width: 0 }} animate={{ width: `${adherenceScore}%` }} transition={{ duration: 1, ease: 'easeOut' }}
-                className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${scoreColor}80, ${scoreColor})`, boxShadow: `0 0 12px ${scoreColor}40` }} />
+            <div className="h-2.5 bg-white/[0.04] rounded-full overflow-hidden">
+              <motion.div initial={{ width: 0 }} animate={{ width: `${adherenceScore}%` }} transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+                className="h-full rounded-full relative" style={{ background: `linear-gradient(90deg, ${scoreColor}60, ${scoreColor})`, boxShadow: `0 0 20px ${scoreColor}50` }}>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full" />
+              </motion.div>
             </div>
           </div>
         </motion.div>
@@ -342,47 +338,61 @@ export function SupplementTracker() {
 
       {/* Today's Schedule */}
       {totalCount > 0 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="rounded-3xl border border-white/10 bg-gradient-to-br from-black/80 via-gray-900/80 to-black/80 backdrop-blur-xl p-5 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.02] to-transparent pointer-events-none" />
+        <motion.div {...fadeUp} transition={{ duration: 0.5, delay: 0.15 }}
+          className="relative overflow-hidden rounded-[28px] border border-white/[0.08] bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 backdrop-blur-2xl p-6 shadow-2xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.02] via-transparent to-cyan-500/[0.01] pointer-events-none" />
+          <div className="absolute -top-20 -right-20 w-40 h-40 bg-emerald-500/[0.05] rounded-full blur-[60px] pointer-events-none" />
           <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                  <CalendarCheck className="w-4 h-4 text-emerald-400" />
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/20 flex items-center justify-center shadow-lg shadow-emerald-500/10">
+                  <CalendarCheck className="w-5 h-5 text-emerald-400" />
                 </div>
                 <div>
-                  <span className="text-sm font-semibold text-white">Today's Schedule</span>
-                  <p className="text-[10px] text-gray-500">{timeOfDayNow} — {scheduleToday.length} supplements</p>
+                  <span className="text-sm font-bold text-white">Today's Schedule</span>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{timeOfDayNow} \u2014 {scheduleToday.length} supplement{scheduleToday.length !== 1 ? 's' : ''}</p>
                 </div>
               </div>
-              <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">{takenTodayCount}/{scheduleToday.length}</span>
+              <div className="flex items-center gap-2">
+                <div className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border border-emerald-500/20">
+                  <span className="text-xs font-black text-emerald-400">{takenTodayCount}/{scheduleToday.length}</span>
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {scheduleToday.map((s, i) => {
                 const taken = takenTodayIds.has(s.id)
                 const TimeIcon = TIME_ICONS[s.times[0] as TimeOfDay] || Clock
+                const tod = (s.times[0] || 'Morning') as TimeOfDay
                 return (
-                  <motion.div key={s.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-                    className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all group ${taken ? 'bg-emerald-500/[0.06] border-emerald-500/15' : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04]'}`}>
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${taken ? 'bg-emerald-500/15 border border-emerald-500/20' : 'bg-white/[0.04] border border-white/[0.08] group-hover:bg-white/[0.06]'}`}>
-                      {taken ? <Check className="w-5 h-5 text-emerald-400" /> : <TimeIcon className="w-4 h-4 text-gray-400" />}
+                  <motion.div key={s.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04, duration: 0.3 }}
+                    className={`group relative flex items-center gap-4 rounded-2xl border p-4 transition-all duration-300 ${taken
+                      ? 'bg-gradient-to-r from-emerald-500/[0.06] to-emerald-500/[0.02] border-emerald-500/15 hover:border-emerald-500/25'
+                      : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.12]'}`}>
+                    <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 ${taken
+                      ? 'bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/25 shadow-lg shadow-emerald-500/10'
+                      : `bg-gradient-to-br ${TIME_GRADIENTS[tod]} border shadow-lg shadow-${tod === 'Morning' ? 'amber' : tod === 'Afternoon' ? 'yellow' : tod === 'Evening' ? 'orange' : 'indigo'}-500/5`}`}>
+                      {taken ? <Check className="w-5 h-5 text-emerald-400" /> : <TimeIcon className="w-5 h-5" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className={`text-sm font-semibold truncate ${taken ? 'text-emerald-300' : 'text-white'}`}>{s.name}</p>
-                        {s.stack && <span className="text-[8px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded-md uppercase tracking-wider">{s.stack}</span>}
+                      <div className="flex items-center gap-2.5">
+                        <p className={`text-sm font-bold truncate ${taken ? 'text-emerald-300' : 'text-white'}`}>{s.name}</p>
+                        {s.stack && (
+                          <span className="text-[9px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-lg uppercase tracking-wider">{s.stack}</span>
+                        )}
                       </div>
-                      <p className="text-[11px] text-gray-500 mt-0.5">{s.dosage} · {s.times.join(', ')}</p>
+                      <p className="text-[11px] text-gray-500 mt-1 font-medium">{s.dosage} \u00B7 {s.times.join(', ')}</p>
                     </div>
                     {!taken ? (
-                      <button onClick={() => markAsTaken(s)}
-                        className="shrink-0 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/30 transition-all text-xs font-semibold opacity-0 group-hover:opacity-100">
+                      <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                        onClick={() => markAsTaken(s)}
+                        className="shrink-0 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border border-emerald-500/20 text-emerald-400 hover:from-emerald-500/20 hover:to-emerald-600/10 hover:border-emerald-500/30 transition-all text-xs font-bold opacity-0 group-hover:opacity-100 shadow-lg shadow-emerald-500/5">
                         Take
-                      </button>
+                      </motion.button>
                     ) : (
-                      <div className="shrink-0 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/15">
-                        <span className="text-[10px] font-bold text-emerald-400">TAKEN</span>
+                      <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/15">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Taken</span>
                       </div>
                     )}
                   </motion.div>
@@ -397,48 +407,55 @@ export function SupplementTracker() {
       <AnimatePresence mode="wait">
         {/* Weekly Patterns Panel */}
         {activePanel === 'patterns' && totalCount > 0 && (
-          <motion.div key="patterns" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-            className="rounded-3xl border border-violet-500/15 bg-gradient-to-br from-black/80 via-gray-900/80 to-black/80 backdrop-blur-xl p-5 overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.03] via-transparent to-purple-500/[0.03] pointer-events-none" />
-            <div className="absolute -top-20 -right-20 w-40 h-40 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
+          <motion.div key="patterns" initial={{ opacity: 0, y: -15, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -15, scale: 0.98 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="relative overflow-hidden rounded-[28px] border border-violet-500/15 bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 backdrop-blur-2xl p-6 shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.03] via-transparent to-purple-500/[0.02] pointer-events-none" />
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-violet-500/[0.06] rounded-full blur-[80px] pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-40 h-40 bg-purple-500/[0.04] rounded-full blur-[60px] pointer-events-none" />
             <div className="relative">
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-                    <BarChart3 className="w-4 h-4 text-violet-400" />
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500/20 to-violet-600/10 border border-violet-500/20 flex items-center justify-center shadow-lg shadow-violet-500/10">
+                    <BarChart3 className="w-5 h-5 text-violet-400" />
                   </div>
                   <div>
-                    <span className="text-sm font-semibold text-white">Weekly Patterns</span>
-                    <p className="text-[10px] text-gray-500">Your supplement consistency</p>
+                    <span className="text-sm font-bold text-white">Weekly Patterns</span>
+                    <p className="text-[11px] text-gray-500 mt-0.5">Your supplement consistency</p>
                   </div>
                 </div>
-                <div className="flex gap-1 bg-white/5 rounded-xl p-0.5 border border-white/[0.06]">
+                <div className="flex gap-1 bg-white/[0.04] rounded-2xl p-1 border border-white/[0.06]">
                   {(['7d', '14d', '30d'] as const).map(p => (
-                    <button key={p} onClick={() => setTrendPeriod(p)}
-                      className={`px-3 py-1 rounded-lg text-[10px] font-semibold transition-all ${trendPeriod === p ? 'bg-violet-500/20 text-violet-300 border border-violet-500/20' : 'text-gray-500 hover:text-white border border-transparent'}`}>{p}</button>
+                    <motion.button key={p} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                      onClick={() => setTrendPeriod(p)}
+                      className={`px-4 py-1.5 rounded-xl text-[11px] font-bold transition-all duration-200 ${trendPeriod === p ? 'bg-violet-500/20 text-violet-300 border border-violet-500/25 shadow-lg shadow-violet-500/10' : 'text-gray-500 hover:text-white border border-transparent'}`}>{p}</motion.button>
                   ))}
                 </div>
               </div>
               {/* 7-Day Bars */}
-              <div className="grid grid-cols-7 gap-2 mb-5">
+              <div className="grid grid-cols-7 gap-2.5 mb-6">
                 {adherenceWeek.map((day, i) => (
-                  <div key={day.date} className="flex flex-col items-center gap-1.5">
-                    <span className="text-[9px] text-gray-500 uppercase font-medium">{day.label}</span>
-                    <div className="w-full h-20 bg-white/[0.03] rounded-xl overflow-hidden flex items-end border border-white/[0.04]">
-                      <motion.div initial={{ height: 0 }} animate={{ height: `${Math.max(day.pct, 4)}%` }} transition={{ duration: 0.6, delay: i * 0.06, ease: [0.16, 1, 0.3, 1] }}
-                        className={`w-full rounded-t-lg ${day.pct >= 80 ? 'bg-gradient-to-t from-emerald-600 to-emerald-400' : day.pct >= 50 ? 'bg-gradient-to-t from-amber-600 to-amber-400' : day.pct > 0 ? 'bg-gradient-to-t from-red-600/60 to-red-400/60' : 'bg-white/[0.03]'}`} />
+                  <div key={day.date} className="flex flex-col items-center gap-2">
+                    <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">{day.label}</span>
+                    <div className="w-full h-24 bg-white/[0.03] rounded-2xl overflow-hidden flex items-end border border-white/[0.05]">
+                      <motion.div initial={{ height: 0 }} animate={{ height: `${Math.max(day.pct, 4)}%` }} transition={{ duration: 0.7, delay: i * 0.07, ease: [0.16, 1, 0.3, 1] }}
+                        className={`w-full rounded-t-xl relative ${day.pct >= 80 ? 'bg-gradient-to-t from-emerald-600 to-emerald-400' : day.pct >= 50 ? 'bg-gradient-to-t from-amber-600 to-amber-400' : day.pct > 0 ? 'bg-gradient-to-t from-red-600/70 to-red-400/70' : 'bg-white/[0.03]'}`}>
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent rounded-t-xl" />
+                      </motion.div>
                     </div>
-                    <span className={`text-[10px] font-bold ${day.pct >= 80 ? 'text-emerald-400' : day.pct >= 50 ? 'text-amber-400' : 'text-gray-500'}`}>{day.pct}%</span>
+                    <span className={`text-[11px] font-black ${day.pct >= 80 ? 'text-emerald-400' : day.pct >= 50 ? 'text-amber-400' : day.pct > 0 ? 'text-red-400/70' : 'text-gray-600'}`}>{day.pct}%</span>
                   </div>
                 ))}
               </div>
               {/* Trend Line */}
-              <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="w-3.5 h-3.5 text-violet-400" />
-                  <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Trend · {trendPeriod}</span>
+              <div className="rounded-2xl bg-gradient-to-br from-white/[0.03] to-white/[0.01] border border-white/[0.06] p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-1.5 rounded-lg bg-violet-500/10">
+                    <TrendingUp className="w-3.5 h-3.5 text-violet-400" />
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em]">Trend \u00B7 {trendPeriod}</span>
                 </div>
-                <div className="h-28">
+                <div className="h-32">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={adherenceTrend}>
                       <defs>
@@ -449,30 +466,28 @@ export function SupplementTracker() {
                       </defs>
                       <XAxis dataKey="date" tick={false} axisLine={false} />
                       <YAxis hide domain={[0, 100]} />
-                      <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '8px 12px' }}
-                        itemStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
-                        labelStyle={{ color: '#9ca3af', fontSize: 9, fontWeight: 600 }}
+                      <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '10px 14px', backdropFilter: 'blur(20px)' }}
+                        itemStyle={{ color: '#fff', fontSize: 12, fontWeight: 700 }}
+                        labelStyle={{ color: '#9ca3af', fontSize: 10, fontWeight: 600 }}
                         formatter={(value: number) => [`${value}%`, 'Adherence']}
                         labelFormatter={(label, payload) => payload?.[0]?.payload?.date || label} />
-                      <Line type="monotone" dataKey="pct" stroke="#8b5cf6" strokeWidth={2.5} dot={false} activeDot={{ r: 4, fill: '#8b5cf6', stroke: '#000', strokeWidth: 2 }} />
+                      <Line type="monotone" dataKey="pct" stroke="#8b5cf6" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: '#8b5cf6', stroke: '#000', strokeWidth: 2, className: 'drop-shadow-lg' }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
               {/* Summary chips */}
-              <div className="flex items-center gap-3 mt-4">
-                <div className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-1.5">
-                  <Flame className="w-3 h-3 text-orange-400" />
-                  <span className="text-[10px] text-gray-400">Streak: <span className="text-white font-bold">{suppStreak}d</span></span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-1.5">
-                  <Activity className="w-3 h-3 text-violet-400" />
-                  <span className="text-[10px] text-gray-400">Week: <span className="text-white font-bold">{weekAdherence}%</span></span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-1.5">
-                  <Pill className="w-3 h-3 text-cyan-400" />
-                  <span className="text-[10px] text-gray-400">Daily: <span className="text-white font-bold">{dailySupps.length}</span></span>
-                </div>
+              <div className="flex items-center gap-3 mt-5">
+                {[
+                  { icon: Flame, color: 'orange', label: 'Streak', value: `${suppStreak}d` },
+                  { icon: Activity, color: 'violet', label: 'Week', value: `${weekAdherence}%` },
+                  { icon: Pill, color: 'cyan', label: 'Daily', value: dailySupps.length },
+                ].map(chip => (
+                  <div key={chip.label} className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-2">
+                    <chip.icon className={`w-3.5 h-3.5 text-${chip.color}-400`} />
+                    <span className="text-[10px] text-gray-500 font-medium">{chip.label}: <span className="text-white font-black">{chip.value}</span></span>
+                  </div>
+                ))}
               </div>
             </div>
           </motion.div>
@@ -480,51 +495,62 @@ export function SupplementTracker() {
 
         {/* AI Coach Panel */}
         {activePanel === 'coach' && (
-          <motion.div key="coach" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-            className="rounded-3xl border border-cyan-500/15 bg-gradient-to-br from-black/80 via-gray-900/80 to-black/80 backdrop-blur-xl p-5 overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/[0.03] via-transparent to-violet-500/[0.03] pointer-events-none" />
-            <div className="absolute -top-20 -right-20 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
+          <motion.div key="coach" initial={{ opacity: 0, y: -15, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -15, scale: 0.98 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="relative overflow-hidden rounded-[28px] border border-cyan-500/15 bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 backdrop-blur-2xl p-6 shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/[0.03] via-transparent to-violet-500/[0.02] pointer-events-none" />
+            <div className="absolute -top-24 -right-24 w-56 h-56 bg-cyan-500/[0.06] rounded-full blur-[80px] pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-violet-500/[0.04] rounded-full blur-[60px] pointer-events-none" />
             <div className="relative">
               {/* Header */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3.5">
                   <div className="relative">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400/20 to-cyan-500/20 border border-cyan-500/20 flex items-center justify-center shadow-lg shadow-cyan-500/10">
-                      <Sparkles className="w-4 h-4 text-cyan-400" />
+                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-400/20 to-cyan-500/20 border border-cyan-500/20 flex items-center justify-center shadow-lg shadow-cyan-500/15">
+                      <Sparkles className="w-5 h-5 text-cyan-400" />
                     </div>
-                    <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-black animate-pulse" />
+                    <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-gray-950 animate-pulse shadow-lg shadow-emerald-400/50" />
                   </div>
                   <div>
-                    <span className="text-xs font-bold text-white/80 uppercase tracking-wider">AI Supplement Coach</span>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Your personalized supplement intelligence</p>
+                    <span className="text-sm font-bold text-white uppercase tracking-wider">AI Supplement Coach</span>
+                    <p className="text-[11px] text-gray-500 mt-0.5">Your personalized supplement intelligence</p>
                   </div>
                 </div>
                 <div className="relative">
-                  <button onClick={() => setShowCoachModeDropdown(p => !p)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-semibold transition-all ${showCoachModeDropdown ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                    <span>{coachMode === 'insight' ? '\uD83E\uDDE0' : coachMode === 'refill' ? '\uD83D\uDCE6' : '\uD83D\uDCA1'}</span>
-                    <span className="hidden sm:inline">{coachMode === 'insight' ? 'Insight' : coachMode === 'refill' ? 'Refill' : 'Stack'}</span>
-                  </button>
+                  <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                    onClick={() => setShowCoachModeDropdown(p => !p)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-2xl border text-[11px] font-bold transition-all duration-300 ${showCoachModeDropdown ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400 shadow-lg shadow-cyan-500/10' : 'bg-white/[0.04] border-white/[0.08] text-gray-400 hover:text-white hover:bg-white/[0.08]'}`}>
+                    <span className="text-sm">{coachMode === 'insight' ? '\uD83E\uDDE0' : coachMode === 'refill' ? '\uD83D\uDCE6' : '\uD83D\uDCA1'}</span>
+                    <span>{coachMode === 'insight' ? 'Insight' : coachMode === 'refill' ? 'Refill' : 'Stack'}</span>
+                  </motion.button>
                   {showCoachModeDropdown && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setShowCoachModeDropdown(false)} />
-                      <div className="absolute right-0 top-10 z-20 w-56 rounded-2xl bg-gray-900 border border-white/10 shadow-2xl p-3">
-                        <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">Switch Mode</p>
-                        <div className="flex flex-col gap-1">
+                      <motion.div initial={{ opacity: 0, y: -8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                        className="absolute right-0 top-12 z-20 w-60 rounded-2xl bg-gray-900/95 backdrop-blur-xl border border-white/10 shadow-2xl p-3">
+                        <p className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-2 px-2">Switch Mode</p>
+                        <div className="flex flex-col gap-1.5">
                           {([
-                            { key: 'insight' as const, label: '\uD83E\uDDE0 AI Insight', desc: 'Smart daily recommendations' },
-                            { key: 'refill' as const, label: '\uD83D\uDCE6 Refill Tracker', desc: 'Never run out' },
-                            { key: 'stack' as const, label: '\uD83D\uDCA1 Stack Intel', desc: 'Interactions & overview' },
+                            { key: 'insight' as const, emoji: '\uD83E\uDDE0', label: 'AI Insight', desc: 'Smart daily recommendations', color: 'cyan' },
+                            { key: 'refill' as const, emoji: '\uD83D\uDCE6', label: 'Refill Tracker', desc: 'Never run out', color: 'amber' },
+                            { key: 'stack' as const, emoji: '\uD83D\uDCA1', label: 'Stack Intel', desc: 'Interactions & overview', color: 'violet' },
                           ]).map(opt => (
-                            <button key={opt.key} onClick={() => { setCoachMode(opt.key); setShowCoachModeDropdown(false) }}
-                              className={`text-left px-3 py-2.5 rounded-xl text-[11px] font-medium transition-all ${coachMode === opt.key ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'}`}>
-                              <div className="font-semibold">{opt.label}</div>
-                              <div className="text-[9px] text-gray-500 mt-0.5">{opt.desc}</div>
-                            </button>
+                            <motion.button key={opt.key} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                              onClick={() => { setCoachMode(opt.key); setShowCoachModeDropdown(false) }}
+                              className={`text-left px-3 py-3 rounded-xl text-[11px] font-medium transition-all duration-200 ${coachMode === opt.key
+                                ? `bg-${opt.color}-500/15 text-${opt.color}-300 border border-${opt.color}-500/25`
+                                : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'}`}>
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">{opt.emoji}</span>
+                                <div>
+                                  <div className="font-bold">{opt.label}</div>
+                                  <div className="text-[9px] text-gray-500 mt-0.5">{opt.desc}</div>
+                                </div>
+                              </div>
+                            </motion.button>
                           ))}
                         </div>
-                      </div>
+                      </motion.div>
                     </>
                   )}
                 </div>
@@ -534,34 +560,34 @@ export function SupplementTracker() {
               {coachMode === 'insight' && (
                 <div className="space-y-3">
                   {smartRecs.length === 0 ? (
-                    <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.04] text-center">
-                      <Brain className="w-8 h-8 text-gray-600 mx-auto mb-3" />
-                      <p className="text-[11px] text-gray-500">Add supplements to unlock AI-powered insights.</p>
+                    <div className="p-8 rounded-2xl bg-gradient-to-br from-white/[0.02] to-white/[0.01] border border-white/[0.05] text-center">
+                      <Brain className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+                      <p className="text-[12px] text-gray-500 font-medium">Add supplements to unlock AI-powered insights.</p>
                     </div>
                   ) : smartRecs.map((rec, i) => {
                     const Icon = rec.icon
-                    const catColors: Record<string, string> = {
-                      Performance: 'border-purple-500/15 bg-purple-500/[0.04]',
-                      Recovery: 'border-emerald-500/15 bg-emerald-500/[0.04]',
-                      Nutrition: 'border-amber-500/15 bg-amber-500/[0.04]',
-                      General: 'border-gray-500/15 bg-gray-500/[0.04]',
+                    const catBorders: Record<string, string> = {
+                      Performance: 'border-purple-500/15 hover:border-purple-500/25',
+                      Recovery: 'border-emerald-500/15 hover:border-emerald-500/25',
+                      Nutrition: 'border-amber-500/15 hover:border-amber-500/25',
+                      General: 'border-gray-500/15 hover:border-gray-500/25',
                     }
-                    const iconColors: Record<string, string> = {
+                    const catIcons: Record<string, string> = {
                       Performance: 'text-purple-400 bg-purple-500/10',
                       Recovery: 'text-emerald-400 bg-emerald-500/10',
                       Nutrition: 'text-amber-400 bg-amber-500/10',
                       General: 'text-gray-400 bg-gray-500/10',
                     }
                     return (
-                      <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
-                        className={`p-4 rounded-2xl border ${catColors[rec.category] || catColors.General} hover:bg-white/[0.04] transition-colors`}>
-                        <div className="flex items-start gap-3">
-                          <div className={`p-2 rounded-xl shrink-0 ${iconColors[rec.category] || iconColors.General}`}>
+                      <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07, duration: 0.3 }}
+                        className={`group p-4 rounded-2xl border bg-gradient-to-r ${rec.gradient} ${catBorders[rec.category] || catBorders.General} hover:bg-white/[0.04] transition-all duration-300`}>
+                        <div className="flex items-start gap-3.5">
+                          <div className={`p-2.5 rounded-xl shrink-0 ${catIcons[rec.category] || catIcons.General} group-hover:scale-110 transition-transform duration-300`}>
                             <Icon className="w-4 h-4" />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-[11px] font-bold text-white/90 mb-0.5">{rec.title}</p>
-                            <p className="text-[10px] text-gray-400 leading-relaxed">{rec.text}</p>
+                            <p className="text-[12px] font-bold text-white/90 mb-0.5">{rec.title}</p>
+                            <p className="text-[11px] text-gray-400 leading-relaxed">{rec.text}</p>
                           </div>
                         </div>
                       </motion.div>
@@ -574,32 +600,35 @@ export function SupplementTracker() {
               {coachMode === 'refill' && (
                 <div className="space-y-3">
                   {supplements.filter(s => s.refillDays && s.refillDays > 0).length === 0 ? (
-                    <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.04] text-center">
-                      <Package className="w-8 h-8 text-gray-600 mx-auto mb-3" />
-                      <p className="text-[11px] text-gray-500">Set refill days on your supplements to track supply.</p>
+                    <div className="p-8 rounded-2xl bg-gradient-to-br from-white/[0.02] to-white/[0.01] border border-white/[0.05] text-center">
+                      <Package className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+                      <p className="text-[12px] text-gray-500 font-medium">Set refill days on your supplements to track supply.</p>
                     </div>
                   ) : supplements.filter(s => s.refillDays && s.refillDays > 0).map((supp, i) => {
                     const daysLeft = supp.refillDays || 30
                     const pct = Math.max(0, Math.min(100, ((30 - daysLeft) / 30) * 100))
-                    const urgency = daysLeft <= 3 ? 'text-red-400' : daysLeft <= 7 ? 'text-amber-400' : 'text-emerald-400'
-                    const barColor = daysLeft <= 3 ? 'from-red-600 to-red-400' : daysLeft <= 7 ? 'from-amber-600 to-amber-400' : 'from-emerald-600 to-emerald-400'
+                    const urgencyColor = daysLeft <= 3 ? 'red' : daysLeft <= 7 ? 'amber' : 'emerald'
                     return (
-                      <motion.div key={supp.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                        className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04] transition-colors">
-                        <div className="flex items-center justify-between mb-2.5">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${daysLeft <= 3 ? 'bg-red-400 animate-pulse' : daysLeft <= 7 ? 'bg-amber-400' : 'bg-emerald-400'}`} />
-                            <span className="text-[11px] font-bold text-white/80">{supp.name}</span>
+                      <motion.div key={supp.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06, duration: 0.3 }}
+                        className={`group p-5 rounded-2xl bg-gradient-to-r from-white/[0.02] to-white/[0.01] border border-white/[0.06] hover:from-white/[0.04] hover:to-white/[0.02] hover:border-white/[0.12] transition-all duration-300`}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-3 h-3 rounded-full ${daysLeft <= 3 ? `bg-${urgencyColor}-400 animate-pulse shadow-lg shadow-${urgencyColor}-400/50` : `bg-${urgencyColor}-400 shadow-lg shadow-${urgencyColor}-400/30`}`} />
+                            <span className="text-[12px] font-bold text-white">{supp.name}</span>
                           </div>
-                          <span className={`text-[10px] font-bold ${urgency}`}>{daysLeft}d left</span>
+                          <div className={`px-3 py-1 rounded-xl bg-${urgencyColor}-500/10 border border-${urgencyColor}-500/20`}>
+                            <span className={`text-[11px] font-black text-${urgencyColor}-400`}>{daysLeft}d left</span>
+                          </div>
                         </div>
-                        <div className="h-2 rounded-full bg-white/[0.05] overflow-hidden">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, delay: i * 0.1 }}
-                            className={`h-full rounded-full bg-gradient-to-r ${barColor}`} />
+                        <div className="h-2.5 rounded-full bg-white/[0.04] overflow-hidden mb-3">
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                            className={`h-full rounded-full bg-gradient-to-r from-${urgencyColor}-600 to-${urgencyColor}-400 relative`}>
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full" />
+                          </motion.div>
                         </div>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-[9px] text-gray-500">{supp.dosage}</span>
-                          <span className="text-[9px] font-semibold" style={{ color: daysLeft <= 3 ? '#f87171' : daysLeft <= 7 ? '#fbbf24' : '#34d399' }}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-gray-500 font-medium">{supp.dosage}</span>
+                          <span className={`text-[10px] font-bold text-${urgencyColor}-400`}>
                             {daysLeft <= 3 ? 'Reorder now!' : daysLeft <= 7 ? 'Order soon' : 'Good supply'}
                           </span>
                         </div>
@@ -613,13 +642,15 @@ export function SupplementTracker() {
               {coachMode === 'stack' && (
                 <div className="space-y-4">
                   {/* Category Donut */}
-                  <div className="p-4 rounded-2xl bg-gradient-to-r from-violet-500/[0.04] to-purple-500/[0.04] border border-violet-500/10">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Layers className="w-4 h-4 text-violet-400" />
-                      <span className="text-[10px] font-bold text-violet-300 uppercase tracking-wider">Stack Overview</span>
+                  <div className="p-5 rounded-2xl bg-gradient-to-r from-violet-500/[0.04] to-purple-500/[0.03] border border-violet-500/10 hover:border-violet-500/20 transition-all duration-300">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="p-1.5 rounded-lg bg-violet-500/10">
+                        <Layers className="w-4 h-4 text-violet-400" />
+                      </div>
+                      <span className="text-[10px] font-bold text-violet-300 uppercase tracking-[0.15em]">Stack Overview</span>
                     </div>
-                    <div className="flex items-center gap-5">
-                      <div className="relative w-20 h-20 shrink-0">
+                    <div className="flex items-center gap-6">
+                      <div className="relative w-24 h-24 shrink-0">
                         <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                           {(() => {
                             const cats: Record<string, { count: number; color: string }> = {}
@@ -636,7 +667,7 @@ export function SupplementTracker() {
                               const p = (data.count / total) * 100
                               const seg = (
                                 <circle key={name} cx="18" cy="18" r="15.915" fill="transparent"
-                                  className={`${data.color} opacity-80`} strokeWidth="3"
+                                  className={`${data.color} opacity-80`} strokeWidth="3.5"
                                   strokeDasharray={`${p} ${100 - p}`} strokeDashoffset={`${-offset}`}
                                   style={{ transition: 'stroke-dasharray 0.6s ease' }} />
                               )
@@ -646,10 +677,10 @@ export function SupplementTracker() {
                           })()}
                         </svg>
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-sm font-black text-white/90">{supplements.length}</span>
+                          <span className="text-lg font-black text-white/90">{supplements.length}</span>
                         </div>
                       </div>
-                      <div className="flex-1 grid grid-cols-2 gap-x-4 gap-y-1.5">
+                      <div className="flex-1 grid grid-cols-2 gap-x-5 gap-y-2">
                         {(() => {
                           const cats: Record<string, { count: number; color: string; dot: string }> = {}
                           const colors = ['bg-violet-500', 'bg-cyan-500', 'bg-amber-500', 'bg-emerald-500', 'bg-rose-500', 'bg-indigo-500', 'bg-orange-500']
@@ -661,10 +692,10 @@ export function SupplementTracker() {
                             cats[cat].count++
                           })
                           return Object.entries(cats).sort((a, b) => b[1].count - a[1].count).map(([name, data]) => (
-                            <div key={name} className="flex items-center gap-1.5">
-                              <span className={`w-2 h-2 rounded-full ${data.color} shrink-0`} />
-                              <span className="text-[10px] text-gray-400 truncate flex-1">{name}</span>
-                              <span className={`text-[10px] font-bold ${data.dot}`}>{data.count}</span>
+                            <div key={name} className="flex items-center gap-2">
+                              <span className={`w-2.5 h-2.5 rounded-full ${data.color} shrink-0`} />
+                              <span className="text-[11px] text-gray-400 truncate flex-1 font-medium">{name}</span>
+                              <span className={`text-[11px] font-black ${data.dot}`}>{data.count}</span>
                             </div>
                           ))
                         })()}
@@ -674,31 +705,35 @@ export function SupplementTracker() {
 
                   {/* Interactions */}
                   {supplementInteractions.length > 0 && (
-                    <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/[0.04] to-cyan-500/[0.04] border border-emerald-500/10">
-                      <div className="flex items-center gap-2 mb-3">
-                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                        <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">Interactions</span>
-                        <span className="text-[9px] text-emerald-400/60 ml-auto">{supplementInteractions.length} detected</span>
+                    <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-500/[0.04] to-cyan-500/[0.03] border border-emerald-500/10 hover:border-emerald-500/20 transition-all duration-300">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-emerald-500/10">
+                            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                          </div>
+                          <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-[0.15em]">Interactions</span>
+                        </div>
+                        <span className="text-[10px] text-emerald-400/60 font-medium">{supplementInteractions.length} detected</span>
                       </div>
                       <div className="space-y-2">
                         {supplementInteractions.map((inter, i) => (
                           <motion.div key={i} initial={{ opacity: 0, x: -5 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                            className={cn('flex items-start gap-2.5 px-3 py-2.5 rounded-xl border',
-                              inter.type === 'synergy' && 'bg-emerald-500/[0.04] border-emerald-500/10',
-                              inter.type === 'conflict' && 'bg-red-500/[0.04] border-red-500/10',
-                              inter.type === 'timing' && 'bg-amber-500/[0.04] border-amber-500/10',
+                            className={cn('flex items-start gap-3 px-4 py-3 rounded-xl border transition-all duration-200 hover:scale-[1.01]',
+                              inter.type === 'synergy' && 'bg-emerald-500/[0.04] border-emerald-500/10 hover:border-emerald-500/20',
+                              inter.type === 'conflict' && 'bg-red-500/[0.04] border-red-500/10 hover:border-red-500/20',
+                              inter.type === 'timing' && 'bg-amber-500/[0.04] border-amber-500/10 hover:border-amber-500/20',
                             )}>
-                            {inter.type === 'synergy' && <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />}
-                            {inter.type === 'conflict' && <ShieldAlert className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />}
-                            {inter.type === 'timing' && <Info className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />}
+                            {inter.type === 'synergy' && <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />}
+                            {inter.type === 'conflict' && <ShieldAlert className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />}
+                            {inter.type === 'timing' && <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />}
                             <div className="flex-1 min-w-0">
-                              <p className="text-[10px] font-bold text-white">{inter.suppA} + {inter.suppB}</p>
-                              <p className="text-[9px] text-gray-400 mt-0.5">{inter.message}</p>
+                              <p className="text-[11px] font-bold text-white">{inter.suppA} + {inter.suppB}</p>
+                              <p className="text-[10px] text-gray-400 mt-0.5">{inter.message}</p>
                             </div>
-                            <span className={cn('text-[8px] font-bold uppercase tracking-wider shrink-0 mt-0.5',
-                              inter.type === 'synergy' && 'text-emerald-400',
-                              inter.type === 'conflict' && 'text-red-400',
-                              inter.type === 'timing' && 'text-amber-400',
+                            <span className={cn('text-[9px] font-black uppercase tracking-wider shrink-0 mt-0.5 px-2 py-0.5 rounded-md',
+                              inter.type === 'synergy' && 'text-emerald-400 bg-emerald-500/10',
+                              inter.type === 'conflict' && 'text-red-400 bg-red-500/10',
+                              inter.type === 'timing' && 'text-amber-400 bg-amber-500/10',
                             )}>{inter.type}</span>
                           </motion.div>
                         ))}
@@ -707,9 +742,9 @@ export function SupplementTracker() {
                   )}
 
                   {supplementInteractions.length === 0 && (
-                    <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.04] text-center">
-                      <Layers className="w-8 h-8 text-gray-600 mx-auto mb-3" />
-                      <p className="text-[11px] text-gray-500">Add more supplements to discover stack interactions.</p>
+                    <div className="p-8 rounded-2xl bg-gradient-to-br from-white/[0.02] to-white/[0.01] border border-white/[0.05] text-center">
+                      <Layers className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+                      <p className="text-[12px] text-gray-500 font-medium">Add more supplements to discover stack interactions.</p>
                     </div>
                   )}
                 </div>
@@ -721,28 +756,42 @@ export function SupplementTracker() {
 
       {/* Empty State */}
       {totalCount === 0 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="rounded-3xl border border-white/10 bg-gradient-to-br from-black/80 via-gray-900/80 to-black/80 backdrop-blur-xl p-10 text-center relative overflow-hidden">
+        <motion.div {...fadeUp} transition={{ duration: 0.6, delay: 0.1 }}
+          className="relative overflow-hidden rounded-[28px] border border-white/[0.08] bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 backdrop-blur-2xl p-12 text-center shadow-2xl">
           <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.03] via-transparent to-cyan-500/[0.03] pointer-events-none" />
+          <div className="absolute -top-32 -right-32 w-64 h-64 bg-violet-500/[0.04] rounded-full blur-[80px] pointer-events-none" />
+          <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-cyan-500/[0.04] rounded-full blur-[80px] pointer-events-none" />
           <div className="relative">
-            <motion.div animate={{ rotate: [0, -10, 10, -10, 0] }} transition={{ duration: 2, repeat: Infinity, repeatDelay: 4 }}>
-              <Pill className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+            <motion.div animate={{ rotate: [0, -8, 8, -8, 0], y: [0, -5, 0] }} transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}
+              className="relative mx-auto w-20 h-20 mb-6">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-violet-500/20 to-cyan-500/20 blur-xl" />
+              <div className="relative w-full h-full rounded-3xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex items-center justify-center shadow-2xl">
+                <Pill className="w-10 h-10 text-gray-500" />
+              </div>
             </motion.div>
-            <p className="text-gray-400 font-semibold text-lg">No supplements tracked</p>
-            <p className="text-gray-500 text-sm mt-1 mb-5">Start your supplement stack to unlock AI-powered insights</p>
-            <Button variant="accent" size="sm" onClick={() => { resetForm(); setShowModal(true) }}>
-              <Plus className="w-4 h-4 mr-1" />Add Your First Supplement
-            </Button>
+            <p className="text-gray-300 font-bold text-xl mb-2">No supplements tracked</p>
+            <p className="text-gray-500 text-sm mb-8 max-w-xs mx-auto">Start your supplement stack to unlock AI-powered insights and track your daily routine</p>
+            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+              onClick={() => { resetForm(); setShowModal(true) }}
+              className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold shadow-xl shadow-violet-500/25 hover:shadow-2xl hover:shadow-violet-500/30 transition-all duration-300 border border-violet-500/30">
+              <Plus className="w-4.5 h-4.5" />Add Your First Supplement
+            </motion.button>
           </div>
         </motion.div>
       )}
 
       {/* Supplement Cards */}
       {totalCount > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {supplementsByStack.noStack.length > 0 && (
             <div>
-              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Other</h4>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-1 rounded-lg bg-white/5">
+                  <Layers className="w-3 h-3 text-gray-500" />
+                </div>
+                <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.15em]">Other</h4>
+                <div className="flex-1 h-px bg-white/[0.05] ml-2" />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {supplementsByStack.noStack.map((supp) => (
                   <SupplementCard key={supp.id} supp={supp} takenTodayIds={takenTodayIds} markAsTaken={markAsTaken} setDeleteTarget={setDeleteTarget} />
@@ -752,10 +801,13 @@ export function SupplementTracker() {
           )}
           {Object.entries(supplementsByStack.grouped).map(([stackName, supps]) => (
             <div key={stackName}>
-              <div className="flex items-center gap-2 mb-2">
-                <Layers className="w-3.5 h-3.5 text-purple-400" />
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{stackName}</h4>
-                <span className="text-[10px] text-gray-600">{supps.length} supps</span>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-1 rounded-lg bg-violet-500/10">
+                  <Layers className="w-3 h-3 text-violet-400" />
+                </div>
+                <h4 className="text-[11px] font-bold text-violet-400/80 uppercase tracking-[0.15em]">{stackName}</h4>
+                <span className="text-[10px] text-gray-600 font-medium">{supps.length} supp{supps.length !== 1 ? 's' : ''}</span>
+                <div className="flex-1 h-px bg-violet-500/10 ml-2" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {supps.map((supp) => (
@@ -768,64 +820,102 @@ export function SupplementTracker() {
       )}
 
       {/* Add Supplement Modal */}
-      <Modal isOpen={showModal} onClose={() => { setShowModal(false); resetForm() }} title="Add Supplement">
-        <div className="space-y-5">
+      <Modal isOpen={showModal} onClose={() => { setShowModal(false); resetForm() }} title="">
+        <div className="space-y-6 -mt-1">
+          {/* Modal Header */}
+          <div className="text-center pb-2">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/20 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-violet-500/15">
+              <Pill className="w-7 h-7 text-violet-400" />
+            </div>
+            <h3 className="text-lg font-black text-white">Add Supplement</h3>
+            <p className="text-[11px] text-gray-500 mt-1">Track your daily nutrition stack</p>
+          </div>
+
+          {/* Quick Add */}
           <div>
-            <label className="block text-[10px] font-medium text-gray-400 mb-3 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 text-purple-400" />Quick Add from Common
+            <label className="block text-[10px] font-bold text-gray-500 mb-3 uppercase tracking-[0.15em] flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3 text-violet-400" />Quick Add
             </label>
             <div className="grid grid-cols-2 gap-2.5">
               {commonSupplements.map((s) => (
                 <motion.button key={s.name} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => handleQuickAdd(s.name, s.dosage)}
-                  className={cn('text-left px-4 py-3 rounded-xl text-xs border transition-all duration-200',
-                    formData.name === s.name ? 'bg-gradient-to-br from-purple-500/20 to-violet-500/10 border-purple-500/40 text-white shadow-lg shadow-purple-500/5'
-                    : 'bg-white/[0.03] border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06] hover:border-white/20')}>
-                  <div className="font-semibold">{s.name}</div>
-                  <div className="text-[10px] text-gray-500 mt-1">{s.dosage}</div>
+                  className={cn('text-left px-4 py-3.5 rounded-2xl text-xs border transition-all duration-300',
+                    formData.name === s.name
+                      ? 'bg-gradient-to-br from-violet-500/20 to-indigo-500/10 border-violet-500/30 text-white shadow-lg shadow-violet-500/15'
+                      : 'bg-white/[0.03] border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06] hover:border-white/20')}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{s.emoji}</span>
+                    <div>
+                      <div className="font-bold">{s.name}</div>
+                      <div className="text-[10px] text-gray-500 mt-0.5">{s.dosage}</div>
+                    </div>
+                  </div>
                 </motion.button>
               ))}
             </div>
           </div>
+
           <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-          <Input label="Supplement Name" placeholder="e.g., Vitamin D3" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} icon={<Pill className="w-4 h-4" />} />
-          <Input label="Dosage" placeholder="e.g., 5000 IU" value={formData.dosage} onChange={(e) => setFormData({ ...formData, dosage: e.target.value })} />
-          <div className="space-y-3">
-            <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wider">Frequency</label>
+
+          {/* Manual Form */}
+          <div className="space-y-4">
+            <Input label="Supplement Name" placeholder="e.g., Vitamin D3" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} icon={<Pill className="w-4 h-4" />} />
+            <Input label="Dosage" placeholder="e.g., 5000 IU" value={formData.dosage} onChange={(e) => setFormData({ ...formData, dosage: e.target.value })} />
+          </div>
+
+          <div>
+            <label className="mb-2.5 block text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">Frequency</label>
             <div className="flex gap-2">
               {(['daily', 'weekly', 'custom'] as const).map((freq) => (
-                <button key={freq} type="button" onClick={() => setFormData({ ...formData, frequency: freq })}
-                  className={cn('flex-1 px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all duration-200 capitalize',
-                    formData.frequency === freq ? 'bg-gradient-to-br from-purple-500/20 to-violet-500/10 border-purple-500/40 text-white shadow-lg shadow-purple-500/5'
-                    : 'bg-white/[0.03] border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06]')}>{freq}</button>
+                <motion.button key={freq} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                  type="button" onClick={() => setFormData({ ...formData, frequency: freq })}
+                  className={cn('flex-1 px-3 py-3 rounded-2xl text-xs font-bold border transition-all duration-300 capitalize',
+                    formData.frequency === freq
+                      ? 'bg-gradient-to-br from-violet-500/20 to-indigo-500/10 border-violet-500/30 text-white shadow-lg shadow-violet-500/15'
+                      : 'bg-white/[0.03] border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06]')}>{freq}</motion.button>
               ))}
             </div>
           </div>
-          <div className="space-y-3">
-            <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wider">Times of Day</label>
+
+          <div>
+            <label className="mb-2.5 block text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">Times of Day</label>
             <div className="grid grid-cols-4 gap-2.5">
               {timeOptions.map(({ value, icon: Icon }) => (
-                <button key={value} type="button" onClick={() => toggleTime(value)}
-                  className={cn('flex flex-col items-center gap-1.5 px-2 py-3.5 rounded-xl text-xs font-medium border transition-all duration-200',
-                    formData.times.includes(value) ? 'bg-gradient-to-br from-purple-500/20 to-violet-500/10 border-purple-500/40 text-white shadow-lg shadow-purple-500/5'
-                    : 'bg-white/[0.03] border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06]')}>
-                  <Icon className="w-4 h-4" />{value}
-                </button>
+                <motion.button key={value} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                  type="button" onClick={() => toggleTime(value)}
+                  className={cn('flex flex-col items-center gap-2 px-2 py-4 rounded-2xl text-xs font-bold border transition-all duration-300',
+                    formData.times.includes(value)
+                      ? `bg-gradient-to-br ${TIME_GRADIENTS[value]} shadow-lg`
+                      : 'bg-white/[0.03] border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06]')}>
+                  <Icon className="w-5 h-5" /><span>{value}</span>
+                </motion.button>
               ))}
             </div>
           </div>
+
           <Input label="Stack (optional)" placeholder="e.g., Morning, Pre-Workout, Night" value={formData.stack} onChange={(e) => setFormData({ ...formData, stack: e.target.value })} icon={<Layers className="w-4 h-4" />} />
           <Input label="Notes (optional)" placeholder="Any notes..." value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} />
+
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Total Cost ($, optional)" placeholder="e.g., 29.99" type="number" value={formData.cost} onChange={(e) => setFormData({ ...formData, cost: e.target.value })} icon={<DollarSign className="w-4 h-4" />} />
-            <Input label="Total Servings (optional)" placeholder="e.g., 60" type="number" value={formData.totalServings} onChange={(e) => setFormData({ ...formData, totalServings: e.target.value })} />
+            <Input label="Total Cost ($)" placeholder="29.99" type="number" value={formData.cost} onChange={(e) => setFormData({ ...formData, cost: e.target.value })} icon={<DollarSign className="w-4 h-4" />} />
+            <Input label="Total Servings" placeholder="60" type="number" value={formData.totalServings} onChange={(e) => setFormData({ ...formData, totalServings: e.target.value })} />
           </div>
+
           {formData.cost && formData.totalServings && parseFloat(formData.cost) > 0 && parseInt(formData.totalServings) > 0 && (
-            <p className="text-xs text-emerald-400">Cost per serving: <span className="font-bold">${(parseFloat(formData.cost) / parseInt(formData.totalServings)).toFixed(2)}</span></p>
+            <motion.div {...fadeIn} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+              <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+              <p className="text-[11px] text-emerald-400">Cost per serving: <span className="font-black">${(parseFloat(formData.cost) / parseInt(formData.totalServings)).toFixed(2)}</span></p>
+            </motion.div>
           )}
-          <Input label="Refill in (days, optional)" placeholder="e.g. 30" type="number" value={formData.refillDays} onChange={(e) => setFormData({ ...formData, refillDays: e.target.value })} />
-          <div className="pt-2">
-            <Button variant="primary" onClick={addSupplement} className="w-full" disabled={!formData.name.trim() || !formData.dosage.trim()}><Plus className="w-4 h-4 mr-1" />Add Supplement</Button>
-          </div>
+
+          <Input label="Refill in (days)" placeholder="e.g. 30" type="number" value={formData.refillDays} onChange={(e) => setFormData({ ...formData, refillDays: e.target.value })} />
+
+          <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+            onClick={addSupplement}
+            disabled={!formData.name.trim() || !formData.dosage.trim()}
+            className="w-full flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold shadow-xl shadow-violet-500/25 hover:shadow-2xl hover:shadow-violet-500/30 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all duration-300 border border-violet-500/30">
+            <Plus className="w-4.5 h-4.5" />Add Supplement
+          </motion.button>
         </div>
       </Modal>
 
@@ -833,22 +923,32 @@ export function SupplementTracker() {
       <AnimatePresence>
         {deleteTarget && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}>
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md" onClick={() => setDeleteTarget(null)}>
             <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="relative z-10 w-full max-w-sm mx-auto" onClick={(e) => e.stopPropagation()}>
-              <div className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-gradient-to-br from-gray-900 to-gray-950 p-6 shadow-2xl shadow-red-500/5">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+              <div className="relative overflow-hidden rounded-[24px] border border-red-500/15 bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-7 shadow-2xl shadow-red-500/5">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-red-500/10 rounded-full -mr-20 -mt-20 blur-[60px]" />
                 <div className="relative flex flex-col items-center text-center">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-red-500/20 to-rose-500/10 flex items-center justify-center mb-4 shadow-lg shadow-red-500/10">
-                    <AlertTriangle className="w-7 h-7 text-red-400 drop-shadow-sm" />
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500/20 to-rose-500/10 flex items-center justify-center mb-5 shadow-lg shadow-red-500/15 border border-red-500/20">
+                    <AlertTriangle className="w-8 h-8 text-red-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-white mb-2">Delete Supplement?</h3>
+                  <h3 className="text-xl font-black text-white mb-2">Delete Supplement?</h3>
                   <p className="text-sm text-gray-400 mb-1">Are you sure you want to delete</p>
-                  <p className="text-base font-semibold text-white mb-4"><span className="text-rose-300">{deleteTarget.name}</span><span className="text-gray-500"> ({deleteTarget.dosage})</span></p>
-                  <div className="px-4 py-2 rounded-xl bg-rose-500/5 border border-rose-500/10 mb-5"><p className="text-xs text-gray-500"><X className="w-3 h-3 inline mr-1 text-rose-400/60" />This will also remove all logs.</p></div>
+                  <p className="text-base font-bold text-white mb-5"><span className="text-rose-300">{deleteTarget.name}</span><span className="text-gray-500"> ({deleteTarget.dosage})</span></p>
+                  <div className="px-5 py-2.5 rounded-xl bg-rose-500/5 border border-rose-500/10 mb-6">
+                    <p className="text-[11px] text-gray-500"><X className="w-3 h-3 inline mr-1 text-rose-400/60" />This will also remove all logs.</p>
+                  </div>
                   <div className="flex gap-3 w-full">
-                    <button onClick={() => setDeleteTarget(null)} className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all text-sm font-medium">Cancel</button>
-                    <button onClick={deleteSupplement} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-500/20 to-rose-500/20 border border-red-500/30 text-red-300 hover:from-red-500/30 hover:to-rose-500/30 transition-all text-sm font-semibold flex items-center justify-center gap-1.5"><Trash2 className="w-4 h-4" />Delete</button>
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                      onClick={() => setDeleteTarget(null)}
+                      className="flex-1 px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all text-sm font-bold">
+                      Cancel
+                    </motion.button>
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                      onClick={deleteSupplement}
+                      className="flex-1 px-4 py-3 rounded-2xl bg-gradient-to-r from-red-500/20 to-rose-500/20 border border-red-500/30 text-red-300 hover:from-red-500/30 hover:to-rose-500/30 transition-all text-sm font-bold flex items-center justify-center gap-2">
+                      <Trash2 className="w-4 h-4" />Delete
+                    </motion.button>
                   </div>
                 </div>
               </div>
@@ -857,65 +957,6 @@ export function SupplementTracker() {
         )}
       </AnimatePresence>
 
-      {/* Settings Modal */}
-      <AnimatePresence>
-        {showSettings && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowSettings(false)}>
-            <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-gray-900 to-gray-950 p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500/10 rounded-full -mr-20 -mt-20 blur-2xl" />
-              <div className="relative">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center shadow-lg"><Settings className="w-5 h-5 text-purple-400" /></div>
-                    <div><h3 className="text-lg font-semibold text-white">Supplements Settings</h3><p className="text-xs text-gray-500">Export & data management</p></div>
-                  </div>
-                  <button onClick={() => setShowSettings(false)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all"><X className="w-4 h-4" /></button>
-                </div>
-                <div className="space-y-4">
-                  <div className="rounded-xl bg-white/5 border border-white/10 p-4">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium mb-2">Export Data</p>
-                    <button onClick={() => exportCSV(supplements, logs)}
-                      className="w-full px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 transition-all text-sm font-medium flex items-center justify-center gap-2">
-                      <Download className="w-4 h-4" /> Export as CSV
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
-                      <p className="text-[9px] text-gray-500 uppercase tracking-wider">Supplements</p>
-                      <p className="text-lg font-bold text-white mt-1">{totalCount}</p>
-                    </div>
-                    <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
-                      <p className="text-[9px] text-gray-500 uppercase tracking-wider">Total Logs</p>
-                      <p className="text-lg font-bold text-white mt-1">{logs.length}</p>
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-red-500/5 border border-red-500/10 p-4">
-                    <h4 className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-3">Data Management</h4>
-                    {!confirmClear ? (
-                      <button onClick={() => setConfirmClear(true)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 transition-all text-sm font-medium flex items-center justify-center gap-2">
-                        <Trash2 className="w-4 h-4" /> Clear All Supplement Data
-                      </button>
-                    ) : (
-                      <div className="space-y-2">
-                        <p className="text-xs text-red-400/80 text-center">This permanently deletes all supplements and logs.</p>
-                        <div className="flex gap-2">
-                          <button onClick={() => setConfirmClear(false)}
-                            className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-all text-xs">Cancel</button>
-                          <button onClick={() => { setSupplements([]); setLogs([]); localStorage.removeItem('supplements'); localStorage.removeItem('supplementLogs'); setConfirmClear(false) }}
-                            className="flex-1 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30 transition-all text-xs font-semibold">Delete All</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
@@ -927,42 +968,62 @@ function SupplementCard({ supp, takenTodayIds, markAsTaken, setDeleteTarget }: {
   const costPerServing = supp.cost && supp.totalServings && supp.totalServings > 0 ? supp.cost / supp.totalServings : null
 
   return (
-    <motion.div layout whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-      <div className={`relative overflow-hidden rounded-2xl border transition-all p-4 ${taken ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-white/[0.02] border-white/5'}`}>
+    <motion.div layout whileHover={{ scale: 1.01, y: -2 }} transition={{ duration: 0.2 }}>
+      <div className={`group relative overflow-hidden rounded-2xl border transition-all duration-300 p-5 ${taken
+        ? 'bg-gradient-to-br from-emerald-500/[0.06] to-emerald-500/[0.02] border-emerald-500/15 hover:border-emerald-500/25 shadow-lg shadow-emerald-500/5'
+        : 'bg-gradient-to-br from-white/[0.02] to-white/[0.01] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.12]'}`}>
         <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
         <div className="relative flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${taken ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'bg-gray-500'}`} />
-              <h4 className="font-semibold text-white truncate">{supp.name}</h4>
-              {supp.stack && <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] bg-purple-500/10 border border-purple-500/20 text-purple-300"><Layers className="w-2 h-2" />{supp.stack}</span>}
+            <div className="flex items-center gap-2.5">
+              <span className={`w-3 h-3 rounded-full flex-shrink-0 ${taken ? 'bg-emerald-400 shadow-lg shadow-emerald-400/50' : 'bg-gray-500 shadow-lg shadow-gray-500/30'}`} />
+              <h4 className="font-bold text-white truncate">{supp.name}</h4>
+              {supp.stack && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-bold bg-violet-500/10 border border-violet-500/20 text-violet-300">
+                  <Layers className="w-2 h-2" />{supp.stack}
+                </span>
+              )}
             </div>
-            <p className="text-sm text-gray-400 ml-4.5">{supp.dosage}</p>
-            {costPerServing !== null && <p className="text-[10px] text-emerald-400/70 ml-4.5 mt-0.5"><DollarSign className="w-2.5 h-2.5 inline" />${costPerServing.toFixed(2)}/serving</p>}
-            <div className="flex flex-wrap gap-1.5 mt-2 ml-4.5">
+            <p className="text-[13px] text-gray-400 ml-5.5 mt-1 font-medium">{supp.dosage}</p>
+            {costPerServing !== null && (
+              <p className="text-[10px] text-emerald-400/70 ml-5.5 mt-1 font-medium">
+                <DollarSign className="w-2.5 h-2.5 inline" />${costPerServing.toFixed(2)}/serving
+              </p>
+            )}
+            <div className="flex flex-wrap gap-1.5 mt-2.5 ml-5.5">
               {supp.times.map((t) => {
                 const Icon = TIME_ICONS[t as TimeOfDay] || Clock
-                return <span key={t} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] bg-white/[0.04] border border-white/[0.08] text-gray-400"><Icon className="w-2.5 h-2.5" />{t}</span>
+                return (
+                  <span key={t} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium bg-white/[0.04] border border-white/[0.08] text-gray-400">
+                    <Icon className="w-2.5 h-2.5" />{t}
+                  </span>
+                )
               })}
             </div>
-            {supp.notes && <p className="text-[11px] text-gray-500 mt-1.5 ml-4.5 italic truncate">{supp.notes}</p>}
+            {supp.notes && <p className="text-[11px] text-gray-500 mt-2 ml-5.5 italic truncate">{supp.notes}</p>}
             {supp.refillDays != null && (
-              <div className={`ml-4.5 mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] ${supp.refillDays <= 7 ? 'bg-red-500/10 border border-red-500/20 text-red-300' : supp.refillDays <= 14 ? 'bg-amber-500/10 border border-amber-500/20 text-amber-300' : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'}`}>
+              <div className={`ml-5.5 mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold ${supp.refillDays <= 7 ? 'bg-red-500/10 border border-red-500/20 text-red-300' : supp.refillDays <= 14 ? 'bg-amber-500/10 border border-amber-500/20 text-amber-300' : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'}`}>
                 <Clock className="w-2.5 h-2.5" />Refill in {supp.refillDays}d
               </div>
             )}
           </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {taken ? (
-              <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                <Check className="w-4 h-4 text-emerald-400" /><span className="text-xs font-medium text-emerald-400">Taken</span>
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" /><span className="text-[11px] font-bold text-emerald-400">Taken</span>
               </div>
             ) : (
-              <Button variant="primary" size="sm" onClick={() => markAsTaken(supp)} className="whitespace-nowrap">
-                <Check className="w-3.5 h-3.5 mr-1" />Take
-              </Button>
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                onClick={() => markAsTaken(supp)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border border-emerald-500/20 text-emerald-400 hover:from-emerald-500/20 hover:to-emerald-600/10 hover:border-emerald-500/30 transition-all text-xs font-bold whitespace-nowrap shadow-lg shadow-emerald-500/5">
+                <Check className="w-3.5 h-3.5" />Take
+              </motion.button>
             )}
-            <button onClick={() => setDeleteTarget(supp)} className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+              onClick={() => setDeleteTarget(supp)}
+              className="p-2.5 rounded-xl text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200">
+              <Trash2 className="w-4 h-4" />
+            </motion.button>
           </div>
         </div>
       </div>

@@ -149,7 +149,7 @@
 
 /* Glass Input */
 .glass-input {
-  @apply bg-black/60 backdrop-blur-[12px] border border-white/5 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-400 outline-none focus:border-white/10 focus:bg-black/50 transition-all duration-200;
+  @apply bg-black/60 backdrop-blur-[12px] border border-white/5 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 outline-none focus:border-white/10 focus:bg-black/50 transition-all duration-200;
 }
 
 .glass-input:hover {
