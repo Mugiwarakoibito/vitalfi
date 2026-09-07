@@ -7,7 +7,7 @@ import {
   Brain, ShieldCheck, ShieldAlert, Info, Zap, Package,
   CheckCircle2, Dumbbell, TrendingUp, BarChart3, ChevronDown,
 } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { generateId, cn } from '@/lib/utils'
@@ -686,7 +686,7 @@ export function SupplementTracker() {
                   </div>
                   <div>
                     <h3 className="text-[13px] font-bold text-white">Weekly Patterns</h3>
-                    <p className="text-[10px] text-gray-500">7-day adherence analysis</p>
+                    <p className="text-[10px] text-gray-500">Adherence & consistency analysis</p>
                   </div>
                 </div>
                 <div className="flex gap-0.5 bg-white/[0.03] rounded-lg p-0.5 border border-white/[0.05]">
@@ -697,94 +697,148 @@ export function SupplementTracker() {
                 </div>
               </div>
 
-              {/* Heatmap calendar */}
-              <div className="mb-5">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <div className="w-1 h-1 rounded-full bg-violet-400" />
-                  <span className="text-[8px] text-gray-500 uppercase tracking-[0.2em] font-bold">Daily heatmap</span>
-                </div>
-                <div className="grid grid-cols-7 gap-1.5">
-                  {weekHeatmap.map((day, i) => (
-                    <motion.div key={day.date} initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }}
-                      className="flex flex-col items-center gap-1">
-                      <span className="text-[8px] text-gray-600 font-bold">{day.dayName.charAt(0)}</span>
-                      <div className="w-full aspect-square rounded-lg border border-white/[0.04] flex items-center justify-center relative overflow-hidden"
-                        style={{ backgroundColor: day.pct >= 80 ? 'rgba(16,185,129,0.12)' : day.pct >= 50 ? 'rgba(245,158,11,0.1)' : day.pct > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.02)' }}>
-                        {day.pct > 0 && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2 + i * 0.04 }}
-                          className="absolute inset-0 rounded-lg" style={{ background: `radial-gradient(circle at center, ${day.pct >= 80 ? 'rgba(16,185,129,0.15)' : day.pct >= 50 ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.1)'}, transparent 70%)` }} />}
-                        <span className="text-[9px] font-bold text-white relative z-10">{day.pct > 0 ? `${day.pct}` : '-'}</span>
+              <div className="grid grid-cols-12 gap-4 mb-5">
+                {/* Consistency ring */}
+                <div className="col-span-3">
+                  <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
+                    className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-4 flex flex-col items-center justify-center h-full">
+                    <div className="relative w-20 h-20">
+                      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="6" />
+                        <circle cx="50" cy="50" r="42" fill="none"
+                          stroke={consistencyScore >= 80 ? '#10b981' : consistencyScore >= 50 ? '#f59e0b' : '#ef4444'}
+                          strokeWidth="6" strokeLinecap="round"
+                          strokeDasharray={`${consistencyScore * 2.64} 264`}
+                          className="transition-all duration-1000" />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-[18px] font-black tabular-nums" style={{ color: consistencyScore >= 80 ? '#10b981' : consistencyScore >= 50 ? '#f59e0b' : '#ef4444' }}>{consistencyScore}</span>
+                        <span className="text-[7px] text-gray-500 uppercase tracking-wider font-bold">score</span>
                       </div>
-                      <span className="text-[7px] text-gray-600">{day.taken}/{day.total}</span>
-                    </motion.div>
-                  ))}
+                    </div>
+                    <span className="text-[8px] text-gray-500 mt-2 font-bold uppercase tracking-wider">Consistency</span>
+                  </motion.div>
+                </div>
+
+                {/* Bar chart - daily adherence */}
+                <div className="col-span-5">
+                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                    className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-4 h-full">
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <BarChart3 className="w-3 h-3 text-violet-400" />
+                      <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Daily adherence</span>
+                      <div className="flex-1" />
+                      <span className="text-[9px] font-bold text-violet-400 tabular-nums">{weekAdherence}% avg</span>
+                    </div>
+                    <div className="h-32">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={weekHeatmap} barSize={28}>
+                          <XAxis dataKey="dayName" tick={{ fill: '#6b7280', fontSize: 9, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                          <YAxis hide domain={[0, 100]} />
+                          <Tooltip cursor={false}
+                            contentStyle={{ backgroundColor: 'rgba(10,10,15,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '8px 12px' }}
+                            itemStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
+                            labelStyle={{ color: '#6b7280', fontSize: 9 }}
+                            formatter={(v: number) => [`${v}%`, 'Adherence']} />
+                          <Bar dataKey="pct" radius={[6, 6, 2, 2]}>
+                            {weekHeatmap.map((d, i) => (
+                              <Cell key={i} fill={d.pct >= 80 ? 'rgba(16,185,129,0.5)' : d.pct >= 50 ? 'rgba(245,158,11,0.4)' : d.pct > 0 ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.05)'} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    {/* Best / Worst */}
+                    <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-white/[0.03]">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        <span className="text-[8px] text-gray-500 font-bold">Best</span>
+                        <span className="text-[9px] text-emerald-300 font-bold">{bestWorstDays.best?.label || '-'}</span>
+                        <span className="text-[8px] text-emerald-400/50 font-bold">{bestWorstDays.best?.pct ?? 0}%</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                        <span className="text-[8px] text-gray-500 font-bold">Worst</span>
+                        <span className="text-[9px] text-red-300 font-bold">{bestWorstDays.worst?.label || '-'}</span>
+                        <span className="text-[8px] text-red-400/50 font-bold">{bestWorstDays.worst?.pct ?? 0}%</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+
+                {/* Radar - time of day */}
+                <div className="col-span-4">
+                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                    className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-4 h-full">
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <Clock className="w-3 h-3 text-cyan-400" />
+                      <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Time distribution</span>
+                    </div>
+                    <div className="h-32">
+                      {timingData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart data={timingData.map(([time, d]) => ({ time: time.slice(0, 3), count: d.total }))} cx="50%" cy="50%" outerRadius="70%">
+                            <PolarGrid stroke="rgba(255,255,255,0.04)" />
+                            <PolarAngleAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 9, fontWeight: 700 }} />
+                            <Radar dataKey="count" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.15} strokeWidth={1.5} />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-[10px] text-gray-600">No data</div>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {timingData.map(([time, d]) => (
+                        <span key={time} className="text-[7px] font-bold text-cyan-400/70 bg-cyan-500/[0.06] border border-cyan-500/10 px-1.5 py-0.5 rounded">
+                          {time} · {d.total}
+                        </span>
+                      ))}
+                    </div>
+                  </motion.div>
                 </div>
               </div>
 
-              {/* Consistency & Best/Worst */}
-              <div className="grid grid-cols-3 gap-2 mb-5">
-                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                  className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-3 text-center">
-                  <div className="text-[9px] text-gray-500 uppercase tracking-wider font-bold mb-1">Consistency</div>
-                  <div className="text-[18px] font-black tabular-nums" style={{ color: consistencyScore >= 80 ? '#10b981' : consistencyScore >= 50 ? '#f59e0b' : '#ef4444' }}>{consistencyScore}%</div>
-                  <div className="h-1 rounded-full bg-white/[0.04] mt-1.5 overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${consistencyScore}%`, backgroundColor: consistencyScore >= 80 ? '#10b981' : consistencyScore >= 50 ? '#f59e0b' : '#ef4444' }} />
-                  </div>
-                </motion.div>
-                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-                  className="rounded-xl border border-emerald-500/08 bg-emerald-500/[0.02] p-3 text-center">
-                  <div className="text-[9px] text-emerald-400/70 uppercase tracking-wider font-bold mb-1">Best Day</div>
-                  {bestWorstDays.best ? (
-                    <>
-                      <div className="text-[14px] font-black text-emerald-300">{bestWorstDays.best.label}</div>
-                      <div className="text-[9px] text-emerald-400/50 mt-0.5">{bestWorstDays.best.pct}% \u00B7 {bestWorstDays.best.taken}/{bestWorstDays.best.total}</div>
-                    </>
-                  ) : <div className="text-[11px] text-gray-600">-</div>}
-                </motion.div>
-                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                  className="rounded-xl border border-red-500/08 bg-red-500/[0.02] p-3 text-center">
-                  <div className="text-[9px] text-red-400/70 uppercase tracking-wider font-bold mb-1">Worst Day</div>
-                  {bestWorstDays.worst ? (
-                    <>
-                      <div className="text-[14px] font-black text-red-300">{bestWorstDays.worst.label}</div>
-                      <div className="text-[9px] text-red-400/50 mt-0.5">{bestWorstDays.worst.pct}% \u00B7 {bestWorstDays.worst.taken}/{bestWorstDays.worst.total}</div>
-                    </>
-                  ) : <div className="text-[11px] text-gray-600">-</div>}
-                </motion.div>
-              </div>
-
-              {/* Trend chart */}
-              <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 mb-4">
+              {/* Area trend chart */}
+              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+                className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 mb-4">
                 <div className="flex items-center gap-1.5 mb-3">
                   <TrendingUp className="w-3 h-3 text-violet-400" />
-                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Trend \u00B7 {trendPeriod}</span>
+                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Trend · {trendPeriod}</span>
                   <div className="flex-1" />
                   <span className="text-[9px] font-bold text-violet-400 tabular-nums">{weekAdherence}% avg</span>
                 </div>
-                <div className="h-28">
+                <div className="h-36">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={adherenceTrend}>
-                      <XAxis dataKey="date" tick={false} axisLine={false} />
+                    <AreaChart data={adherenceTrend}>
+                      <defs>
+                        <linearGradient id="violetGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="date" tick={{ fill: '#4b5563', fontSize: 8, fontWeight: 600 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                       <YAxis hide domain={[0, 100]} />
-                      <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '8px 12px' }}
+                      <Tooltip cursor={{ stroke: 'rgba(139,92,246,0.2)', strokeWidth: 1 }}
+                        contentStyle={{ backgroundColor: 'rgba(10,10,15,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '8px 12px' }}
                         itemStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
                         labelStyle={{ color: '#6b7280', fontSize: 9 }}
                         formatter={(v: number) => [`${v}%`, 'Adherence']}
                         labelFormatter={(l, p) => p?.[0]?.payload?.date || l} />
-                      <Line type="monotone" dataKey="pct" stroke="#8b5cf6" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#8b5cf6', stroke: '#000', strokeWidth: 2 }} />
-                    </LineChart>
+                      <Area type="monotone" dataKey="pct" stroke="#8b5cf6" strokeWidth={2} fill="url(#violetGradient)" dot={false} activeDot={{ r: 4, fill: '#8b5cf6', stroke: '#0a0a0f', strokeWidth: 2 }} />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Stats row */}
               <div className="grid grid-cols-4 gap-2">
                 {[
                   { icon: Flame, color: 'text-orange-400', bg: 'bg-orange-500/[0.06]', border: 'border-orange-500/10', label: 'Streak', val: `${suppStreak}d` },
-                  { icon: Activity, color: 'text-violet-400', bg: 'bg-violet-500/[0.06]', border: 'border-violet-500/10', label: 'Week', val: `${weekAdherence}%` },
+                  { icon: Activity, color: 'text-violet-400', bg: 'bg-violet-500/[0.06]', border: 'border-violet-500/10', label: 'Week Avg', val: `${weekAdherence}%` },
                   { icon: Pill, color: 'text-cyan-400', bg: 'bg-cyan-500/[0.06]', border: 'border-cyan-500/10', label: 'Daily', val: `${dailySupps.length}` },
                   { icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/[0.06]', border: 'border-emerald-500/10', label: 'Score', val: `${consistencyScore}%` },
                 ].map((c, i) => (
-                  <motion.div key={c.label} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 + i * 0.04 }}
+                  <motion.div key={c.label} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.04 }}
                     className={`flex flex-col items-center gap-1 ${c.bg} border ${c.border} rounded-xl p-2.5`}>
                     <c.icon className={`w-3.5 h-3.5 ${c.color}`} />
                     <span className="text-[12px] font-black text-white tabular-nums">{c.val}</span>
