@@ -6,6 +6,7 @@ import {
   DollarSign, Layers, CalendarCheck,
   Brain, ShieldCheck, ShieldAlert, Info, Zap, Package,
   CheckCircle2, Dumbbell, TrendingUp, BarChart3, ChevronDown,
+  ChevronLeft, ChevronRight, RotateCcw,
 } from 'lucide-react'
 import { BarChart, Bar, AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { Modal } from '@/components/ui/Modal'
@@ -77,6 +78,7 @@ export function SupplementTracker() {
   const [coachMode, setCoachMode] = useState<'insight' | 'refill' | 'stack' | 'timing' | 'cost'>('insight')
   const [showCoachModeDropdown, setShowCoachModeDropdown] = useState(false)
   const [trendPeriod, setTrendPeriod] = useState<'7d' | '14d' | '30d'>('7d')
+  const [trendWeekOffset, setTrendWeekOffset] = useState(0)
   const [justTaken, setJustTaken] = useState<Supplement | null>(null)
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -98,25 +100,6 @@ export function SupplementTracker() {
   const takenTodayIds = useMemo(() => new Set(todayLogs.map((l) => l.supplementId)), [todayLogs])
   const takenTodayCount = takenTodayIds.size; const totalCount = supplements.length; const remainingCount = totalCount - takenTodayCount
   const dailySupps = useMemo(() => supplements.filter((s) => s.frequency === 'daily'), [supplements])
-
-  const adherenceWeek = useMemo(() => {
-    const days: { date: string; label: string; taken: number; total: number; pct: number }[] = []
-    const now = new Date()
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now); d.setDate(d.getDate() - i)
-      const dateStr = d.toISOString().split('T')[0]
-      const dayLogs = logs.filter((l) => l.date === dateStr)
-      const taken = new Set(dayLogs.map((l) => l.supplementId)).size
-      const total = dailySupps.length
-      days.push({ date: dateStr, label: d.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0), taken, total, pct: total > 0 ? Math.round((taken / total) * 100) : 0 })
-    }
-    return days
-  }, [logs, dailySupps])
-
-  const weekAdherence = useMemo(() => {
-    const total = adherenceWeek.reduce((s, d) => s + d.total, 0); const taken = adherenceWeek.reduce((s, d) => s + d.taken, 0)
-    return total > 0 ? Math.round((taken / total) * 100) : 0
-  }, [adherenceWeek])
 
   const adherenceTrend = useMemo(() => {
     const days: { date: string; pct: number }[] = []; const now = new Date()
@@ -192,40 +175,42 @@ export function SupplementTracker() {
       .sort((a, b) => b.perMonth - a.perMonth)
   }, [supplements])
 
-  const weekHeatmap = useMemo(() => {
-    const days: { date: string; dayName: string; pct: number; taken: number; total: number }[] = []
+  // Week-offset-aware data for patterns panel
+  const weekOffsetData = useMemo(() => {
     const now = new Date()
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now); d.setDate(d.getDate() - i)
+    const start = new Date(now)
+    start.setDate(start.getDate() - start.getDay() + (trendWeekOffset * 7))
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(start)
+    end.setDate(end.getDate() + 6)
+    end.setHours(23, 59, 59, 999)
+    const days: { date: string; dayName: string; fullDate: string; pct: number; taken: number; total: number }[] = []
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start); d.setDate(d.getDate() + i)
       const dateStr = d.toISOString().split('T')[0]
       const dayLogs = logs.filter(l => l.date === dateStr)
       const taken = new Set(dayLogs.map(l => l.supplementId)).size
       const total = dailySupps.length
       days.push({
-        date: dateStr,
+        date: d.toLocaleDateString('en-US', { weekday: 'short' }),
         dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        fullDate: dateStr,
         taken, total,
         pct: total > 0 ? Math.round((taken / total) * 100) : 0,
       })
     }
-    return days
-  }, [logs, dailySupps])
-
-  const consistencyScore = useMemo(() => {
-    if (adherenceWeek.length === 0) return 0
-    const pcts = adherenceWeek.map(d => d.pct)
+    const totalSlots = days.reduce((s, d) => s + d.total, 0)
+    const takenSlots = days.reduce((s, d) => s + d.taken, 0)
+    const weekPct = totalSlots > 0 ? Math.round((takenSlots / totalSlots) * 100) : 0
+    const pcts = days.map(d => d.pct)
     const avg = pcts.reduce((s, p) => s + p, 0) / pcts.length
     const variance = pcts.reduce((s, p) => s + Math.pow(p - avg, 2), 0) / pcts.length
-    const stdDev = Math.sqrt(variance)
-    const consistency = Math.max(0, Math.round(100 - stdDev))
-    return consistency
-  }, [adherenceWeek])
-
-  const bestWorstDays = useMemo(() => {
-    if (adherenceWeek.length === 0) return { best: null, worst: null }
-    const sorted = [...adherenceWeek].sort((a, b) => b.pct - a.pct)
-    return { best: sorted[0], worst: sorted[sorted.length - 1] }
-  }, [adherenceWeek])
+    const consistency = Math.max(0, Math.round(100 - Math.sqrt(variance)))
+    const sorted = [...days].sort((a, b) => b.pct - a.pct)
+    const label = `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+    const isCurrent = trendWeekOffset === 0
+    return { days, weekPct, consistency, best: sorted[0], worst: sorted[sorted.length - 1], label, isCurrent, start, end }
+  }, [logs, dailySupps, trendWeekOffset])
 
   const smartRecs = useMemo(() => {
     const total = scheduleToday.length; const taken = takenTodayCount
@@ -322,6 +307,482 @@ export function SupplementTracker() {
           </motion.button>
         </div>
       </motion.div>
+
+      {/* ─── PANELS ─── */}
+      <AnimatePresence mode="wait">
+        {/* ═══ WEEKLY PATTERNS ═══ */}
+        {activePanel === 'patterns' && totalCount > 0 && (
+          <motion.div key="patterns" initial={{ opacity: 0, y: -10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.98 }}
+            transition={{ duration: 0.35, ease: smooth }}
+            className="relative overflow-hidden rounded-[20px] border border-violet-500/10 bg-[#0c0c14] shadow-xl">
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute -top-20 -left-20 w-48 h-48 bg-violet-500/[0.04] rounded-full blur-[80px]" />
+              <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-indigo-500/[0.03] rounded-full blur-[60px]" />
+            </div>
+            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/15 to-transparent" />
+
+            <div className="relative p-5">
+              {/* Header with week nav */}
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/15 flex items-center justify-center">
+                    <BarChart3 className="w-4 h-4 text-violet-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-[13px] font-bold text-white">Weekly Patterns</h3>
+                    <p className="text-[10px] text-gray-500">{weekOffsetData.label}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-0.5 bg-white/[0.03] rounded-lg p-0.5 border border-white/[0.05]">
+                    <button onClick={() => setTrendWeekOffset(o => o + 1)} className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => setTrendWeekOffset(o => o - 1)} className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                    {!weekOffsetData.isCurrent && (
+                      <button onClick={() => setTrendWeekOffset(0)} className="p-1.5 rounded-md bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
+                        <RotateCcw className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex gap-0.5 bg-white/[0.03] rounded-lg p-0.5 border border-white/[0.05]">
+                    {(['7d', '14d', '30d'] as const).map(p => (
+                      <button key={p} onClick={() => setTrendPeriod(p)}
+                        className={cn('px-2.5 py-1 rounded-md text-[10px] font-bold transition-all', trendPeriod === p ? 'bg-violet-500/15 text-violet-300' : 'text-gray-500 hover:text-white')}>{p}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-12 gap-4 mb-5">
+                {/* Consistency ring */}
+                <div className="col-span-3">
+                  <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
+                    className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-4 flex flex-col items-center justify-center h-full">
+                    <div className="relative w-20 h-20">
+                      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="6" />
+                        <circle cx="50" cy="50" r="42" fill="none"
+                          stroke={weekOffsetData.consistency >= 80 ? '#10b981' : weekOffsetData.consistency >= 50 ? '#f59e0b' : '#ef4444'}
+                          strokeWidth="6" strokeLinecap="round"
+                          strokeDasharray={`${weekOffsetData.consistency * 2.64} 264`}
+                          className="transition-all duration-1000" />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-[18px] font-black tabular-nums" style={{ color: weekOffsetData.consistency >= 80 ? '#10b981' : weekOffsetData.consistency >= 50 ? '#f59e0b' : '#ef4444' }}>{weekOffsetData.consistency}</span>
+                        <span className="text-[7px] text-gray-500 uppercase tracking-wider font-bold">score</span>
+                      </div>
+                    </div>
+                    <span className="text-[8px] text-gray-500 mt-2 font-bold uppercase tracking-wider">Consistency</span>
+                  </motion.div>
+                </div>
+
+                {/* Bar chart - daily adherence */}
+                <div className="col-span-5">
+                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                    className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-4 h-full">
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <BarChart3 className="w-3 h-3 text-violet-400" />
+                      <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Daily adherence</span>
+                      <div className="flex-1" />
+                      <span className="text-[9px] font-bold text-violet-400 tabular-nums">{weekOffsetData.weekPct}% avg</span>
+                    </div>
+                    <div className="h-32">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={weekOffsetData.days} barSize={28}>
+                          <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 9, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                          <YAxis hide domain={[0, 100]} />
+                          <Tooltip cursor={false}
+                            contentStyle={{ backgroundColor: 'rgba(10,10,15,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '8px 12px' }}
+                            itemStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
+                            labelStyle={{ color: '#6b7280', fontSize: 9 }}
+                            formatter={(v: number) => [`${v}%`, 'Adherence']} />
+                          <Bar dataKey="pct" radius={[6, 6, 2, 2]}>
+                            {weekOffsetData.days.map((d, i) => (
+                              <Cell key={i} fill={d.pct >= 80 ? 'rgba(16,185,129,0.5)' : d.pct >= 50 ? 'rgba(245,158,11,0.4)' : d.pct > 0 ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.05)'} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-white/[0.03]">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        <span className="text-[8px] text-gray-500 font-bold">Best</span>
+                        <span className="text-[9px] text-emerald-300 font-bold">{weekOffsetData.best?.date || '-'}</span>
+                        <span className="text-[8px] text-emerald-400/50 font-bold">{weekOffsetData.best?.pct ?? 0}%</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                        <span className="text-[8px] text-gray-500 font-bold">Worst</span>
+                        <span className="text-[9px] text-red-300 font-bold">{weekOffsetData.worst?.date || '-'}</span>
+                        <span className="text-[8px] text-red-400/50 font-bold">{weekOffsetData.worst?.pct ?? 0}%</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+
+                {/* Radar - time of day */}
+                <div className="col-span-4">
+                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                    className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-4 h-full">
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <Clock className="w-3 h-3 text-cyan-400" />
+                      <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Time distribution</span>
+                    </div>
+                    <div className="h-32">
+                      {timingData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart data={timingData.map(([time, d]) => ({ time: time.slice(0, 3), count: d.total }))} cx="50%" cy="50%" outerRadius="70%">
+                            <PolarGrid stroke="rgba(255,255,255,0.04)" />
+                            <PolarAngleAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 9, fontWeight: 700 }} />
+                            <Radar dataKey="count" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.15} strokeWidth={1.5} />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-[10px] text-gray-600">No data</div>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {timingData.map(([time, d]) => (
+                        <span key={time} className="text-[7px] font-bold text-cyan-400/70 bg-cyan-500/[0.06] border border-cyan-500/10 px-1.5 py-0.5 rounded">
+                          {time} · {d.total}
+                        </span>
+                      ))}
+                    </div>
+                  </motion.div>
+                </div>
+              </div>
+
+              {/* Area trend chart */}
+              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+                className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 mb-4">
+                <div className="flex items-center gap-1.5 mb-3">
+                  <TrendingUp className="w-3 h-3 text-violet-400" />
+                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Trend · {trendPeriod}</span>
+                  <div className="flex-1" />
+                  <span className="text-[9px] font-bold text-violet-400 tabular-nums">{weekOffsetData.weekPct}% avg</span>
+                </div>
+                <div className="h-36">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={adherenceTrend}>
+                      <defs>
+                        <linearGradient id="violetGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="date" tick={{ fill: '#4b5563', fontSize: 8, fontWeight: 600 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                      <YAxis hide domain={[0, 100]} />
+                      <Tooltip cursor={{ stroke: 'rgba(139,92,246,0.2)', strokeWidth: 1 }}
+                        contentStyle={{ backgroundColor: 'rgba(10,10,15,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '8px 12px' }}
+                        itemStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
+                        labelStyle={{ color: '#6b7280', fontSize: 9 }}
+                        formatter={(v: number) => [`${v}%`, 'Adherence']}
+                        labelFormatter={(l, p) => p?.[0]?.payload?.date || l} />
+                      <Area type="monotone" dataKey="pct" stroke="#8b5cf6" strokeWidth={2} fill="url(#violetGradient)" dot={false} activeDot={{ r: 4, fill: '#8b5cf6', stroke: '#0a0a0f', strokeWidth: 2 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </motion.div>
+
+              {/* Stats row */}
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { icon: Flame, color: 'text-orange-400', bg: 'bg-orange-500/[0.06]', border: 'border-orange-500/10', label: 'Streak', val: `${suppStreak}d` },
+                  { icon: Activity, color: 'text-violet-400', bg: 'bg-violet-500/[0.06]', border: 'border-violet-500/10', label: 'Week Avg', val: `${weekOffsetData.weekPct}%` },
+                  { icon: Pill, color: 'text-cyan-400', bg: 'bg-cyan-500/[0.06]', border: 'border-cyan-500/10', label: 'Daily', val: `${dailySupps.length}` },
+                  { icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/[0.06]', border: 'border-emerald-500/10', label: 'Score', val: `${weekOffsetData.consistency}%` },
+                ].map((c, i) => (
+                  <motion.div key={c.label} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.04 }}
+                    className={`flex flex-col items-center gap-1 ${c.bg} border ${c.border} rounded-xl p-2.5`}>
+                    <c.icon className={`w-3.5 h-3.5 ${c.color}`} />
+                    <span className="text-[12px] font-black text-white tabular-nums">{c.val}</span>
+                    <span className="text-[7px] text-gray-500 uppercase tracking-wider font-bold">{c.label}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ═══ AI COACH ═══ */}
+        {activePanel === 'coach' && (
+          <motion.div key="coach" initial={{ opacity: 0, y: -10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.98 }}
+            transition={{ duration: 0.35, ease: smooth }}
+            className="relative overflow-hidden rounded-[20px] border border-cyan-500/10 bg-[#0c0c14] shadow-xl">
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute -top-20 -left-20 w-48 h-48 bg-cyan-500/[0.04] rounded-full blur-[80px]" />
+              <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-emerald-500/[0.03] rounded-full blur-[60px]" />
+            </div>
+            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-500/15 to-transparent" />
+
+            <div className="relative p-5">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2.5">
+                  <div className="relative w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-cyan-400" />
+                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border-[1.5px] border-[#0c0c14] animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-[13px] font-bold text-white">AI Coach</h3>
+                    <p className="text-[10px] text-gray-500">{smartRecs.length} insight{smartRecs.length !== 1 ? 's' : ''} available</p>
+                  </div>
+                </div>
+                <div className="relative">
+                  <button onClick={() => setShowCoachModeDropdown(p => !p)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[10px] font-bold text-gray-400 hover:text-white transition-all">
+                    {coachMode === 'insight' ? <Brain className="w-3 h-3" /> : coachMode === 'refill' ? <Package className="w-3 h-3" /> : coachMode === 'stack' ? <Layers className="w-3 h-3" /> : coachMode === 'timing' ? <Clock className="w-3 h-3" /> : <DollarSign className="w-3 h-3" />}
+                    <span className="hidden sm:inline capitalize">{coachMode}</span>
+                    <ChevronDown className="w-3 h-3" />
+                  </button>
+                  {showCoachModeDropdown && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setShowCoachModeDropdown(false)} />
+                      <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                        className="absolute right-0 top-9 z-20 w-44 rounded-xl bg-gray-900 border border-white/[0.08] shadow-2xl p-1.5">
+                        {([
+                          { k: 'insight' as const, icon: Brain, label: 'Insights', desc: 'Smart tips' },
+                          { k: 'timing' as const, icon: Clock, label: 'Timing', desc: 'Schedule' },
+                          { k: 'cost' as const, icon: DollarSign, label: 'Cost', desc: 'Spending' },
+                          { k: 'refill' as const, icon: Package, label: 'Refills', desc: 'Supply' },
+                          { k: 'stack' as const, icon: Layers, label: 'Stack', desc: 'Interactions' },
+                        ]).map(o => (
+                          <button key={o.k} onClick={() => { setCoachMode(o.k); setShowCoachModeDropdown(false) }}
+                            className={cn('w-full text-left px-3 py-2 rounded-lg text-[11px] font-medium transition-all flex items-center gap-2',
+                              coachMode === o.k ? 'bg-cyan-500/10 text-cyan-300' : 'text-gray-400 hover:text-white hover:bg-white/5')}>
+                            <o.icon className="w-3 h-3 shrink-0" />
+                            <div><div className="font-bold">{o.label}</div><div className="text-[8px] text-gray-600">{o.desc}</div></div>
+                          </button>
+                        ))}
+                      </motion.div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* ═══ Insight Mode ═══ */}
+              {coachMode === 'insight' && (
+                <div className="space-y-2">
+                  {smartRecs.length === 0 ? (
+                    <div className="py-8 text-center"><Brain className="w-8 h-8 text-gray-600 mx-auto mb-2" /><p className="text-[11px] text-gray-500">Add supplements for insights.</p></div>
+                  ) : smartRecs.map((rec, i) => {
+                    const Icon = rec.icon
+                    const catStyles: Record<string, { bg: string; icon: string; accent: string }> = {
+                      Performance: { bg: 'bg-purple-500/[0.04] border-purple-500/10', icon: 'text-purple-400', accent: 'bg-purple-400' },
+                      Recovery: { bg: 'bg-emerald-500/[0.04] border-emerald-500/10', icon: 'text-emerald-400', accent: 'bg-emerald-400' },
+                      Nutrition: { bg: 'bg-amber-500/[0.04] border-amber-500/10', icon: 'text-amber-400', accent: 'bg-amber-400' },
+                      General: { bg: 'bg-gray-500/[0.04] border-gray-500/10', icon: 'text-gray-400', accent: 'bg-gray-400' },
+                    }
+                    const cs = catStyles[rec.category] || catStyles.General
+                    return (
+                      <motion.div key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                        className={cn('group relative flex items-start gap-3 p-3 rounded-xl border transition-all hover:bg-white/[0.02]', cs.bg)}>
+                        <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center shrink-0', cs.bg)}>
+                          <Icon className={cn('w-3.5 h-3.5', cs.icon)} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-bold text-white">{rec.title}</p>
+                          <p className="text-[10px] text-gray-400 mt-0.5 leading-relaxed">{rec.text}</p>
+                        </div>
+                        <div className={cn('w-1 h-8 rounded-full shrink-0 mt-0.5', cs.accent, 'opacity-30')} />
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* ═══ Timing Mode ═══ */}
+              {coachMode === 'timing' && (
+                <div className="space-y-3">
+                  {timingData.length === 0 ? (
+                    <div className="py-8 text-center"><Clock className="w-8 h-8 text-gray-600 mx-auto mb-2" /><p className="text-[11px] text-gray-500">Add supplements with times set.</p></div>
+                  ) : timingData.map(([time, data], i) => {
+                    const tc = TIME_COLORS[time as TimeOfDay]
+                    const TimeIcon = TIME_ICONS[time as TimeOfDay]
+                    return (
+                      <motion.div key={time} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
+                        className="rounded-xl border border-white/[0.04] bg-white/[0.015] overflow-hidden">
+                        <div className={`flex items-center gap-2.5 px-4 py-2.5 bg-gradient-to-r ${tc.bg} border-b ${tc.border}`}>
+                          <TimeIcon className={`w-3.5 h-3.5 ${tc.icon}`} />
+                          <span className={`text-[11px] font-bold ${tc.text}`}>{time}</span>
+                          <span className="text-[9px] text-gray-500">{data.total} supplement{data.total !== 1 ? 's' : ''}</span>
+                          <div className="flex-1" />
+                          <div className="flex -space-x-1">
+                            {data.supps.slice(0, 4).map((_, j) => (
+                              <div key={j} className="w-4 h-4 rounded-full border border-[#0c0c14] bg-white/[0.06]" />
+                            ))}
+                            {data.supps.length > 4 && <span className="text-[8px] text-gray-500 ml-1">+{data.supps.length - 4}</span>}
+                          </div>
+                        </div>
+                        <div className="px-4 py-2.5">
+                          <div className="flex flex-wrap gap-1.5">
+                            {data.supps.map(name => (
+                              <span key={name} className="text-[9px] font-medium text-gray-400 bg-white/[0.03] border border-white/[0.04] px-2 py-1 rounded-md">{name}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                  <div className="flex items-start gap-2 p-3 rounded-xl bg-cyan-500/[0.03] border border-cyan-500/08">
+                    <Zap className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] font-bold text-white">Timing Tip</p>
+                      <p className="text-[9px] text-gray-400 mt-0.5">Fat-soluble vitamins (D3, K2, fish oil) absorb better with meals. Take magnesium at night for sleep support.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ═══ Cost Mode ═══ */}
+              {coachMode === 'cost' && (
+                <div className="space-y-3">
+                  {costBreakdown.length === 0 ? (
+                    <div className="py-8 text-center"><DollarSign className="w-8 h-8 text-gray-600 mx-auto mb-2" /><p className="text-[11px] text-gray-500">Add cost & servings to track spending.</p></div>
+                  ) : (
+                    <>
+                      <div className="rounded-xl bg-gradient-to-br from-violet-500/[0.06] to-violet-500/[0.02] border border-violet-500/10 p-4 text-center">
+                        <p className="text-[9px] text-violet-300/70 uppercase tracking-wider font-bold mb-1">Monthly Estimate</p>
+                        <div className="text-[28px] font-black text-violet-300 tabular-nums">${monthlyCost.toFixed(0)}</div>
+                        <p className="text-[9px] text-gray-500 mt-1">{costBreakdown.length} supplement{costBreakdown.length !== 1 ? 's' : ''} tracked</p>
+                      </div>
+                      {costBreakdown.map((item, i) => (
+                        <motion.div key={item.name} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
+                          className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                          <div className="w-8 h-8 rounded-lg bg-violet-500/[0.06] border border-violet-500/10 flex items-center justify-center shrink-0">
+                            <DollarSign className="w-3.5 h-3.5 text-violet-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-bold text-white truncate">{item.name}</p>
+                            <p className="text-[9px] text-gray-500">${item.perServing.toFixed(2)}/serving · {item.servings} servings</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-[12px] font-black text-white tabular-nums">${item.perMonth.toFixed(0)}</p>
+                            <p className="text-[8px] text-gray-500">/month</p>
+                          </div>
+                        </motion.div>
+                      ))}
+                      <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/[0.03] border border-amber-500/08">
+                        <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-[10px] font-bold text-white">Cost Tip</p>
+                          <p className="text-[9px] text-gray-400 mt-0.5">Buying larger quantities often saves 20-40%. Consider 90-day supplies for your daily staples.</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* ═══ Refill Mode ═══ */}
+              {coachMode === 'refill' && (
+                <div className="space-y-2">
+                  {supplements.filter(s => s.refillDays && s.refillDays > 0).length === 0 ? (
+                    <div className="py-8 text-center"><Package className="w-8 h-8 text-gray-600 mx-auto mb-2" /><p className="text-[11px] text-gray-500">Set refill days to track supply.</p></div>
+                  ) : supplements.filter(s => s.refillDays && s.refillDays > 0).map((supp, i) => {
+                    const daysLeft = supp.refillDays || 30
+                    const pct = Math.max(0, Math.min(100, ((30 - daysLeft) / 30) * 100))
+                    const urgency = daysLeft <= 3 ? { color: '#ef4444', bg: 'bg-red-500', label: 'Critical' } : daysLeft <= 7 ? { color: '#f59e0b', bg: 'bg-amber-500', label: 'Soon' } : { color: '#10b981', bg: 'bg-emerald-500', label: 'Good' }
+                    return (
+                      <motion.div key={supp.id} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
+                        className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${urgency.bg} ${daysLeft <= 3 ? 'animate-pulse' : ''}`} />
+                            <span className="text-[11px] font-bold text-white">{supp.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: urgency.color, backgroundColor: `${urgency.color}15` }}>{urgency.label}</span>
+                            <span className="text-[10px] font-bold" style={{ color: urgency.color }}>{daysLeft}d left</span>
+                          </div>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, delay: i * 0.08 }}
+                            className="h-full rounded-full" style={{ backgroundColor: urgency.color }} />
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* ═══ Stack Mode ═══ */}
+              {coachMode === 'stack' && (
+                <div className="space-y-3">
+                  <div className="p-4 rounded-xl bg-violet-500/[0.03] border border-violet-500/08">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Layers className="w-3.5 h-3.5 text-violet-400" />
+                      <span className="text-[9px] font-bold text-violet-300 uppercase tracking-wider">Stack Overview</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="relative w-16 h-16 shrink-0">
+                        <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                          {(() => {
+                            const cats: Record<string, { count: number; color: string }> = {}
+                            const colors = ['stroke-violet-500', 'stroke-cyan-500', 'stroke-amber-500', 'stroke-emerald-500', 'stroke-rose-500']
+                            let ci = 0; supplements.forEach(s => { const c = s.stack || 'Other'; if (!cats[c]) { cats[c] = { count: 0, color: colors[ci % colors.length] }; ci++ }; cats[c].count++ })
+                            const total = supplements.length; let off = 0
+                            return Object.entries(cats).map(([n, d]) => { const p = (d.count / total) * 100; const seg = <circle key={n} cx="18" cy="18" r="15.915" fill="transparent" className={`${d.color} opacity-80`} strokeWidth="3" strokeDasharray={`${p} ${100 - p}`} strokeDashoffset={`${-off}`} />; off += p; return seg })
+                          })()}
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center"><span className="text-sm font-black text-white/80">{supplements.length}</span></div>
+                      </div>
+                      <div className="flex-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                        {(() => {
+                          const cats: Record<string, { count: number; dot: string }> = {}
+                          const dots = ['bg-violet-400', 'bg-cyan-400', 'bg-amber-400', 'bg-emerald-400', 'bg-rose-400']
+                          let ci = 0; supplements.forEach(s => { const c = s.stack || 'Other'; if (!cats[c]) { cats[c] = { count: 0, dot: dots[ci % dots.length] }; ci++ }; cats[c].count++ })
+                          return Object.entries(cats).sort((a, b) => b[1].count - a[1].count).map(([n, d]) => (
+                            <div key={n} className="flex items-center gap-1.5">
+                              <span className={`w-1.5 h-1.5 rounded-full ${d.dot}`} />
+                              <span className="text-[9px] text-gray-400 truncate flex-1">{n}</span>
+                              <span className="text-[9px] font-bold text-white">{d.count}</span>
+                            </div>
+                          ))
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {supplementInteractions.length > 0 && (
+                    <div className="p-4 rounded-xl bg-emerald-500/[0.03] border border-emerald-500/08">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-[9px] font-bold text-emerald-300 uppercase tracking-wider">Interactions</span>
+                        </div>
+                        <span className="text-[9px] text-emerald-400/50">{supplementInteractions.length} found</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {supplementInteractions.map((inter, i) => (
+                          <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}
+                            className={cn('flex items-start gap-2 p-2.5 rounded-lg border text-[10px]',
+                              inter.type === 'synergy' && 'bg-emerald-500/[0.03] border-emerald-500/08',
+                              inter.type === 'conflict' && 'bg-red-500/[0.03] border-red-500/08',
+                              inter.type === 'timing' && 'bg-amber-500/[0.03] border-amber-500/08')}>
+                            {inter.type === 'synergy' && <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0 mt-0.5" />}
+                            {inter.type === 'conflict' && <ShieldAlert className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />}
+                            {inter.type === 'timing' && <Info className="w-3 h-3 text-amber-400 shrink-0 mt-0.5" />}
+                            <div className="flex-1"><p className="font-bold text-white">{inter.suppA} + {inter.suppB}</p><p className="text-gray-400">{inter.message}</p></div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {supplementInteractions.length === 0 && (
+                    <div className="py-8 text-center"><Layers className="w-8 h-8 text-gray-600 mx-auto mb-2" /><p className="text-[11px] text-gray-500">Add more supplements for interactions.</p></div>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ═══════ HERO: WELLNESS COMMAND CENTER ═══════ */}
       {totalCount > 0 && (
@@ -663,472 +1124,6 @@ export function SupplementTracker() {
           </div>
         </motion.div>
       )}
-
-      {/* ─── PANELS ─── */}
-      <AnimatePresence mode="wait">
-        {/* ═══ WEEKLY PATTERNS ═══ */}
-        {activePanel === 'patterns' && totalCount > 0 && (
-          <motion.div key="patterns" initial={{ opacity: 0, y: -10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.98 }}
-            transition={{ duration: 0.35, ease: smooth }}
-            className="relative overflow-hidden rounded-[20px] border border-violet-500/10 bg-[#0c0c14] shadow-xl">
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute -top-20 -left-20 w-48 h-48 bg-violet-500/[0.04] rounded-full blur-[80px]" />
-              <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-indigo-500/[0.03] rounded-full blur-[60px]" />
-            </div>
-            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/15 to-transparent" />
-
-            <div className="relative p-5">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/15 flex items-center justify-center">
-                    <BarChart3 className="w-4 h-4 text-violet-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-[13px] font-bold text-white">Weekly Patterns</h3>
-                    <p className="text-[10px] text-gray-500">Adherence & consistency analysis</p>
-                  </div>
-                </div>
-                <div className="flex gap-0.5 bg-white/[0.03] rounded-lg p-0.5 border border-white/[0.05]">
-                  {(['7d', '14d', '30d'] as const).map(p => (
-                    <button key={p} onClick={() => setTrendPeriod(p)}
-                      className={cn('px-3 py-1 rounded-md text-[10px] font-bold transition-all', trendPeriod === p ? 'bg-violet-500/15 text-violet-300' : 'text-gray-500 hover:text-white')}>{p}</button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-12 gap-4 mb-5">
-                {/* Consistency ring */}
-                <div className="col-span-3">
-                  <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
-                    className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-4 flex flex-col items-center justify-center h-full">
-                    <div className="relative w-20 h-20">
-                      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="6" />
-                        <circle cx="50" cy="50" r="42" fill="none"
-                          stroke={consistencyScore >= 80 ? '#10b981' : consistencyScore >= 50 ? '#f59e0b' : '#ef4444'}
-                          strokeWidth="6" strokeLinecap="round"
-                          strokeDasharray={`${consistencyScore * 2.64} 264`}
-                          className="transition-all duration-1000" />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-[18px] font-black tabular-nums" style={{ color: consistencyScore >= 80 ? '#10b981' : consistencyScore >= 50 ? '#f59e0b' : '#ef4444' }}>{consistencyScore}</span>
-                        <span className="text-[7px] text-gray-500 uppercase tracking-wider font-bold">score</span>
-                      </div>
-                    </div>
-                    <span className="text-[8px] text-gray-500 mt-2 font-bold uppercase tracking-wider">Consistency</span>
-                  </motion.div>
-                </div>
-
-                {/* Bar chart - daily adherence */}
-                <div className="col-span-5">
-                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-                    className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-4 h-full">
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <BarChart3 className="w-3 h-3 text-violet-400" />
-                      <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Daily adherence</span>
-                      <div className="flex-1" />
-                      <span className="text-[9px] font-bold text-violet-400 tabular-nums">{weekAdherence}% avg</span>
-                    </div>
-                    <div className="h-32">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={weekHeatmap} barSize={28}>
-                          <XAxis dataKey="dayName" tick={{ fill: '#6b7280', fontSize: 9, fontWeight: 700 }} axisLine={false} tickLine={false} />
-                          <YAxis hide domain={[0, 100]} />
-                          <Tooltip cursor={false}
-                            contentStyle={{ backgroundColor: 'rgba(10,10,15,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '8px 12px' }}
-                            itemStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
-                            labelStyle={{ color: '#6b7280', fontSize: 9 }}
-                            formatter={(v: number) => [`${v}%`, 'Adherence']} />
-                          <Bar dataKey="pct" radius={[6, 6, 2, 2]}>
-                            {weekHeatmap.map((d, i) => (
-                              <Cell key={i} fill={d.pct >= 80 ? 'rgba(16,185,129,0.5)' : d.pct >= 50 ? 'rgba(245,158,11,0.4)' : d.pct > 0 ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.05)'} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                    {/* Best / Worst */}
-                    <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-white/[0.03]">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                        <span className="text-[8px] text-gray-500 font-bold">Best</span>
-                        <span className="text-[9px] text-emerald-300 font-bold">{bestWorstDays.best?.label || '-'}</span>
-                        <span className="text-[8px] text-emerald-400/50 font-bold">{bestWorstDays.best?.pct ?? 0}%</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                        <span className="text-[8px] text-gray-500 font-bold">Worst</span>
-                        <span className="text-[9px] text-red-300 font-bold">{bestWorstDays.worst?.label || '-'}</span>
-                        <span className="text-[8px] text-red-400/50 font-bold">{bestWorstDays.worst?.pct ?? 0}%</span>
-                      </div>
-                    </div>
-                  </motion.div>
-                </div>
-
-                {/* Radar - time of day */}
-                <div className="col-span-4">
-                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                    className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-4 h-full">
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <Clock className="w-3 h-3 text-cyan-400" />
-                      <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Time distribution</span>
-                    </div>
-                    <div className="h-32">
-                      {timingData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RadarChart data={timingData.map(([time, d]) => ({ time: time.slice(0, 3), count: d.total }))} cx="50%" cy="50%" outerRadius="70%">
-                            <PolarGrid stroke="rgba(255,255,255,0.04)" />
-                            <PolarAngleAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 9, fontWeight: 700 }} />
-                            <Radar dataKey="count" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.15} strokeWidth={1.5} />
-                          </RadarChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-[10px] text-gray-600">No data</div>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {timingData.map(([time, d]) => (
-                        <span key={time} className="text-[7px] font-bold text-cyan-400/70 bg-cyan-500/[0.06] border border-cyan-500/10 px-1.5 py-0.5 rounded">
-                          {time} · {d.total}
-                        </span>
-                      ))}
-                    </div>
-                  </motion.div>
-                </div>
-              </div>
-
-              {/* Area trend chart */}
-              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-                className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 mb-4">
-                <div className="flex items-center gap-1.5 mb-3">
-                  <TrendingUp className="w-3 h-3 text-violet-400" />
-                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Trend · {trendPeriod}</span>
-                  <div className="flex-1" />
-                  <span className="text-[9px] font-bold text-violet-400 tabular-nums">{weekAdherence}% avg</span>
-                </div>
-                <div className="h-36">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={adherenceTrend}>
-                      <defs>
-                        <linearGradient id="violetGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                          <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="date" tick={{ fill: '#4b5563', fontSize: 8, fontWeight: 600 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                      <YAxis hide domain={[0, 100]} />
-                      <Tooltip cursor={{ stroke: 'rgba(139,92,246,0.2)', strokeWidth: 1 }}
-                        contentStyle={{ backgroundColor: 'rgba(10,10,15,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '8px 12px' }}
-                        itemStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
-                        labelStyle={{ color: '#6b7280', fontSize: 9 }}
-                        formatter={(v: number) => [`${v}%`, 'Adherence']}
-                        labelFormatter={(l, p) => p?.[0]?.payload?.date || l} />
-                      <Area type="monotone" dataKey="pct" stroke="#8b5cf6" strokeWidth={2} fill="url(#violetGradient)" dot={false} activeDot={{ r: 4, fill: '#8b5cf6', stroke: '#0a0a0f', strokeWidth: 2 }} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </motion.div>
-
-              {/* Stats row */}
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  { icon: Flame, color: 'text-orange-400', bg: 'bg-orange-500/[0.06]', border: 'border-orange-500/10', label: 'Streak', val: `${suppStreak}d` },
-                  { icon: Activity, color: 'text-violet-400', bg: 'bg-violet-500/[0.06]', border: 'border-violet-500/10', label: 'Week Avg', val: `${weekAdherence}%` },
-                  { icon: Pill, color: 'text-cyan-400', bg: 'bg-cyan-500/[0.06]', border: 'border-cyan-500/10', label: 'Daily', val: `${dailySupps.length}` },
-                  { icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/[0.06]', border: 'border-emerald-500/10', label: 'Score', val: `${consistencyScore}%` },
-                ].map((c, i) => (
-                  <motion.div key={c.label} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.04 }}
-                    className={`flex flex-col items-center gap-1 ${c.bg} border ${c.border} rounded-xl p-2.5`}>
-                    <c.icon className={`w-3.5 h-3.5 ${c.color}`} />
-                    <span className="text-[12px] font-black text-white tabular-nums">{c.val}</span>
-                    <span className="text-[7px] text-gray-500 uppercase tracking-wider font-bold">{c.label}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* ═══ AI COACH ═══ */}
-        {activePanel === 'coach' && (
-          <motion.div key="coach" initial={{ opacity: 0, y: -10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.98 }}
-            transition={{ duration: 0.35, ease: smooth }}
-            className="relative overflow-hidden rounded-[20px] border border-cyan-500/10 bg-[#0c0c14] shadow-xl">
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute -top-20 -left-20 w-48 h-48 bg-cyan-500/[0.04] rounded-full blur-[80px]" />
-              <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-emerald-500/[0.03] rounded-full blur-[60px]" />
-            </div>
-            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-500/15 to-transparent" />
-
-            <div className="relative p-5">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2.5">
-                  <div className="relative w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-cyan-400" />
-                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border-[1.5px] border-[#0c0c14] animate-pulse" />
-                  </div>
-                  <div>
-                    <h3 className="text-[13px] font-bold text-white">AI Coach</h3>
-                    <p className="text-[10px] text-gray-500">{smartRecs.length} insight{smartRecs.length !== 1 ? 's' : ''} available</p>
-                  </div>
-                </div>
-                <div className="relative">
-                  <button onClick={() => setShowCoachModeDropdown(p => !p)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[10px] font-bold text-gray-400 hover:text-white transition-all">
-                    {coachMode === 'insight' ? <Brain className="w-3 h-3" /> : coachMode === 'refill' ? <Package className="w-3 h-3" /> : coachMode === 'stack' ? <Layers className="w-3 h-3" /> : coachMode === 'timing' ? <Clock className="w-3 h-3" /> : <DollarSign className="w-3 h-3" />}
-                    <span className="hidden sm:inline capitalize">{coachMode}</span>
-                    <ChevronDown className="w-3 h-3" />
-                  </button>
-                  {showCoachModeDropdown && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setShowCoachModeDropdown(false)} />
-                      <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                        className="absolute right-0 top-9 z-20 w-44 rounded-xl bg-gray-900 border border-white/[0.08] shadow-2xl p-1.5">
-                        {([
-                          { k: 'insight' as const, icon: Brain, label: 'Insights', desc: 'Smart tips' },
-                          { k: 'timing' as const, icon: Clock, label: 'Timing', desc: 'Schedule' },
-                          { k: 'cost' as const, icon: DollarSign, label: 'Cost', desc: 'Spending' },
-                          { k: 'refill' as const, icon: Package, label: 'Refills', desc: 'Supply' },
-                          { k: 'stack' as const, icon: Layers, label: 'Stack', desc: 'Interactions' },
-                        ]).map(o => (
-                          <button key={o.k} onClick={() => { setCoachMode(o.k); setShowCoachModeDropdown(false) }}
-                            className={cn('w-full text-left px-3 py-2 rounded-lg text-[11px] font-medium transition-all flex items-center gap-2',
-                              coachMode === o.k ? 'bg-cyan-500/10 text-cyan-300' : 'text-gray-400 hover:text-white hover:bg-white/5')}>
-                            <o.icon className="w-3 h-3 shrink-0" />
-                            <div><div className="font-bold">{o.label}</div><div className="text-[8px] text-gray-600">{o.desc}</div></div>
-                          </button>
-                        ))}
-                      </motion.div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* ═══ Insight Mode ═══ */}
-              {coachMode === 'insight' && (
-                <div className="space-y-2">
-                  {smartRecs.length === 0 ? (
-                    <div className="py-8 text-center"><Brain className="w-8 h-8 text-gray-600 mx-auto mb-2" /><p className="text-[11px] text-gray-500">Add supplements for insights.</p></div>
-                  ) : smartRecs.map((rec, i) => {
-                    const Icon = rec.icon
-                    const catStyles: Record<string, { bg: string; icon: string; accent: string }> = {
-                      Performance: { bg: 'bg-purple-500/[0.04] border-purple-500/10', icon: 'text-purple-400', accent: 'bg-purple-400' },
-                      Recovery: { bg: 'bg-emerald-500/[0.04] border-emerald-500/10', icon: 'text-emerald-400', accent: 'bg-emerald-400' },
-                      Nutrition: { bg: 'bg-amber-500/[0.04] border-amber-500/10', icon: 'text-amber-400', accent: 'bg-amber-400' },
-                      General: { bg: 'bg-gray-500/[0.04] border-gray-500/10', icon: 'text-gray-400', accent: 'bg-gray-400' },
-                    }
-                    const cs = catStyles[rec.category] || catStyles.General
-                    return (
-                      <motion.div key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                        className={cn('group relative flex items-start gap-3 p-3 rounded-xl border transition-all hover:bg-white/[0.02]', cs.bg)}>
-                        <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center shrink-0', cs.bg)}>
-                          <Icon className={cn('w-3.5 h-3.5', cs.icon)} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[11px] font-bold text-white">{rec.title}</p>
-                          <p className="text-[10px] text-gray-400 mt-0.5 leading-relaxed">{rec.text}</p>
-                        </div>
-                        <div className={cn('w-1 h-8 rounded-full shrink-0 mt-0.5', cs.accent, 'opacity-30')} />
-                      </motion.div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {/* ═══ Timing Mode ═══ */}
-              {coachMode === 'timing' && (
-                <div className="space-y-3">
-                  {timingData.length === 0 ? (
-                    <div className="py-8 text-center"><Clock className="w-8 h-8 text-gray-600 mx-auto mb-2" /><p className="text-[11px] text-gray-500">Add supplements with times set.</p></div>
-                  ) : timingData.map(([time, data], i) => {
-                    const tc = TIME_COLORS[time as TimeOfDay]
-                    const TimeIcon = TIME_ICONS[time as TimeOfDay]
-                    return (
-                      <motion.div key={time} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
-                        className="rounded-xl border border-white/[0.04] bg-white/[0.015] overflow-hidden">
-                        <div className={`flex items-center gap-2.5 px-4 py-2.5 bg-gradient-to-r ${tc.bg} border-b ${tc.border}`}>
-                          <TimeIcon className={`w-3.5 h-3.5 ${tc.icon}`} />
-                          <span className={`text-[11px] font-bold ${tc.text}`}>{time}</span>
-                          <span className="text-[9px] text-gray-500">{data.total} supplement{data.total !== 1 ? 's' : ''}</span>
-                          <div className="flex-1" />
-                          <div className="flex -space-x-1">
-                            {data.supps.slice(0, 4).map((_, j) => (
-                              <div key={j} className="w-4 h-4 rounded-full border border-[#0c0c14] bg-white/[0.06]" />
-                            ))}
-                            {data.supps.length > 4 && <span className="text-[8px] text-gray-500 ml-1">+{data.supps.length - 4}</span>}
-                          </div>
-                        </div>
-                        <div className="px-4 py-2.5">
-                          <div className="flex flex-wrap gap-1.5">
-                            {data.supps.map(name => (
-                              <span key={name} className="text-[9px] font-medium text-gray-400 bg-white/[0.03] border border-white/[0.04] px-2 py-1 rounded-md">{name}</span>
-                            ))}
-                          </div>
-                        </div>
-                      </motion.div>
-                    )
-                  })}
-                  {/* Tip */}
-                  <div className="flex items-start gap-2 p-3 rounded-xl bg-cyan-500/[0.03] border border-cyan-500/08">
-                    <Zap className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-[10px] font-bold text-white">Timing Tip</p>
-                      <p className="text-[9px] text-gray-400 mt-0.5">Fat-soluble vitamins (D3, K2, fish oil) absorb better with meals. Take magnesium at night for sleep support.</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ═══ Cost Mode ═══ */}
-              {coachMode === 'cost' && (
-                <div className="space-y-3">
-                  {costBreakdown.length === 0 ? (
-                    <div className="py-8 text-center"><DollarSign className="w-8 h-8 text-gray-600 mx-auto mb-2" /><p className="text-[11px] text-gray-500">Add cost & servings to track spending.</p></div>
-                  ) : (
-                    <>
-                      {/* Total monthly */}
-                      <div className="rounded-xl bg-gradient-to-br from-violet-500/[0.06] to-violet-500/[0.02] border border-violet-500/10 p-4 text-center">
-                        <p className="text-[9px] text-violet-300/70 uppercase tracking-wider font-bold mb-1">Monthly Estimate</p>
-                        <div className="text-[28px] font-black text-violet-300 tabular-nums">${monthlyCost.toFixed(0)}</div>
-                        <p className="text-[9px] text-gray-500 mt-1">{costBreakdown.length} supplement{costBreakdown.length !== 1 ? 's' : ''} tracked</p>
-                      </div>
-                      {/* Breakdown */}
-                      {costBreakdown.map((item, i) => (
-                        <motion.div key={item.name} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                          className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                          <div className="w-8 h-8 rounded-lg bg-violet-500/[0.06] border border-violet-500/10 flex items-center justify-center shrink-0">
-                            <DollarSign className="w-3.5 h-3.5 text-violet-400" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[11px] font-bold text-white truncate">{item.name}</p>
-                            <p className="text-[9px] text-gray-500">${item.perServing.toFixed(2)}/serving \u00B7 {item.servings} servings</p>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-[12px] font-black text-white tabular-nums">${item.perMonth.toFixed(0)}</p>
-                            <p className="text-[8px] text-gray-500">/month</p>
-                          </div>
-                        </motion.div>
-                      ))}
-                      {/* Tip */}
-                      <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/[0.03] border border-amber-500/08">
-                        <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-[10px] font-bold text-white">Cost Tip</p>
-                          <p className="text-[9px] text-gray-400 mt-0.5">Buying larger quantities often saves 20-40%. Consider 90-day supplies for your daily staples.</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* ═══ Refill Mode ═══ */}
-              {coachMode === 'refill' && (
-                <div className="space-y-2">
-                  {supplements.filter(s => s.refillDays && s.refillDays > 0).length === 0 ? (
-                    <div className="py-8 text-center"><Package className="w-8 h-8 text-gray-600 mx-auto mb-2" /><p className="text-[11px] text-gray-500">Set refill days to track supply.</p></div>
-                  ) : supplements.filter(s => s.refillDays && s.refillDays > 0).map((supp, i) => {
-                    const daysLeft = supp.refillDays || 30
-                    const pct = Math.max(0, Math.min(100, ((30 - daysLeft) / 30) * 100))
-                    const urgency = daysLeft <= 3 ? { color: '#ef4444', bg: 'bg-red-500', label: 'Critical' } : daysLeft <= 7 ? { color: '#f59e0b', bg: 'bg-amber-500', label: 'Soon' } : { color: '#10b981', bg: 'bg-emerald-500', label: 'Good' }
-                    return (
-                      <motion.div key={supp.id} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                        className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${urgency.bg} ${daysLeft <= 3 ? 'animate-pulse' : ''}`} />
-                            <span className="text-[11px] font-bold text-white">{supp.name}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: urgency.color, backgroundColor: `${urgency.color}15` }}>{urgency.label}</span>
-                            <span className="text-[10px] font-bold" style={{ color: urgency.color }}>{daysLeft}d left</span>
-                          </div>
-                        </div>
-                        <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, delay: i * 0.08 }}
-                            className="h-full rounded-full" style={{ backgroundColor: urgency.color }} />
-                        </div>
-                      </motion.div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {/* ═══ Stack Mode ═══ */}
-              {coachMode === 'stack' && (
-                <div className="space-y-3">
-                  <div className="p-4 rounded-xl bg-violet-500/[0.03] border border-violet-500/08">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Layers className="w-3.5 h-3.5 text-violet-400" />
-                      <span className="text-[9px] font-bold text-violet-300 uppercase tracking-wider">Stack Overview</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="relative w-16 h-16 shrink-0">
-                        <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                          {(() => {
-                            const cats: Record<string, { count: number; color: string }> = {}
-                            const colors = ['stroke-violet-500', 'stroke-cyan-500', 'stroke-amber-500', 'stroke-emerald-500', 'stroke-rose-500']
-                            let ci = 0; supplements.forEach(s => { const c = s.stack || 'Other'; if (!cats[c]) { cats[c] = { count: 0, color: colors[ci % colors.length] }; ci++ }; cats[c].count++ })
-                            const total = supplements.length; let off = 0
-                            return Object.entries(cats).map(([n, d]) => { const p = (d.count / total) * 100; const seg = <circle key={n} cx="18" cy="18" r="15.915" fill="transparent" className={`${d.color} opacity-80`} strokeWidth="3" strokeDasharray={`${p} ${100 - p}`} strokeDashoffset={`${-off}`} />; off += p; return seg })
-                          })()}
-                        </svg>
-                        <div className="absolute inset-0 flex items-center justify-center"><span className="text-sm font-black text-white/80">{supplements.length}</span></div>
-                      </div>
-                      <div className="flex-1 grid grid-cols-2 gap-x-3 gap-y-1">
-                        {(() => {
-                          const cats: Record<string, { count: number; dot: string }> = {}
-                          const dots = ['bg-violet-400', 'bg-cyan-400', 'bg-amber-400', 'bg-emerald-400', 'bg-rose-400']
-                          let ci = 0; supplements.forEach(s => { const c = s.stack || 'Other'; if (!cats[c]) { cats[c] = { count: 0, dot: dots[ci % dots.length] }; ci++ }; cats[c].count++ })
-                          return Object.entries(cats).sort((a, b) => b[1].count - a[1].count).map(([n, d]) => (
-                            <div key={n} className="flex items-center gap-1.5">
-                              <span className={`w-1.5 h-1.5 rounded-full ${d.dot}`} />
-                              <span className="text-[9px] text-gray-400 truncate flex-1">{n}</span>
-                              <span className="text-[9px] font-bold text-white">{d.count}</span>
-                            </div>
-                          ))
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-
-                  {supplementInteractions.length > 0 && (
-                    <div className="p-4 rounded-xl bg-emerald-500/[0.03] border border-emerald-500/08">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-[9px] font-bold text-emerald-300 uppercase tracking-wider">Interactions</span>
-                        </div>
-                        <span className="text-[9px] text-emerald-400/50">{supplementInteractions.length} found</span>
-                      </div>
-                      <div className="space-y-1.5">
-                        {supplementInteractions.map((inter, i) => (
-                          <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}
-                            className={cn('flex items-start gap-2 p-2.5 rounded-lg border text-[10px]',
-                              inter.type === 'synergy' && 'bg-emerald-500/[0.03] border-emerald-500/08',
-                              inter.type === 'conflict' && 'bg-red-500/[0.03] border-red-500/08',
-                              inter.type === 'timing' && 'bg-amber-500/[0.03] border-amber-500/08')}>
-                            {inter.type === 'synergy' && <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0 mt-0.5" />}
-                            {inter.type === 'conflict' && <ShieldAlert className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />}
-                            {inter.type === 'timing' && <Info className="w-3 h-3 text-amber-400 shrink-0 mt-0.5" />}
-                            <div className="flex-1"><p className="font-bold text-white">{inter.suppA} + {inter.suppB}</p><p className="text-gray-400">{inter.message}</p></div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {supplementInteractions.length === 0 && (
-                    <div className="py-8 text-center"><Layers className="w-8 h-8 text-gray-600 mx-auto mb-2" /><p className="text-[11px] text-gray-500">Add more supplements for interactions.</p></div>
-                  )}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ─── EMPTY STATE ─── */}
       {totalCount === 0 && (
