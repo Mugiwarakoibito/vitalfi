@@ -603,41 +603,55 @@ export function SupplementTracker() {
                     <div className="space-y-1.5">
                       {items.map((s, i) => {
                         const taken = takenTodayIds.has(s.id)
+                        const freqLabel = s.frequency === 'daily' ? 'Daily' : s.frequency === 'weekly' ? 'Weekly' : 'Custom'
+                        const freqColor = s.frequency === 'daily' ? 'text-cyan-400 bg-cyan-500/[0.06] border-cyan-500/10' : s.frequency === 'weekly' ? 'text-amber-400 bg-amber-500/[0.06] border-amber-500/10' : 'text-gray-400 bg-gray-500/[0.06] border-gray-500/10'
+                        const refillUrgent = s.refillDays && s.refillDays <= 5
                         return (
                           <motion.div key={s.id} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: i * 0.03, duration: 0.3, ease: smooth }}
-                            className={`group relative flex items-center gap-3 rounded-xl border p-2.5 transition-all duration-300 ${
+                            className={`group relative rounded-xl border transition-all duration-300 overflow-hidden ${
                               taken ? 'bg-emerald-500/[0.03] border-emerald-500/08' : 'bg-white/[0.01] border-white/[0.03] hover:bg-white/[0.025] hover:border-white/[0.06]'
                             }`}>
-                            {/* Checkbox */}
-                            <button onClick={() => taken ? undoTakeById(s.id) : markAsTaken(s)}
-                              className={`shrink-0 w-6 h-6 rounded-lg border flex items-center justify-center transition-all duration-200 ${
-                                taken ? 'bg-emerald-500/15 border-emerald-500/20 hover:bg-red-500/15 hover:border-red-500/20 group/undo' : 'border-white/[0.08] hover:border-white/20 bg-white/[0.02]'
-                              }`}>
-                              {taken && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={spring}><Check className="w-3 h-3 text-emerald-400 group-hover/undo:hidden" /></motion.div>}
-                              {taken && <Undo2 className="w-3 h-3 text-red-400 hidden group-hover/undo:block" />}
-                            </button>
+                            <div className="flex items-center gap-3 p-2.5">
+                              {/* Checkbox */}
+                              <button onClick={() => taken ? undoTakeById(s.id) : markAsTaken(s)}
+                                className={`shrink-0 w-6 h-6 rounded-lg border flex items-center justify-center transition-all duration-200 ${
+                                  taken ? 'bg-emerald-500/15 border-emerald-500/20 hover:bg-red-500/15 hover:border-red-500/20 group/undo' : 'border-white/[0.08] hover:border-white/20 bg-white/[0.02]'
+                                }`}>
+                                {taken && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={spring}><Check className="w-3 h-3 text-emerald-400 group-hover/undo:hidden" /></motion.div>}
+                                {taken && <Undo2 className="w-3 h-3 text-red-400 hidden group-hover/undo:block" />}
+                              </button>
 
-                            {/* Info */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className={`text-[12px] font-semibold truncate ${taken ? 'text-emerald-300/70 line-through' : 'text-white'}`}>{s.name}</span>
-                                {s.stack && <span className="text-[7px] font-bold text-violet-400/70 bg-violet-500/[0.06] border border-violet-500/10 px-1 py-px rounded uppercase tracking-widest">{s.stack}</span>}
-                              </div>
-                              <div className="flex items-center gap-1 mt-0.5">
-                                <span className="text-[10px] text-gray-500">{s.dosage}</span>
-                                {s.cost && s.totalServings && (
-                                  <span className="text-[9px] text-violet-400/50">· ${(s.cost / s.totalServings).toFixed(2)}/serving</span>
+                              {/* Info */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`text-[12px] font-semibold truncate ${taken ? 'text-emerald-300/70 line-through' : 'text-white'}`}>{s.name}</span>
+                                  {s.stack && <span className="text-[7px] font-bold text-violet-400/70 bg-violet-500/[0.06] border border-violet-500/10 px-1 py-px rounded uppercase tracking-widest">{s.stack}</span>}
+                                  <span className={`text-[7px] font-bold px-1 py-px rounded border ${freqColor}`}>{freqLabel}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                  <span className="text-[10px] text-gray-400 font-medium">{s.dosage}</span>
+                                  {s.cost && s.totalServings && (
+                                    <span className="text-[8px] text-violet-400/50 bg-violet-500/[0.04] px-1.5 py-0.5 rounded">${(s.cost / s.totalServings).toFixed(2)}/serving</span>
+                                  )}
+                                  {s.refillDays && (
+                                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${refillUrgent ? 'text-red-400 bg-red-500/[0.06]' : 'text-gray-500 bg-white/[0.03]'}`}>
+                                      {refillUrgent ? `Refill in ${s.refillDays}d` : `${s.refillDays}d supply`}
+                                    </span>
+                                  )}
+                                </div>
+                                {s.notes && (
+                                  <p className="text-[9px] text-gray-600 italic mt-1 truncate">{s.notes}</p>
                                 )}
                               </div>
-                            </div>
 
-                            {/* Delete on hover */}
-                            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                              onClick={(e) => { e.stopPropagation(); deleteFromSchedule(s) }}
-                              className="shrink-0 w-6 h-6 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 hover:bg-red-500/[0.08] transition-all duration-200">
-                              <Trash2 className="w-3 h-3" />
-                            </motion.button>
+                              {/* Delete on hover */}
+                              <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                onClick={(e) => { e.stopPropagation(); deleteFromSchedule(s) }}
+                                className="shrink-0 w-6 h-6 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 hover:bg-red-500/[0.08] transition-all duration-200">
+                                <Trash2 className="w-3 h-3" />
+                              </motion.button>
+                            </div>
                           </motion.div>
                         )
                       })}
