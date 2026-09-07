@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Pill, Plus, Check, Clock, AlertTriangle,
@@ -77,6 +77,8 @@ export function SupplementTracker() {
   const [coachMode, setCoachMode] = useState<'insight' | 'refill' | 'stack'>('insight')
   const [showCoachModeDropdown, setShowCoachModeDropdown] = useState(false)
   const [trendPeriod, setTrendPeriod] = useState<'7d' | '14d' | '30d'>('7d')
+  const [deletedSupp, setDeletedSupp] = useState<{ supp: Supplement; index: number } | null>(null)
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -179,6 +181,25 @@ export function SupplementTracker() {
     persistLogs([...logs, { id: generateId(), supplementId: supp.id, takenAt: new Date().toISOString(), date: today }])
   }
 
+  const deleteFromSchedule = (supp: Supplement) => {
+    const idx = supplements.findIndex(s => s.id === supp.id)
+    if (idx === -1) return
+    setDeletedSupp({ supp, index: idx })
+    persistSupplements(supplements.filter(s => s.id !== supp.id))
+    persistLogs(logs.filter(l => l.supplementId !== supp.id))
+    if (undoTimer.current) clearTimeout(undoTimer.current)
+    undoTimer.current = setTimeout(() => setDeletedSupp(null), 5000)
+  }
+
+  const undoDelete = () => {
+    if (!deletedSupp) return
+    if (undoTimer.current) clearTimeout(undoTimer.current)
+    const updated = [...supplements]
+    updated.splice(deletedSupp.index, 0, deletedSupp.supp)
+    persistSupplements(updated)
+    setDeletedSupp(null)
+  }
+
   const handleQuickAdd = (name: string, dosage: string) => setFormData({ ...formData, name, dosage, times: formData.times.length ? formData.times : ['Morning'] })
   const toggleTime = (time: TimeOfDay) => setFormData(prev => ({ ...prev, times: prev.times.includes(time) ? prev.times.filter(t => t !== time) : [...prev.times, time] }))
   const resetForm = () => setFormData({ name: '', dosage: '', frequency: 'daily', times: [], notes: '', refillDays: '', stack: '', cost: '', totalServings: '' })
@@ -233,218 +254,215 @@ export function SupplementTracker() {
         </div>
       </motion.div>
 
-      {/* ─── HERO: INSANE WELLNESS PULSE ─── */}
+      {/* ═══════ HERO: WELLNESS COMMAND CENTER ═══════ */}
       {totalCount > 0 && (
-        <motion.div initial={{ opacity: 0, y: 20, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.7, delay: 0.05, ease: smooth }}
-          className="relative overflow-hidden rounded-[28px] border border-white/[0.08] bg-gradient-to-br from-[#0c0c14] via-[#0e0e1a] to-[#0c0c14] shadow-2xl shadow-black/50">
+        <motion.div initial={{ opacity: 0, y: 24, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.8, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
+          className="relative overflow-hidden rounded-[28px] border border-white/[0.07] bg-[#08080f] shadow-[0_0_60px_-12px_rgba(0,0,0,0.8)]">
 
-          {/* ── Scanlines overlay ── */}
-          <div className="absolute inset-0 pointer-events-none opacity-[0.03]"
-            style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)' }} />
-
-          {/* ── Holographic border shimmer ── */}
-          <motion.div animate={{ backgroundPosition: ['0% 50%', '200% 50%'] }} transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
-            className="absolute inset-0 rounded-[28px] pointer-events-none"
-            style={{ background: `linear-gradient(90deg, transparent, ${scoreColor}10, transparent, ${scoreColor}08, transparent)`, backgroundSize: '200% 100%', WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude', padding: '1px' }} />
-
-          {/* ── Ambient orbs ── */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <motion.div animate={{ x: [0, 30, -20, 0], y: [0, -20, 10, 0] }} transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute -top-20 -left-20 w-60 h-60 rounded-full blur-[100px]" style={{ backgroundColor: `${scoreColor}08` }} />
-            <motion.div animate={{ x: [0, -25, 15, 0], y: [0, 15, -25, 0] }} transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute -bottom-20 -right-20 w-48 h-48 rounded-full blur-[80px] bg-violet-500/[0.04]" />
+          {/* ── Layered background ── */}
+          <div className="absolute inset-0 pointer-events-none">
+            {/* Grid pattern */}
+            <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+            {/* Radial pulse */}
+            <motion.div animate={{ scale: [1, 1.3, 1], opacity: [0.06, 0.02, 0.06] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute top-1/2 left-[15%] -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full blur-[80px]" style={{ backgroundColor: scoreColor }} />
+            <motion.div animate={{ scale: [1.2, 1, 1.2], opacity: [0.03, 0.06, 0.03] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute top-1/3 right-[10%] w-[200px] h-[200px] rounded-full blur-[60px] bg-violet-500" />
+            {/* Scanline */}
+            <motion.div animate={{ y: ['-100%', '200%'] }} transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+              className="absolute left-0 right-0 h-px opacity-20" style={{ background: `linear-gradient(90deg, transparent, ${scoreColor}, transparent)` }} />
           </div>
 
-          {/* ── EKG Heartbeat line ── */}
-          <div className="absolute top-0 left-0 right-0 h-16 overflow-hidden pointer-events-none">
-            <svg viewBox="0 0 800 60" className="w-full h-full" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="ekgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor={scoreColor} stopOpacity="0" />
-                  <stop offset="30%" stopColor={scoreColor} stopOpacity="0.15" />
-                  <stop offset="50%" stopColor={scoreColor} stopOpacity="0.4" />
-                  <stop offset="70%" stopColor={scoreColor} stopOpacity="0.15" />
-                  <stop offset="100%" stopColor={scoreColor} stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <motion.path
-                d="M0,30 L100,30 L120,30 L140,10 L150,50 L160,5 L170,55 L180,30 L200,30 L350,30 L370,30 L390,12 L400,48 L410,8 L420,52 L430,30 L450,30 L600,30 L620,30 L640,14 L650,46 L660,10 L670,50 L680,30 L700,30 L800,30"
-                fill="none" stroke="url(#ekgGrad)" strokeWidth="1.5"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                transition={{ duration: 2, delay: 0.3, ease: smooth }} />
-            </svg>
-          </div>
+          {/* ── Border glow ── */}
+          <div className="absolute inset-0 rounded-[28px] pointer-events-none" style={{ boxShadow: `inset 0 0 0 1px ${scoreColor}08, inset 0 1px 0 0 ${scoreColor}06` }} />
 
-          {/* ── Floating particles ── */}
-          {[...Array(8)].map((_, i) => (
-            <motion.div key={i}
-              animate={{ x: [0, (i % 2 ? 1 : -1) * (20 + i * 8), 0], y: [0, -(15 + i * 6), 0], opacity: [0, 0.6, 0] }}
-              transition={{ duration: 4 + i * 0.8, repeat: Infinity, delay: i * 0.5, ease: 'easeInOut' }}
-              className="absolute w-1 h-1 rounded-full"
-              style={{ left: `${12 + i * 11}%`, top: `${30 + (i % 3) * 15}%`, backgroundColor: `${scoreColor}60` }} />
-          ))}
+          <div className="relative p-5 pb-4">
 
-          {/* ── Top grid line ── */}
-          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
-
-          <div className="relative p-6 pt-8">
-            {/* Top: Greeting + Status Badge */}
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <motion.p initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
-                  className="text-[10px] text-gray-500 font-medium mb-1 uppercase tracking-[0.2em]">
-                  {timeOfDayNow === 'Morning' ? '\u2600\uFE0F Morning' : timeOfDayNow === 'Afternoon' ? '\uD83C\uDF1E Afternoon' : timeOfDayNow === 'Evening' ? '\uD83C\uDF06 Evening' : '\uD83C\uDF19 Night'} // session
-                </motion.p>
-                <motion.h2 initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}
-                  className="text-[20px] font-black text-white tracking-tight leading-none">
-                  Wellness<span style={{ color: scoreColor }}>Pulse</span>
-                </motion.h2>
+            {/* ═══ ROW 1: Header bar ═══ */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                {/* Logo mark */}
+                <div className="relative w-8 h-8 shrink-0">
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                    className="absolute inset-0 rounded-lg border border-dashed" style={{ borderColor: `${scoreColor}20` }} />
+                  <div className="absolute inset-[2px] rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${scoreColor}15, ${scoreColor}05)` }}>
+                    <Activity className="w-3.5 h-3.5" style={{ color: scoreColor }} />
+                  </div>
+                </div>
+                <div>
+                  <h2 className="text-[15px] font-black text-white tracking-tight leading-none">Wellness<span style={{ color: scoreColor }}>Pulse</span></h2>
+                  <p className="text-[9px] text-gray-500 uppercase tracking-[0.2em] mt-0.5">{timeOfDayNow} module \u00B7 v2.0</p>
+                </div>
               </div>
+              {/* Status cluster */}
               <div className="flex items-center gap-2">
-                {/* System status */}
-                <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                  <motion.div animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.5, repeat: Infinity }}
-                    className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: scoreColor, boxShadow: `0 0 6px ${scoreColor}` }} />
-                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">System {adherenceScore >= 50 ? 'Online' : 'Degraded'}</span>
-                </motion.div>
-                {/* Streak */}
                 {suppStreak > 0 && (
-                  <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, ...spring }}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-500/[0.06] border border-orange-500/10">
-                    <motion.span animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 1.2, repeat: Infinity }}
-                      className="text-[12px]">\uD83D\uDD25</motion.span>
-                    <span className="text-[11px] font-black text-orange-300 tabular-nums">{suppStreak}</span>
+                  <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-500/[0.06] border border-orange-500/10">
+                    <motion.span animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 1.2, repeat: Infinity }} className="text-[11px]">\uD83D\uDD25</motion.span>
+                    <span className="text-[10px] font-black text-orange-300 tabular-nums">{suppStreak}d</span>
                   </motion.div>
                 )}
+                <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+                  <motion.div animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.5, repeat: Infinity }}
+                    className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: scoreColor, boxShadow: `0 0 8px ${scoreColor}80` }} />
+                  <span className="text-[8px] font-bold text-gray-500 uppercase tracking-wider">Live</span>
+                </motion.div>
               </div>
             </div>
 
-            {/* ── Main: Score Orb + Stats ── */}
-            <div className="flex items-center gap-5 mb-6">
-              {/* Score orb */}
-              <div className="relative shrink-0">
-                {/* Outermost ring - rotating dashes */}
-                <motion.div animate={{ rotate: 360 }} transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
-                  className="absolute -inset-4 rounded-full" style={{ border: `1.5px dashed ${scoreColor}12` }} />
-                {/* Second ring - pulse */}
-                <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0, 0.4] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                  className="absolute -inset-2 rounded-full" style={{ border: `1px solid ${scoreColor}25` }} />
-                {/* Glow */}
-                <div className="absolute inset-0 rounded-full blur-2xl" style={{ backgroundColor: `${scoreColor}18` }} />
-                {/* Core */}
+            {/* ═══ ROW 2: Core Reactor ═══ */}
+            <div className="flex gap-5 mb-4">
+
+              {/* ── Reactor Core ── */}
+              <div className="relative shrink-0 w-[140px] h-[140px] flex items-center justify-center">
+                {/* Ring 4 - outermost orbit */}
+                <motion.div animate={{ rotate: -360 }} transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
+                  className="absolute inset-0 rounded-full border border-dashed" style={{ borderColor: `${scoreColor}08` }}>
+                  <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full" style={{ backgroundColor: `${scoreColor}30` }} />
+                </motion.div>
+                {/* Ring 3 - dot orbit */}
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
+                  className="absolute inset-[8px] rounded-full border" style={{ borderColor: `${scoreColor}0a` }}>
+                  <div className="absolute top-1/2 -right-1 -translate-y-1/2 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: `${scoreColor}40` }} />
+                  <div className="absolute top-1/2 -left-1 -translate-y-1/2 w-1 h-1 rounded-full bg-violet-400/30" />
+                </motion.div>
+                {/* Ring 2 - pulse wave */}
+                <motion.div animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0, 0.5] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                  className="absolute inset-[18px] rounded-full border" style={{ borderColor: `${scoreColor}20` }} />
+                {/* Ring 1 - inner glow */}
+                <motion.div animate={{ scale: [1, 1.08, 1], opacity: [0.3, 0.1, 0.3] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                  className="absolute inset-[28px] rounded-full" style={{ backgroundColor: `${scoreColor}08`, border: `1px solid ${scoreColor}15` }} />
+                {/* Core glow */}
+                <div className="absolute inset-[32px] rounded-full blur-xl" style={{ backgroundColor: `${scoreColor}15` }} />
+                {/* Core body */}
                 <div className="relative w-[72px] h-[72px] rounded-full flex items-center justify-center"
-                  style={{ background: `conic-gradient(from 0deg, ${scoreColor}08, ${scoreColor}20, ${scoreColor}08)`, border: `1.5px solid ${scoreColor}25` }}>
-                  {/* Inner glass */}
-                  <div className="absolute inset-[3px] rounded-full bg-[#0c0c14]/80 backdrop-blur-sm" />
-                  <motion.div initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ delay: 0.3, type: 'spring', bounce: 0.5 }}
+                  style={{ background: `radial-gradient(circle at 30% 30%, ${scoreColor}18, ${scoreColor}05 70%)`, border: `1px solid ${scoreColor}20` }}>
+                  <div className="absolute inset-[2px] rounded-full bg-[#08080f]/90 backdrop-blur-sm" />
+                  {/* Score */}
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.4, type: 'spring', bounce: 0.5 }}
                     className="relative text-center">
-                    {/* Glitch score */}
                     <div className="relative">
-                      <span className="text-[28px] font-black tabular-nums leading-none" style={{ color: scoreColor }}>{adherenceScore}</span>
-                      <motion.span animate={{ clipPath: ['inset(0 0 65% 0)', 'inset(40% 0 0 0)', 'inset(0 0 65% 0)'] }} transition={{ duration: 3, repeat: Infinity, repeatDelay: 4 }}
-                        className="absolute inset-0 text-[28px] font-black tabular-nums leading-none opacity-50" style={{ color: scoreColor, transform: 'translateX(1px)' }}>{adherenceScore}</motion.span>
+                      <span className="text-[26px] font-black tabular-nums leading-none" style={{ color: scoreColor }}>{adherenceScore}</span>
+                      {/* Ghost duplicate for depth */}
+                      <motion.span animate={{ opacity: [0.15, 0.05, 0.15], y: [0, 1, 0] }} transition={{ duration: 3, repeat: Infinity }}
+                        className="absolute inset-0 text-[26px] font-black tabular-nums leading-none blur-[1px]" style={{ color: scoreColor }}>{adherenceScore}</motion.span>
                     </div>
-                    <div className="text-[6px] text-gray-500 uppercase tracking-[0.25em] font-bold">percent</div>
+                    <div className="text-[6px] text-gray-500 uppercase tracking-[0.3em] font-bold mt-0.5">score</div>
                   </motion.div>
                 </div>
+                {/* Particle ring */}
+                {[0, 60, 120, 180, 240, 300].map((deg, i) => (
+                  <motion.div key={i}
+                    animate={{ opacity: [0, 0.6, 0], scale: [0.5, 1, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity, delay: i * 0.3, ease: 'easeInOut' }}
+                    className="absolute w-1 h-1 rounded-full"
+                    style={{
+                      backgroundColor: `${scoreColor}80`,
+                      top: `${50 + 48 * Math.sin((deg * Math.PI) / 180)}%`,
+                      left: `${50 + 48 * Math.cos((deg * Math.PI) / 180)}%`,
+                      transform: 'translate(-50%, -50%)',
+                    }} />
+                ))}
               </div>
 
-              {/* Right: breakdown */}
-              <div className="flex-1 space-y-3">
-                {/* Status text */}
-                <div>
-                  <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}
-                    className="flex items-center gap-2 mb-1.5">
-                    <span className="text-[13px] font-bold text-white">{takenTodayCount} of {totalCount}</span>
-                    <span className="text-[10px] text-gray-500">supplements taken</span>
-                  </motion.div>
-                  {/* Progress bar */}
-                  <div className="h-[5px] bg-white/[0.04] rounded-full overflow-hidden">
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${adherenceScore}%` }} transition={{ duration: 1.4, ease: smooth }}
-                      className="h-full rounded-full relative" style={{ background: `linear-gradient(90deg, ${scoreColor}50, ${scoreColor})` }}>
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-                    </motion.div>
+              {/* ── Right: Data Panel ── */}
+              <div className="flex-1 flex flex-col justify-between min-w-0">
+                {/* Intake counter */}
+                <div className="mb-3">
+                  <div className="flex items-baseline gap-2 mb-2">
+                    <motion.span initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                      className="text-[32px] font-black tabular-nums leading-none" style={{ color: scoreColor }}>{takenTodayCount}</motion.span>
+                    <span className="text-[14px] font-bold text-gray-600">/ {totalCount}</span>
+                    <span className="text-[10px] text-gray-500 ml-1">intake</span>
+                  </div>
+                  {/* Segmented bar */}
+                  <div className="flex gap-[3px]">
+                    {scheduleToday.map((s, i) => {
+                      const taken = takenTodayIds.has(s.id)
+                      return (
+                        <motion.div key={s.id} initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ delay: 0.4 + i * 0.05 }}
+                          className="flex-1 h-[6px] rounded-full origin-left transition-all duration-500"
+                          style={{ backgroundColor: taken ? `${scoreColor}` : 'rgba(255,255,255,0.04)', opacity: taken ? 0.9 : 1 }} />
+                      )
+                    })}
                   </div>
                 </div>
 
-                {/* Cell grid - like a status matrix */}
-                <div className="grid grid-cols-7 gap-1">
-                  {scheduleToday.map((s, i) => {
-                    const taken = takenTodayIds.has(s.id)
-                    return (
-                      <motion.button key={s.id} initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.5 + i * 0.04, ...spring }}
-                        onClick={() => markAsTaken(s)} disabled={taken}
-                        className={cn('h-6 rounded-[4px] border transition-all duration-300 cursor-pointer',
-                          taken ? 'border-emerald-500/20' : 'border-white/[0.04] hover:border-white/15'
-                        )}
-                        style={{ backgroundColor: taken ? `${scoreColor}15` : 'rgba(255,255,255,0.02)' }}
-                        title={s.name}>
-                        {taken && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-full h-full flex items-center justify-center"><Check className="w-2.5 h-2.5" style={{ color: scoreColor }} /></motion.div>}
-                      </motion.button>
-                    )
-                  })}
-                </div>
-
-                {/* Stats row */}
-                <div className="flex gap-1.5">
+                {/* Status matrix */}
+                <div className="grid grid-cols-3 gap-2 mb-3">
                   {[
-                    { icon: Check, val: takenTodayCount, label: 'done', color: '#10b981' },
-                    { icon: Target, val: remainingCount, label: 'left', color: '#f59e0b' },
-                    { icon: DollarSign, val: `$${monthlyCost.toFixed(0)}/mo`, label: 'cost', color: '#a78bfa' },
+                    { label: 'Remaining', val: remainingCount, color: '#f59e0b', icon: Target },
+                    { label: 'Streak', val: `${suppStreak}d`, color: '#f97316', icon: Flame },
+                    { label: 'Monthly', val: `$${monthlyCost.toFixed(0)}`, color: '#a78bfa', icon: DollarSign },
                   ].map((s, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 + i * 0.05 }}
-                      className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/[0.02] border border-white/[0.04]">
-                      <s.icon className="w-2.5 h-2.5" style={{ color: s.color }} />
-                      <span className="text-[9px] font-bold text-white tabular-nums">{s.val}</span>
+                    <motion.div key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 + i * 0.06 }}
+                      className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-2.5">
+                      <s.icon className="w-3 h-3 mb-1.5" style={{ color: s.color }} />
+                      <div className="text-[13px] font-black text-white tabular-nums leading-none">{s.val}</div>
+                      <div className="text-[7px] text-gray-500 uppercase tracking-[0.15em] font-bold mt-1">{s.label}</div>
                     </motion.div>
                   ))}
+                </div>
+
+                {/* EKG sparkline */}
+                <div className="h-8 overflow-hidden rounded-lg bg-white/[0.015] border border-white/[0.03] px-2">
+                  <svg viewBox="0 0 200 30" className="w-full h-full" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="sparkGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor={scoreColor} stopOpacity="0" />
+                        <stop offset="20%" stopColor={scoreColor} stopOpacity="0.6" />
+                        <stop offset="80%" stopColor={scoreColor} stopOpacity="0.6" />
+                        <stop offset="100%" stopColor={scoreColor} stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <motion.path
+                      d="M0,15 L20,15 L25,15 L30,8 L33,22 L36,5 L39,25 L42,15 L55,15 L80,15 L85,15 L90,9 L93,21 L96,6 L99,24 L102,15 L115,15 L140,15 L145,15 L150,10 L153,20 L156,7 L159,23 L162,15 L180,15 L200,15"
+                      fill="none" stroke="url(#sparkGrad)" strokeWidth="1.2" strokeLinecap="round"
+                      initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 2, delay: 0.6, ease: smooth }} />
+                  </svg>
                 </div>
               </div>
             </div>
 
-            {/* ── Taking Today: pill tags ── */}
-            <div>
-              <div className="flex items-center gap-2 mb-2.5">
-                <div className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: scoreColor }} />
-                <p className="text-[9px] text-gray-500 uppercase tracking-[0.2em] font-bold">Taking today</p>
-                <div className="flex-1 h-px bg-white/[0.04]" />
+            {/* ═══ ROW 3: Taking Today ═══ */}
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-1 h-1 rounded-full" style={{ backgroundColor: scoreColor, boxShadow: `0 0 4px ${scoreColor}` }} />
+                <p className="text-[8px] text-gray-500 uppercase tracking-[0.25em] font-bold">Active compounds</p>
+                <div className="flex-1 h-px bg-white/[0.03]" />
+                <span className="text-[8px] font-bold tabular-nums" style={{ color: `${scoreColor}80` }}>{takenTodayCount}/{scheduleToday.length}</span>
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-[5px]">
                 {scheduleToday.map((s, i) => {
                   const taken = takenTodayIds.has(s.id)
                   return (
-                    <motion.button key={s.id} initial={{ opacity: 0, scale: 0.8, y: 6 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-                      transition={{ delay: 0.2 + i * 0.03, ...spring }}
+                    <motion.button key={s.id} initial={{ opacity: 0, y: 8, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ delay: 0.3 + i * 0.03, type: 'spring', bounce: 0.4 }}
                       onClick={() => markAsTaken(s)} disabled={taken}
                       className={cn(
-                        'group relative inline-flex items-center gap-1.5 px-3 py-[7px] rounded-full text-[10px] font-bold border transition-all duration-300',
+                        'group relative inline-flex items-center gap-[5px] px-3 py-[6px] rounded-full text-[10px] font-bold border transition-all duration-300',
                         taken
-                          ? 'bg-emerald-500/[0.06] border-emerald-500/12 text-emerald-400/70'
-                          : 'bg-white/[0.02] border-white/[0.05] text-gray-400 hover:text-white hover:border-white/15 hover:bg-white/[0.05]'
+                          ? 'border-emerald-500/12 text-emerald-400/70 bg-emerald-500/[0.04]'
+                          : 'border-white/[0.05] text-gray-500 hover:text-white hover:border-white/15 hover:bg-white/[0.04]'
                       )}>
-                      {/* Glow on hover */}
-                      {!taken && <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ boxShadow: `0 0 12px ${scoreColor}10` }} />}
-                      <span className={cn('w-1.5 h-1.5 rounded-full shrink-0 transition-colors', taken ? 'bg-emerald-400' : 'bg-gray-600 group-hover:bg-gray-400')} />
-                      {taken && <Check className="w-2.5 h-2.5 text-emerald-400/60" />}
-                      <span className={taken ? 'line-through opacity-60' : ''}>{s.name}</span>
+                      {/* Pulse dot */}
+                      {!taken && (
+                        <span className="relative flex h-1.5 w-1.5 shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gray-500 opacity-40" />
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-gray-500" />
+                        </span>
+                      )}
+                      {taken && <Check className="w-2.5 h-2.5 text-emerald-400/50 shrink-0" />}
+                      <span className={cn(taken && 'line-through opacity-50')}>{s.name}</span>
+                      {/* Hover glow */}
+                      {!taken && <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" style={{ boxShadow: `0 0 16px ${scoreColor}08` }} />}
                     </motion.button>
                   )
                 })}
               </div>
             </div>
-          </div>
-
-          {/* ── Bottom: Wave decoration ── */}
-          <div className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none overflow-hidden">
-            <svg viewBox="0 0 400 20" className="w-full h-full" preserveAspectRatio="none">
-              <motion.path d="M0,10 Q50,0 100,10 T200,10 T300,10 T400,10 L400,20 L0,20 Z"
-                animate={{ d: ['M0,10 Q50,0 100,10 T200,10 T300,10 T400,10 L400,20 L0,20 Z', 'M0,10 Q50,20 100,10 T200,10 T300,10 T400,10 L400,20 L0,20 Z', 'M0,10 Q50,0 100,10 T200,10 T300,10 T400,10 L400,20 L0,20 Z'] }}
-                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                fill={`${scoreColor}08`} />
-            </svg>
           </div>
         </motion.div>
       )}
@@ -518,15 +536,29 @@ export function SupplementTracker() {
 
                     {/* Action */}
                     {!taken ? (
-                      <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.9 }}
-                        onClick={() => markAsTaken(s)}
-                        className="shrink-0 h-8 px-4 rounded-lg bg-emerald-500 text-black text-[10px] font-extrabold uppercase tracking-wider opacity-0 group-hover:opacity-100 shadow-lg shadow-emerald-500/20 transition-all duration-200">
-                        Take
-                      </motion.button>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.9 }}
+                          onClick={() => markAsTaken(s)}
+                          className="h-8 px-4 rounded-lg bg-emerald-500 text-black text-[10px] font-extrabold uppercase tracking-wider opacity-0 group-hover:opacity-100 shadow-lg shadow-emerald-500/20 transition-all duration-200">
+                          Take
+                        </motion.button>
+                        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                          onClick={() => deleteFromSchedule(s)}
+                          className="h-8 w-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 hover:bg-red-500/[0.08] hover:border-red-500/15 transition-all duration-200">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </motion.button>
+                      </div>
                     ) : (
-                      <div className="shrink-0 h-7 px-2.5 rounded-lg bg-emerald-500/8 border border-emerald-500/15 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                        <span className="text-[9px] font-bold text-emerald-400 uppercase">Done</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="h-7 px-2.5 rounded-lg bg-emerald-500/8 border border-emerald-500/15 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          <span className="text-[9px] font-bold text-emerald-400 uppercase">Done</span>
+                        </div>
+                        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                          onClick={() => deleteFromSchedule(s)}
+                          className="h-7 w-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 hover:bg-red-500/[0.08] transition-all duration-200">
+                          <Trash2 className="w-3 h-3" />
+                        </motion.button>
                       </div>
                     )}
                   </motion.div>
@@ -928,6 +960,28 @@ export function SupplementTracker() {
                 </div>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── UNDO TOAST ─── */}
+      <AnimatePresence>
+        {deletedSupp && (
+          <motion.div initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ type: 'spring', bounce: 0.3 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#14141f] border border-white/[0.08] shadow-2xl shadow-black/60 backdrop-blur-xl">
+            <div className="w-8 h-8 rounded-xl bg-red-500/10 border border-red-500/15 flex items-center justify-center shrink-0">
+              <Trash2 className="w-4 h-4 text-red-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-white truncate">{deletedSupp.supp.name}</p>
+              <p className="text-[9px] text-gray-500">Removed from supplements</p>
+            </div>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              onClick={undoDelete}
+              className="shrink-0 px-3 py-1.5 rounded-xl bg-violet-500/15 border border-violet-500/20 text-violet-300 text-[10px] font-bold hover:bg-violet-500/25 transition-all">
+              Undo
+            </motion.button>
           </motion.div>
         )}
       </AnimatePresence>
