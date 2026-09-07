@@ -232,7 +232,7 @@ export function SupplementTracker() {
       <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="flex items-end justify-between">
         <div>
           <h1 className="text-[28px] font-extrabold text-white tracking-tight leading-none">Supplements</h1>
-          <p className="text-[13px] text-gray-500 mt-1.5 font-medium">{totalCount} tracked \u00B7 {scheduleToday.length} today</p>
+          <p className="text-[13px] text-gray-500 mt-1.5 font-medium">{totalCount} tracked · {scheduleToday.length} today</p>
         </div>
         <div className="flex items-center gap-2">
           {totalCount > 0 && (
@@ -294,7 +294,7 @@ export function SupplementTracker() {
                 </div>
                 <div>
                   <h2 className="text-[15px] font-black text-white tracking-tight leading-none">Wellness<span style={{ color: scoreColor }}>Pulse</span></h2>
-                  <p className="text-[9px] text-gray-500 mt-0.5">{totalCount} supplement{totalCount !== 1 ? 's' : ''} tracked \u00B7 {takenTodayCount} taken today</p>
+                  <p className="text-[9px] text-gray-500 mt-0.5">{totalCount} supplement{totalCount !== 1 ? 's' : ''} tracked · {takenTodayCount} taken today</p>
                 </div>
               </div>
               {/* Status cluster */}
@@ -380,19 +380,21 @@ export function SupplementTracker() {
                     <motion.span initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
                       className="text-[32px] font-black tabular-nums leading-none" style={{ color: scoreColor }}>{takenTodayCount}</motion.span>
                     <span className="text-[14px] font-bold text-gray-600">/ {totalCount}</span>
-                    <span className="text-[10px] text-gray-500 ml-1">intake</span>
+                    <span className="text-[10px] text-gray-500 ml-1">taken</span>
                   </div>
                   {/* Segmented bar */}
-                  <div className="flex gap-[3px]">
-                    {scheduleToday.map((s, i) => {
-                      const taken = takenTodayIds.has(s.id)
-                      return (
+                  {scheduleToday.length > 0 && (
+                    <div className="flex gap-[3px]">
+                      {scheduleToday.map((s, i) => {
+                        const taken = takenTodayIds.has(s.id)
+                        return (
                         <motion.div key={s.id} initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ delay: 0.4 + i * 0.05 }}
                           className="flex-1 h-[6px] rounded-full origin-left transition-all duration-500"
                           style={{ backgroundColor: taken ? `${scoreColor}` : 'rgba(255,255,255,0.04)', opacity: taken ? 0.9 : 1 }} />
                       )
                     })}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Status matrix */}
@@ -559,7 +561,7 @@ export function SupplementTracker() {
                               <div className="flex items-center gap-1 mt-0.5">
                                 <span className="text-[10px] text-gray-500">{s.dosage}</span>
                                 {s.cost && s.totalServings && (
-                                  <span className="text-[9px] text-violet-400/50">\u00B7 ${(s.cost / s.totalServings).toFixed(2)}/serving</span>
+                                  <span className="text-[9px] text-violet-400/50">· ${(s.cost / s.totalServings).toFixed(2)}/serving</span>
                                 )}
                               </div>
                             </div>
@@ -625,7 +627,7 @@ export function SupplementTracker() {
               <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4">
                 <div className="flex items-center gap-1.5 mb-3">
                   <TrendingUp className="w-3 h-3 text-violet-400" />
-                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Trend \u00B7 {trendPeriod}</span>
+                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Trend · {trendPeriod}</span>
                 </div>
                 <div className="h-24">
                   <ResponsiveContainer width="100%" height="100%">
