@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Pill, Plus, Check, Clock, AlertTriangle,
+  Pill, Plus, Check, AlertTriangle, Undo2,
   Trash2, Sunrise, Sunset, Moon, Sun, Sparkles, Target, Flame, Activity,
   DollarSign, Layers, CalendarCheck,
   Brain, ShieldCheck, ShieldAlert, Info, Zap, Package,
@@ -193,6 +193,11 @@ export function SupplementTracker() {
     setJustTaken(null)
   }
 
+  const undoTakeById = (suppId: string) => {
+    const logToRemove = logs.find(l => l.date === today && l.supplementId === suppId)
+    if (logToRemove) persistLogs(logs.filter(l => l.id !== logToRemove.id))
+  }
+
   const deleteFromSchedule = (supp: Supplement) => {
     persistSupplements(supplements.filter(s => s.id !== supp.id))
     persistLogs(logs.filter(l => l.supplementId !== supp.id))
@@ -218,7 +223,7 @@ export function SupplementTracker() {
   const timeOptions = TIMES_OF_DAY.map(t => ({ value: t, icon: TIME_ICONS[t] }))
   const adherenceScore = totalCount > 0 ? Math.round((takenTodayCount / totalCount) * 100) : 0
   const scoreColor = adherenceScore >= 80 ? '#10b981' : adherenceScore >= 50 ? '#f59e0b' : '#ef4444'
-  const timeOfDayNow = new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : new Date().getHours() < 21 ? 'Evening' : 'Night'
+
 
   return (
     <div className="space-y-5">
@@ -289,7 +294,7 @@ export function SupplementTracker() {
                 </div>
                 <div>
                   <h2 className="text-[15px] font-black text-white tracking-tight leading-none">Wellness<span style={{ color: scoreColor }}>Pulse</span></h2>
-                  <p className="text-[9px] text-gray-500 uppercase tracking-[0.2em] mt-0.5">{timeOfDayNow} \u00B7 {totalCount} active</p>
+                  <p className="text-[9px] text-gray-500 mt-0.5">{totalCount} supplement{totalCount !== 1 ? 's' : ''} tracked \u00B7 {takenTodayCount} taken today</p>
                 </div>
               </div>
               {/* Status cluster */}
@@ -485,10 +490,10 @@ export function SupplementTracker() {
                 </div>
                 <div>
                   <h3 className="text-[13px] font-bold text-white">Today's Schedule</h3>
-                  <p className="text-[10px] text-gray-500">{timeOfDayNow} \u00B7 {scheduleToday.length} supplement{scheduleToday.length !== 1 ? 's' : ''}</p>
+                  <p className="text-[10px] text-gray-500">{takenTodayCount} of {scheduleToday.length} taken</p>
                 </div>
               </div>
-              {/* Mini ring */}
+              {/* Progress ring */}
               <div className="relative w-9 h-9">
                 <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                   <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2.5" />
@@ -503,78 +508,73 @@ export function SupplementTracker() {
               </div>
             </div>
 
-            {/* Items */}
-            <div className="px-5 pb-5 space-y-2">
-              {scheduleToday.map((s, i) => {
-                const taken = takenTodayIds.has(s.id)
-                const TimeIcon = TIME_ICONS[s.times[0] as TimeOfDay] || Clock
-                const tod = (s.times[0] || 'Morning') as TimeOfDay
-                const tc = TIME_COLORS[tod]
+            {/* Grouped by time of day */}
+            <div className="px-5 pb-5 space-y-4">
+              {(TIMES_OF_DAY as readonly TimeOfDay[]).map(timeOfDay => {
+                const items = scheduleToday.filter(s => s.times[0] === timeOfDay)
+                if (items.length === 0) return null
+                const TimeIcon = TIME_ICONS[timeOfDay]
+                const tc = TIME_COLORS[timeOfDay]
+                const takenInGroup = items.filter(s => takenTodayIds.has(s.id)).length
+                const allTaken = takenInGroup === items.length
+
                 return (
-                  <motion.div key={s.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.03, duration: 0.35, ease: smooth }}
-                    className={`group relative flex items-center gap-3 rounded-[14px] border p-3 transition-all duration-300 ${
-                      taken ? 'bg-emerald-500/[0.04] border-emerald-500/10' : 'bg-white/[0.015] border-white/[0.04] hover:bg-white/[0.03] hover:border-white/[0.08]'
-                    }`}>
-                    {/* Icon */}
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 ${
-                      taken ? 'bg-emerald-500/10 border border-emerald-500/15' : `bg-gradient-to-br ${tc.bg} ${tc.border} border`
-                    }`}>
-                      {taken
-                        ? <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ ...spring }}><Check className="w-4 h-4 text-emerald-400" /></motion.div>
-                        : <TimeIcon className={`w-4 h-4 ${tc.icon}`} />}
+                  <div key={timeOfDay}>
+                    {/* Group header */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-5 h-5 rounded-md flex items-center justify-center bg-gradient-to-br ${tc.bg} border ${tc.border}`}>
+                        <TimeIcon className={`w-2.5 h-2.5 ${tc.icon}`} />
+                      </div>
+                      <span className={`text-[10px] font-bold uppercase tracking-[0.15em] ${allTaken ? 'text-emerald-400/60' : tc.text}`}>{timeOfDay}</span>
+                      <span className="text-[9px] text-gray-600 font-medium">{takenInGroup}/{items.length}</span>
+                      <div className="flex-1 h-px bg-white/[0.03]" />
+                      {allTaken && <CheckCircle2 className="w-3 h-3 text-emerald-400/40" />}
                     </div>
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[13px] font-semibold truncate ${taken ? 'text-emerald-300' : 'text-white'}`}>{s.name}</span>
-                        {s.stack && <span className="text-[8px] font-bold text-violet-400 bg-violet-500/8 border border-violet-500/15 px-1.5 py-0.5 rounded-md uppercase tracking-widest">{s.stack}</span>}
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        <span className="text-[10px] text-gray-400 font-medium">{s.dosage}</span>
-                        <span className="text-[8px] text-gray-600">\u00B7</span>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${tc.text} bg-gradient-to-br ${tc.bg} border ${tc.border}`}>{s.times[0]}</span>
-                        {s.cost && s.totalServings && (
-                          <>
-                            <span className="text-[8px] text-gray-600">\u00B7</span>
-                            <span className="text-[9px] text-violet-400/70 font-medium">${(s.cost / s.totalServings).toFixed(2)}/serving</span>
-                          </>
-                        )}
-                        {s.notes && (
-                          <span className="text-[9px] text-gray-600 italic truncate max-w-[100px]">{s.notes}</span>
-                        )}
-                      </div>
-                    </div>
+                    {/* Items */}
+                    <div className="space-y-1.5">
+                      {items.map((s, i) => {
+                        const taken = takenTodayIds.has(s.id)
+                        return (
+                          <motion.div key={s.id} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.03, duration: 0.3, ease: smooth }}
+                            className={`group relative flex items-center gap-3 rounded-xl border p-2.5 transition-all duration-300 ${
+                              taken ? 'bg-emerald-500/[0.03] border-emerald-500/08' : 'bg-white/[0.01] border-white/[0.03] hover:bg-white/[0.025] hover:border-white/[0.06]'
+                            }`}>
+                            {/* Checkbox */}
+                            <button onClick={() => taken ? undoTakeById(s.id) : markAsTaken(s)}
+                              className={`shrink-0 w-6 h-6 rounded-lg border flex items-center justify-center transition-all duration-200 ${
+                                taken ? 'bg-emerald-500/15 border-emerald-500/20 hover:bg-red-500/15 hover:border-red-500/20 group/undo' : 'border-white/[0.08] hover:border-white/20 bg-white/[0.02]'
+                              }`}>
+                              {taken && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={spring}><Check className="w-3 h-3 text-emerald-400 group-hover/undo:hidden" /></motion.div>}
+                              {taken && <Undo2 className="w-3 h-3 text-red-400 hidden group-hover/undo:block" />}
+                            </button>
 
-                    {/* Action */}
-                    {!taken ? (
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.9 }}
-                          onClick={() => markAsTaken(s)}
-                          className="h-8 px-4 rounded-lg bg-emerald-500 text-black text-[10px] font-extrabold uppercase tracking-wider opacity-0 group-hover:opacity-100 shadow-lg shadow-emerald-500/20 transition-all duration-200">
-                          Take
-                        </motion.button>
-                        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                          onClick={() => deleteFromSchedule(s)}
-                          className="h-8 w-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 hover:bg-red-500/[0.08] hover:border-red-500/15 transition-all duration-200">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </motion.button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <div className="h-7 px-2.5 rounded-lg bg-emerald-500/8 border border-emerald-500/15 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                          <span className="text-[9px] font-bold text-emerald-400 uppercase">Done</span>
-                        </div>
-                        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                          onClick={() => deleteFromSchedule(s)}
-                          className="h-7 w-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 hover:bg-red-500/[0.08] transition-all duration-200">
-                          <Trash2 className="w-3 h-3" />
-                        </motion.button>
-                      </div>
-                    )}
-                  </motion.div>
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-[12px] font-semibold truncate ${taken ? 'text-emerald-300/70 line-through' : 'text-white'}`}>{s.name}</span>
+                                {s.stack && <span className="text-[7px] font-bold text-violet-400/70 bg-violet-500/[0.06] border border-violet-500/10 px-1 py-px rounded uppercase tracking-widest">{s.stack}</span>}
+                              </div>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <span className="text-[10px] text-gray-500">{s.dosage}</span>
+                                {s.cost && s.totalServings && (
+                                  <span className="text-[9px] text-violet-400/50">\u00B7 ${(s.cost / s.totalServings).toFixed(2)}/serving</span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Delete on hover */}
+                            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                              onClick={(e) => { e.stopPropagation(); deleteFromSchedule(s) }}
+                              className="shrink-0 w-6 h-6 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 hover:bg-red-500/[0.08] transition-all duration-200">
+                              <Trash2 className="w-3 h-3" />
+                            </motion.button>
+                          </motion.div>
+                        )
+                      })}
+                    </div>
+                  </div>
                 )
               })}
             </div>
