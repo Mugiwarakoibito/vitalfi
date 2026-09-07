@@ -5,10 +5,9 @@ import {
   Trash2, Sunrise, Sunset, Moon, Sun, Sparkles, Target, Flame, Activity,
   DollarSign, Layers, CalendarCheck,
   Brain, ShieldCheck, ShieldAlert, Info, Zap, Package,
-  CheckCircle2, Dumbbell, TrendingUp, BarChart3, ChevronDown,
-  ChevronLeft, ChevronRight, RotateCcw,
+  CheckCircle2, Dumbbell, BarChart3, ChevronDown,
 } from 'lucide-react'
-import { BarChart, Bar, AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { generateId, cn } from '@/lib/utils'
@@ -77,8 +76,6 @@ export function SupplementTracker() {
   const [activePanel, setActivePanel] = useState<'patterns' | 'coach' | null>(null)
   const [coachMode, setCoachMode] = useState<'insight' | 'refill' | 'stack' | 'timing' | 'cost'>('insight')
   const [showCoachModeDropdown, setShowCoachModeDropdown] = useState(false)
-  const [trendPeriod, setTrendPeriod] = useState<'7d' | '14d' | '30d'>('7d')
-  const [trendWeekOffset, setTrendWeekOffset] = useState(0)
   const [justTaken, setJustTaken] = useState<Supplement | null>(null)
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -100,18 +97,6 @@ export function SupplementTracker() {
   const takenTodayIds = useMemo(() => new Set(todayLogs.map((l) => l.supplementId)), [todayLogs])
   const takenTodayCount = takenTodayIds.size; const totalCount = supplements.length; const remainingCount = totalCount - takenTodayCount
   const dailySupps = useMemo(() => supplements.filter((s) => s.frequency === 'daily'), [supplements])
-
-  const adherenceTrend = useMemo(() => {
-    const days: { date: string; pct: number }[] = []; const now = new Date()
-    const period = trendPeriod === '7d' ? 7 : trendPeriod === '14d' ? 14 : 30
-    for (let i = period - 1; i >= 0; i--) {
-      const d = new Date(now); d.setDate(d.getDate() - i)
-      const dayLogs = logs.filter((l) => l.date === d.toISOString().split('T')[0])
-      const taken = new Set(dayLogs.map((l) => l.supplementId)).size; const total = dailySupps.length
-      days.push({ date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), pct: total > 0 ? Math.round((taken / total) * 100) : 0 })
-    }
-    return days
-  }, [logs, dailySupps, trendPeriod])
 
   const suppStreak = useMemo(() => {
     let streak = 0; const now = new Date()
@@ -174,43 +159,6 @@ export function SupplementTracker() {
       }))
       .sort((a, b) => b.perMonth - a.perMonth)
   }, [supplements])
-
-  // Week-offset-aware data for patterns panel
-  const weekOffsetData = useMemo(() => {
-    const now = new Date()
-    const start = new Date(now)
-    start.setDate(start.getDate() - start.getDay() + (trendWeekOffset * 7))
-    start.setHours(0, 0, 0, 0)
-    const end = new Date(start)
-    end.setDate(end.getDate() + 6)
-    end.setHours(23, 59, 59, 999)
-    const days: { date: string; dayName: string; fullDate: string; pct: number; taken: number; total: number }[] = []
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(start); d.setDate(d.getDate() + i)
-      const dateStr = d.toISOString().split('T')[0]
-      const dayLogs = logs.filter(l => l.date === dateStr)
-      const taken = new Set(dayLogs.map(l => l.supplementId)).size
-      const total = dailySupps.length
-      days.push({
-        date: d.toLocaleDateString('en-US', { weekday: 'short' }),
-        dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
-        fullDate: dateStr,
-        taken, total,
-        pct: total > 0 ? Math.round((taken / total) * 100) : 0,
-      })
-    }
-    const totalSlots = days.reduce((s, d) => s + d.total, 0)
-    const takenSlots = days.reduce((s, d) => s + d.taken, 0)
-    const weekPct = totalSlots > 0 ? Math.round((takenSlots / totalSlots) * 100) : 0
-    const pcts = days.map(d => d.pct)
-    const avg = pcts.reduce((s, p) => s + p, 0) / pcts.length
-    const variance = pcts.reduce((s, p) => s + Math.pow(p - avg, 2), 0) / pcts.length
-    const consistency = Math.max(0, Math.round(100 - Math.sqrt(variance)))
-    const sorted = [...days].sort((a, b) => b.pct - a.pct)
-    const label = `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-    const isCurrent = trendWeekOffset === 0
-    return { days, weekPct, consistency, best: sorted[0], worst: sorted[sorted.length - 1], label, isCurrent, start, end }
-  }, [logs, dailySupps, trendWeekOffset])
 
   const smartRecs = useMemo(() => {
     const total = scheduleToday.length; const taken = takenTodayCount
@@ -311,7 +259,38 @@ export function SupplementTracker() {
       {/* ─── PANELS ─── */}
       <AnimatePresence mode="wait">
         {/* ═══ WEEKLY PATTERNS ═══ */}
-        {activePanel === 'patterns' && totalCount > 0 && (
+        {activePanel === 'patterns' && totalCount > 0 && (() => {
+          const now = new Date()
+          const last30 = Array.from({ length: 30 }, (_, i) => {
+            const d = new Date(now); d.setDate(d.getDate() - (29 - i))
+            const dateStr = d.toISOString().split('T')[0]
+            const dayLogs = logs.filter(l => l.date === dateStr)
+            const taken = new Set(dayLogs.map(l => l.supplementId)).size
+            const total = dailySupps.length
+            const morning = dayLogs.filter(l => { const s = supplements.find(s => s.id === l.supplementId); return s?.times[0] === 'Morning' }).length
+            const afternoon = dayLogs.filter(l => { const s = supplements.find(s => s.id === l.supplementId); return s?.times[0] === 'Afternoon' }).length
+            const evening = dayLogs.filter(l => { const s = supplements.find(s => s.id === l.supplementId); return s?.times[0] === 'Evening' }).length
+            const night = dayLogs.filter(l => { const s = supplements.find(s => s.id === l.supplementId); return s?.times[0] === 'Night' }).length
+            return {
+              date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              day: d.toLocaleDateString('en-US', { weekday: 'short' }),
+              taken, total,
+              pct: total > 0 ? Math.round((taken / total) * 100) : 0,
+              morning, afternoon, evening, night,
+            }
+          })
+          const loggedDays = last30.filter(d => d.taken > 0).length
+          const totalTaken = last30.reduce((s, d) => s + d.taken, 0)
+          const totalSlots = last30.reduce((s, d) => s + d.total, 0)
+          const avgAdherence = totalSlots > 0 ? Math.round((totalTaken / totalSlots) * 100) : 0
+          let bestStreak = 0, currentStreak = 0
+          for (const d of last30) {
+            if (d.pct === 100) { currentStreak++; bestStreak = Math.max(bestStreak, currentStreak) }
+            else currentStreak = 0
+          }
+          const perfectDays = last30.filter(d => d.pct === 100).length
+          const missedDays = last30.filter(d => d.total > 0 && d.taken === 0).length
+          return (
           <motion.div key="patterns" initial={{ opacity: 0, y: -10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.98 }}
             transition={{ duration: 0.35, ease: smooth }}
             className="relative overflow-hidden rounded-[20px] border border-violet-500/10 bg-[#0c0c14] shadow-xl">
@@ -322,191 +301,92 @@ export function SupplementTracker() {
             <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/15 to-transparent" />
 
             <div className="relative p-5">
-              {/* Header with week nav */}
+              {/* Header */}
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/15 flex items-center justify-center">
                     <BarChart3 className="w-4 h-4 text-violet-400" />
                   </div>
                   <div>
-                    <h3 className="text-[13px] font-bold text-white">Weekly Patterns</h3>
-                    <p className="text-[10px] text-gray-500">{weekOffsetData.label}</p>
+                    <h3 className="text-[13px] font-bold text-white">30-Day Adherence</h3>
+                    <p className="text-[10px] text-gray-500">{loggedDays} days logged · {dailySupps.length} daily supplement{dailySupps.length !== 1 ? 's' : ''}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex items-center gap-0.5 bg-white/[0.03] rounded-lg p-0.5 border border-white/[0.05]">
-                    <button onClick={() => setTrendWeekOffset(o => o + 1)} className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-                      <ChevronLeft className="w-3.5 h-3.5" />
-                    </button>
-                    <button onClick={() => setTrendWeekOffset(o => o - 1)} className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                    {!weekOffsetData.isCurrent && (
-                      <button onClick={() => setTrendWeekOffset(0)} className="p-1.5 rounded-md bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
-                        <RotateCcw className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex gap-0.5 bg-white/[0.03] rounded-lg p-0.5 border border-white/[0.05]">
-                    {(['7d', '14d', '30d'] as const).map(p => (
-                      <button key={p} onClick={() => setTrendPeriod(p)}
-                        className={cn('px-2.5 py-1 rounded-md text-[10px] font-bold transition-all', trendPeriod === p ? 'bg-violet-500/15 text-violet-300' : 'text-gray-500 hover:text-white')}>{p}</button>
-                    ))}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#f97316]" /><span className="text-[8px] text-gray-500 font-bold">Morning</span></div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#8b5cf6]" /><span className="text-[8px] text-gray-500 font-bold">Afternoon</span></div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#06b6d4]" /><span className="text-[8px] text-gray-500 font-bold">Evening</span></div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#6366f1]" /><span className="text-[8px] text-gray-500 font-bold">Night</span></div>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-12 gap-4 mb-5">
-                {/* Consistency ring */}
-                <div className="col-span-3">
-                  <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
-                    className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-4 flex flex-col items-center justify-center h-full">
-                    <div className="relative w-20 h-20">
-                      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="6" />
-                        <circle cx="50" cy="50" r="42" fill="none"
-                          stroke={weekOffsetData.consistency >= 80 ? '#10b981' : weekOffsetData.consistency >= 50 ? '#f59e0b' : '#ef4444'}
-                          strokeWidth="6" strokeLinecap="round"
-                          strokeDasharray={`${weekOffsetData.consistency * 2.64} 264`}
-                          className="transition-all duration-1000" />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-[18px] font-black tabular-nums" style={{ color: weekOffsetData.consistency >= 80 ? '#10b981' : weekOffsetData.consistency >= 50 ? '#f59e0b' : '#ef4444' }}>{weekOffsetData.consistency}</span>
-                        <span className="text-[7px] text-gray-500 uppercase tracking-wider font-bold">score</span>
-                      </div>
-                    </div>
-                    <span className="text-[8px] text-gray-500 mt-2 font-bold uppercase tracking-wider">Consistency</span>
-                  </motion.div>
-                </div>
-
-                {/* Bar chart - daily adherence */}
-                <div className="col-span-5">
-                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-                    className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-4 h-full">
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <BarChart3 className="w-3 h-3 text-violet-400" />
-                      <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Daily adherence</span>
-                      <div className="flex-1" />
-                      <span className="text-[9px] font-bold text-violet-400 tabular-nums">{weekOffsetData.weekPct}% avg</span>
-                    </div>
-                    <div className="h-32">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={weekOffsetData.days} barSize={28}>
-                          <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 9, fontWeight: 700 }} axisLine={false} tickLine={false} />
-                          <YAxis hide domain={[0, 100]} />
-                          <Tooltip cursor={false}
-                            contentStyle={{ backgroundColor: 'rgba(10,10,15,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '8px 12px' }}
-                            itemStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
-                            labelStyle={{ color: '#6b7280', fontSize: 9 }}
-                            formatter={(v: number) => [`${v}%`, 'Adherence']} />
-                          <Bar dataKey="pct" radius={[6, 6, 2, 2]}>
-                            {weekOffsetData.days.map((d, i) => (
-                              <Cell key={i} fill={d.pct >= 80 ? 'rgba(16,185,129,0.5)' : d.pct >= 50 ? 'rgba(245,158,11,0.4)' : d.pct > 0 ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.05)'} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-white/[0.03]">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                        <span className="text-[8px] text-gray-500 font-bold">Best</span>
-                        <span className="text-[9px] text-emerald-300 font-bold">{weekOffsetData.best?.date || '-'}</span>
-                        <span className="text-[8px] text-emerald-400/50 font-bold">{weekOffsetData.best?.pct ?? 0}%</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                        <span className="text-[8px] text-gray-500 font-bold">Worst</span>
-                        <span className="text-[9px] text-red-300 font-bold">{weekOffsetData.worst?.date || '-'}</span>
-                        <span className="text-[8px] text-red-400/50 font-bold">{weekOffsetData.worst?.pct ?? 0}%</span>
-                      </div>
-                    </div>
-                  </motion.div>
-                </div>
-
-                {/* Radar - time of day */}
-                <div className="col-span-4">
-                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                    className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-4 h-full">
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <Clock className="w-3 h-3 text-cyan-400" />
-                      <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Time distribution</span>
-                    </div>
-                    <div className="h-32">
-                      {timingData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RadarChart data={timingData.map(([time, d]) => ({ time: time.slice(0, 3), count: d.total }))} cx="50%" cy="50%" outerRadius="70%">
-                            <PolarGrid stroke="rgba(255,255,255,0.04)" />
-                            <PolarAngleAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 9, fontWeight: 700 }} />
-                            <Radar dataKey="count" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.15} strokeWidth={1.5} />
-                          </RadarChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-[10px] text-gray-600">No data</div>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {timingData.map(([time, d]) => (
-                        <span key={time} className="text-[7px] font-bold text-cyan-400/70 bg-cyan-500/[0.06] border border-cyan-500/10 px-1.5 py-0.5 rounded">
-                          {time} · {d.total}
-                        </span>
-                      ))}
-                    </div>
-                  </motion.div>
-                </div>
-              </div>
-
-              {/* Area trend chart */}
-              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-                className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 mb-4">
-                <div className="flex items-center gap-1.5 mb-3">
-                  <TrendingUp className="w-3 h-3 text-violet-400" />
-                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Trend · {trendPeriod}</span>
-                  <div className="flex-1" />
-                  <span className="text-[9px] font-bold text-violet-400 tabular-nums">{weekOffsetData.weekPct}% avg</span>
-                </div>
-                <div className="h-36">
+              {/* Main chart */}
+              <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 mb-4">
+                <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={adherenceTrend}>
+                    <BarChart data={last30} barGap={1} barCategoryGap="15%">
                       <defs>
-                        <linearGradient id="violetGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                          <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+                        <linearGradient id="gradMorning" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#f97316" stopOpacity={0.8} />
+                          <stop offset="100%" stopColor="#f97316" stopOpacity={0.3} />
+                        </linearGradient>
+                        <linearGradient id="gradAfternoon" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.8} />
+                          <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                        </linearGradient>
+                        <linearGradient id="gradEvening" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.8} />
+                          <stop offset="100%" stopColor="#06b6d4" stopOpacity={0.3} />
+                        </linearGradient>
+                        <linearGradient id="gradNight" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#6366f1" stopOpacity={0.8} />
+                          <stop offset="100%" stopColor="#6366f1" stopOpacity={0.3} />
                         </linearGradient>
                       </defs>
-                      <XAxis dataKey="date" tick={{ fill: '#4b5563', fontSize: 8, fontWeight: 600 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                      <YAxis hide domain={[0, 100]} />
-                      <Tooltip cursor={{ stroke: 'rgba(139,92,246,0.2)', strokeWidth: 1 }}
-                        contentStyle={{ backgroundColor: 'rgba(10,10,15,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '8px 12px' }}
-                        itemStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
-                        labelStyle={{ color: '#6b7280', fontSize: 9 }}
-                        formatter={(v: number) => [`${v}%`, 'Adherence']}
-                        labelFormatter={(l, p) => p?.[0]?.payload?.date || l} />
-                      <Area type="monotone" dataKey="pct" stroke="#8b5cf6" strokeWidth={2} fill="url(#violetGradient)" dot={false} activeDot={{ r: 4, fill: '#8b5cf6', stroke: '#0a0a0f', strokeWidth: 2 }} />
-                    </AreaChart>
+                      <XAxis dataKey="day" tick={{ fill: '#4b5563', fontSize: 8, fontWeight: 600 }} axisLine={false} tickLine={false} interval={2} />
+                      <YAxis tick={{ fill: '#374151', fontSize: 8 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <Tooltip cursor={{ fill: 'rgba(139,92,246,0.05)' }}
+                        contentStyle={{ backgroundColor: 'rgba(10,10,15,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '10px 14px' }}
+                        labelStyle={{ color: '#9ca3af', fontSize: 10, fontWeight: 700, marginBottom: 4 }}
+                        itemStyle={{ color: '#fff', fontSize: 10, fontWeight: 600, padding: '1px 0' }}
+                        labelFormatter={(_, p) => p?.[0]?.payload ? `${p[0].payload.date} · ${p[0].payload.pct}%` : ''}
+                        formatter={(v: number, name: string) => [v, name.charAt(0).toUpperCase() + name.slice(1)]} />
+                      <Bar dataKey="morning" stackId="a" fill="url(#gradMorning)" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="afternoon" stackId="a" fill="url(#gradAfternoon)" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="evening" stackId="a" fill="url(#gradEvening)" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="night" stackId="a" fill="url(#gradNight)" radius={[3, 3, 0, 0]} />
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
-              </motion.div>
+              </div>
 
-              {/* Stats row */}
-              <div className="grid grid-cols-4 gap-2">
+              {/* Data cards */}
+              <div className="grid grid-cols-5 gap-2">
                 {[
-                  { icon: Flame, color: 'text-orange-400', bg: 'bg-orange-500/[0.06]', border: 'border-orange-500/10', label: 'Streak', val: `${suppStreak}d` },
-                  { icon: Activity, color: 'text-violet-400', bg: 'bg-violet-500/[0.06]', border: 'border-violet-500/10', label: 'Week Avg', val: `${weekOffsetData.weekPct}%` },
-                  { icon: Pill, color: 'text-cyan-400', bg: 'bg-cyan-500/[0.06]', border: 'border-cyan-500/10', label: 'Daily', val: `${dailySupps.length}` },
-                  { icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/[0.06]', border: 'border-emerald-500/10', label: 'Score', val: `${weekOffsetData.consistency}%` },
+                  { label: 'Tracked', value: `${loggedDays}`, sub: 'of 30 days', color: '#8b5cf6', icon: CalendarCheck },
+                  { label: 'Adherence', value: `${avgAdherence}%`, sub: 'avg daily', color: avgAdherence >= 80 ? '#10b981' : avgAdherence >= 50 ? '#f59e0b' : '#ef4444', icon: Target },
+                  { label: 'Streak', value: `${bestStreak}d`, sub: 'best run', color: '#f97316', icon: Flame },
+                  { label: 'Perfect', value: `${perfectDays}`, sub: '100% days', color: '#06b6d4', icon: CheckCircle2 },
+                  { label: 'Missed', value: `${missedDays}`, sub: 'zero days', color: missedDays > 5 ? '#ef4444' : '#6b7280', icon: AlertTriangle },
                 ].map((c, i) => (
-                  <motion.div key={c.label} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.04 }}
-                    className={`flex flex-col items-center gap-1 ${c.bg} border ${c.border} rounded-xl p-2.5`}>
-                    <c.icon className={`w-3.5 h-3.5 ${c.color}`} />
-                    <span className="text-[12px] font-black text-white tabular-nums">{c.val}</span>
-                    <span className="text-[7px] text-gray-500 uppercase tracking-wider font-bold">{c.label}</span>
+                  <motion.div key={c.label} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}
+                    className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-3 text-center relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-[0.03]" style={{ background: `radial-gradient(circle at center, ${c.color}, transparent 70%)` }} />
+                    <div className="relative">
+                      <c.icon className="w-3.5 h-3.5 mx-auto mb-1.5" style={{ color: c.color }} />
+                      <div className="text-[16px] font-black text-white tabular-nums leading-none">{c.value}</div>
+                      <div className="text-[7px] text-gray-500 uppercase tracking-wider font-bold mt-1">{c.label}</div>
+                      <div className="text-[7px] text-gray-600 mt-0.5">{c.sub}</div>
+                    </div>
                   </motion.div>
                 ))}
               </div>
             </div>
           </motion.div>
-        )}
+          )
+        })()}
 
         {/* ═══ AI COACH ═══ */}
         {activePanel === 'coach' && (
