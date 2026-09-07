@@ -13,13 +13,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label className="mb-1.5 block text-sm font-medium text-muted">
+          <label className="mb-2 block text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em]">
             {label}
           </label>
         )}
         <div className="relative">
           {icon && (
-            <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none" style={{ color: '#A78BFA', zIndex: 50 }}>
+            <div className="absolute left-3.5 top-0 bottom-0 flex items-center pointer-events-none" style={{ color: '#A78BFA', zIndex: 50 }}>
               {icon}
             </div>
           )}
@@ -27,7 +27,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             className={cn(
               'glass-input w-full',
-              icon && 'pl-9',
+              icon && 'pl-11',
               error && 'border-error/50 focus:border-error/70',
               className
             )}
