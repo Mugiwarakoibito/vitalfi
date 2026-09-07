@@ -257,144 +257,291 @@ export function SupplementTracker() {
         </div>
       </motion.div>
 
-      {/* Hero Ring */}
+      {/* Hero Ring — Premium */}
       {totalCount > 0 && (
-        <motion.div {...fadeUp} transition={{ duration: 0.5, delay: 0.1 }}
-          className="relative overflow-hidden rounded-[28px] border border-white/[0.08] bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 backdrop-blur-2xl p-7 shadow-2xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.03] via-transparent to-cyan-500/[0.03] pointer-events-none" />
-          <div className="absolute -top-32 -right-32 w-64 h-64 bg-violet-500/[0.06] rounded-full blur-[80px] pointer-events-none" />
-          <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-cyan-500/[0.06] rounded-full blur-[80px] pointer-events-none" />
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-px bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
-          <div className="relative flex items-center gap-8">
-            {/* SVG Ring */}
-            <div className={`relative w-36 h-36 shrink-0 ${scoreGlow} rounded-full`}>
-              <div className="absolute inset-1 rounded-full bg-gradient-to-br from-white/[0.03] to-transparent" />
-              <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90 relative z-10">
-                <defs>
-                  <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor={scoreColor} stopOpacity="0.4" />
-                    <stop offset="50%" stopColor={scoreColor} stopOpacity="0.8" />
-                    <stop offset="100%" stopColor={scoreColor} stopOpacity="1" />
-                  </linearGradient>
-                  <filter id="ringGlow">
-                    <feGaussianBlur stdDeviation="4" result="blur" />
-                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                  </filter>
-                </defs>
-                <circle cx="60" cy="60" r="54" fill="transparent" stroke="rgba(255,255,255,0.04)" strokeWidth="6" />
-                <motion.circle cx="60" cy="60" r="54" fill="transparent"
-                  stroke="url(#ringGrad)" strokeWidth="6" strokeLinecap="round"
-                  strokeDasharray={circumference}
-                  initial={{ strokeDashoffset: circumference }}
-                  animate={{ strokeDashoffset }}
-                  transition={{ duration: 1.8, ease: [0.16, 1, 0.3, 1] }}
-                  filter="url(#ringGlow)" />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-                <motion.span initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4, duration: 0.6, type: 'spring' }}
-                  className="text-5xl font-black text-white drop-shadow-2xl">{adherenceScore}</motion.span>
-                <span className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-semibold mt-0.5">percent</span>
+        <motion.div {...fadeUp} transition={{ duration: 0.6, delay: 0.1 }}
+          className="relative overflow-hidden rounded-[32px] border border-white/[0.07] bg-gradient-to-br from-[#0a0a0f] via-[#0d0d15] to-[#0a0a0f] shadow-[0_8px_60px_-12px_rgba(0,0,0,0.8)]">
+
+          {/* Ambient orbs */}
+          <div className="absolute -top-40 -right-40 w-[500px] h-[500px] bg-violet-600/[0.07] rounded-full blur-[120px] pointer-events-none" />
+          <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] bg-cyan-600/[0.05] rounded-full blur-[120px] pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-600/[0.03] rounded-full blur-[150px] pointer-events-none" />
+
+          {/* Top accent line */}
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent" />
+
+          {/* Noise texture overlay */}
+          <div className="absolute inset-0 opacity-[0.015] pointer-events-none" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\' opacity=\'1\'/%3E%3C/svg%3E")' }} />
+
+          <div className="relative p-8 pb-7">
+            <div className="flex items-center gap-10">
+
+              {/* SVG Ring — Premium */}
+              <div className="relative shrink-0">
+                {/* Outer glow ring */}
+                <div className={`absolute -inset-4 rounded-full ${scoreGlow} blur-2xl opacity-60`} />
+
+                {/* Animated orbiting dots */}
+                <div className="absolute -inset-6">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                    className="w-full h-full relative">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white/20 blur-[1px]" />
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white/10 blur-[1px]" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-white/15 blur-[1px]" />
+                  </motion.div>
+                </div>
+
+                {/* Main ring container */}
+                <div className="relative w-40 h-40">
+                  {/* Background glass disc */}
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/[0.04] via-white/[0.01] to-transparent border border-white/[0.05]" />
+                  <div className="absolute inset-[3px] rounded-full bg-gradient-to-br from-[#0a0a0f] via-[#0d0d15] to-[#0a0a0f]" />
+
+                  <svg viewBox="0 0 120 120" className="absolute inset-0 w-full h-full -rotate-90 z-10">
+                    <defs>
+                      <linearGradient id="ringGradOuter" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor={scoreColor} stopOpacity="0.2" />
+                        <stop offset="100%" stopColor={scoreColor} stopOpacity="0.05" />
+                      </linearGradient>
+                      <linearGradient id="ringGradMain" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor={scoreColor} stopOpacity="0.5" />
+                        <stop offset="40%" stopColor={scoreColor} stopOpacity="0.9" />
+                        <stop offset="100%" stopColor={scoreColor} stopOpacity="1" />
+                      </linearGradient>
+                      <filter id="ringGlowHeavy">
+                        <feGaussianBlur stdDeviation="5" result="blur1" />
+                        <feGaussianBlur stdDeviation="2" result="blur2" />
+                        <feMerge>
+                          <feMergeNode in="blur1" />
+                          <feMergeNode in="blur2" />
+                          <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                      </filter>
+                      <filter id="innerShadow">
+                        <feGaussianBlur stdDeviation="2" result="blur" />
+                        <feOffset dx="0" dy="1" />
+                        <feComposite in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" />
+                        <feFlood floodColor={scoreColor} floodOpacity="0.15" />
+                        <feComposite in2="SourceAlpha" operator="in" />
+                        <feMerge>
+                          <feMergeNode in="SourceGraphic" />
+                          <feMergeNode />
+                        </feMerge>
+                      </filter>
+                    </defs>
+                    {/* Track — outer subtle ring */}
+                    <circle cx="60" cy="60" r="54" fill="transparent" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+                    {/* Track — main ring background */}
+                    <circle cx="60" cy="60" r="54" fill="transparent" stroke="rgba(255,255,255,0.04)" strokeWidth="7" />
+                    {/* Animated progress */}
+                    <motion.circle cx="60" cy="60" r="54" fill="transparent"
+                      stroke="url(#ringGradMain)" strokeWidth="7" strokeLinecap="round"
+                      strokeDasharray={circumference}
+                      initial={{ strokeDashoffset: circumference }}
+                      animate={{ strokeDashoffset }}
+                      transition={{ duration: 2, ease: [0.16, 1, 0.3, 1] }}
+                      filter="url(#ringGlowHeavy)" />
+                    {/* Tick marks */}
+                    {[...Array(60)].map((_, i) => {
+                      const angle = (i * 6) * (Math.PI / 180)
+                      const isMajor = i % 5 === 0
+                      const r1 = isMajor ? 47 : 48.5
+                      const r2 = 46
+                      return (
+                        <line key={i}
+                          x1={60 + r1 * Math.cos(angle - Math.PI / 2)}
+                          y1={60 + r1 * Math.sin(angle - Math.PI / 2)}
+                          x2={60 + r2 * Math.cos(angle - Math.PI / 2)}
+                          y2={60 + r2 * Math.sin(angle - Math.PI / 2)}
+                          stroke={isMajor ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)'}
+                          strokeWidth={isMajor ? 1 : 0.5}
+                        />
+                      )
+                    })}
+                    {/* Endpoint glow dot */}
+                    {adherenceScore > 0 && (
+                      <circle
+                        cx={60 + 54 * Math.cos(((adherenceScore / 100) * 360 - 90) * (Math.PI / 180))}
+                        cy={60 + 54 * Math.sin(((adherenceScore / 100) * 360 - 90) * (Math.PI / 180))}
+                        r="3" fill={scoreColor} filter="url(#ringGlowHeavy)" opacity="0.9"
+                      />
+                    )}
+                  </svg>
+
+                  {/* Center content */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+                    <motion.div initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, duration: 0.8, type: 'spring', bounce: 0.3 }}>
+                      <span className="text-5xl font-black text-white tabular-nums" style={{ textShadow: `0 0 40px ${scoreColor}40` }}>{adherenceScore}</span>
+                    </motion.div>
+                    <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, duration: 0.5 }}>
+                      <span className="text-[10px] text-gray-500 uppercase tracking-[0.25em] font-semibold">percent</span>
+                    </motion.div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats Grid — Premium */}
+              <div className="flex-1 grid grid-cols-2 gap-3.5">
+                {[
+                  { icon: Check, label: 'Taken', value: takenTodayCount, sub: `of ${totalCount} today`, color: 'emerald', gradient: 'from-emerald-500 to-emerald-400', delay: 0.2 },
+                  { icon: Target, label: 'Left', value: remainingCount, sub: 'remaining', color: 'amber', gradient: 'from-amber-500 to-amber-400', delay: 0.25 },
+                  { icon: Flame, label: 'Streak', value: suppStreak, sub: 'perfect days', color: 'orange', gradient: 'from-orange-500 to-orange-400', delay: 0.3, suffix: 'd' },
+                  { icon: DollarSign, label: 'Cost', value: `$${monthlyCost.toFixed(0)}`, sub: 'per month', color: 'violet', gradient: 'from-violet-500 to-violet-400', delay: 0.35 },
+                ].map((stat) => (
+                  <motion.div key={stat.label} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: stat.delay, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                    className="group relative rounded-[20px] overflow-hidden cursor-default">
+                    {/* Card background */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.06] rounded-[20px]" />
+                    <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[20px] pointer-events-none"
+                      style={{ background: `radial-gradient(circle at 30% 20%, ${stat.color === 'emerald' ? 'rgba(16,185,129,0.08)' : stat.color === 'amber' ? 'rgba(245,158,11,0.08)' : stat.color === 'orange' ? 'rgba(249,115,22,0.08)' : 'rgba(139,92,246,0.08)'} 0%, transparent 70%)` }} />
+                    <div className="relative p-4.5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={`p-1.5 rounded-xl bg-gradient-to-br from-${stat.color}-500/15 to-${stat.color}-500/5`}>
+                          <stat.icon className={`w-3.5 h-3.5 text-${stat.color}-400`} />
+                        </div>
+                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.18em]">{stat.label}</span>
+                      </div>
+                      <p className={`text-[32px] leading-none font-black text-${stat.color}-300 tabular-nums`}>
+                        {stat.value}{stat.suffix && <span className="text-sm font-semibold text-gray-500 ml-0.5">{stat.suffix}</span>}
+                      </p>
+                      <p className="text-[10px] text-gray-600 mt-1.5">{stat.sub}</p>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
             </div>
-            {/* Stats Grid */}
-            <div className="flex-1 grid grid-cols-2 gap-3">
-              {[
-                { icon: Check, label: 'Taken', value: takenTodayCount, sub: `of ${totalCount} today`, color: 'emerald', delay: 0.15 },
-                { icon: Target, label: 'Left', value: remainingCount, sub: 'remaining', color: 'amber', delay: 0.2 },
-                { icon: Flame, label: 'Streak', value: suppStreak, sub: 'perfect days', color: 'orange', delay: 0.25, suffix: 'd' },
-                { icon: DollarSign, label: 'Cost', value: `$${monthlyCost.toFixed(0)}`, sub: 'per month', color: 'violet', delay: 0.3 },
-              ].map((stat) => (
-                <motion.div key={stat.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: stat.delay, duration: 0.4 }}
-                  className={`group relative rounded-2xl bg-gradient-to-br from-white/[0.03] to-white/[0.01] border border-white/[0.06] p-4 hover:from-white/[0.05] hover:to-white/[0.03] hover:border-white/[0.12] transition-all duration-300 cursor-default`}>
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                    style={{ background: `radial-gradient(circle at 50% 0%, var(--tw-gradient-stops))` }} />
-                  <div className="flex items-center gap-1.5 mb-2.5">
-                    <div className={`p-1 rounded-lg bg-${stat.color}-500/10`}>
-                      <stat.icon className={`w-3 h-3 text-${stat.color}-400`} />
-                    </div>
-                    <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.15em]">{stat.label}</span>
-                  </div>
-                  <p className={`text-3xl font-black text-${stat.color}-300`}>{stat.value}{stat.suffix && <span className="text-sm font-medium text-gray-500 ml-0.5">{stat.suffix}</span>}</p>
-                  <p className="text-[10px] text-gray-600 mt-1">{stat.sub}</p>
+
+            {/* Adherence bar — Premium */}
+            <div className="mt-7">
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: scoreColor, boxShadow: `0 0 8px ${scoreColor}80` }} />
+                  <span className="text-[10px] text-gray-500 uppercase tracking-[0.18em] font-semibold">Daily Progress</span>
+                </div>
+                <span className="text-sm font-black tabular-nums" style={{ color: scoreColor }}>{adherenceScore}%</span>
+              </div>
+              <div className="relative h-3 bg-white/[0.04] rounded-full overflow-hidden border border-white/[0.04]">
+                <motion.div initial={{ width: 0 }} animate={{ width: `${adherenceScore}%` }} transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
+                  className="h-full rounded-full relative overflow-hidden"
+                  style={{ background: `linear-gradient(90deg, ${scoreColor}50, ${scoreColor}90, ${scoreColor})` }}>
+                  {/* Shimmer */}
+                  <motion.div animate={{ x: ['-100%', '200%'] }} transition={{ duration: 2, repeat: Infinity, repeatDelay: 3, ease: 'easeInOut' }}
+                    className="absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg]" />
+                  {/* Glow */}
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full blur-sm" style={{ backgroundColor: scoreColor, boxShadow: `0 0 12px ${scoreColor}` }} />
                 </motion.div>
-              ))}
-            </div>
-          </div>
-          {/* Adherence bar */}
-          <div className="mt-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] text-gray-500 uppercase tracking-[0.15em] font-semibold">Daily Progress</span>
-              <span className="text-xs font-black" style={{ color: scoreColor }}>{adherenceScore}%</span>
-            </div>
-            <div className="h-2.5 bg-white/[0.04] rounded-full overflow-hidden">
-              <motion.div initial={{ width: 0 }} animate={{ width: `${adherenceScore}%` }} transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                className="h-full rounded-full relative" style={{ background: `linear-gradient(90deg, ${scoreColor}60, ${scoreColor})`, boxShadow: `0 0 20px ${scoreColor}50` }}>
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full" />
-              </motion.div>
+              </div>
             </div>
           </div>
         </motion.div>
       )}
 
-      {/* Today's Schedule */}
+      {/* Today's Schedule — Premium */}
       {totalCount > 0 && (
-        <motion.div {...fadeUp} transition={{ duration: 0.5, delay: 0.15 }}
-          className="relative overflow-hidden rounded-[28px] border border-white/[0.08] bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 backdrop-blur-2xl p-6 shadow-2xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.02] via-transparent to-cyan-500/[0.01] pointer-events-none" />
-          <div className="absolute -top-20 -right-20 w-40 h-40 bg-emerald-500/[0.05] rounded-full blur-[60px] pointer-events-none" />
-          <div className="relative">
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/20 flex items-center justify-center shadow-lg shadow-emerald-500/10">
-                  <CalendarCheck className="w-5 h-5 text-emerald-400" />
+        <motion.div {...fadeUp} transition={{ duration: 0.6, delay: 0.15 }}
+          className="relative overflow-hidden rounded-[32px] border border-white/[0.07] bg-gradient-to-br from-[#0a0a0f] via-[#0d0d15] to-[#0a0a0f] shadow-[0_8px_60px_-12px_rgba(0,0,0,0.8)]">
+
+          {/* Ambient */}
+          <div className="absolute -top-32 -right-32 w-[400px] h-[400px] bg-emerald-600/[0.05] rounded-full blur-[120px] pointer-events-none" />
+          <div className="absolute -bottom-32 -left-32 w-[350px] h-[350px] bg-cyan-600/[0.03] rounded-full blur-[100px] pointer-events-none" />
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent" />
+          <div className="absolute inset-0 opacity-[0.015] pointer-events-none" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\' opacity=\'1\'/%3E%3C/svg%3E")' }} />
+
+          <div className="relative p-7">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3.5">
+                <div className="relative">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/15 flex items-center justify-center shadow-lg shadow-emerald-500/10">
+                    <CalendarCheck className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#0a0a0f] shadow-lg shadow-emerald-400/50" />
                 </div>
                 <div>
                   <span className="text-sm font-bold text-white">Today's Schedule</span>
                   <p className="text-[11px] text-gray-500 mt-0.5">{timeOfDayNow} \u2014 {scheduleToday.length} supplement{scheduleToday.length !== 1 ? 's' : ''}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border border-emerald-500/20">
-                  <span className="text-xs font-black text-emerald-400">{takenTodayCount}/{scheduleToday.length}</span>
+              <div className="flex items-center gap-3">
+                {/* Progress mini ring */}
+                <div className="relative w-10 h-10">
+                  <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                    <circle cx="18" cy="18" r="15" fill="transparent" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
+                    <motion.circle cx="18" cy="18" r="15" fill="transparent" stroke="#10b981" strokeWidth="3" strokeLinecap="round"
+                      strokeDasharray={`${(takenTodayCount / Math.max(scheduleToday.length, 1)) * 94.25} ${94.25}`}
+                      initial={{ strokeDashoffset: 94.25 }}
+                      animate={{ strokeDashoffset: 0 }}
+                      transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-[9px] font-black text-emerald-400">{takenTodayCount}/{scheduleToday.length}</span>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="space-y-3">
+
+            {/* Schedule items */}
+            <div className="space-y-2.5">
               {scheduleToday.map((s, i) => {
                 const taken = takenTodayIds.has(s.id)
                 const TimeIcon = TIME_ICONS[s.times[0] as TimeOfDay] || Clock
                 const tod = (s.times[0] || 'Morning') as TimeOfDay
+                const todColors = { Morning: 'emerald', Afternoon: 'yellow', Evening: 'orange', Night: 'indigo' }
+                const todColor = todColors[tod]
                 return (
-                  <motion.div key={s.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04, duration: 0.3 }}
-                    className={`group relative flex items-center gap-4 rounded-2xl border p-4 transition-all duration-300 ${taken
-                      ? 'bg-gradient-to-r from-emerald-500/[0.06] to-emerald-500/[0.02] border-emerald-500/15 hover:border-emerald-500/25'
-                      : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.12]'}`}>
-                    <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 ${taken
-                      ? 'bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/25 shadow-lg shadow-emerald-500/10'
-                      : `bg-gradient-to-br ${TIME_GRADIENTS[tod]} border shadow-lg shadow-${tod === 'Morning' ? 'amber' : tod === 'Afternoon' ? 'yellow' : tod === 'Evening' ? 'orange' : 'indigo'}-500/5`}`}>
-                      {taken ? <Check className="w-5 h-5 text-emerald-400" /> : <TimeIcon className="w-5 h-5" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2.5">
-                        <p className={`text-sm font-bold truncate ${taken ? 'text-emerald-300' : 'text-white'}`}>{s.name}</p>
-                        {s.stack && (
-                          <span className="text-[9px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-lg uppercase tracking-wider">{s.stack}</span>
-                        )}
+                  <motion.div key={s.id} initial={{ opacity: 0, x: -15 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    className={`group relative rounded-[18px] overflow-hidden transition-all duration-300 ${taken
+                      ? 'border border-emerald-500/15 hover:border-emerald-500/25'
+                      : 'border border-white/[0.05] hover:border-white/[0.12]'}`}>
+
+                    {/* Background */}
+                    <div className={`absolute inset-0 ${taken ? 'bg-gradient-to-r from-emerald-500/[0.06] via-emerald-500/[0.03] to-transparent' : 'bg-gradient-to-r from-white/[0.02] via-white/[0.01] to-transparent'}`} />
+                    <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none ${taken ? '' : 'bg-gradient-to-r from-white/[0.01] to-transparent'}`} />
+
+                    <div className="relative flex items-center gap-4 p-4">
+                      {/* Time icon */}
+                      <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 ${taken
+                        ? 'bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 border border-emerald-500/20 shadow-lg shadow-emerald-500/10'
+                        : `bg-gradient-to-br from-${todColor}-500/10 to-${todColor}-500/5 border border-${todColor}-500/10`}`}>
+                        {taken ? (
+                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', bounce: 0.5 }}>
+                            <Check className="w-5 h-5 text-emerald-400" />
+                          </motion.div>
+                        ) : <TimeIcon className={`w-5 h-5 text-${todColor}-400`} />}
                       </div>
-                      <p className="text-[11px] text-gray-500 mt-1 font-medium">{s.dosage} \u00B7 {s.times.join(', ')}</p>
-                    </div>
-                    {!taken ? (
-                      <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                        onClick={() => markAsTaken(s)}
-                        className="shrink-0 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border border-emerald-500/20 text-emerald-400 hover:from-emerald-500/20 hover:to-emerald-600/10 hover:border-emerald-500/30 transition-all text-xs font-bold opacity-0 group-hover:opacity-100 shadow-lg shadow-emerald-500/5">
-                        Take
-                      </motion.button>
-                    ) : (
-                      <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/15">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Taken</span>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2.5">
+                          <p className={`text-[13px] font-bold truncate ${taken ? 'text-emerald-300' : 'text-white'}`}>{s.name}</p>
+                          {s.stack && (
+                            <span className="text-[8px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/15 px-2 py-0.5 rounded-lg uppercase tracking-widest">{s.stack}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <Clock className="w-3 h-3 text-gray-600" />
+                          <p className="text-[11px] text-gray-500 font-medium">{s.dosage} \u00B7 {s.times.join(', ')}</p>
+                        </div>
                       </div>
-                    )}
+
+                      {/* Action */}
+                      {!taken ? (
+                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.92 }}
+                          onClick={() => markAsTaken(s)}
+                          className="shrink-0 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 text-black text-[11px] font-black uppercase tracking-wider opacity-0 group-hover:opacity-100 shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all duration-300">
+                          Take
+                        </motion.button>
+                      ) : (
+                        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', bounce: 0.4 }}
+                          className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/15">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">Taken</span>
+                        </motion.div>
+                      )}
+                    </div>
                   </motion.div>
                 )
               })}
@@ -819,34 +966,46 @@ export function SupplementTracker() {
         </div>
       )}
 
-      {/* Add Supplement Modal */}
+      {/* Add Supplement Modal — Premium */}
       <Modal isOpen={showModal} onClose={() => { setShowModal(false); resetForm() }} title="">
-        <div className="space-y-6 -mt-1">
-          {/* Modal Header */}
-          <div className="text-center pb-2">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/20 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-violet-500/15">
-              <Pill className="w-7 h-7 text-violet-400" />
-            </div>
-            <h3 className="text-lg font-black text-white">Add Supplement</h3>
-            <p className="text-[11px] text-gray-500 mt-1">Track your daily nutrition stack</p>
+        <div className="space-y-0 -mt-1">
+          {/* Modal Header — Premium */}
+          <div className="relative text-center pb-6">
+            {/* Ambient glow */}
+            <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-40 h-40 bg-violet-600/10 rounded-full blur-[60px] pointer-events-none" />
+
+            <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', bounce: 0.4, delay: 0.1 }}
+              className="relative mx-auto mb-4">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 blur-xl" />
+              <div className="relative w-16 h-16 rounded-3xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/20 flex items-center justify-center mx-auto shadow-xl shadow-violet-500/15">
+                <Pill className="w-8 h-8 text-violet-400" />
+              </div>
+            </motion.div>
+            <h3 className="text-xl font-black text-white">Add Supplement</h3>
+            <p className="text-[12px] text-gray-500 mt-1.5">Track your daily nutrition stack</p>
           </div>
 
-          {/* Quick Add */}
-          <div>
-            <label className="block text-[10px] font-bold text-gray-500 mb-3 uppercase tracking-[0.15em] flex items-center gap-1.5">
+          {/* Quick Add — Premium Grid */}
+          <div className="mb-6">
+            <label className="block text-[10px] font-bold text-gray-500 mb-3 uppercase tracking-[0.18em] flex items-center gap-1.5">
               <Sparkles className="w-3 h-3 text-violet-400" />Quick Add
             </label>
             <div className="grid grid-cols-2 gap-2.5">
               {commonSupplements.map((s) => (
-                <motion.button key={s.name} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => handleQuickAdd(s.name, s.dosage)}
-                  className={cn('text-left px-4 py-3.5 rounded-2xl text-xs border transition-all duration-300',
+                <motion.button key={s.name} whileHover={{ scale: 1.02, y: -1 }} whileTap={{ scale: 0.97 }} onClick={() => handleQuickAdd(s.name, s.dosage)}
+                  className={cn('group relative text-left px-4 py-3.5 rounded-[16px] text-xs border transition-all duration-300 overflow-hidden',
                     formData.name === s.name
-                      ? 'bg-gradient-to-br from-violet-500/20 to-indigo-500/10 border-violet-500/30 text-white shadow-lg shadow-violet-500/15'
-                      : 'bg-white/[0.03] border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06] hover:border-white/20')}>
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">{s.emoji}</span>
+                      ? 'border-violet-500/30 text-white shadow-lg shadow-violet-500/15'
+                      : 'border-white/[0.06] text-gray-400 hover:text-white hover:border-white/15')}>
+                  {/* Background */}
+                  <div className={cn('absolute inset-0 transition-opacity duration-300',
+                    formData.name === s.name
+                      ? 'opacity-100 bg-gradient-to-br from-violet-500/15 to-indigo-500/10'
+                      : 'opacity-0 group-hover:opacity-100 bg-gradient-to-br from-white/[0.04] to-white/[0.01]')} />
+                  <div className="relative flex items-center gap-3">
+                    <span className="text-lg">{s.emoji}</span>
                     <div>
-                      <div className="font-bold">{s.name}</div>
+                      <div className="font-bold text-[12px]">{s.name}</div>
                       <div className="text-[10px] text-gray-500 mt-0.5">{s.dosage}</div>
                     </div>
                   </div>
@@ -855,67 +1014,94 @@ export function SupplementTracker() {
             </div>
           </div>
 
-          <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          {/* Divider */}
+          <div className="relative h-px my-6">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
+            <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 bg-[#0d0d15]">
+              <span className="text-[9px] text-gray-600 uppercase tracking-widest font-semibold">or enter manually</span>
+            </div>
+          </div>
 
-          {/* Manual Form */}
-          <div className="space-y-4">
+          {/* Manual Form — Premium */}
+          <div className="space-y-5">
             <Input label="Supplement Name" placeholder="e.g., Vitamin D3" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} icon={<Pill className="w-4 h-4" />} />
             <Input label="Dosage" placeholder="e.g., 5000 IU" value={formData.dosage} onChange={(e) => setFormData({ ...formData, dosage: e.target.value })} />
           </div>
 
-          <div>
-            <label className="mb-2.5 block text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">Frequency</label>
-            <div className="flex gap-2">
+          {/* Frequency */}
+          <div className="mt-5">
+            <label className="mb-3 block text-[10px] font-bold text-gray-500 uppercase tracking-[0.18em]">Frequency</label>
+            <div className="flex gap-2.5">
               {(['daily', 'weekly', 'custom'] as const).map((freq) => (
-                <motion.button key={freq} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                <motion.button key={freq} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}
                   type="button" onClick={() => setFormData({ ...formData, frequency: freq })}
-                  className={cn('flex-1 px-3 py-3 rounded-2xl text-xs font-bold border transition-all duration-300 capitalize',
+                  className={cn('flex-1 px-3 py-3.5 rounded-[16px] text-[12px] font-bold border transition-all duration-300 capitalize',
                     formData.frequency === freq
-                      ? 'bg-gradient-to-br from-violet-500/20 to-indigo-500/10 border-violet-500/30 text-white shadow-lg shadow-violet-500/15'
-                      : 'bg-white/[0.03] border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06]')}>{freq}</motion.button>
+                      ? 'bg-gradient-to-br from-violet-500/15 to-indigo-500/10 border-violet-500/25 text-white shadow-lg shadow-violet-500/10'
+                      : 'border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.04] hover:border-white/15')}>{freq}</motion.button>
               ))}
             </div>
           </div>
 
-          <div>
-            <label className="mb-2.5 block text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">Times of Day</label>
+          {/* Times of Day */}
+          <div className="mt-5">
+            <label className="mb-3 block text-[10px] font-bold text-gray-500 uppercase tracking-[0.18em]">Times of Day</label>
             <div className="grid grid-cols-4 gap-2.5">
               {timeOptions.map(({ value, icon: Icon }) => (
-                <motion.button key={value} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                <motion.button key={value} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.94 }}
                   type="button" onClick={() => toggleTime(value)}
-                  className={cn('flex flex-col items-center gap-2 px-2 py-4 rounded-2xl text-xs font-bold border transition-all duration-300',
+                  className={cn('group relative flex flex-col items-center gap-2 px-2 py-4.5 rounded-[16px] text-[11px] font-bold border transition-all duration-300 overflow-hidden',
                     formData.times.includes(value)
                       ? `bg-gradient-to-br ${TIME_GRADIENTS[value]} shadow-lg`
-                      : 'bg-white/[0.03] border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06]')}>
+                      : 'border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.04] hover:border-white/15')}>
                   <Icon className="w-5 h-5" /><span>{value}</span>
                 </motion.button>
               ))}
             </div>
           </div>
 
-          <Input label="Stack (optional)" placeholder="e.g., Morning, Pre-Workout, Night" value={formData.stack} onChange={(e) => setFormData({ ...formData, stack: e.target.value })} icon={<Layers className="w-4 h-4" />} />
-          <Input label="Notes (optional)" placeholder="Any notes..." value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} />
+          {/* More fields */}
+          <div className="mt-5 space-y-5">
+            <Input label="Stack (optional)" placeholder="e.g., Morning, Pre-Workout, Night" value={formData.stack} onChange={(e) => setFormData({ ...formData, stack: e.target.value })} icon={<Layers className="w-4 h-4" />} />
+            <Input label="Notes (optional)" placeholder="Any notes..." value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} />
 
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Total Cost ($)" placeholder="29.99" type="number" value={formData.cost} onChange={(e) => setFormData({ ...formData, cost: e.target.value })} icon={<DollarSign className="w-4 h-4" />} />
-            <Input label="Total Servings" placeholder="60" type="number" value={formData.totalServings} onChange={(e) => setFormData({ ...formData, totalServings: e.target.value })} />
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Total Cost ($)" placeholder="29.99" type="number" value={formData.cost} onChange={(e) => setFormData({ ...formData, cost: e.target.value })} icon={<DollarSign className="w-4 h-4" />} />
+              <Input label="Total Servings" placeholder="60" type="number" value={formData.totalServings} onChange={(e) => setFormData({ ...formData, totalServings: e.target.value })} />
+            </div>
+
+            {formData.cost && formData.totalServings && parseFloat(formData.cost) > 0 && parseInt(formData.totalServings) > 0 && (
+              <motion.div {...fadeIn} className="flex items-center gap-2.5 px-4 py-3 rounded-[14px] bg-emerald-500/[0.06] border border-emerald-500/15">
+                <div className="p-1 rounded-lg bg-emerald-500/10">
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                </div>
+                <p className="text-[11px] text-emerald-400">Cost per serving: <span className="font-black">${(parseFloat(formData.cost) / parseInt(formData.totalServings)).toFixed(2)}</span></p>
+              </motion.div>
+            )}
+
+            <Input label="Refill in (days)" placeholder="e.g. 30" type="number" value={formData.refillDays} onChange={(e) => setFormData({ ...formData, refillDays: e.target.value })} />
           </div>
 
-          {formData.cost && formData.totalServings && parseFloat(formData.cost) > 0 && parseInt(formData.totalServings) > 0 && (
-            <motion.div {...fadeIn} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-              <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
-              <p className="text-[11px] text-emerald-400">Cost per serving: <span className="font-black">${(parseFloat(formData.cost) / parseInt(formData.totalServings)).toFixed(2)}</span></p>
-            </motion.div>
-          )}
-
-          <Input label="Refill in (days)" placeholder="e.g. 30" type="number" value={formData.refillDays} onChange={(e) => setFormData({ ...formData, refillDays: e.target.value })} />
-
-          <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
-            onClick={addSupplement}
-            disabled={!formData.name.trim() || !formData.dosage.trim()}
-            className="w-full flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold shadow-xl shadow-violet-500/25 hover:shadow-2xl hover:shadow-violet-500/30 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all duration-300 border border-violet-500/30">
-            <Plus className="w-4.5 h-4.5" />Add Supplement
-          </motion.button>
+          {/* Submit — Premium */}
+          <div className="mt-6">
+            <motion.button whileHover={{ scale: 1.01, y: -1 }} whileTap={{ scale: 0.98 }}
+              onClick={addSupplement}
+              disabled={!formData.name.trim() || !formData.dosage.trim()}
+              className="relative w-full flex items-center justify-center gap-2.5 px-6 py-4.5 rounded-[18px] text-[13px] font-black uppercase tracking-wider text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300 overflow-hidden">
+              {/* Button background */}
+              <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600" />
+              <div className="absolute inset-0 bg-gradient-to-r from-violet-500 via-indigo-500 to-violet-500 opacity-0 hover:opacity-100 transition-opacity duration-300" />
+              {/* Button glow */}
+              <div className="absolute inset-0 opacity-50">
+                <div className="absolute -top-2 left-1/4 w-20 h-8 bg-violet-400/30 rounded-full blur-xl" />
+                <div className="absolute -bottom-2 right-1/4 w-20 h-8 bg-indigo-400/30 rounded-full blur-xl" />
+              </div>
+              <div className="absolute inset-0 border border-white/10 rounded-[18px]" />
+              <div className="relative flex items-center gap-2.5">
+                <Plus className="w-4.5 h-4.5" />Add Supplement
+              </div>
+            </motion.button>
+          </div>
         </div>
       </Modal>
 
