@@ -289,7 +289,7 @@ export function SupplementTracker() {
                 </div>
                 <div>
                   <h2 className="text-[15px] font-black text-white tracking-tight leading-none">Wellness<span style={{ color: scoreColor }}>Pulse</span></h2>
-                  <p className="text-[9px] text-gray-500 uppercase tracking-[0.2em] mt-0.5">{timeOfDayNow} module \u00B7 v2.0</p>
+                  <p className="text-[9px] text-gray-500 uppercase tracking-[0.2em] mt-0.5">{timeOfDayNow} \u00B7 {totalCount} active</p>
                 </div>
               </div>
               {/* Status cluster */}
@@ -297,7 +297,9 @@ export function SupplementTracker() {
                 {suppStreak > 0 && (
                   <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }}
                     className="flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-500/[0.06] border border-orange-500/10">
-                    <motion.span animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 1.2, repeat: Infinity }} className="text-[11px]">\uD83D\uDD25</motion.span>
+                    <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 1.2, repeat: Infinity }} className="text-orange-400">
+                      <Flame className="w-3 h-3" />
+                    </motion.div>
                     <span className="text-[10px] font-black text-orange-300 tabular-nums">{suppStreak}d</span>
                   </motion.div>
                 )}
@@ -529,7 +531,20 @@ export function SupplementTracker() {
                         <span className={`text-[13px] font-semibold truncate ${taken ? 'text-emerald-300' : 'text-white'}`}>{s.name}</span>
                         {s.stack && <span className="text-[8px] font-bold text-violet-400 bg-violet-500/8 border border-violet-500/15 px-1.5 py-0.5 rounded-md uppercase tracking-widest">{s.stack}</span>}
                       </div>
-                      <p className="text-[10px] text-gray-500 mt-0.5">{s.dosage} \u00B7 {s.times.join(', ')}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <span className="text-[10px] text-gray-400 font-medium">{s.dosage}</span>
+                        <span className="text-[8px] text-gray-600">\u00B7</span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${tc.text} bg-gradient-to-br ${tc.bg} border ${tc.border}`}>{s.times[0]}</span>
+                        {s.cost && s.totalServings && (
+                          <>
+                            <span className="text-[8px] text-gray-600">\u00B7</span>
+                            <span className="text-[9px] text-violet-400/70 font-medium">${(s.cost / s.totalServings).toFixed(2)}/serving</span>
+                          </>
+                        )}
+                        {s.notes && (
+                          <span className="text-[9px] text-gray-600 italic truncate max-w-[100px]">{s.notes}</span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Action */}
