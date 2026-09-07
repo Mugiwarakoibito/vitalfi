@@ -10,6 +10,34 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, icon, ...props }, ref) => {
+    if (icon) {
+      return (
+        <div className="w-full">
+          {label && (
+            <label className="mb-2 block text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em]">
+              {label}
+            </label>
+          )}
+          <div className={cn(
+            'flex items-center gap-3 bg-black/60 backdrop-blur-[12px] border border-white/5 rounded-xl px-4 py-3.5 transition-all duration-200',
+            'hover:border-white/10 focus-within:border-white/10 focus-within:bg-black/50',
+            error && 'border-error/50 focus-within:border-error/70'
+          )}>
+            <span className="text-[#A78BFA] shrink-0">{icon}</span>
+            <input
+              ref={ref}
+              className={cn(
+                'flex-1 bg-transparent text-[13px] text-white placeholder-slate-400 outline-none min-w-0',
+                className
+              )}
+              {...props}
+            />
+          </div>
+          {error && <p className="mt-1 text-xs text-error-light">{error}</p>}
+        </div>
+      )
+    }
+
     return (
       <div className="w-full">
         {label && (
@@ -17,23 +45,15 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {label}
           </label>
         )}
-        <div className="relative">
-          {icon && (
-            <div className="absolute left-4 top-0 bottom-0 flex items-center pointer-events-none" style={{ color: '#A78BFA', zIndex: 50 }}>
-              {icon}
-            </div>
+        <input
+          ref={ref}
+          className={cn(
+            'glass-input w-full',
+            error && 'border-error/50 focus:border-error/70',
+            className
           )}
-          <input
-            ref={ref}
-            className={cn(
-              'glass-input w-full',
-              icon && 'pl-14',
-              error && 'border-error/50 focus:border-error/70',
-              className
-            )}
-            {...props}
-          />
-        </div>
+          {...props}
+        />
         {error && <p className="mt-1 text-xs text-error-light">{error}</p>}
       </div>
     )
