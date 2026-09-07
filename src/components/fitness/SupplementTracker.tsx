@@ -77,7 +77,7 @@ export function SupplementTracker() {
   const [coachMode, setCoachMode] = useState<'insight' | 'refill' | 'stack'>('insight')
   const [showCoachModeDropdown, setShowCoachModeDropdown] = useState(false)
   const [trendPeriod, setTrendPeriod] = useState<'7d' | '14d' | '30d'>('7d')
-  const [deletedSupp, setDeletedSupp] = useState<{ supp: Supplement; index: number } | null>(null)
+  const [justTaken, setJustTaken] = useState<Supplement | null>(null)
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const today = new Date().toISOString().split('T')[0]
@@ -179,25 +179,23 @@ export function SupplementTracker() {
   const markAsTaken = (supp: Supplement) => {
     if (takenTodayIds.has(supp.id)) return
     persistLogs([...logs, { id: generateId(), supplementId: supp.id, takenAt: new Date().toISOString(), date: today }])
+    setJustTaken(supp)
+    if (undoTimer.current) clearTimeout(undoTimer.current)
+    undoTimer.current = setTimeout(() => setJustTaken(null), 4000)
+  }
+
+  const undoTake = () => {
+    if (!justTaken) return
+    if (undoTimer.current) clearTimeout(undoTimer.current)
+    const todayLogs = logs.filter(l => l.date === today)
+    const logToRemove = todayLogs.find(l => l.supplementId === justTaken.id)
+    if (logToRemove) persistLogs(logs.filter(l => l.id !== logToRemove.id))
+    setJustTaken(null)
   }
 
   const deleteFromSchedule = (supp: Supplement) => {
-    const idx = supplements.findIndex(s => s.id === supp.id)
-    if (idx === -1) return
-    setDeletedSupp({ supp, index: idx })
     persistSupplements(supplements.filter(s => s.id !== supp.id))
     persistLogs(logs.filter(l => l.supplementId !== supp.id))
-    if (undoTimer.current) clearTimeout(undoTimer.current)
-    undoTimer.current = setTimeout(() => setDeletedSupp(null), 5000)
-  }
-
-  const undoDelete = () => {
-    if (!deletedSupp) return
-    if (undoTimer.current) clearTimeout(undoTimer.current)
-    const updated = [...supplements]
-    updated.splice(deletedSupp.index, 0, deletedSupp.supp)
-    persistSupplements(updated)
-    setDeletedSupp(null)
   }
 
   const handleQuickAdd = (name: string, dosage: string) => setFormData({ ...formData, name, dosage, times: formData.times.length ? formData.times : ['Morning'] })
@@ -966,19 +964,19 @@ export function SupplementTracker() {
 
       {/* ─── UNDO TOAST ─── */}
       <AnimatePresence>
-        {deletedSupp && (
+        {justTaken && (
           <motion.div initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: 'spring', bounce: 0.3 }}
             className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#14141f] border border-white/[0.08] shadow-2xl shadow-black/60 backdrop-blur-xl">
-            <div className="w-8 h-8 rounded-xl bg-red-500/10 border border-red-500/15 flex items-center justify-center shrink-0">
-              <Trash2 className="w-4 h-4 text-red-400" />
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center shrink-0">
+              <Check className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-bold text-white truncate">{deletedSupp.supp.name}</p>
-              <p className="text-[9px] text-gray-500">Removed from supplements</p>
+              <p className="text-[11px] font-bold text-white truncate">{justTaken.name}</p>
+              <p className="text-[9px] text-gray-500">Marked as taken</p>
             </div>
             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-              onClick={undoDelete}
+              onClick={undoTake}
               className="shrink-0 px-3 py-1.5 rounded-xl bg-violet-500/15 border border-violet-500/20 text-violet-300 text-[10px] font-bold hover:bg-violet-500/25 transition-all">
               Undo
             </motion.button>
