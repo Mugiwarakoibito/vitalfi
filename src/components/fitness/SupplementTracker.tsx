@@ -145,8 +145,11 @@ export function SupplementTracker() {
   const monthlyCost = useMemo(() => supplements.reduce((sum, s) => { if (s.cost && s.totalServings && s.totalServings > 0) return sum + (s.cost / s.totalServings) * 30; return sum }, 0), [supplements])
 
   const scheduleToday = useMemo(() => {
-    const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
-    return supplements.filter(s => { if (s.frequency === 'daily') return true; if (s.frequency === 'weekly') return s.times.some(t => t.toLowerCase() === todayName); return true })
+    return supplements.filter(s => {
+      if (s.frequency === 'daily') return true
+      if (s.frequency === 'weekly') return true
+      return true
+    })
   }, [supplements])
 
   const supplementInteractions = useMemo(() => {
