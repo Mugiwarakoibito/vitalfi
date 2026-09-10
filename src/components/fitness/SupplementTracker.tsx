@@ -78,6 +78,7 @@ export function SupplementTracker() {
   const [coachMode, setCoachMode] = useState<'insight' | 'refill' | 'stack' | 'timing' | 'cost'>('insight')
   const [showCoachModeDropdown, setShowCoachModeDropdown] = useState(false)
   const [trendWeekOffset, setTrendWeekOffset] = useState(0)
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0])
   const [justTaken, setJustTaken] = useState<Supplement | null>(null)
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -95,7 +96,7 @@ export function SupplementTracker() {
   const persistSupplements = useCallback((data: Supplement[]) => { setSupplements(data); localStorage.setItem('supplements', JSON.stringify(data)) }, [])
   const persistLogs = useCallback((data: SupplementLog[]) => { setLogs(data); localStorage.setItem('supplementLogs', JSON.stringify(data)) }, [])
 
-  const todayLogs = useMemo(() => logs.filter((l) => l.date === today), [logs, today])
+  const todayLogs = useMemo(() => logs.filter((l) => l.date === selectedDate), [logs, selectedDate])
   const takenTodayIds = useMemo(() => new Set(todayLogs.map((l) => l.supplementId)), [todayLogs])
   const takenTodayCount = takenTodayIds.size; const totalCount = supplements.length; const remainingCount = totalCount - takenTodayCount
   const dailySupps = useMemo(() => supplements.filter((s) => s.frequency === 'daily'), [supplements])
@@ -115,12 +116,18 @@ export function SupplementTracker() {
   const monthlyCost = useMemo(() => supplements.reduce((sum, s) => { if (s.cost && s.totalServings && s.totalServings > 0) return sum + (s.cost / s.totalServings) * 30; return sum }, 0), [supplements])
 
   const scheduleToday = useMemo(() => {
+    const dayOfWeek = new Date(selectedDate + 'T12:00:00').getDay()
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    const selectedDayName = dayNames[dayOfWeek]
     return supplements.filter(s => {
       if (s.frequency === 'daily') return true
-      if (s.frequency === 'weekly') return true
+      if (s.frequency === 'weekly') {
+        const assignedDay = s.times[0]?.toLowerCase()
+        return assignedDay === selectedDayName || !assignedDay
+      }
       return true
     })
-  }, [supplements])
+  }, [supplements, selectedDate])
 
   const supplementInteractions = useMemo(() => {
     return SUPP_INTERACTIONS.filter(inter => {
@@ -179,7 +186,7 @@ export function SupplementTracker() {
 
   const markAsTaken = (supp: Supplement) => {
     if (takenTodayIds.has(supp.id)) return
-    persistLogs([...logs, { id: generateId(), supplementId: supp.id, takenAt: new Date().toISOString(), date: today }])
+    persistLogs([...logs, { id: generateId(), supplementId: supp.id, takenAt: new Date().toISOString(), date: selectedDate }])
     setJustTaken(supp)
     if (undoTimer.current) clearTimeout(undoTimer.current)
     undoTimer.current = setTimeout(() => setJustTaken(null), 4000)
@@ -232,10 +239,10 @@ export function SupplementTracker() {
       {/* ─── HEADER ─── */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
-          <button onClick={() => setTrendWeekOffset(o => o + 1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+          <button onClick={() => { setTrendWeekOffset(o => o + 1); setSelectedDate(d => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() - 7); return dt.toISOString().split('T')[0] }) }} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 border border-white/10">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
             <Calendar className="w-4 h-4 text-violet-400 shrink-0" />
             {(() => {
               const now = new Date()
@@ -248,11 +255,11 @@ export function SupplementTracker() {
               )
             })()}
           </div>
-          <button onClick={() => setTrendWeekOffset(o => o - 1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+          <button onClick={() => { setTrendWeekOffset(o => o - 1); setSelectedDate(d => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() + 7); return dt.toISOString().split('T')[0] }) }} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
             <ChevronRight className="w-5 h-5" />
           </button>
           {trendWeekOffset !== 0 && (
-            <button onClick={() => setTrendWeekOffset(0)} className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
+            <button onClick={() => { setTrendWeekOffset(0); setSelectedDate(today) }} className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
               <RotateCcw className="w-4 h-4" />
             </button>
           )}
