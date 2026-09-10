@@ -293,10 +293,11 @@ export function SupplementTracker() {
           let bestStreak = 0, cur = 0
           for (const d of weekDays) { if (d.pct === 100) { cur++; bestStreak = Math.max(bestStreak, cur) } else cur = 0 }
           const suppBreakdown = dailySupps.map(s => {
-            const takenInWeek = weekDays.filter((_, i) => {
+            const takenInWeek = Array.from({ length: 7 }, (_, i) => {
               const d = new Date(weekStart); d.setDate(d.getDate() + i)
-              return logs.some(l => l.supplementId === s.id && l.date === d.toISOString().split('T')[0])
-            }).length
+              const dateStr = d.toISOString().split('T')[0]
+              return logs.some(l => l.supplementId === s.id && l.date === dateStr)
+            }).filter(Boolean).length
             return { name: s.name, stack: s.stack, taken: takenInWeek, pct: Math.round((takenInWeek / 7) * 100) }
           }).sort((a, b) => b.pct - a.pct)
           const weekLabel = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
