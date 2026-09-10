@@ -195,14 +195,14 @@ export function SupplementTracker() {
   const undoTake = () => {
     if (!justTaken) return
     if (undoTimer.current) clearTimeout(undoTimer.current)
-    const todayLogs = logs.filter(l => l.date === today)
+    const todayLogs = logs.filter(l => l.date === selectedDate)
     const logToRemove = todayLogs.find(l => l.supplementId === justTaken.id)
     if (logToRemove) persistLogs(logs.filter(l => l.id !== logToRemove.id))
     setJustTaken(null)
   }
 
   const undoTakeById = (suppId: string) => {
-    const logToRemove = logs.find(l => l.date === today && l.supplementId === suppId)
+    const logToRemove = logs.find(l => l.date === selectedDate && l.supplementId === suppId)
     if (logToRemove) persistLogs(logs.filter(l => l.id !== logToRemove.id))
   }
 
