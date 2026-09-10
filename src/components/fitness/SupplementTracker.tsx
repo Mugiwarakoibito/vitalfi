@@ -230,8 +230,33 @@ export function SupplementTracker() {
     <div className="space-y-5">
 
       {/* ─── HEADER ─── */}
-      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="flex items-center justify-between">
-        <div />
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <button onClick={() => setTrendWeekOffset(o => o + 1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+            <Calendar className="w-4 h-4 text-violet-400 shrink-0" />
+            {(() => {
+              const now = new Date()
+              const ws = new Date(now); ws.setDate(ws.getDate() - ws.getDay() + (trendWeekOffset * 7)); ws.setHours(0,0,0,0)
+              const we = new Date(ws); we.setDate(we.getDate() + 6)
+              return (
+                <span className="text-[11px] text-white font-medium select-none">
+                  {ws.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {we.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              )
+            })()}
+          </div>
+          <button onClick={() => setTrendWeekOffset(o => o - 1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          {trendWeekOffset !== 0 && (
+            <button onClick={() => setTrendWeekOffset(0)} className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {totalCount > 0 && (
             <>
@@ -691,38 +716,6 @@ export function SupplementTracker() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ─── DATE NAVIGATION + STATS ─── */}
-      {totalCount > 0 && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setTrendWeekOffset(o => o + 1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-              <Calendar className="w-4 h-4 text-violet-400 shrink-0" />
-              {(() => {
-                const now = new Date()
-                const ws = new Date(now); ws.setDate(ws.getDate() - ws.getDay() + (trendWeekOffset * 7)); ws.setHours(0,0,0,0)
-                const we = new Date(ws); we.setDate(we.getDate() + 6)
-                return (
-                  <span className="text-[11px] text-white font-medium select-none">
-                    {ws.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {we.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </span>
-                )
-              })()}
-            </div>
-            <button onClick={() => setTrendWeekOffset(o => o - 1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-              <ChevronRight className="w-5 h-5" />
-            </button>
-            {trendWeekOffset !== 0 && (
-              <button onClick={() => setTrendWeekOffset(0)} className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
-                <RotateCcw className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </motion.div>
-      )}
 
       {/* ═══════ HERO: WELLNESS COMMAND CENTER ═══════ */}
       {totalCount > 0 && (
