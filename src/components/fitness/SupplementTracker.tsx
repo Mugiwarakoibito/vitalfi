@@ -94,20 +94,20 @@ export function SupplementTracker() {
       const logStored = localStorage.getItem('supplementLogs')
       if (logStored) {
         const raw: SupplementLog[] = JSON.parse(logStored)
-        let changed = false
         const fixed = raw.map(l => {
-          const takenAtDate = new Date(l.takenAt)
-          const correctDate = toLocalDate(takenAtDate)
-          if (l.date !== correctDate) {
-            changed = true
-            return { ...l, date: correctDate }
+          if (!l.date || l.date.length !== 10 || l.date[4] !== '-' || l.date[7] !== '-') {
+            if (l.takenAt) {
+              const d = new Date(l.takenAt)
+              if (!isNaN(d.getTime())) return { ...l, date: toLocalDate(d) }
+            }
+            return { ...l, date: toLocalDate(new Date()) }
           }
           return l
         })
         setLogs(fixed)
-        if (changed) localStorage.setItem('supplementLogs', JSON.stringify(fixed))
+        localStorage.setItem('supplementLogs', JSON.stringify(fixed))
       }
-    } catch {}
+    } catch (e) { console.error('Failed to load supplements', e) }
   }, [])
 
   const persistSupplements = useCallback((data: Supplement[]) => { setSupplements(data); localStorage.setItem('supplements', JSON.stringify(data)) }, [])
