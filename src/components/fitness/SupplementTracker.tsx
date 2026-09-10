@@ -6,6 +6,7 @@ import {
   DollarSign, Layers, CalendarCheck,
   Brain, ShieldCheck, ShieldAlert, Info, Zap, Package,
   CheckCircle2, Dumbbell, BarChart3, ChevronDown,
+  ChevronLeft, ChevronRight, RotateCcw,
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Modal } from '@/components/ui/Modal'
@@ -76,6 +77,7 @@ export function SupplementTracker() {
   const [activePanel, setActivePanel] = useState<'patterns' | 'coach' | null>(null)
   const [coachMode, setCoachMode] = useState<'insight' | 'refill' | 'stack' | 'timing' | 'cost'>('insight')
   const [showCoachModeDropdown, setShowCoachModeDropdown] = useState(false)
+  const [trendWeekOffset, setTrendWeekOffset] = useState(0)
   const [justTaken, setJustTaken] = useState<Supplement | null>(null)
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -261,8 +263,14 @@ export function SupplementTracker() {
         {/* ═══ WEEKLY PATTERNS ═══ */}
         {activePanel === 'patterns' && totalCount > 0 && (() => {
           const now = new Date()
-          const last30 = Array.from({ length: 30 }, (_, i) => {
-            const d = new Date(now); d.setDate(d.getDate() - (29 - i))
+          const weekStart = new Date(now)
+          weekStart.setDate(weekStart.getDate() - weekStart.getDay() + (trendWeekOffset * 7))
+          weekStart.setHours(0, 0, 0, 0)
+          const weekEnd = new Date(weekStart)
+          weekEnd.setDate(weekEnd.getDate() + 6)
+          const isCurrentWeek = trendWeekOffset === 0
+          const weekDays = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date(weekStart); d.setDate(d.getDate() + i)
             const dateStr = d.toISOString().split('T')[0]
             const dayLogs = logs.filter(l => l.date === dateStr)
             const taken = new Set(dayLogs.map(l => l.supplementId)).size
@@ -279,17 +287,19 @@ export function SupplementTracker() {
               morning, afternoon, evening, night,
             }
           })
-          const loggedDays = last30.filter(d => d.taken > 0).length
-          const totalTaken = last30.reduce((s, d) => s + d.taken, 0)
-          const totalSlots = last30.reduce((s, d) => s + d.total, 0)
-          const avgAdherence = totalSlots > 0 ? Math.round((totalTaken / totalSlots) * 100) : 0
-          let bestStreak = 0, currentStreak = 0
-          for (const d of last30) {
-            if (d.pct === 100) { currentStreak++; bestStreak = Math.max(bestStreak, currentStreak) }
-            else currentStreak = 0
-          }
-          const perfectDays = last30.filter(d => d.pct === 100).length
-          const missedDays = last30.filter(d => d.total > 0 && d.taken === 0).length
+          const weekTaken = weekDays.reduce((s, d) => s + d.taken, 0)
+          const weekTotal = weekDays.reduce((s, d) => s + d.total, 0)
+          const weekPct = weekTotal > 0 ? Math.round((weekTaken / weekTotal) * 100) : 0
+          let bestStreak = 0, cur = 0
+          for (const d of weekDays) { if (d.pct === 100) { cur++; bestStreak = Math.max(bestStreak, cur) } else cur = 0 }
+          const suppBreakdown = dailySupps.map(s => {
+            const takenInWeek = weekDays.filter((_, i) => {
+              const d = new Date(weekStart); d.setDate(d.getDate() + i)
+              return logs.some(l => l.supplementId === s.id && l.date === d.toISOString().split('T')[0])
+            }).length
+            return { name: s.name, stack: s.stack, taken: takenInWeek, pct: Math.round((takenInWeek / 7) * 100) }
+          }).sort((a, b) => b.pct - a.pct)
+          const weekLabel = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
           return (
           <motion.div key="patterns" initial={{ opacity: 0, y: -10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.98 }}
             transition={{ duration: 0.35, ease: smooth }}
@@ -301,32 +311,43 @@ export function SupplementTracker() {
             <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/15 to-transparent" />
 
             <div className="relative p-5">
-              {/* Header */}
+              {/* Header with week nav */}
               <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/15 flex items-center justify-center">
-                    <BarChart3 className="w-4 h-4 text-violet-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-[13px] font-bold text-white">30-Day Adherence</h3>
-                    <p className="text-[10px] text-gray-500">{loggedDays} days logged · {dailySupps.length} daily supplement{dailySupps.length !== 1 ? 's' : ''}</p>
-                  </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setTrendWeekOffset(o => o + 1)} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">{weekLabel}</span>
+                  <button onClick={() => setTrendWeekOffset(o => o - 1)} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  {!isCurrentWeek && (
+                    <button onClick={() => setTrendWeekOffset(0)} className="p-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.05]">
-                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#f97316]" /><span className="text-[8px] text-gray-500 font-bold">Morning</span></div>
-                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#8b5cf6]" /><span className="text-[8px] text-gray-500 font-bold">Afternoon</span></div>
-                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#06b6d4]" /><span className="text-[8px] text-gray-500 font-bold">Evening</span></div>
-                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#6366f1]" /><span className="text-[8px] text-gray-500 font-bold">Night</span></div>
-                  </div>
+                <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+                  <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#f97316]" /><span className="text-[8px] text-gray-500 font-bold">Morning</span></div>
+                  <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#8b5cf6]" /><span className="text-[8px] text-gray-500 font-bold">Afternoon</span></div>
+                  <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#06b6d4]" /><span className="text-[8px] text-gray-500 font-bold">Evening</span></div>
+                  <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#6366f1]" /><span className="text-[8px] text-gray-500 font-bold">Night</span></div>
                 </div>
               </div>
 
               {/* Main chart */}
               <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 mb-4">
-                <div className="h-56">
+                <div className="flex items-center gap-1.5 mb-3">
+                  <BarChart3 className="w-3 h-3 text-violet-400" />
+                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Daily intake</span>
+                  <div className="flex-1" />
+                  <span className="text-[9px] font-bold text-violet-400 tabular-nums">{weekPct}% adherence</span>
+                  <span className="text-[8px] text-gray-600">·</span>
+                  <span className="text-[9px] font-bold text-gray-400 tabular-nums">{weekTaken}/{weekTotal} taken</span>
+                </div>
+                <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={last30} barGap={1} barCategoryGap="15%">
+                    <BarChart data={weekDays} barGap={2} barCategoryGap="20%">
                       <defs>
                         <linearGradient id="gradMorning" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="#f97316" stopOpacity={0.8} />
@@ -345,7 +366,7 @@ export function SupplementTracker() {
                           <stop offset="100%" stopColor="#6366f1" stopOpacity={0.3} />
                         </linearGradient>
                       </defs>
-                      <XAxis dataKey="day" tick={{ fill: '#4b5563', fontSize: 8, fontWeight: 600 }} axisLine={false} tickLine={false} interval={2} />
+                      <XAxis dataKey="day" tick={{ fill: '#4b5563', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fill: '#374151', fontSize: 8 }} axisLine={false} tickLine={false} allowDecimals={false} />
                       <Tooltip cursor={{ fill: 'rgba(139,92,246,0.05)' }}
                         contentStyle={{ backgroundColor: 'rgba(10,10,15,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '10px 14px' }}
@@ -356,32 +377,41 @@ export function SupplementTracker() {
                       <Bar dataKey="morning" stackId="a" fill="url(#gradMorning)" radius={[0, 0, 0, 0]} />
                       <Bar dataKey="afternoon" stackId="a" fill="url(#gradAfternoon)" radius={[0, 0, 0, 0]} />
                       <Bar dataKey="evening" stackId="a" fill="url(#gradEvening)" radius={[0, 0, 0, 0]} />
-                      <Bar dataKey="night" stackId="a" fill="url(#gradNight)" radius={[3, 3, 0, 0]} />
+                      <Bar dataKey="night" stackId="a" fill="url(#gradNight)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* Data cards */}
-              <div className="grid grid-cols-5 gap-2">
-                {[
-                  { label: 'Tracked', value: `${loggedDays}`, sub: 'of 30 days', color: '#8b5cf6', icon: CalendarCheck },
-                  { label: 'Adherence', value: `${avgAdherence}%`, sub: 'avg daily', color: avgAdherence >= 80 ? '#10b981' : avgAdherence >= 50 ? '#f59e0b' : '#ef4444', icon: Target },
-                  { label: 'Streak', value: `${bestStreak}d`, sub: 'best run', color: '#f97316', icon: Flame },
-                  { label: 'Perfect', value: `${perfectDays}`, sub: '100% days', color: '#06b6d4', icon: CheckCircle2 },
-                  { label: 'Missed', value: `${missedDays}`, sub: 'zero days', color: missedDays > 5 ? '#ef4444' : '#6b7280', icon: AlertTriangle },
-                ].map((c, i) => (
-                  <motion.div key={c.label} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}
-                    className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-3 text-center relative overflow-hidden">
-                    <div className="absolute inset-0 opacity-[0.03]" style={{ background: `radial-gradient(circle at center, ${c.color}, transparent 70%)` }} />
-                    <div className="relative">
-                      <c.icon className="w-3.5 h-3.5 mx-auto mb-1.5" style={{ color: c.color }} />
-                      <div className="text-[16px] font-black text-white tabular-nums leading-none">{c.value}</div>
-                      <div className="text-[7px] text-gray-500 uppercase tracking-wider font-bold mt-1">{c.label}</div>
-                      <div className="text-[7px] text-gray-600 mt-0.5">{c.sub}</div>
-                    </div>
-                  </motion.div>
-                ))}
+              {/* Per-supplement breakdown */}
+              <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4">
+                <div className="flex items-center gap-1.5 mb-3">
+                  <Pill className="w-3 h-3 text-violet-400" />
+                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Supplement adherence</span>
+                  <div className="flex-1" />
+                  {bestStreak === 7 && <span className="text-[8px] font-bold text-emerald-400 bg-emerald-500/[0.06] border border-emerald-500/10 px-1.5 py-0.5 rounded">Perfect week</span>}
+                </div>
+                <div className="space-y-2">
+                  {suppBreakdown.map((s, i) => (
+                    <motion.div key={s.name} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
+                      className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] font-semibold text-white truncate">{s.name}</span>
+                          {s.stack && <span className="text-[7px] font-bold text-violet-400/70 bg-violet-500/[0.06] border border-violet-500/10 px-1 py-px rounded uppercase tracking-widest">{s.stack}</span>}
+                        </div>
+                      </div>
+                      <div className="w-24 h-1.5 rounded-full bg-white/[0.04] overflow-hidden shrink-0">
+                        <motion.div initial={{ width: 0 }} animate={{ width: `${s.pct}%` }} transition={{ duration: 0.8, delay: i * 0.06 }}
+                          className="h-full rounded-full" style={{ backgroundColor: s.pct >= 80 ? '#10b981' : s.pct >= 50 ? '#f59e0b' : '#ef4444' }} />
+                      </div>
+                      <span className="text-[10px] font-bold tabular-nums w-10 text-right" style={{ color: s.pct >= 80 ? '#10b981' : s.pct >= 50 ? '#f59e0b' : '#ef4444' }}>{s.taken}/7</span>
+                    </motion.div>
+                  ))}
+                  {suppBreakdown.length === 0 && (
+                    <div className="py-4 text-center"><Pill className="w-6 h-6 text-gray-600 mx-auto mb-1.5" /><p className="text-[10px] text-gray-500">No daily supplements to track.</p></div>
+                  )}
+                </div>
               </div>
             </div>
           </motion.div>
