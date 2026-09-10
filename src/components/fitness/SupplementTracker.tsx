@@ -113,10 +113,13 @@ export function SupplementTracker() {
   const persistSupplements = useCallback((data: Supplement[]) => { setSupplements(data); localStorage.setItem('supplements', JSON.stringify(data)) }, [])
   const persistLogs = useCallback((data: SupplementLog[]) => { setLogs(data); localStorage.setItem('supplementLogs', JSON.stringify(data)) }, [])
 
-  const todayLogs = useMemo(() => logs.filter((l) => {
-    const logDate = l.takenAt ? toLocalDate(new Date(l.takenAt)) : l.date
-    return logDate === selectedDate
-  }), [logs, selectedDate])
+  const todayLogs = useMemo(() => {
+    return logs.filter((l) => {
+      const d = new Date(l.takenAt)
+      const logDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      return logDate === selectedDate
+    })
+  }, [logs, selectedDate])
   const takenTodayIds = useMemo(() => new Set(todayLogs.map((l) => l.supplementId)), [todayLogs])
   const takenTodayCount = takenTodayIds.size; const totalCount = supplements.length; const remainingCount = totalCount - takenTodayCount
   const dailySupps = useMemo(() => supplements.filter((s) => s.frequency === 'daily'), [supplements])
@@ -216,7 +219,8 @@ export function SupplementTracker() {
     if (!justTaken) return
     if (undoTimer.current) clearTimeout(undoTimer.current)
     const logToRemove = logs.find(l => {
-      const logDate = l.takenAt ? toLocalDate(new Date(l.takenAt)) : l.date
+      const d = new Date(l.takenAt)
+      const logDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       return logDate === selectedDate && l.supplementId === justTaken.id
     })
     if (logToRemove) persistLogs(logs.filter(l => l.id !== logToRemove.id))
@@ -225,7 +229,8 @@ export function SupplementTracker() {
 
   const undoTakeById = (suppId: string) => {
     const logToRemove = logs.find(l => {
-      const logDate = l.takenAt ? toLocalDate(new Date(l.takenAt)) : l.date
+      const d = new Date(l.takenAt)
+      const logDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       return logDate === selectedDate && l.supplementId === suppId
     })
     if (logToRemove) persistLogs(logs.filter(l => l.id !== logToRemove.id))
