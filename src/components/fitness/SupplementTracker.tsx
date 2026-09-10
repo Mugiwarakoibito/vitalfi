@@ -65,6 +65,10 @@ const SUPP_INTERACTIONS: { a: string; b: string; type: 'synergy' | 'conflict' | 
 const spring = { type: 'spring' as const, bounce: 0.4 }
 const smooth = [0.16, 1, 0.3, 1] as const
 
+function toLocalDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export function SupplementTracker() {
   const [supplements, setSupplements] = useState<Supplement[]>([])
   const [logs, setLogs] = useState<SupplementLog[]>([])
@@ -78,7 +82,6 @@ export function SupplementTracker() {
   const [coachMode, setCoachMode] = useState<'insight' | 'refill' | 'stack' | 'timing' | 'cost'>('insight')
   const [showCoachModeDropdown, setShowCoachModeDropdown] = useState(false)
   const [trendWeekOffset, setTrendWeekOffset] = useState(0)
-  const toLocalDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   const today = toLocalDate(new Date())
   const [selectedDate, setSelectedDate] = useState(today)
   const [justTaken, setJustTaken] = useState<Supplement | null>(null)
@@ -91,15 +94,18 @@ export function SupplementTracker() {
       const logStored = localStorage.getItem('supplementLogs')
       if (logStored) {
         const raw: SupplementLog[] = JSON.parse(logStored)
+        let changed = false
         const fixed = raw.map(l => {
-          if (l.takenAt) {
-            const d = new Date(l.takenAt)
-            return { ...l, date: toLocalDate(d) }
+          const takenAtDate = new Date(l.takenAt)
+          const correctDate = toLocalDate(takenAtDate)
+          if (l.date !== correctDate) {
+            changed = true
+            return { ...l, date: correctDate }
           }
           return l
         })
         setLogs(fixed)
-        localStorage.setItem('supplementLogs', JSON.stringify(fixed))
+        if (changed) localStorage.setItem('supplementLogs', JSON.stringify(fixed))
       }
     } catch {}
   }, [])
@@ -107,7 +113,10 @@ export function SupplementTracker() {
   const persistSupplements = useCallback((data: Supplement[]) => { setSupplements(data); localStorage.setItem('supplements', JSON.stringify(data)) }, [])
   const persistLogs = useCallback((data: SupplementLog[]) => { setLogs(data); localStorage.setItem('supplementLogs', JSON.stringify(data)) }, [])
 
-  const todayLogs = useMemo(() => logs.filter((l) => l.date === selectedDate), [logs, selectedDate])
+  const todayLogs = useMemo(() => logs.filter((l) => {
+    const logDate = l.takenAt ? toLocalDate(new Date(l.takenAt)) : l.date
+    return logDate === selectedDate
+  }), [logs, selectedDate])
   const takenTodayIds = useMemo(() => new Set(todayLogs.map((l) => l.supplementId)), [todayLogs])
   const takenTodayCount = takenTodayIds.size; const totalCount = supplements.length; const remainingCount = totalCount - takenTodayCount
   const dailySupps = useMemo(() => supplements.filter((s) => s.frequency === 'daily'), [supplements])
@@ -206,14 +215,19 @@ export function SupplementTracker() {
   const undoTake = () => {
     if (!justTaken) return
     if (undoTimer.current) clearTimeout(undoTimer.current)
-    const todayLogs = logs.filter(l => l.date === selectedDate)
-    const logToRemove = todayLogs.find(l => l.supplementId === justTaken.id)
+    const logToRemove = logs.find(l => {
+      const logDate = l.takenAt ? toLocalDate(new Date(l.takenAt)) : l.date
+      return logDate === selectedDate && l.supplementId === justTaken.id
+    })
     if (logToRemove) persistLogs(logs.filter(l => l.id !== logToRemove.id))
     setJustTaken(null)
   }
 
   const undoTakeById = (suppId: string) => {
-    const logToRemove = logs.find(l => l.date === selectedDate && l.supplementId === suppId)
+    const logToRemove = logs.find(l => {
+      const logDate = l.takenAt ? toLocalDate(new Date(l.takenAt)) : l.date
+      return logDate === selectedDate && l.supplementId === suppId
+    })
     if (logToRemove) persistLogs(logs.filter(l => l.id !== logToRemove.id))
   }
 
