@@ -89,7 +89,18 @@ export function SupplementTracker() {
       const stored = localStorage.getItem('supplements')
       if (stored) setSupplements(JSON.parse(stored))
       const logStored = localStorage.getItem('supplementLogs')
-      if (logStored) setLogs(JSON.parse(logStored))
+      if (logStored) {
+        const raw: SupplementLog[] = JSON.parse(logStored)
+        const fixed = raw.map(l => {
+          if (l.takenAt) {
+            const d = new Date(l.takenAt)
+            return { ...l, date: toLocalDate(d) }
+          }
+          return l
+        })
+        setLogs(fixed)
+        localStorage.setItem('supplementLogs', JSON.stringify(fixed))
+      }
     } catch {}
   }, [])
 
@@ -244,20 +255,14 @@ export function SupplementTracker() {
           </button>
           <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
             <Calendar className="w-4 h-4 text-violet-400 shrink-0" />
-            <span className="text-sm text-white font-medium select-none">
-              {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-            </span>
-            <input type="date" value={selectedDate} onChange={e => { if (e.target.value) setSelectedDate(e.target.value) }}
-              className="bg-transparent border-none text-white font-medium text-sm outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:transition-opacity cursor-pointer w-0 p-0 opacity-0 absolute" />
-            <button onClick={() => { const input = document.querySelector('input[type="date"]') as HTMLInputElement; input?.showPicker?.() }} className="p-1.5 rounded-lg bg-black/40 border border-white/10 text-gray-400 hover:text-white hover:bg-black/60 transition-all">
-              <Calendar className="w-4 h-4" />
-            </button>
+            <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
+              className="bg-transparent border-none text-white font-medium text-sm outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:transition-opacity cursor-pointer" />
           </div>
           <button onClick={() => { const dt = new Date(selectedDate + 'T12:00:00'); dt.setDate(dt.getDate() + 1); setSelectedDate(toLocalDate(dt)) }} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
             <ChevronRight className="w-5 h-5" />
           </button>
           {selectedDate !== today && (
-            <button onClick={() => { setSelectedDate(today) }} className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="Today">
+            <button onClick={() => setSelectedDate(today)} className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="Jump to today">
               <RotateCcw className="w-4 h-4" />
             </button>
           )}
