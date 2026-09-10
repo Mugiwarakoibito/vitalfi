@@ -249,8 +249,8 @@ export function SupplementTracker() {
             </span>
             <input type="date" value={selectedDate} onChange={e => { if (e.target.value) { setSelectedDate(e.target.value); setTrendWeekOffset(0) } }}
               className="bg-transparent border-none text-white font-medium text-sm outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:transition-opacity cursor-pointer w-0 p-0 opacity-0 absolute" />
-            <button onClick={() => { const input = document.querySelector('input[type="date"]') as HTMLInputElement; input?.showPicker?.() }} className="p-1 rounded-lg bg-black/40 border border-white/10 text-gray-400 hover:text-white hover:bg-black/60 transition-all">
-              <Calendar className="w-3.5 h-3.5" />
+            <button onClick={() => { const input = document.querySelector('input[type="date"]') as HTMLInputElement; input?.showPicker?.() }} className="p-1.5 rounded-lg bg-black/40 border border-white/10 text-gray-400 hover:text-white hover:bg-black/60 transition-all">
+              <Calendar className="w-4 h-4" />
             </button>
           </div>
           <button onClick={() => { setTrendWeekOffset(o => o - 1); setSelectedDate(d => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() + 7); return dt.toISOString().split('T')[0] }) }} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
