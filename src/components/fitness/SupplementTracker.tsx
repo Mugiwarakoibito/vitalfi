@@ -230,10 +230,32 @@ export function SupplementTracker() {
     <div className="space-y-5">
 
       {/* ─── HEADER ─── */}
-      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="flex items-end justify-between">
-        <div>
-          <h1 className="text-[28px] font-extrabold text-white tracking-tight leading-none">Supplements</h1>
-          <p className="text-[13px] text-gray-500 mt-1.5 font-medium">{totalCount} tracked · {scheduleToday.length} today</p>
+      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          <button onClick={() => setTrendWeekOffset(o => o + 1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          {(() => {
+            const now = new Date()
+            const ws = new Date(now); ws.setDate(ws.getDate() - ws.getDay() + (trendWeekOffset * 7)); ws.setHours(0,0,0,0)
+            const we = new Date(ws); we.setDate(we.getDate() + 6)
+            return (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+                <CalendarCheck className="w-4 h-4 text-violet-400 shrink-0" />
+                <span className="text-[11px] text-white font-medium select-none">
+                  {ws.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {we.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+            )
+          })()}
+          <button onClick={() => setTrendWeekOffset(o => o - 1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          {trendWeekOffset !== 0 && (
+            <button onClick={() => setTrendWeekOffset(0)} className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {totalCount > 0 && (
