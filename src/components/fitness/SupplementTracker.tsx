@@ -113,13 +113,7 @@ export function SupplementTracker() {
   const persistSupplements = useCallback((data: Supplement[]) => { setSupplements(data); localStorage.setItem('supplements', JSON.stringify(data)) }, [])
   const persistLogs = useCallback((data: SupplementLog[]) => { setLogs(data); localStorage.setItem('supplementLogs', JSON.stringify(data)) }, [])
 
-  const todayLogs = useMemo(() => {
-    return logs.filter((l) => {
-      const d = new Date(l.takenAt)
-      const logDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      return logDate === selectedDate
-    })
-  }, [logs, selectedDate])
+  const todayLogs = useMemo(() => logs.filter(l => l.date === selectedDate), [logs, selectedDate])
   const takenTodayIds = useMemo(() => new Set(todayLogs.map((l) => l.supplementId)), [todayLogs])
   const takenTodayCount = takenTodayIds.size; const totalCount = supplements.length; const remainingCount = totalCount - takenTodayCount
   const dailySupps = useMemo(() => supplements.filter((s) => s.frequency === 'daily'), [supplements])
@@ -128,7 +122,7 @@ export function SupplementTracker() {
     let streak = 0; const now = new Date()
     for (let i = 0; i < 365; i++) {
       const d = new Date(now); d.setDate(d.getDate() - i)
-      const dateStr = d.toISOString().split('T')[0]
+      const dateStr = toLocalDate(d)
       const dayLogs = logs.filter((l) => l.date === dateStr); const taken = new Set(dayLogs.map((l) => l.supplementId)).size
       if (dailySupps.length > 0 && taken === dailySupps.length) streak++
       else if (dailySupps.length > 0) break
@@ -218,21 +212,13 @@ export function SupplementTracker() {
   const undoTake = () => {
     if (!justTaken) return
     if (undoTimer.current) clearTimeout(undoTimer.current)
-    const logToRemove = logs.find(l => {
-      const d = new Date(l.takenAt)
-      const logDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      return logDate === selectedDate && l.supplementId === justTaken.id
-    })
+    const logToRemove = logs.find(l => l.date === selectedDate && l.supplementId === justTaken.id)
     if (logToRemove) persistLogs(logs.filter(l => l.id !== logToRemove.id))
     setJustTaken(null)
   }
 
   const undoTakeById = (suppId: string) => {
-    const logToRemove = logs.find(l => {
-      const d = new Date(l.takenAt)
-      const logDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      return logDate === selectedDate && l.supplementId === suppId
-    })
+    const logToRemove = logs.find(l => l.date === selectedDate && l.supplementId === suppId)
     if (logToRemove) persistLogs(logs.filter(l => l.id !== logToRemove.id))
   }
 
@@ -322,7 +308,7 @@ export function SupplementTracker() {
           const isCurrentWeek = trendWeekOffset === 0
           const weekDays = Array.from({ length: 7 }, (_, i) => {
             const d = new Date(weekStart); d.setDate(d.getDate() + i)
-            const dateStr = d.toISOString().split('T')[0]
+            const dateStr = toLocalDate(d)
             const dayLogs = logs.filter(l => l.date === dateStr)
             const taken = new Set(dayLogs.map(l => l.supplementId)).size
             const total = dailySupps.length
@@ -346,7 +332,7 @@ export function SupplementTracker() {
           const suppBreakdown = dailySupps.map(s => {
             const takenInWeek = Array.from({ length: 7 }, (_, i) => {
               const d = new Date(weekStart); d.setDate(d.getDate() + i)
-              const dateStr = d.toISOString().split('T')[0]
+              const dateStr = toLocalDate(d)
               return logs.some(l => l.supplementId === s.id && l.date === dateStr)
             }).filter(Boolean).length
             return { name: s.name, stack: s.stack, taken: takenInWeek, pct: Math.round((takenInWeek / 7) * 100) }
