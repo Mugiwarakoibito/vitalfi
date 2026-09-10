@@ -694,48 +694,32 @@ export function SupplementTracker() {
 
       {/* ─── DATE NAVIGATION + STATS ─── */}
       {totalCount > 0 && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
-          {/* Week nav */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-1">
-              <button onClick={() => setTrendWeekOffset(o => o + 1)} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-                <ChevronLeft className="w-4 h-4" />
-              </button>
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setTrendWeekOffset(o => o + 1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+              <CalendarCheck className="w-4 h-4 text-violet-400 shrink-0" />
               {(() => {
                 const now = new Date()
                 const ws = new Date(now); ws.setDate(ws.getDate() - ws.getDay() + (trendWeekOffset * 7)); ws.setHours(0,0,0,0)
                 const we = new Date(ws); we.setDate(we.getDate() + 6)
                 return (
-                  <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">
+                  <span className="text-[11px] text-white font-medium select-none">
                     {ws.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {we.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </span>
                 )
               })()}
-              <button onClick={() => setTrendWeekOffset(o => o - 1)} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-                <ChevronRight className="w-4 h-4" />
-              </button>
-              {trendWeekOffset !== 0 && (
-                <button onClick={() => setTrendWeekOffset(0)} className="p-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </button>
-              )}
             </div>
-          </div>
-          {/* Stat cards grid */}
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: 'Remaining', val: remainingCount, color: '#f59e0b', icon: Target },
-              { label: 'Streak', val: `${suppStreak}d`, color: '#f97316', icon: Flame },
-              { label: 'Monthly', val: `$${monthlyCost.toFixed(0)}`, color: '#a78bfa', icon: DollarSign },
-            ].map((s, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.06 }}
-                className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0c0c14] p-4 shadow-lg">
-                <div className="absolute top-0 right-0 w-16 h-16 rounded-full blur-xl -mr-6 -mt-6" style={{ backgroundColor: `${s.color}15` }} />
-                <s.icon className="w-4 h-4 mb-2" style={{ color: s.color }} />
-                <div className="text-[18px] font-black text-white tabular-nums leading-none">{s.val}</div>
-                <div className="text-[9px] text-gray-500 uppercase tracking-[0.15em] font-bold mt-1.5">{s.label}</div>
-              </motion.div>
-            ))}
+            <button onClick={() => setTrendWeekOffset(o => o - 1)} className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+              <ChevronRight className="w-5 h-5" />
+            </button>
+            {trendWeekOffset !== 0 && (
+              <button onClick={() => setTrendWeekOffset(0)} className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </motion.div>
       )}
