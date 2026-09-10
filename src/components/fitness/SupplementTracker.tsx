@@ -2,11 +2,11 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Pill, Plus, Check, AlertTriangle, Undo2, Clock,
-  Trash2, Sunrise, Sunset, Moon, Sun, Sparkles, Target, Flame, Activity,
-  DollarSign, Layers, CalendarCheck,
+  Trash2, Sunrise, Sunset, Moon, Sun, Sparkles, Activity,
+  DollarSign, Layers, CalendarCheck, Calendar,
   Brain, ShieldCheck, ShieldAlert, Info, Zap, Package,
   CheckCircle2, Dumbbell, BarChart3, ChevronDown,
-  ChevronLeft, ChevronRight, RotateCcw,
+  ChevronLeft, ChevronRight, RotateCcw, Target, Flame,
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Modal } from '@/components/ui/Modal'
@@ -700,7 +700,7 @@ export function SupplementTracker() {
               <ChevronLeft className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-              <CalendarCheck className="w-4 h-4 text-violet-400 shrink-0" />
+              <Calendar className="w-4 h-4 text-violet-400 shrink-0" />
               {(() => {
                 const now = new Date()
                 const ws = new Date(now); ws.setDate(ws.getDate() - ws.getDay() + (trendWeekOffset * 7)); ws.setHours(0,0,0,0)
