@@ -79,6 +79,7 @@ export function SupplementTracker() {
     times: [] as TimeOfDay[], notes: '', refillDays: '', stack: '', cost: '', totalServings: '',
   })
   const [activePanel, setActivePanel] = useState<'patterns' | 'coach' | null>(null)
+  const [weekOffset, setWeekOffset] = useState(0)
   const [coachMode, setCoachMode] = useState<'insight' | 'refill' | 'stack' | 'timing' | 'cost'>('insight')
   const [showCoachModeDropdown, setShowCoachModeDropdown] = useState(false)
   const today = toLocalDate(new Date())
@@ -305,8 +306,14 @@ export function SupplementTracker() {
         {/* ═══ WEEKLY WAVE ═══ */}
         {activePanel === 'patterns' && totalCount > 0 && (() => {
           const now = new Date(selectedDate + 'T12:00:00')
+          const weekStart = new Date(now)
+          weekStart.setDate(weekStart.getDate() - weekStart.getDay() + (weekOffset * 7))
+          weekStart.setHours(0, 0, 0, 0)
+          const weekEnd = new Date(weekStart)
+          weekEnd.setDate(weekEnd.getDate() + 6)
+          const isCurrentWeek = weekOffset === 0
           const weekDays = Array.from({ length: 7 }, (_, i) => {
-            const d = new Date(now); d.setDate(d.getDate() - (6 - i))
+            const d = new Date(weekStart); d.setDate(d.getDate() + i)
             const dateStr = toLocalDate(d)
             const dayLogs = logs.filter(l => l.date === dateStr)
             const taken = new Set(dayLogs.map(l => l.supplementId)).size
@@ -333,16 +340,7 @@ export function SupplementTracker() {
           const totalAfternoon = weekDays.reduce((s, d) => s + d.afternoon, 0)
           const totalEvening = weekDays.reduce((s, d) => s + d.evening, 0)
           const totalNight = weekDays.reduce((s, d) => s + d.night, 0)
-          const timeTotals = [
-            { label: 'Morning', count: totalMorning, color: '#f97316' },
-            { label: 'Afternoon', count: totalAfternoon, color: '#8b5cf6' },
-            { label: 'Evening', count: totalEvening, color: '#06b6d4' },
-            { label: 'Night', count: totalNight, color: '#6366f1' },
-          ].filter(t => t.count > 0).sort((a, b) => b.count - a.count)
-          const bestTime = timeTotals[0]
-          const missedDays = weekDays.filter(d => d.pct < 100).length
-          const avgPerDay = weekDays.length > 0 ? (weekTaken / weekDays.length).toFixed(1) : '0'
-          const costPerMonth = supplements.reduce((sum, s) => { if (s.cost && s.totalServings && s.totalServings > 0) return sum + (s.cost / s.totalServings) * 30; return sum }, 0)
+
 
           const cx = 140, cy = 140, radius = 100
           const circlePts = weekDays.map((d, i) => {
@@ -383,9 +381,22 @@ export function SupplementTracker() {
                   <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/10 border border-violet-500/20 flex items-center justify-center shadow-lg shadow-violet-500/10">
                     <TrendingUp className="w-5 h-5 text-violet-400" />
                   </div>
-                  <div>
-                    <h3 className="text-[15px] font-bold text-white tracking-tight">Weekly Wave</h3>
-                    <p className="text-[10px] text-gray-500 mt-0.5">7-day adherence overview</p>
+                  <div className="flex items-center gap-1.5 bg-white/[0.04] rounded-xl px-2 py-1 border border-white/[0.08]">
+                    <button onClick={() => setWeekOffset(o => o + 1)} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-[10px] text-gray-400 font-medium px-2 min-w-[110px] text-center select-none">
+                      {weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                    <button onClick={() => setWeekOffset(o => Math.max(0, o - 1))} disabled={isCurrentWeek}
+                      className={`p-1.5 rounded-lg border transition-all ${isCurrentWeek ? 'bg-white/[0.02] border-white/[0.04] text-gray-600 cursor-not-allowed' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20'}`}>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => setWeekOffset(0)}
+                      className={`p-1.5 rounded-lg border transition-all ${isCurrentWeek ? 'bg-white/[0.02] border-white/[0.04] text-gray-600' : 'bg-violet-500/10 border-violet-500/20 text-violet-400 hover:bg-violet-500/20'}`}
+                      title={isCurrentWeek ? 'Current week' : 'This week'}>
+                      <RotateCcw className="w-3 h-3" />
+                    </button>
                   </div>
                 </div>
                 <div className="flex items-center gap-2.5">
@@ -459,91 +470,108 @@ export function SupplementTracker() {
                   </div>
                 </div>
 
-                {/* Weekly Insights + Daily bars */}
+                {/* Consistency Ring + Time Distribution + Heatmap */}
                 <div className="w-52 flex flex-col gap-3 shrink-0">
-                  <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden flex flex-col gap-3">
+                  {/* Consistency Ring */}
+                  <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden flex flex-col items-center">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/15 to-transparent" />
+                    <div className="flex items-center gap-2 mb-4 w-full">
+                      <Target className="w-3.5 h-3.5 text-violet-400" />
+                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.15em]">Consistency</span>
+                    </div>
+                    <div className="relative w-28 h-28">
+                      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="6" />
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="url(#consistencyGrad)" strokeWidth="6" strokeLinecap="round"
+                          strokeDasharray={`${2 * Math.PI * 42}`}
+                          strokeDashoffset={`${2 * Math.PI * 42 * (1 - weekPct / 100)}`}
+                          style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1)' }} />
+                        <defs>
+                          <linearGradient id="consistencyGrad" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#a78bfa" />
+                            <stop offset="100%" stopColor="#7c3aed" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-2xl font-black text-white tabular-nums">{weekPct}</span>
+                        <span className="text-[8px] text-gray-500 font-bold tracking-wider">%CONSISTENT</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Time Distribution */}
+                  <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden flex flex-col gap-2.5">
                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/15 to-transparent" />
                     <div className="flex items-center gap-2">
-                      <Sparkles className="w-3.5 h-3.5 text-violet-400" />
-                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.15em]">Weekly insights</span>
+                      <Clock className="w-3.5 h-3.5 text-violet-400" />
+                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.15em]">Time split</span>
                     </div>
-
-                    {bestTime && (
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: bestTime.color + '15' }}>
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: bestTime.color }} />
+                    {[
+                      { label: 'AM', count: totalMorning, color: '#f97316', icon: Sun },
+                      { label: 'Mid', count: totalAfternoon, color: '#8b5cf6', icon: Sparkles },
+                      { label: 'Eve', count: totalEvening, color: '#06b6d4', icon: Sunset },
+                      { label: 'Night', count: totalNight, color: '#6366f1', icon: Moon },
+                    ].filter(t => t.count > 0).map(t => {
+                      const maxCount = Math.max(totalMorning, totalAfternoon, totalEvening, totalNight, 1)
+                      const pct = Math.round((t.count / maxCount) * 100)
+                      const Icon = t.icon
+                      return (
+                        <div key={t.label} className="flex items-center gap-2">
+                          <Icon className="w-3 h-3 shrink-0" style={{ color: t.color }} />
+                          <div className="flex-1 h-2 rounded-full bg-white/[0.04] overflow-hidden">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                              transition={{ duration: 0.8, ease: 'easeOut' }}
+                              className="h-full rounded-full" style={{ backgroundColor: t.color + '99' }} />
+                          </div>
+                          <span className="text-[9px] font-bold tabular-nums w-5 text-right" style={{ color: t.color }}>{t.count}</span>
                         </div>
-                        <div>
-                          <span className="text-[7px] text-gray-500 font-bold block">Best timing</span>
-                          <span className="text-[11px] font-black" style={{ color: bestTime.color }}>{bestTime.label}</span>
-                          <span className="text-[8px] text-gray-500 ml-1">({bestTime.count}x)</span>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                        <Activity className="w-4 h-4 text-violet-400" />
-                      </div>
-                      <div>
-                        <span className="text-[7px] text-gray-500 font-bold block">Daily average</span>
-                        <span className="text-[11px] font-black text-violet-400">{avgPerDay}</span>
-                        <span className="text-[8px] text-gray-500 ml-1">supps/day</span>
-                      </div>
-                    </div>
-
-                    {costPerMonth > 0 && (
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                          <DollarSign className="w-4 h-4 text-emerald-400" />
-                        </div>
-                        <div>
-                          <span className="text-[7px] text-gray-500 font-bold block">Monthly cost</span>
-                          <span className="text-[11px] font-black text-emerald-400">${costPerMonth.toFixed(0)}</span>
-                          <span className="text-[8px] text-gray-500 ml-1">estimated</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {missedDays > 0 && (
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                          <AlertTriangle className="w-4 h-4 text-amber-400" />
-                        </div>
-                        <div>
-                          <span className="text-[7px] text-gray-500 font-bold block">Missed days</span>
-                          <span className="text-[11px] font-black text-amber-400">{missedDays}</span>
-                          <span className="text-[8px] text-gray-500 ml-1">incomplete</span>
-                        </div>
-                      </div>
-                    )}
+                      )
+                    })}
                   </div>
 
-                  <div className="flex-1 rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 flex flex-col min-h-0">
-                    <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider mb-3 shrink-0">Daily bars</span>
-                    <div className="flex-1 flex items-end gap-1 min-h-0">
-                      {weekDays.map((d, i) => (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-                          <span className="text-[7px] font-bold tabular-nums" style={{ color: d.pct >= 80 ? '#10b981' : d.pct >= 50 ? '#f59e0b' : '#ef4444' }}>{d.pct}</span>
-                          <div className="w-full rounded-t-md transition-all duration-500" style={{
-                            height: `${Math.max(d.pct, 4)}%`,
-                            backgroundColor: d.pct >= 80 ? 'rgba(16,185,129,0.4)' : d.pct >= 50 ? 'rgba(245,158,11,0.35)' : d.pct > 0 ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.04)',
-                            boxShadow: d.pct === 100 ? '0 0 12px rgba(16,185,129,0.3)' : 'none',
-                          }} />
-                          <span className="text-[7px] text-gray-500 font-bold">{d.letter}</span>
+                  {/* 30-Day Heatmap */}
+                  <div className="flex-1 rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden flex flex-col min-h-0">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/15 to-transparent" />
+                    <div className="flex items-center gap-2 mb-3 shrink-0">
+                      <Calendar className="w-3.5 h-3.5 text-violet-400" />
+                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.15em]">30-day map</span>
+                    </div>
+                    <div className="flex-1 flex flex-col justify-center min-h-0">
+                      <div className="grid grid-cols-7 gap-[3px]">
+                        {Array.from({ length: 28 }, (_, i) => {
+                          const d = new Date(now); d.setDate(d.getDate() - (27 - i))
+                          const dateStr = toLocalDate(d)
+                          const dayLogs = logs.filter(l => l.date === dateStr)
+                          const dayTaken = new Set(dayLogs.map(l => l.supplementId)).size
+                          const dayTotal = dailySupps.length
+                          const dayPct = dayTotal > 0 ? (dayTaken / dayTotal) * 100 : 0
+                          const heat = dayPct >= 100 ? '#10b981' : dayPct >= 75 ? '#34d399' : dayPct >= 50 ? '#f59e0b' : dayPct > 0 ? '#ef4444' : 'rgba(255,255,255,0.04)'
+                          return (
+                            <div key={i} className="aspect-square rounded-[3px] transition-colors duration-300"
+                              style={{ backgroundColor: heat, boxShadow: dayPct === 100 ? '0 0 4px rgba(16,185,129,0.3)' : 'none' }}
+                              title={`${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${dayTaken}/${dayTotal}`} />
+                          )
+                        })}
+                      </div>
+                      <div className="flex justify-between mt-2">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-[1px] bg-white/[0.04]" />
+                          <span className="text-[7px] text-gray-600">0%</span>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 shrink-0">
-                    <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-2.5 text-center">
-                      <span className="text-[14px] font-black text-orange-400 tabular-nums block">{bestStreak}</span>
-                      <span className="text-[6px] text-gray-500 font-bold uppercase tracking-wider">Streak</span>
-                    </div>
-                    <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-2.5 text-center">
-                      <span className="text-[14px] font-black text-emerald-400 tabular-nums block">{weekTaken}</span>
-                      <span className="text-[6px] text-gray-500 font-bold uppercase tracking-wider">Taken</span>
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-[1px] bg-red-500/35" />
+                          <span className="text-[7px] text-gray-600">25%</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-[1px] bg-amber-500/35" />
+                          <span className="text-[7px] text-gray-600">50%</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-[1px] bg-emerald-500/40" />
+                          <span className="text-[7px] text-gray-600">100%</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
