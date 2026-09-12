@@ -7,8 +7,8 @@ import {
   Brain, ShieldCheck, ShieldAlert, Info, Zap, Package,
   CheckCircle2, Dumbbell, BarChart3, ChevronDown,
   ChevronLeft, ChevronRight, RotateCcw, Target, Flame,
+  TrendingUp,
 } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { generateId, cn } from '@/lib/utils'
@@ -81,7 +81,6 @@ export function SupplementTracker() {
   const [activePanel, setActivePanel] = useState<'patterns' | 'coach' | null>(null)
   const [coachMode, setCoachMode] = useState<'insight' | 'refill' | 'stack' | 'timing' | 'cost'>('insight')
   const [showCoachModeDropdown, setShowCoachModeDropdown] = useState(false)
-  const [trendWeekOffset, setTrendWeekOffset] = useState(0)
   const today = toLocalDate(new Date())
   const [selectedDate, setSelectedDate] = useState(today)
   const [justTaken, setJustTaken] = useState<Supplement | null>(null)
@@ -115,7 +114,7 @@ export function SupplementTracker() {
 
   const todayLogs = useMemo(() => logs.filter(l => l.date === selectedDate), [logs, selectedDate])
   const takenTodayIds = useMemo(() => new Set(todayLogs.map((l) => l.supplementId)), [todayLogs])
-  const takenTodayCount = takenTodayIds.size; const totalCount = supplements.length; const remainingCount = totalCount - takenTodayCount
+  const takenTodayCount = todayLogs.length > 0 ? new Set(todayLogs.map(l => l.supplementId)).size : 0; const totalCount = supplements.length; const remainingCount = totalCount - takenTodayCount
   const dailySupps = useMemo(() => supplements.filter((s) => s.frequency === 'daily'), [supplements])
 
   const suppStreak = useMemo(() => {
@@ -219,7 +218,13 @@ export function SupplementTracker() {
 
   const undoTakeById = (suppId: string) => {
     const logToRemove = logs.find(l => l.date === selectedDate && l.supplementId === suppId)
-    if (logToRemove) persistLogs(logs.filter(l => l.id !== logToRemove.id))
+    if (logToRemove) {
+      persistLogs(logs.filter(l => l.id !== logToRemove.id))
+    }
+    if (justTaken && justTaken.id === suppId) {
+      if (undoTimer.current) clearTimeout(undoTimer.current)
+      setJustTaken(null)
+    }
   }
 
   const deleteFromSchedule = (supp: Supplement) => {
@@ -297,17 +302,11 @@ export function SupplementTracker() {
 
       {/* ─── PANELS ─── */}
       <AnimatePresence mode="wait">
-        {/* ═══ WEEKLY PATTERNS ═══ */}
+        {/* ═══ WEEKLY WAVE ═══ */}
         {activePanel === 'patterns' && totalCount > 0 && (() => {
           const now = new Date(selectedDate + 'T12:00:00')
-          const weekStart = new Date(now)
-          weekStart.setDate(weekStart.getDate() - weekStart.getDay() + (trendWeekOffset * 7))
-          weekStart.setHours(0, 0, 0, 0)
-          const weekEnd = new Date(weekStart)
-          weekEnd.setDate(weekEnd.getDate() + 6)
-          const isCurrentWeek = trendWeekOffset === 0
           const weekDays = Array.from({ length: 7 }, (_, i) => {
-            const d = new Date(weekStart); d.setDate(d.getDate() + i)
+            const d = new Date(now); d.setDate(d.getDate() - (6 - i))
             const dateStr = toLocalDate(d)
             const dayLogs = logs.filter(l => l.date === dateStr)
             const taken = new Set(dayLogs.map(l => l.supplementId)).size
@@ -317,11 +316,10 @@ export function SupplementTracker() {
             const evening = dayLogs.filter(l => { const s = supplements.find(s => s.id === l.supplementId); return s?.times[0] === 'Evening' }).length
             const night = dayLogs.filter(l => { const s = supplements.find(s => s.id === l.supplementId); return s?.times[0] === 'Night' }).length
             return {
+              letter: d.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0),
               date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-              day: d.toLocaleDateString('en-US', { weekday: 'short' }),
-              taken, total,
+              taken, total, morning, afternoon, evening, night,
               pct: total > 0 ? Math.round((taken / total) * 100) : 0,
-              morning, afternoon, evening, night,
             }
           })
           const weekTaken = weekDays.reduce((s, d) => s + d.taken, 0)
@@ -329,126 +327,269 @@ export function SupplementTracker() {
           const weekPct = weekTotal > 0 ? Math.round((weekTaken / weekTotal) * 100) : 0
           let bestStreak = 0, cur = 0
           for (const d of weekDays) { if (d.pct === 100) { cur++; bestStreak = Math.max(bestStreak, cur) } else cur = 0 }
-          const suppBreakdown = dailySupps.map(s => {
-            const takenInWeek = Array.from({ length: 7 }, (_, i) => {
-              const d = new Date(weekStart); d.setDate(d.getDate() + i)
-              const dateStr = toLocalDate(d)
-              return logs.some(l => l.supplementId === s.id && l.date === dateStr)
-            }).filter(Boolean).length
-            return { name: s.name, stack: s.stack, taken: takenInWeek, pct: Math.round((takenInWeek / 7) * 100) }
-          }).sort((a, b) => b.pct - a.pct)
-          const weekLabel = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+          const perfectDays = weekDays.filter(d => d.pct === 100).length
+
+          const totalMorning = weekDays.reduce((s, d) => s + d.morning, 0)
+          const totalAfternoon = weekDays.reduce((s, d) => s + d.afternoon, 0)
+          const totalEvening = weekDays.reduce((s, d) => s + d.evening, 0)
+          const totalNight = weekDays.reduce((s, d) => s + d.night, 0)
+          const timeTotals = [
+            { label: 'Morning', count: totalMorning, color: '#f97316' },
+            { label: 'Afternoon', count: totalAfternoon, color: '#8b5cf6' },
+            { label: 'Evening', count: totalEvening, color: '#06b6d4' },
+            { label: 'Night', count: totalNight, color: '#6366f1' },
+          ].filter(t => t.count > 0).sort((a, b) => b.count - a.count)
+          const bestTime = timeTotals[0]
+          const missedDays = weekDays.filter(d => d.pct < 100).length
+          const avgPerDay = weekDays.length > 0 ? (weekTaken / weekDays.length).toFixed(1) : '0'
+          const costPerMonth = supplements.reduce((sum, s) => { if (s.cost && s.totalServings && s.totalServings > 0) return sum + (s.cost / s.totalServings) * 30; return sum }, 0)
+
+          const cx = 140, cy = 140, radius = 100
+          const circlePts = weekDays.map((d, i) => {
+            const angle = (i / 7) * Math.PI * 2 - Math.PI / 2
+            const r = radius * (d.pct / 100)
+            return {
+              x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle),
+              baseX: cx + radius * Math.cos(angle), baseY: cy + radius * Math.sin(angle),
+              labelX: cx + (radius + 22) * Math.cos(angle), labelY: cy + (radius + 22) * Math.sin(angle),
+            }
+          })
+          let wavePath = ''
+          for (let i = 0; i < circlePts.length; i++) {
+            const p = circlePts[i]
+            const next = circlePts[(i + 1) % circlePts.length]
+            const prev = circlePts[(i - 1 + circlePts.length) % circlePts.length]
+            const next2 = circlePts[(i + 2) % circlePts.length]
+            const cp1x = p.x + (next.x - prev.x) / 5, cp1y = p.y + (next.y - prev.y) / 5
+            const cp2x = next.x - (next2.x - p.x) / 5, cp2y = next.y - (next2.y - p.y) / 5
+            if (i === 0) wavePath = `M ${p.x} ${p.y}`
+            wavePath += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${next.x} ${next.y}`
+          }
+          wavePath += ' Z'
+
           return (
           <motion.div key="patterns" initial={{ opacity: 0, y: -10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.98 }}
-            transition={{ duration: 0.35, ease: smooth }}
-            className="relative overflow-hidden rounded-[20px] border border-violet-500/10 bg-[#0c0c14] shadow-xl">
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute -top-20 -left-20 w-48 h-48 bg-violet-500/[0.04] rounded-full blur-[80px]" />
-              <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-indigo-500/[0.03] rounded-full blur-[60px]" />
+            transition={{ duration: 0.4, ease: smooth }}
+            className="relative overflow-hidden rounded-[24px] border border-violet-500/10 bg-[#07070d] shadow-2xl shadow-violet-500/[0.08]">
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              <div className="absolute -top-40 -left-40 w-80 h-80 bg-violet-700/[0.07] rounded-full blur-[120px]" />
+              <div className="absolute -bottom-40 -right-40 w-72 h-72 bg-indigo-700/[0.05] rounded-full blur-[100px]" />
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-500/25 to-transparent" />
             </div>
-            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/15 to-transparent" />
 
-            <div className="relative p-5">
-              {/* Header with week nav */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-1">
-                  <button onClick={() => setTrendWeekOffset(o => o + 1)} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">{weekLabel}</span>
-                  <button onClick={() => setTrendWeekOffset(o => o - 1)} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                  {!isCurrentWeek && (
-                    <button onClick={() => setTrendWeekOffset(0)} className="p-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="This week">
-                      <RotateCcw className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+            <div className="relative p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/10 border border-violet-500/20 flex items-center justify-center shadow-lg shadow-violet-500/10">
+                    <TrendingUp className="w-5 h-5 text-violet-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-[15px] font-bold text-white tracking-tight">Weekly Wave</h3>
+                    <p className="text-[10px] text-gray-500 mt-0.5">7-day adherence overview</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.05]">
-                  <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#f97316]" /><span className="text-[8px] text-gray-500 font-bold">Morning</span></div>
-                  <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#8b5cf6]" /><span className="text-[8px] text-gray-500 font-bold">Afternoon</span></div>
-                  <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#06b6d4]" /><span className="text-[8px] text-gray-500 font-bold">Evening</span></div>
-                  <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#6366f1]" /><span className="text-[8px] text-gray-500 font-bold">Night</span></div>
+                <div className="flex items-center gap-2.5">
+                  <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-orange-500/10 to-amber-500/5 border border-orange-500/20 cursor-default">
+                    <Flame className="w-3.5 h-3.5 text-orange-400" />
+                    <span className="text-[11px] font-black text-orange-300 tabular-nums">{bestStreak}d streak</span>
+                  </motion.div>
+                  <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-green-500/5 border border-emerald-500/20 cursor-default">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-[11px] font-black text-emerald-300 tabular-nums">{perfectDays}/7 perfect</span>
+                  </motion.div>
                 </div>
               </div>
 
-              {/* Main chart */}
-              <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 mb-4">
-                <div className="flex items-center gap-1.5 mb-3">
-                  <BarChart3 className="w-3 h-3 text-violet-400" />
-                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Daily intake</span>
-                  <div className="flex-1" />
-                  <span className="text-[9px] font-bold text-violet-400 tabular-nums">{weekPct}% adherence</span>
-                  <span className="text-[8px] text-gray-600">·</span>
-                  <span className="text-[9px] font-bold text-gray-400 tabular-nums">{weekTaken}/{weekTotal} taken</span>
-                </div>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={weekDays} barGap={2} barCategoryGap="20%">
+              <div className="flex gap-4" style={{ height: '380px' }}>
+                {/* Circular Adherence Radar */}
+                <div className="flex-1 rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-5 relative overflow-hidden flex flex-col">
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/20 to-transparent" />
+                  <div className="flex items-center gap-2 mb-3 shrink-0">
+                    <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                    <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.15em]">Adherence radar</span>
+                    <div className="flex-1" />
+                    <span className="text-[12px] font-black text-violet-400 tabular-nums">{weekPct}%</span>
+                    <span className="text-[8px] text-gray-600 font-bold">avg</span>
+                  </div>
+                  <div className="flex-1 flex items-center justify-center min-h-0">
+                    <svg viewBox="0 0 280 280" className="w-full max-w-[280px] h-full max-h-[280px]">
                       <defs>
-                        <linearGradient id="gradMorning" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#f97316" stopOpacity={0.8} />
-                          <stop offset="100%" stopColor="#f97316" stopOpacity={0.3} />
+                        <radialGradient id="cwFill" cx="50%" cy="50%" r="50%">
+                          <stop offset="0%" stopColor="#7c3aed" stopOpacity={0.25} />
+                          <stop offset="70%" stopColor="#6d28d9" stopOpacity={0.1} />
+                          <stop offset="100%" stopColor="#4c1d95" stopOpacity={0.02} />
+                        </radialGradient>
+                        <linearGradient id="cwStroke" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#a78bfa" stopOpacity={0.8} />
+                          <stop offset="50%" stopColor="#7c3aed" stopOpacity={1} />
+                          <stop offset="100%" stopColor="#6d28d9" stopOpacity={0.8} />
                         </linearGradient>
-                        <linearGradient id="gradAfternoon" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.8} />
-                          <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                        </linearGradient>
-                        <linearGradient id="gradEvening" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.8} />
-                          <stop offset="100%" stopColor="#06b6d4" stopOpacity={0.3} />
-                        </linearGradient>
-                        <linearGradient id="gradNight" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#6366f1" stopOpacity={0.8} />
-                          <stop offset="100%" stopColor="#6366f1" stopOpacity={0.3} />
-                        </linearGradient>
+                        <filter id="cwGlow"><feGaussianBlur stdDeviation="6" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                        <filter id="cwSoftGlow"><feGaussianBlur stdDeviation="3" /></filter>
                       </defs>
-                      <XAxis dataKey="day" tick={{ fill: '#4b5563', fontSize: 9, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: '#374151', fontSize: 8 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                      <Tooltip cursor={{ fill: 'rgba(139,92,246,0.05)' }}
-                        contentStyle={{ backgroundColor: 'rgba(10,10,15,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '10px 14px' }}
-                        labelStyle={{ color: '#9ca3af', fontSize: 10, fontWeight: 700, marginBottom: 4 }}
-                        itemStyle={{ color: '#fff', fontSize: 10, fontWeight: 600, padding: '1px 0' }}
-                        labelFormatter={(_, p) => p?.[0]?.payload ? `${p[0].payload.date} · ${p[0].payload.pct}%` : ''}
-                        formatter={(v: number, name: string) => [v, name.charAt(0).toUpperCase() + name.slice(1)]} />
-                      <Bar dataKey="morning" stackId="a" fill="url(#gradMorning)" radius={[0, 0, 0, 0]} />
-                      <Bar dataKey="afternoon" stackId="a" fill="url(#gradAfternoon)" radius={[0, 0, 0, 0]} />
-                      <Bar dataKey="evening" stackId="a" fill="url(#gradEvening)" radius={[0, 0, 0, 0]} />
-                      <Bar dataKey="night" stackId="a" fill="url(#gradNight)" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                      {[0.25, 0.5, 0.75, 1].map(f => (
+                        <circle key={f} cx={cx} cy={cy} r={radius * f} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1" strokeDasharray={f < 1 ? '2 4' : 'none'} />
+                      ))}
+                      {circlePts.map((p, i) => <line key={i} x1={cx} y1={cy} x2={p.baseX} y2={p.baseY} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />)}
+                      <path d={wavePath} fill="url(#cwFill)" />
+                      <path d={wavePath} fill="none" stroke="#7c3aed" strokeWidth="4" opacity="0.1" filter="url(#cwGlow)" />
+                      <path d={wavePath} fill="none" stroke="url(#cwStroke)" strokeWidth="2" strokeLinejoin="round" />
+                      {circlePts.map((p, i) => {
+                        const d = weekDays[i]
+                        const isPerfect = d.pct === 100
+                        const nodeColor = isPerfect ? '#10b981' : d.pct >= 80 ? '#34d399' : d.pct >= 50 ? '#f59e0b' : '#ef4444'
+                        return (
+                          <g key={i}>
+                            {isPerfect && <circle cx={p.x} cy={p.y} r="6" fill="none" stroke="#10b981" strokeWidth="1" opacity="0.4">
+                              <animate attributeName="r" from="6" to="14" dur="2s" repeatCount="indefinite" />
+                              <animate attributeName="opacity" from="0.4" to="0" dur="2s" repeatCount="indefinite" />
+                            </circle>}
+                            <circle cx={p.x} cy={p.y} r="8" fill={nodeColor} opacity="0.15" filter="url(#cwSoftGlow)" />
+                            <circle cx={p.x} cy={p.y} r="6" fill="#07070d" stroke={nodeColor} strokeWidth="2" />
+                            <circle cx={p.x} cy={p.y} r="3" fill={nodeColor} />
+                            <text x={p.labelX} y={p.labelY + 1} textAnchor="middle" dominantBaseline="middle" fill={isPerfect ? '#10b981' : '#9ca3af'} fontSize="11" fontWeight="800">{d.letter}</text>
+                            <text x={p.labelX} y={p.labelY + 12} textAnchor="middle" dominantBaseline="middle" fill={nodeColor} fontSize="8" fontWeight="700" opacity="0.7">{d.pct}%</text>
+                          </g>
+                        )
+                      })}
+                      <circle cx={cx} cy={cy} r="28" fill="#0a0a14" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+                      <text x={cx} y={cy - 4} textAnchor="middle" fill="white" fontSize="18" fontWeight="900">{weekPct}</text>
+                      <text x={cx} y={cy + 10} textAnchor="middle" fill="#6b7280" fontSize="7" fontWeight="700" letterSpacing="0.1em">AVERAGE</text>
+                    </svg>
+                  </div>
                 </div>
-              </div>
 
-              {/* Per-supplement breakdown */}
-              <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4">
-                <div className="flex items-center gap-1.5 mb-3">
-                  <Pill className="w-3 h-3 text-violet-400" />
-                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Supplement adherence</span>
-                  <div className="flex-1" />
-                  {bestStreak === 7 && <span className="text-[8px] font-bold text-emerald-400 bg-emerald-500/[0.06] border border-emerald-500/10 px-1.5 py-0.5 rounded">Perfect week</span>}
-                </div>
-                <div className="space-y-2">
-                  {suppBreakdown.map((s, i) => (
-                    <motion.div key={s.name} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                      className="flex items-center gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] font-semibold text-white truncate">{s.name}</span>
-                          {s.stack && <span className="text-[7px] font-bold text-violet-400/70 bg-violet-500/[0.06] border border-violet-500/10 px-1 py-px rounded uppercase tracking-widest">{s.stack}</span>}
+                {/* Weekly Insights + Daily bars */}
+                <div className="w-52 flex flex-col gap-3 shrink-0">
+                  <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden flex flex-col gap-3">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/15 to-transparent" />
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.15em]">Weekly insights</span>
+                    </div>
+
+                    {bestTime && (
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: bestTime.color + '15' }}>
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: bestTime.color }} />
+                        </div>
+                        <div>
+                          <span className="text-[7px] text-gray-500 font-bold block">Best timing</span>
+                          <span className="text-[11px] font-black" style={{ color: bestTime.color }}>{bestTime.label}</span>
+                          <span className="text-[8px] text-gray-500 ml-1">({bestTime.count}x)</span>
                         </div>
                       </div>
-                      <div className="w-24 h-1.5 rounded-full bg-white/[0.04] overflow-hidden shrink-0">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${s.pct}%` }} transition={{ duration: 0.8, delay: i * 0.06 }}
-                          className="h-full rounded-full" style={{ backgroundColor: s.pct >= 80 ? '#10b981' : s.pct >= 50 ? '#f59e0b' : '#ef4444' }} />
+                    )}
+
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                        <Activity className="w-4 h-4 text-violet-400" />
                       </div>
-                      <span className="text-[10px] font-bold tabular-nums w-10 text-right" style={{ color: s.pct >= 80 ? '#10b981' : s.pct >= 50 ? '#f59e0b' : '#ef4444' }}>{s.taken}/7</span>
-                    </motion.div>
-                  ))}
-                  {suppBreakdown.length === 0 && (
-                    <div className="py-4 text-center"><Pill className="w-6 h-6 text-gray-600 mx-auto mb-1.5" /><p className="text-[10px] text-gray-500">No daily supplements to track.</p></div>
-                  )}
+                      <div>
+                        <span className="text-[7px] text-gray-500 font-bold block">Daily average</span>
+                        <span className="text-[11px] font-black text-violet-400">{avgPerDay}</span>
+                        <span className="text-[8px] text-gray-500 ml-1">supps/day</span>
+                      </div>
+                    </div>
+
+                    {costPerMonth > 0 && (
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                          <DollarSign className="w-4 h-4 text-emerald-400" />
+                        </div>
+                        <div>
+                          <span className="text-[7px] text-gray-500 font-bold block">Monthly cost</span>
+                          <span className="text-[11px] font-black text-emerald-400">${costPerMonth.toFixed(0)}</span>
+                          <span className="text-[8px] text-gray-500 ml-1">estimated</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {missedDays > 0 && (
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                          <AlertTriangle className="w-4 h-4 text-amber-400" />
+                        </div>
+                        <div>
+                          <span className="text-[7px] text-gray-500 font-bold block">Missed days</span>
+                          <span className="text-[11px] font-black text-amber-400">{missedDays}</span>
+                          <span className="text-[8px] text-gray-500 ml-1">incomplete</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 flex flex-col min-h-0">
+                    <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider mb-3 shrink-0">Daily bars</span>
+                    <div className="flex-1 flex items-end gap-1 min-h-0">
+                      {weekDays.map((d, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                          <span className="text-[7px] font-bold tabular-nums" style={{ color: d.pct >= 80 ? '#10b981' : d.pct >= 50 ? '#f59e0b' : '#ef4444' }}>{d.pct}</span>
+                          <div className="w-full rounded-t-md transition-all duration-500" style={{
+                            height: `${Math.max(d.pct, 4)}%`,
+                            backgroundColor: d.pct >= 80 ? 'rgba(16,185,129,0.4)' : d.pct >= 50 ? 'rgba(245,158,11,0.35)' : d.pct > 0 ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.04)',
+                            boxShadow: d.pct === 100 ? '0 0 12px rgba(16,185,129,0.3)' : 'none',
+                          }} />
+                          <span className="text-[7px] text-gray-500 font-bold">{d.letter}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 shrink-0">
+                    <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-2.5 text-center">
+                      <span className="text-[14px] font-black text-orange-400 tabular-nums block">{bestStreak}</span>
+                      <span className="text-[6px] text-gray-500 font-bold uppercase tracking-wider">Streak</span>
+                    </div>
+                    <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-2.5 text-center">
+                      <span className="text-[14px] font-black text-emerald-400 tabular-nums block">{weekTaken}</span>
+                      <span className="text-[6px] text-gray-500 font-bold uppercase tracking-wider">Taken</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Supplements column */}
+                <div className="w-56 rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden flex flex-col shrink-0">
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/15 to-transparent" />
+                  <div className="flex items-center gap-2 mb-3 shrink-0">
+                    <Pill className="w-3.5 h-3.5 text-violet-400" />
+                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.15em]">Supplements</span>
+                  </div>
+                  <div className="flex-1 overflow-y-auto space-y-2 min-h-0" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(139,92,246,0.3) transparent' }}>
+                    {dailySupps.map((s, i) => {
+                      const takenInWeek = Array.from({ length: 7 }, (_, j) => {
+                        const d = new Date(now); d.setDate(d.getDate() - (6 - j))
+                        return logs.some(l => l.supplementId === s.id && l.date === toLocalDate(d))
+                      }).filter(Boolean).length
+                      const pct = Math.round((takenInWeek / 7) * 100)
+                      const dayDots = Array.from({ length: 7 }, (_, j) => {
+                        const d = new Date(now); d.setDate(d.getDate() - (6 - j))
+                        return logs.some(l => l.supplementId === s.id && l.date === toLocalDate(d))
+                      })
+                      return (
+                        <motion.div key={s.id} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                          whileHover={{ x: -2, transition: { duration: 0.15 } }}
+                          className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-3 hover:border-violet-500/20 hover:bg-white/[0.03] transition-all duration-200 cursor-default">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <span className="text-[10px] font-semibold text-white truncate flex-1">{s.name}</span>
+                            <span className="text-[9px] font-black tabular-nums" style={{ color: pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444' }}>{pct}%</span>
+                          </div>
+                          <div className="flex gap-[3px] mb-2">
+                            {dayDots.map((taken, j) => (
+                              <div key={j} className={`flex-1 h-1 rounded-full transition-all duration-300 ${taken ? 'bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.3)]' : 'bg-white/[0.06]'}`} />
+                            ))}
+                          </div>
+                          <div className="w-full h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, delay: i * 0.06 }}
+                              className="h-full rounded-full" style={{ backgroundColor: pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444' }} />
+                          </div>
+                        </motion.div>
+                      )
+                    })}
+                    {dailySupps.length === 0 && (
+                      <div className="py-6 text-center"><Pill className="w-6 h-6 text-gray-600 mx-auto mb-1.5" /><p className="text-[9px] text-gray-500">No daily supplements.</p></div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
