@@ -778,7 +778,6 @@ export function SupplementTracker() {
             return { name: dayNames[dayIdx], pct, idx: dayIdx }
           })
           const weakDays = dayAdherence.filter(d => d.pct < 70 && d.pct > 0).sort((a, b) => a.pct - b.pct)
-          const strongDays = dayAdherence.filter(d => d.pct >= 80).sort((a, b) => b.pct - a.pct)
 
           // ─── Supplement Trend (7d vs 30d delta) ───
           const suppTrends = suppAdherence.map(s => {
@@ -864,56 +863,104 @@ export function SupplementTracker() {
               </div>
               {/* ──── MODE: OVERVIEW ──── */}
               {coachMode === 'overview' && (() => {
+                // Dynamic day name
+                const dayLabel = selectedDate === today ? 'Today' :
+                  selectedDate === (() => { const d = new Date(); d.setDate(d.getDate() - 1); return toLocalDate(d) })() ? 'Yesterday' :
+                  new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+
+                // 30-day streak dots
+                const streakDots = Array.from({ length: 30 }, (_, i) => {
+                  const d = new Date(now); d.setDate(d.getDate() - (29 - i))
+                  const dateStr = toLocalDate(d)
+                  const dayLogs = logs.filter(l => l.date === dateStr)
+                  const taken = new Set(dayLogs.map(l => l.supplementId)).size
+                  const total = dailySupps.length
+                  const pct = total > 0 ? (taken / total) * 100 : 0
+                  return { pct, isToday: dateStr === today, isFuture: dateStr > today }
+                })
+
                 return (
                 <div className="flex flex-col gap-2" style={{ maxHeight: '520px' }}>
-                  {/* 1. MOMENTUM — single composite score */}
-                  <div className="rounded-xl bg-gradient-to-br from-violet-500/[0.06] to-indigo-500/[0.02] border border-violet-500/15 p-3 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/25 to-transparent" />
-                    <div className="flex items-center gap-3">
-                      <div className="relative w-14 h-14 shrink-0">
+                  {/* 1. MOMENTUM — enhanced design */}
+                  <div className="rounded-2xl bg-gradient-to-br from-violet-500/[0.08] to-indigo-500/[0.03] border border-violet-500/15 p-4 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/30 to-transparent" />
+                    <div className="absolute -top-12 -right-12 w-32 h-32 bg-violet-500/[0.06] rounded-full blur-[60px]" />
+                    <div className="flex items-center gap-4">
+                      {/* Ring */}
+                      <div className="relative w-[72px] h-[72px] shrink-0">
                         <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                          <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="7" />
-                          <circle cx="50" cy="50" r="40" fill="none" stroke="url(#momGrad)" strokeWidth="7" strokeLinecap="round"
-                            strokeDasharray={2 * Math.PI * 40}
-                            strokeDashoffset={2 * Math.PI * 40 * (1 - momentumScore / 100)} />
-                          <defs><linearGradient id="momGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#a78bfa" /><stop offset="100%" stopColor="#7c3aed" /></linearGradient></defs>
+                          <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="6" />
+                          <circle cx="50" cy="50" r="42" fill="none" stroke="url(#momGrad)" strokeWidth="6" strokeLinecap="round"
+                            strokeDasharray={2 * Math.PI * 42}
+                            strokeDashoffset={2 * Math.PI * 42 * (1 - momentumScore / 100)} />
+                          <defs>
+                            <linearGradient id="momGrad" x1="0" y1="0" x2="1" y2="1">
+                              <stop offset="0%" stopColor="#a78bfa" />
+                              <stop offset="50%" stopColor="#7c3aed" />
+                              <stop offset="100%" stopColor="#6d28d9" />
+                            </linearGradient>
+                          </defs>
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="text-lg font-black text-white tabular-nums leading-none">{momentumScore}</span>
-                          <span className="text-[6px] font-bold text-gray-500 mt-0.5">score</span>
+                          <span className="text-[22px] font-black text-white tabular-nums leading-none">{momentumScore}</span>
+                          <span className="text-[7px] font-bold text-violet-300/60 mt-0.5">MOMENTUM</span>
                         </div>
+                        {momentumScore >= 70 && <div className="absolute inset-0 rounded-full animate-ping opacity-[0.04] bg-violet-500" />}
                       </div>
-                      <div className="flex-1 grid grid-cols-4 gap-1">
-                        <div className="text-center">
-                          <span className="text-[10px] font-black text-white block tabular-nums">{consistencyScore}%</span>
-                          <span className="text-[5px] text-gray-500 font-bold">ADHERE</span>
+                      {/* Stats */}
+                      <div className="flex-1 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className="text-[7px] font-bold text-gray-400 uppercase tracking-wider">Adherence</span>
+                              <span className="text-[10px] font-black text-white tabular-nums">{consistencyScore}%</span>
+                            </div>
+                            <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                              <motion.div initial={{ width: 0 }} animate={{ width: consistencyScore + '%' }} transition={{ duration: 0.8 }}
+                                className="h-full rounded-full bg-gradient-to-r from-violet-500 to-violet-400" />
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-center">
-                          <span className="text-[10px] font-black text-orange-300 block tabular-nums">{longTermStreak}d</span>
-                          <span className="text-[5px] text-gray-500 font-bold">STREAK</span>
-                        </div>
-                        <div className="text-center">
-                          <span className="text-[10px] font-black text-cyan-300 block tabular-nums">{timingAlignmentPct}%</span>
-                          <span className="text-[5px] text-gray-500 font-bold">TIMING</span>
-                        </div>
-                        <div className="text-center">
-                          <span className={'text-[10px] font-black block tabular-nums ' + (trendAvg > 3 ? 'text-emerald-400' : trendAvg < -3 ? 'text-rose-400' : 'text-amber-400')}>{trendAvg > 3 ? '\u2191' : trendAvg < -3 ? '\u2193' : '\u2192'}</span>
-                          <span className="text-[5px] text-gray-500 font-bold">TREND</span>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-orange-500/[0.06] border border-orange-500/10">
+                            <Flame className="w-3 h-3 text-orange-400 shrink-0" />
+                            <div>
+                              <span className="text-[11px] font-black text-orange-300 block tabular-nums leading-none">{longTermStreak}<span className="text-[7px] font-bold">d</span></span>
+                              <span className="text-[5px] text-gray-500 font-bold">STREAK</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-cyan-500/[0.06] border border-cyan-500/10">
+                            <Clock className="w-3 h-3 text-cyan-400 shrink-0" />
+                            <div>
+                              <span className="text-[11px] font-black text-cyan-300 block tabular-nums leading-none">{timingAlignmentPct}<span className="text-[7px] font-bold">%</span></span>
+                              <span className="text-[5px] text-gray-500 font-bold">TIMING</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+                            <TrendingUp className={'w-3 h-3 shrink-0 ' + (trendAvg > 3 ? 'text-emerald-400' : trendAvg < -3 ? 'text-rose-400' : 'text-amber-400')} />
+                            <div>
+                              <span className={'text-[11px] font-black block tabular-nums leading-none ' + (trendAvg > 3 ? 'text-emerald-300' : trendAvg < -3 ? 'text-rose-300' : 'text-amber-300')}>
+                                {trendAvg > 3 ? '\u2191' : trendAvg < -3 ? '\u2193' : '\u2192'}{Math.abs(trendAvg).toFixed(0)}
+                              </span>
+                              <span className="text-[5px] text-gray-500 font-bold">TREND</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* 2. TODAY — compact command */}
-                  <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-2.5 relative overflow-hidden">
+                  {/* 2. TODAY / YESTERDAY / DAY — dynamic name */}
+                  <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent" />
-                    <div className="flex items-center gap-1.5 mb-1.5">
+                    <div className="flex items-center gap-1.5 mb-2">
                       <Activity className="w-3 h-3 text-emerald-400" />
-                      <span className="text-[9px] font-bold text-white">Today</span>
+                      <span className="text-[9px] font-bold text-white">{dayLabel}</span>
                       <div className="flex-1" />
                       <span className="text-[9px] font-black text-white tabular-nums">{todayProgress}/{todayTotal}</span>
+                      <span className="text-[7px] text-gray-500">taken</span>
                     </div>
-                    <div className="w-full h-1 rounded-full bg-white/[0.06] overflow-hidden mb-1.5">
+                    <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden mb-2">
                       <motion.div initial={{ width: 0 }} animate={{ width: todayPct + '%' }} transition={{ duration: 0.8 }}
                         className="h-full rounded-full" style={{ background: todayPct === 100 ? '#10b981' : todayPct >= 50 ? '#f59e0b' : '#ef4444' }} />
                     </div>
@@ -930,47 +977,65 @@ export function SupplementTracker() {
                     </div>
                   </div>
 
-                  {/* 3. WEEK PATTERN — which days you fail */}
-                  <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-2.5 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <CalendarCheck className="w-3 h-3 text-amber-400" />
-                      <span className="text-[9px] font-bold text-white">Day Pattern</span>
+                  {/* 3. 30-DAY STREAK CALENDAR */}
+                  <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-400/20 to-transparent" />
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Flame className="w-3 h-3 text-orange-400" />
+                      <span className="text-[9px] font-bold text-white">30-Day Streak</span>
                       <div className="flex-1" />
-                      {strongDays.length > 0 && <span className="text-[6px] text-emerald-400 font-bold">Best: {strongDays[0].name}</span>}
-                      {weakDays.length > 0 && <span className="text-[6px] text-rose-400 font-bold ml-1">Weak: {weakDays[0].name}</span>}
+                      <span className="text-[7px] text-gray-500">{streakDots.filter(d => d.pct === 100).length}/30 perfect</span>
                     </div>
-                    <div className="flex gap-1">
-                      {dayAdherence.map((d, i) => (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                          <div className="w-full h-8 rounded bg-white/[0.03] relative overflow-hidden flex items-end">
-                            <motion.div initial={{ height: 0 }} animate={{ height: Math.max(d.pct, 4) + '%' }} transition={{ duration: 0.5, delay: i * 0.04 }}
-                              className={'w-full rounded-t transition-all ' +
-                                (d.pct >= 80 ? 'bg-emerald-500/50' : d.pct >= 50 ? 'bg-amber-500/40' : d.pct > 0 ? 'bg-rose-500/40' : 'bg-white/[0.04]')} />
-                            <span className="absolute bottom-0.5 left-0 right-0 text-center text-[6px] font-black text-white/80 tabular-nums">{d.pct > 0 ? d.pct : '-'}</span>
-                          </div>
-                          <span className="text-[6px] font-bold text-gray-500">{d.name}</span>
-                        </div>
+                    <div className="flex gap-[3px] flex-wrap">
+                      {streakDots.map((d, i) => (
+                        <motion.div key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.2, delay: i * 0.01 }}
+                          className={'w-2 h-2 rounded-[3px] transition-all hover:scale-150 cursor-default ' +
+                            (d.isFuture ? 'bg-white/[0.02]' :
+                             d.pct === 100 ? 'bg-emerald-400 shadow-[0_0_4px_rgba(16,185,129,0.3)]' :
+                             d.pct >= 50 ? 'bg-amber-400/60' :
+                             d.pct > 0 ? 'bg-rose-400/50' :
+                             'bg-white/[0.06]') +
+                            (d.isToday ? ' ring-1 ring-violet-400 ring-offset-1 ring-offset-[#07070d]' : '')}
+                          title={`${30 - i}d ago: ${d.pct}%`} />
                       ))}
+                    </div>
+                    <div className="flex items-center gap-3 mt-2 pt-2 border-t border-white/[0.04]">
+                      <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-[3px] bg-emerald-400" /><span className="text-[6px] text-gray-500">100%</span></div>
+                      <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-[3px] bg-amber-400/60" /><span className="text-[6px] text-gray-500">50%+</span></div>
+                      <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-[3px] bg-rose-400/50" /><span className="text-[6px] text-gray-500">&lt;50%</span></div>
+                      <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-[3px] bg-white/[0.06]" /><span className="text-[6px] text-gray-500">Missed</span></div>
                     </div>
                   </div>
 
-                  {/* 4. TRENDING — supplement delta + insights */}
-                  <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-2.5 relative overflow-hidden flex-1 min-h-0">
+                  {/* 4. TRENDING — horizontal bar chart + insights */}
+                  <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden flex-1 min-h-0">
                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent" />
-                    <div className="flex items-center gap-1.5 mb-1.5">
+                    <div className="flex items-center gap-1.5 mb-2">
                       <TrendingUp className="w-3 h-3 text-cyan-400" />
                       <span className="text-[9px] font-bold text-white">Trending</span>
                       <div className="flex-1" />
-                      <span className="text-[6px] text-gray-500">7d vs 30d</span>
+                      <span className="text-[6px] text-gray-500">7d vs 30d delta</span>
                     </div>
-                    <div className="overflow-y-auto space-y-1" style={{ maxHeight: '130px', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
-                      {suppTrends.slice(0, 6).map((s) => (
-                        <div key={s.id} className="flex items-center gap-2 py-1 px-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                          <div className={'w-1.5 h-1.5 rounded-full shrink-0 ' + (s.trend === 'rising' ? 'bg-emerald-400' : s.trend === 'dropping' ? 'bg-rose-400' : 'bg-gray-500')} />
-                          <span className="text-[8px] font-bold text-white truncate flex-1">{s.name}</span>
-                          <span className="text-[7px] font-bold text-gray-400 tabular-nums">{s.rate7}%</span>
-                          <span className={'text-[7px] font-black tabular-nums ' + (s.delta > 0 ? 'text-emerald-400' : s.delta < 0 ? 'text-rose-400' : 'text-gray-500')}>
+                    {/* Horizontal bar chart */}
+                    <div className="space-y-1.5 mb-2">
+                      {suppTrends.slice(0, 5).map((s, i) => (
+                        <div key={s.id} className="flex items-center gap-2">
+                          <span className="text-[7px] font-bold text-gray-400 w-14 truncate shrink-0">{s.name}</span>
+                          <div className="flex-1 h-3 rounded bg-white/[0.03] relative overflow-hidden">
+                            {/* Center line at 0 */}
+                            <div className="absolute top-0 bottom-0 left-1/2 w-px bg-white/10" />
+                            {s.delta > 0 ? (
+                              <motion.div initial={{ width: 0 }} animate={{ width: Math.min(Math.abs(s.delta), 50) + '%' }} transition={{ duration: 0.6, delay: i * 0.08 }}
+                                className="absolute top-0 bottom-0 left-1/2 rounded-r bg-emerald-500/40" />
+                            ) : s.delta < 0 ? (
+                              <motion.div initial={{ width: 0 }} animate={{ width: Math.min(Math.abs(s.delta), 50) + '%' }} transition={{ duration: 0.6, delay: i * 0.08 }}
+                                className="absolute top-0 bottom-0 right-1/2 rounded-l bg-rose-500/40" />
+                            ) : (
+                              <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-1 rounded bg-gray-500/40" />
+                            )}
+                          </div>
+                          <span className={'text-[8px] font-black tabular-nums w-8 text-right shrink-0 ' +
+                            (s.delta > 0 ? 'text-emerald-400' : s.delta < 0 ? 'text-rose-400' : 'text-gray-500')}>
                             {s.delta > 0 ? '+' : ''}{s.delta}
                           </span>
                         </div>
@@ -978,10 +1043,10 @@ export function SupplementTracker() {
                     </div>
                     {/* Smart Insights */}
                     {insights.length > 0 && (
-                      <div className="mt-1.5 pt-1.5 border-t border-white/[0.04] space-y-0.5">
+                      <div className="pt-2 border-t border-white/[0.04] space-y-1">
                         {insights.slice(0, 3).map((insight, i) => (
-                          <div key={i} className="flex items-center gap-1.5">
-                            <Zap className="w-2 h-2 text-violet-400 shrink-0" />
+                          <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-violet-500/[0.04] border border-violet-500/10">
+                            <Zap className="w-2.5 h-2.5 text-violet-400 shrink-0" />
                             <span className="text-[7px] text-gray-300">{insight}</span>
                           </div>
                         ))}
@@ -992,7 +1057,7 @@ export function SupplementTracker() {
                 )
               })()}
 
-                                          {/* ──── MODE: OPTIMIZATION ──── */}
+                                                        {/* ──── MODE: OPTIMIZATION ──── */}
               {coachMode === 'optimization' && (() => {
                 const optData = [
                   { name: 'Aligned', value: timingAlignment, fill: '#10b981' },
