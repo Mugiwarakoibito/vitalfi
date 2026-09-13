@@ -578,28 +578,102 @@ export function SupplementTracker() {
             const dayLogs = logs.filter(l => l.date === dateStr)
             const taken = new Set(dayLogs.map(l => l.supplementId)).size
             const total = dailySupps.length
-            return { letter: d.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0), taken, total, pct: total > 0 ? Math.round((taken / total) * 100) : 0, date: dateStr }
+            return {
+              letter: d.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0),
+              dayName: d.toLocaleDateString('en-US', { weekday: 'long' }),
+              taken, total,
+              pct: total > 0 ? Math.round((taken / total) * 100) : 0,
+              date: dateStr,
+              isToday: dateStr === today,
+              isPast: dateStr < today
+            }
           })
+
+          // ─── Streak Intelligence ───
+          let currentStreak = 0
+          let bestStreak = 0
+          let tempStreak = 0
+          for (let i = 0; i < 30; i++) {
+            const d = new Date(now); d.setDate(d.getDate() - i)
+            const dateStr = toLocalDate(d)
+            const dayLogs = logs.filter(l => l.date === dateStr)
+            const taken = new Set(dayLogs.map(l => l.supplementId)).size
+            const total = dailySupps.length
+            const pct = total > 0 ? Math.round((taken / total) * 100) : 0
+            if (pct === 100) { tempStreak++; bestStreak = Math.max(bestStreak, tempStreak) }
+            else { tempStreak = 0 }
+          }
+          currentStreak = 0
+          for (let i = 0; i < 30; i++) {
+            const d = new Date(now); d.setDate(d.getDate() - i)
+            const dateStr = toLocalDate(d)
+            const dayLogs = logs.filter(l => l.date === dateStr)
+            const taken = new Set(dayLogs.map(l => l.supplementId)).size
+            const total = dailySupps.length
+            const pct = total > 0 ? Math.round((taken / total) * 100) : 0
+            if (pct === 100) currentStreak++
+            else break
+          }
+
+          // ─── Per-Supplement Adherence (7-day & 30-day) ───
+          const suppAdherence = supplements.map(s => {
+            let taken7 = 0, total7 = 0, taken30 = 0, total30 = 0
+            for (let i = 0; i < 30; i++) {
+              const d = new Date(now); d.setDate(d.getDate() - i)
+              const dateStr = toLocalDate(d)
+              const dayLogs = logs.filter(l => l.date === dateStr && l.supplementId === s.id)
+              const isTaken = dayLogs.length > 0
+              if (i < 7) { total7++; if (isTaken) taken7++ }
+              total30++; if (isTaken) taken30++
+            }
+            const rate7 = total7 > 0 ? Math.round((taken7 / total7) * 100) : 0
+            const rate30 = total30 > 0 ? Math.round((taken30 / total30) * 100) : 0
+            return { ...s, rate7, rate30, taken7, total7, taken30, total30 }
+          })
+
+          // ─── Weekly Trend (last 4 weeks) ───
+          const weeklyTrend = Array.from({ length: 4 }, (_, wi) => {
+            let taken = 0, total = 0
+            for (let i = wi * 7; i < (wi + 1) * 7; i++) {
+              const d = new Date(now); d.setDate(d.getDate() - i)
+              const dateStr = toLocalDate(d)
+              const dayLogs = logs.filter(l => l.date === dateStr)
+              const dayTaken = new Set(dayLogs.map(l => l.supplementId)).size
+              taken += dayTaken
+              total += dailySupps.length
+            }
+            const pct = total > 0 ? Math.round((taken / total) * 100) : 0
+            const label = wi === 0 ? 'This wk' : wi === 1 ? 'Last wk' : (wi + 1) + ' wk ago'
+            return { label, pct, taken, total }
+          }).reverse()
 
           // ─── Timing Intelligence ───
           const timingRecs = supplements.map(s => {
             const times = s.times || []
-            let optimal = ''
-            let reason = ''
-            if (s.name.toLowerCase().includes('vitamin d') || s.name.toLowerCase().includes('b12')) {
-              optimal = 'Morning'; reason = 'Absorbs best with sunlight'
-            } else if (s.name.toLowerCase().includes('magnesium') || s.name.toLowerCase().includes('zinc')) {
-              optimal = 'Night'; reason = 'Supports sleep & recovery'
-            } else if (s.name.toLowerCase().includes('iron')) {
-              optimal = 'Morning'; reason = 'Empty stomach = 2x absorption'
-            } else if (s.name.toLowerCase().includes('omega') || s.name.toLowerCase().includes('fish')) {
-              optimal = 'With meal'; reason = 'Fat-soluble, needs food'
-            } else if (s.name.toLowerCase().includes('caffeine') || s.name.toLowerCase().includes('pre-workout')) {
-              optimal = '30min pre'; reason = 'Peak effects in 30-60min'
+            let optimal = '', reason = '', category = ''
+            const name = s.name.toLowerCase()
+            if (name.includes('vitamin d') || name.includes('b12')) {
+              optimal = 'Morning'; reason = 'Absorbs best with sunlight'; category = 'fat-soluble'
+            } else if (name.includes('magnesium') || name.includes('zinc')) {
+              optimal = 'Night'; reason = 'Supports sleep & recovery'; category = 'mineral'
+            } else if (name.includes('iron')) {
+              optimal = 'Morning'; reason = 'Empty stomach = 2x absorption'; category = 'mineral'
+            } else if (name.includes('omega') || name.includes('fish')) {
+              optimal = 'With meal'; reason = 'Fat-soluble, needs food'; category = 'fat-soluble'
+            } else if (name.includes('caffeine') || name.includes('pre-workout')) {
+              optimal = '30min pre'; reason = 'Peak effects in 30-60min'; category = 'stimulant'
+            } else if (name.includes('creatine')) {
+              optimal = 'Post-workout'; reason = 'Muscle uptake peaks after exercise'; category = 'performance'
+            } else if (name.includes('collagen')) {
+              optimal = 'Morning'; reason = 'Empty stomach for best absorption'; category = 'protein'
+            } else if (name.includes('probiotic')) {
+              optimal = 'Morning'; reason = 'Stomach acid lower in AM'; category = 'gut'
+            } else if (name.includes('whey') || name.includes('protein')) {
+              optimal = 'Post-workout'; reason = 'Muscle protein synthesis window'; category = 'protein'
             } else {
-              optimal = times[0] || 'Morning'; reason = 'Based on your current schedule'
+              optimal = times[0] || 'Morning'; reason = 'Based on your current schedule'; category = 'general'
             }
-            return { name: s.name, current: times.join(', ') || 'Not set', optimal, reason, match: times.includes(optimal) }
+            return { name: s.name, id: s.id, current: times.join(', ') || 'Not set', optimal, reason, category, match: times.includes(optimal) || times.some(t => optimal.toLowerCase().includes(t.toLowerCase())) }
           })
           const timingScore = timingRecs.length > 0 ? Math.round((timingRecs.filter(r => r.match).length / timingRecs.length) * 100) : 0
 
@@ -615,6 +689,7 @@ export function SupplementTracker() {
           )
           const synergies = synergyPairs.filter(s => s.type === 'synergy')
           const conflicts = synergyPairs.filter(s => s.type === 'conflict')
+          const timingPairs = synergyPairs.filter(s => s.type === 'timing')
           const synergyScore = Math.min(100, 50 + synergies.length * 15 - conflicts.length * 20)
 
           // ─── Cost Intelligence ───
@@ -623,11 +698,32 @@ export function SupplementTracker() {
             return sum
           }, 0)
           const costPerDay = totalCost > 0 ? (totalCost / 30).toFixed(2) : '0'
+          const costPerWeek = (parseFloat(costPerDay) * 7).toFixed(0)
+          const monthlyProjection = totalCost > 0 ? totalCost.toFixed(0) : '0'
           const yearlyProjection = totalCost > 0 ? (totalCost * 12).toFixed(0) : '0'
+          const costBreakdown = supplements.filter(s => s.cost && s.totalServings && s.totalServings > 0).map(s => ({
+            name: s.name, cost: s.cost!, perDay: (s.cost! / 30).toFixed(2),
+            pct: totalCost > 0 ? Math.round((s.cost! / totalCost) * 100) : 0
+          })).sort((a, b) => b.cost - a.cost)
 
-          // ─── Gap Analysis ───
-          const commonSupps = ['Vitamin D', 'Omega-3', 'Magnesium', 'Probiotics', 'Zinc', 'B12', 'Iron', 'Collagen']
-          const missing = commonSupps.filter(c => !supplements.some(s => s.name.toLowerCase().includes(c.toLowerCase())))
+          // ─── Gap Analysis (Enhanced) ───
+          const commonSupps = [
+            { name: 'Vitamin D', why: 'Immune & bone health', priority: 'high' as const },
+            { name: 'Omega-3', why: 'Heart & brain function', priority: 'high' as const },
+            { name: 'Magnesium', why: 'Sleep & muscle recovery', priority: 'high' as const },
+            { name: 'Probiotics', why: 'Gut health & immunity', priority: 'medium' as const },
+            { name: 'Zinc', why: 'Immune & testosterone', priority: 'medium' as const },
+            { name: 'B12', why: 'Energy & nerve health', priority: 'medium' as const },
+            { name: 'Iron', why: 'Oxygen transport', priority: 'low' as const },
+            { name: 'Collagen', why: 'Skin & joint health', priority: 'low' as const },
+          ]
+          const missing = commonSupps.filter(c => !supplements.some(s => s.name.toLowerCase().includes(c.name.toLowerCase())))
+
+          // ─── Consistency Score ───
+          const weekPct = weekDays.reduce((s, d) => s + d.taken, 0) > 0 ? Math.round((weekDays.reduce((s, d) => s + d.taken, 0) / Math.max(weekDays.reduce((s, d) => s + d.total, 0), 1)) * 100) : 0
+          const consistencyScore = weekPct
+          const perfectDays = weekDays.filter(d => d.pct === 100).length
+          const activeDays = weekDays.filter(d => d.pct > 0).length
 
           return (
           <motion.div key="coach" initial={{ opacity: 0, y: -12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -12, scale: 0.98 }}
@@ -640,22 +736,100 @@ export function SupplementTracker() {
             </div>
 
             <div className="relative p-6">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-6">
+          {/* ─── Header ─── */}
+              <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/10 border border-violet-500/20 flex items-center justify-center shadow-lg shadow-violet-500/10">
-                    <Brain className="w-5 h-5 text-violet-400" />
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-500/25 to-indigo-500/15 border border-violet-500/25 flex items-center justify-center shadow-lg shadow-violet-500/15 relative">
+                    <Brain className="w-5.5 h-5.5 text-violet-400" />
+                    <motion.div animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0, 0.4] }} transition={{ duration: 3, repeat: Infinity }}
+                      className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-violet-400" />
                   </div>
                   <div>
                     <h3 className="text-[15px] font-bold text-white tracking-tight">AI Coach</h3>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Powered by supplement intelligence</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">Intelligence · Timing · Synergy</p>
                   </div>
                 </div>
-                <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500/15 to-blue-500/10 border border-cyan-500/25 cursor-default">
-                  <Brain className="w-4 h-4 text-cyan-400" />
-                  <span className="text-[14px] font-black text-cyan-300 tabular-nums">{supplements.length}</span>
-                  <span className="text-[9px] text-cyan-400/60 font-bold">tracked</span>
-                </motion.div>
+                <div className="flex items-center gap-2">
+                  <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/15 to-emerald-600/10 border border-emerald-500/20 cursor-default">
+                    <Flame className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-[12px] font-black text-emerald-300 tabular-nums">{currentStreak}</span>
+                    <span className="text-[8px] text-emerald-400/60 font-bold">streak</span>
+                  </motion.div>
+                  <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-violet-500/15 to-indigo-500/10 border border-violet-500/20 cursor-default">
+                    <Brain className="w-3.5 h-3.5 text-violet-400" />
+                    <span className="text-[12px] font-black text-violet-300 tabular-nums">{supplements.length}</span>
+                    <span className="text-[8px] text-violet-400/60 font-bold">supps</span>
+                  </motion.div>
+                </div>
+              </div>
+
+              {/* ─── Consistency Ring + Weekly Trend ─── */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {/* Consistency Ring */}
+                <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/20 to-transparent" />
+                  <div className="flex items-center gap-2 mb-3">
+                    <Activity className="w-3.5 h-3.5 text-violet-400" />
+                    <span className="text-[10px] font-bold text-white">Consistency</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-16 h-16 shrink-0">
+                      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="6" />
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="url(#consGrad)" strokeWidth="6" strokeLinecap="round"
+                          strokeDasharray={2 * Math.PI * 42}
+                          strokeDashoffset={2 * Math.PI * 42 * (1 - consistencyScore / 100)} />
+                        <defs><linearGradient id="consGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#a78bfa" /><stop offset="100%" stopColor="#7c3aed" /></linearGradient></defs>
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-xl font-black text-white tabular-nums">{consistencyScore}%</span>
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] text-gray-500">Perfect days</span>
+                        <span className="text-[10px] font-black text-emerald-400">{perfectDays}/7</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] text-gray-500">Active days</span>
+                        <span className="text-[10px] font-black text-cyan-400">{activeDays}/7</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] text-gray-500">Best streak</span>
+                        <span className="text-[10px] font-black text-amber-400">{bestStreak}d</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Weekly Trend Sparkline */}
+                <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent" />
+                  <div className="flex items-center gap-2 mb-3">
+                    <TrendingUp className="w-3.5 h-3.5 text-cyan-400" />
+                    <span className="text-[10px] font-bold text-white">4-Week Trend</span>
+                  </div>
+                  <div className="flex items-end gap-1.5 h-12 mb-2">
+                    {weeklyTrend.map((w, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                        <motion.div
+                          initial={{ height: 0 }}
+                          animate={{ height: Math.max(4, (w.pct / 100) * 48) + 'px' }}
+                          transition={{ duration: 0.6, delay: i * 0.1 }}
+                          className={'w-full rounded-lg ' + (w.pct >= 80 ? 'bg-gradient-to-t from-emerald-500/40 to-emerald-400/20' : w.pct >= 50 ? 'bg-gradient-to-t from-amber-500/30 to-amber-400/15' : 'bg-gradient-to-t from-rose-500/30 to-rose-400/15')}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-1.5">
+                    {weeklyTrend.map((w, i) => (
+                      <div key={i} className="flex-1 text-center">
+                        <span className="text-[7px] text-gray-600 block">{w.label}</span>
+                        <span className={'text-[9px] font-black tabular-nums ' + (w.pct >= 80 ? 'text-emerald-400' : w.pct >= 50 ? 'text-amber-400' : 'text-rose-400')}>{w.pct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* ─── Weekly Habit Grid ─── */}
@@ -665,22 +839,23 @@ export function SupplementTracker() {
                   <CalendarCheck className="w-4 h-4 text-violet-400" />
                   <span className="text-[11px] font-bold text-white">Weekly Habit Grid</span>
                   <div className="flex-1" />
-                  <span className="text-[9px] font-black text-violet-300 tabular-nums">{weekDays.filter(d => d.pct === 100).length}/7</span>
+                  <span className="text-[9px] font-black text-violet-300 tabular-nums">{perfectDays}/7</span>
                   <span className="text-[8px] text-gray-600">perfect</span>
                 </div>
                 <div className="grid grid-cols-7 gap-2">
                   {weekDays.map((d, i) => (
                     <div key={i} className="flex flex-col items-center gap-1.5">
-                      <span className="text-[8px] font-bold text-gray-500">{d.letter}</span>
-                      <div className={`w-full aspect-square rounded-xl flex items-center justify-center transition-all duration-300 ${
-                        d.pct === 100 ? 'bg-gradient-to-br from-emerald-500/30 to-emerald-600/20 border border-emerald-500/30 shadow-lg shadow-emerald-500/10' :
-                        d.pct >= 50 ? 'bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/20' :
-                        d.pct > 0 ? 'bg-gradient-to-br from-rose-500/20 to-rose-600/10 border border-rose-500/20' :
-                        'bg-white/[0.02] border border-white/[0.04]'
-                      }`}>
+                      <span className={'text-[8px] font-bold ' + (d.isToday ? 'text-violet-400' : 'text-gray-500')}>{d.letter}</span>
+                      <div className={'w-full aspect-square rounded-xl flex items-center justify-center transition-all duration-300 relative ' +
+                        (d.pct === 100 ? 'bg-gradient-to-br from-emerald-500/30 to-emerald-600/20 border border-emerald-500/30 shadow-lg shadow-emerald-500/10' :
+                         d.pct >= 50 ? 'bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/20' :
+                         d.pct > 0 ? 'bg-gradient-to-br from-rose-500/20 to-rose-600/10 border border-rose-500/20' :
+                         'bg-white/[0.02] border border-white/[0.04]') +
+                        (d.isToday ? ' ring-1 ring-violet-500/30' : '')}>
                         {d.pct === 100 ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> :
                          d.pct > 0 ? <span className="text-[10px] font-black text-rose-300">{d.pct}</span> :
                          <span className="text-[10px] text-gray-600">—</span>}
+                        {d.isToday && <div className="absolute -bottom-1 w-1 h-1 rounded-full bg-violet-400" />}
                       </div>
                     </div>
                   ))}
@@ -690,6 +865,43 @@ export function SupplementTracker() {
                   <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-amber-500/20 border border-amber-500/20" /><span className="text-[8px] text-gray-500">50%+</span></div>
                   <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-rose-500/20 border border-rose-500/20" /><span className="text-[8px] text-gray-500">&lt;50%</span></div>
                   <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-white/[0.02] border border-white/[0.04]" /><span className="text-[8px] text-gray-500">None</span></div>
+                </div>
+              </div>
+
+              {/* ─── Supplement Breakdown ─── */}
+              <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-5 relative overflow-hidden mb-4">
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-400/20 to-transparent" />
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 className="w-4 h-4 text-indigo-400" />
+                  <span className="text-[11px] font-bold text-white">Supplement Breakdown</span>
+                  <div className="flex-1" />
+                  <span className="text-[9px] text-gray-600">7d / 30d</span>
+                </div>
+                <div className="space-y-2.5">
+                  {suppAdherence.sort((a, b) => b.rate7 - a.rate7).slice(0, 6).map((s, i) => (
+                    <div key={s.id} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold text-white truncate flex-1">{s.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={'text-[10px] font-black tabular-nums ' + (s.rate7 >= 80 ? 'text-emerald-400' : s.rate7 >= 50 ? 'text-amber-400' : 'text-rose-400')}>{s.rate7}%</span>
+                          <span className="text-[8px] text-gray-600">/</span>
+                          <span className={'text-[10px] font-bold tabular-nums ' + (s.rate30 >= 80 ? 'text-emerald-400/70' : s.rate30 >= 50 ? 'text-amber-400/70' : 'text-rose-400/70')}>{s.rate30}%</span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden flex gap-0.5">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: s.rate7 + '%' }}
+                          transition={{ duration: 0.8, delay: i * 0.05 }}
+                          className={'h-full rounded-full ' + (s.rate7 >= 80 ? 'bg-emerald-500' : s.rate7 >= 50 ? 'bg-amber-500' : 'bg-rose-500')}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between mt-1.5">
+                        <span className="text-[7px] text-gray-600">{s.taken7}/{s.total7} this week</span>
+                        <span className="text-[7px] text-gray-600">{s.taken30}/{s.total30} this month</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -704,21 +916,33 @@ export function SupplementTracker() {
                   <span className="text-[8px] text-gray-600">optimized</span>
                 </div>
                 <div className="space-y-2">
-                  {timingRecs.slice(0, 4).map((r, i) => (
-                    <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                      <div className={`w-2 h-2 rounded-full shrink-0 ${r.match ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                      <span className="text-[10px] font-bold text-white truncate flex-1">{r.name}</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[8px] text-gray-500">{r.current}</span>
-                        <span className="text-[8px] text-gray-600">→</span>
-                        <span className={`text-[8px] font-bold ${r.match ? 'text-emerald-400' : 'text-cyan-400'}`}>{r.optimal}</span>
+                  {timingRecs.slice(0, 5).map((r, i) => (
+                    <div key={i} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className={'w-2 h-2 rounded-full shrink-0 ' + (r.match ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'bg-amber-400')} />
+                        <span className="text-[10px] font-bold text-white truncate flex-1">{r.name}</span>
+                        <span className={'text-[8px] font-bold px-1.5 py-0.5 rounded-md ' +
+                          (r.category === 'fat-soluble' ? 'bg-amber-500/10 text-amber-400' :
+                           r.category === 'mineral' ? 'bg-blue-500/10 text-blue-400' :
+                           r.category === 'protein' ? 'bg-red-500/10 text-red-400' :
+                           r.category === 'stimulant' ? 'bg-orange-500/10 text-orange-400' :
+                           r.category === 'performance' ? 'bg-cyan-500/10 text-cyan-400' :
+                           'bg-gray-500/10 text-gray-400')
+                        }>{r.category}</span>
                       </div>
+                      <div className="flex items-center gap-1.5 ml-4">
+                        <span className="text-[8px] text-gray-500">Current:</span>
+                        <span className="text-[8px] text-gray-400 font-medium">{r.current}</span>
+                        <span className="text-[8px] text-gray-600">→</span>
+                        <span className={'text-[8px] font-bold ' + (r.match ? 'text-emerald-400' : 'text-cyan-400')}>{r.optimal}</span>
+                      </div>
+                      <p className="text-[7px] text-gray-600 ml-4 mt-1">{r.reason}</p>
                     </div>
                   ))}
                 </div>
                 <p className="text-[9px] text-gray-500 mt-3 flex items-center gap-1.5">
                   <Info className="w-3 h-3 text-cyan-400 shrink-0" />
-                  Timing based on absorption science & circadian rhythm
+                  Timing based on absorption science &amp; circadian rhythm
                 </p>
               </div>
 
@@ -732,7 +956,7 @@ export function SupplementTracker() {
                   <span className="text-[9px] font-black text-emerald-300 tabular-nums">{synergyScore}</span>
                   <span className="text-[8px] text-gray-600">score</span>
                 </div>
-                <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="grid grid-cols-4 gap-2 mb-3">
                   <div className="text-center p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                     <span className="text-[14px] font-black text-emerald-400 block">{synergies.length}</span>
                     <span className="text-[7px] text-gray-500 font-bold uppercase">Synergies</span>
@@ -742,14 +966,19 @@ export function SupplementTracker() {
                     <span className="text-[7px] text-gray-500 font-bold uppercase">Conflicts</span>
                   </div>
                   <div className="text-center p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                    <span className="text-[14px] font-black text-amber-400 block">{timingPairs.length}</span>
+                    <span className="text-[7px] text-gray-500 font-bold uppercase">Timing</span>
+                  </div>
+                  <div className="text-center p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                     <span className="text-[14px] font-black text-gray-400 block">{synergyPairs.filter(s => s.type === 'neutral').length}</span>
                     <span className="text-[7px] text-gray-500 font-bold uppercase">Neutral</span>
                   </div>
                 </div>
                 {synergies.length > 0 && (
                   <div className="space-y-1.5">
-                    {synergies.slice(0, 2).map((s, i) => (
+                    {synergies.slice(0, 3).map((s, i) => (
                       <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
                         <span className="text-[9px] text-emerald-300 font-bold">{s.a} + {s.b}</span>
                         <span className="text-[8px] text-gray-500 ml-auto">{s.message}</span>
                       </div>
@@ -760,7 +989,19 @@ export function SupplementTracker() {
                   <div className="space-y-1.5 mt-2">
                     {conflicts.slice(0, 2).map((s, i) => (
                       <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-rose-500/[0.04] border border-rose-500/10">
+                        <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" />
                         <span className="text-[9px] text-rose-300 font-bold">{s.a} + {s.b}</span>
+                        <span className="text-[8px] text-gray-500 ml-auto">{s.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {timingPairs.length > 0 && (
+                  <div className="space-y-1.5 mt-2">
+                    {timingPairs.slice(0, 2).map((s, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/[0.04] border border-amber-500/10">
+                        <Clock className="w-3 h-3 text-amber-400 shrink-0" />
+                        <span className="text-[9px] text-amber-300 font-bold">{s.a} + {s.b}</span>
                         <span className="text-[8px] text-gray-500 ml-auto">{s.message}</span>
                       </div>
                     ))}
@@ -775,20 +1016,38 @@ export function SupplementTracker() {
                   <DollarSign className="w-4 h-4 text-amber-400" />
                   <span className="text-[11px] font-bold text-white">Cost Intelligence</span>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="text-center">
-                    <span className="text-[16px] font-black text-amber-300 block">${costPerDay}</span>
+                <div className="grid grid-cols-4 gap-2 mb-3">
+                  <div className="text-center p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                    <span className="text-[14px] font-black text-amber-300 block">${costPerDay}</span>
                     <span className="text-[7px] text-gray-500 font-bold uppercase">Per Day</span>
                   </div>
-                  <div className="text-center">
-                    <span className="text-[16px] font-black text-amber-300 block">${(parseFloat(costPerDay) * 7).toFixed(0)}</span>
+                  <div className="text-center p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                    <span className="text-[14px] font-black text-amber-300 block">${costPerWeek}</span>
                     <span className="text-[7px] text-gray-500 font-bold uppercase">Per Week</span>
                   </div>
-                  <div className="text-center">
-                    <span className="text-[16px] font-black text-amber-300 block">${yearlyProjection}</span>
+                  <div className="text-center p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                    <span className="text-[14px] font-black text-amber-300 block">${monthlyProjection}</span>
+                    <span className="text-[7px] text-gray-500 font-bold uppercase">Monthly</span>
+                  </div>
+                  <div className="text-center p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                    <span className="text-[14px] font-black text-amber-300 block">${yearlyProjection}</span>
                     <span className="text-[7px] text-gray-500 font-bold uppercase">Yearly</span>
                   </div>
                 </div>
+                {costBreakdown.length > 0 && (
+                  <div className="space-y-1.5 pt-3 border-t border-white/[0.04]">
+                    <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Breakdown</span>
+                    {costBreakdown.slice(0, 4).map((c, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-[9px] text-gray-400 truncate flex-1">{c.name}</span>
+                        <div className="flex-1 h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                          <div className="h-full rounded-full bg-amber-500/40" style={{ width: c.pct + '%' }} />
+                        </div>
+                        <span className="text-[9px] font-bold text-amber-300 tabular-nums w-8 text-right">${c.perDay}/d</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* ─── Gap Analysis ─── */}
@@ -798,11 +1057,23 @@ export function SupplementTracker() {
                   <div className="flex items-center gap-2 mb-3">
                     <ShieldAlert className="w-4 h-4 text-rose-400" />
                     <span className="text-[11px] font-bold text-white">Gap Analysis</span>
+                    <div className="flex-1" />
+                    <span className="text-[9px] text-gray-600">{missing.length} missing</span>
                   </div>
-                  <p className="text-[9px] text-gray-400 mb-3">Common supplements you may be missing:</p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="space-y-2">
                     {missing.slice(0, 5).map(m => (
-                      <span key={m} className="text-[9px] font-bold text-rose-300 bg-rose-500/10 border border-rose-500/15 px-2.5 py-1 rounded-lg">{m}</span>
+                      <div key={m.name} className="flex items-center gap-2.5 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                        <div className={'w-1.5 h-1.5 rounded-full shrink-0 ' + (m.priority === 'high' ? 'bg-rose-400' : m.priority === 'medium' ? 'bg-amber-400' : 'bg-gray-500')} />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[10px] font-bold text-white block">{m.name}</span>
+                          <span className="text-[8px] text-gray-500">{m.why}</span>
+                        </div>
+                        <span className={'text-[7px] font-bold uppercase px-1.5 py-0.5 rounded ' +
+                          (m.priority === 'high' ? 'bg-rose-500/10 text-rose-400' :
+                           m.priority === 'medium' ? 'bg-amber-500/10 text-amber-400' :
+                           'bg-gray-500/10 text-gray-400')
+                        }>{m.priority}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -811,6 +1082,7 @@ export function SupplementTracker() {
           </motion.div>
           )
         })()}
+
       </AnimatePresence>
 
       {/* ═══════ HERO: WELLNESS COMMAND CENTER ═══════ */}
