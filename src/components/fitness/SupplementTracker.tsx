@@ -9,6 +9,7 @@ import {
   ChevronLeft, ChevronRight, RotateCcw, Flame,
   TrendingUp, ChevronDown,
 } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { generateId, cn } from '@/lib/utils'
@@ -788,553 +789,499 @@ export function SupplementTracker() {
                   )}
                 </div>
               </div>
-
-              {/* ─── MODE: OVERVIEW ─── */}
-              {coachMode === 'overview' && (
-                <>
-              {/* ═══════ ADHERENCE RING (full width) ═══════ */}
-              <div className="rounded-2xl bg-gradient-to-br from-violet-500/[0.06] to-indigo-500/[0.02] border border-violet-500/15 p-5 relative overflow-hidden mb-3">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/30 to-transparent" />
-                <div className="absolute -top-20 -right-20 w-48 h-48 bg-violet-500/[0.04] rounded-full blur-[60px] pointer-events-none" />
-                <div className="flex items-center gap-2 mb-4 relative z-10">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500/25 to-indigo-500/15 border border-violet-500/25 flex items-center justify-center">
-                    <Activity className="w-4 h-4 text-violet-400" />
-                  </div>
-                  <div>
-                    <span className="text-[11px] font-bold text-white tracking-tight block">Adherence Score</span>
-                    <span className="text-[8px] text-gray-500">7-day consistency overview</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-6 relative z-10">
-                  <div className="relative w-28 h-28 shrink-0">
-                    <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                      <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="6" />
-                      <circle cx="50" cy="50" r="42" fill="none" stroke="url(#heroRingGrad)" strokeWidth="6" strokeLinecap="round"
-                        strokeDasharray={2 * Math.PI * 42}
-                        strokeDashoffset={2 * Math.PI * 42 * (1 - consistencyScore / 100)} />
-                      <defs><linearGradient id="heroRingGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#a78bfa" /><stop offset="100%" stopColor="#7c3aed" /></linearGradient></defs>
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-3xl font-black text-white tabular-nums leading-none">{consistencyScore}</span>
-                      <span className="text-[8px] font-bold text-gray-400 tracking-widest mt-0.5">% consistency</span>
-                    </div>
-                    {consistencyScore >= 80 && (
-                      <div className="absolute inset-0 rounded-full animate-ping opacity-[0.08] bg-violet-500" />
-                    )}
-                  </div>
-                  <div className="flex-1 space-y-2.5">
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-orange-500/[0.06] border border-orange-500/15">
-                      <Flame className="w-4 h-4 text-orange-400 shrink-0" />
-                      <span className="text-[10px] font-bold text-gray-400 flex-1">Current Streak</span>
-                      <span className="text-sm font-black text-orange-300 tabular-nums">{currentStreak}<span className="text-[8px] font-bold text-orange-400/60 ml-0.5">days</span></span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/15">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span className="text-[10px] font-bold text-gray-400 flex-1">Perfect Days</span>
-                      <span className="text-sm font-black text-emerald-300 tabular-nums">{perfectDays}<span className="text-[8px] font-bold text-emerald-400/60 ml-0.5">/7</span></span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-cyan-500/[0.06] border border-cyan-500/15">
-                      <Activity className="w-4 h-4 text-cyan-400 shrink-0" />
-                      <span className="text-[10px] font-bold text-gray-400 flex-1">Active Days</span>
-                      <span className="text-sm font-black text-cyan-300 tabular-nums">{activeDays}<span className="text-[8px] font-bold text-cyan-400/60 ml-0.5">/7</span></span>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-3 text-center relative z-10">
-                  <div className={'text-[10px] font-bold px-4 py-1.5 rounded-full inline-block ' +
-                    (consistencyScore >= 80 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                     consistencyScore >= 50 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                     'bg-rose-500/10 text-rose-400 border border-rose-500/20')}>
-                    {consistencyScore >= 80 ? '✨ Excellent! Keep it up!' :
-                     consistencyScore >= 50 ? '💪 Good progress — aim higher!' :
-                     consistencyScore > 0 ? '📉 Room to improve — stay consistent!' :
-                     '⭐ Start your streak today!'}
-                  </div>
-                </div>
-              </div>
-
-              {/* ──── 7-Day Activity Heatmap (full width) ──── */}
-              <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden mb-3">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/25 to-transparent" />
-                <div className="flex items-center gap-2 mb-3">
-                  <CalendarCheck className="w-3.5 h-3.5 text-cyan-400" />
-                  <span className="text-[10px] font-bold text-white tracking-tight">7-Day Activity</span>
-                  <div className="flex-1" />
-                  <span className="text-[8px] font-bold text-gray-500">{perfectDays}/7 perfect</span>
-                </div>
-                <div className="grid grid-cols-7 gap-2">
-                  {weekDays.map((d, i) => (
-                    <div key={i} className={'group flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 ' +
-                      (d.isToday
-                        ? 'bg-violet-500/10 border-violet-500/25 shadow-lg shadow-violet-500/10'
-                        : 'bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04] hover:border-white/[0.1]')}>
-                      <span className={'text-[9px] font-bold ' + (d.isToday ? 'text-violet-400' : 'text-gray-500')}>{d.letter}</span>
-                      <span className="text-[7px] text-gray-600">{d.date}</span>
-                      <div className={'w-10 h-10 rounded-lg flex items-center justify-center border ' +
-                        (d.pct === 100 ? 'bg-emerald-500/15 border-emerald-500/25' :
-                         d.pct >= 50 ? 'bg-amber-500/10 border-amber-500/20' :
-                         d.pct > 0 ? 'bg-rose-500/10 border-rose-500/20' :
-                         'bg-white/[0.03] border-white/[0.06]')}>
-                        {d.pct === 100 ? <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400" /> :
-                         d.pct > 0 ? <span className="text-xs font-black text-rose-300">{d.pct}</span> :
-                         <span className="text-[10px] text-gray-600">—</span>}
-                      </div>
-                      <div className="w-full h-1 rounded-full bg-white/[0.04] overflow-hidden">
-                        <div className={'h-full rounded-full transition-all duration-500 ' +
-                          (d.pct === 100 ? 'bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.3)]' :
-                           d.pct >= 50 ? 'bg-amber-400' : d.pct > 0 ? 'bg-rose-400' : 'bg-white/10')}
-                          style={{ width: Math.max(d.pct, 2) + '%' }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* ──── Weekly Trend (full width) ──── */}
-              <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden mb-3">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-400/25 to-transparent" />
-                <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-[10px] font-bold text-white tracking-tight">Weekly Trend</span>
-                  <div className="flex-1" />
-                  {(() => {
-                    const diffs = weeklyTrend.map((w, i) => i > 0 ? w.pct - weeklyTrend[i-1].pct : 0).slice(1)
-                    const avgDiff = diffs.length > 0 ? diffs.reduce((a, b) => a + b, 0) / diffs.length : 0
-                    const arrow = avgDiff > 3 ? '↑' : avgDiff < -3 ? '↓' : '→'
-                    const color = avgDiff > 3 ? 'text-emerald-400' : avgDiff < -3 ? 'text-rose-400' : 'text-amber-400'
-                    const label = avgDiff > 3 ? 'Improving' : avgDiff < -3 ? 'Declining' : 'Stable'
+              {/* ──── MODE: OVERVIEW ──── */}
+              {coachMode === 'overview' && (() => {
+                const CustomTip = ({ active, payload, label }: any) => {
+                  if (active && payload && payload.length) {
                     return (
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.05]">
-                        <span className={'text-sm font-black ' + color}>{arrow}</span>
-                        <span className={'text-[9px] font-bold ' + color}>{label}</span>
+                      <div className="bg-[#0e0e18] border border-white/10 rounded-lg px-2.5 py-1.5 shadow-xl">
+                        <p className="text-[9px] text-gray-400">{label}</p>
+                        <p className="text-[11px] font-bold text-white">{payload[0].value}%</p>
                       </div>
                     )
-                  })()}
-                </div>
-                <div className="flex items-end gap-3 h-28 mb-2">
-                  {weeklyTrend.map((w, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                      <span className={'text-[10px] font-black tabular-nums ' + (w.pct >= 80 ? 'text-emerald-400' : w.pct >= 50 ? 'text-amber-400' : 'text-rose-400')}>{w.pct}%</span>
-                      <motion.div
-                        initial={{ height: 0 }}
-                        animate={{ height: Math.max(4, (w.pct / 100) * 80) + 'px' }}
-                        transition={{ duration: 0.8, delay: i * 0.15, ease: [0.16, 1, 0.3, 1] }}
-                        className={'w-full rounded-lg ' + (w.pct >= 80 ? 'bg-gradient-to-t from-emerald-500/50 to-emerald-400/20 shadow-[0_0_8px_rgba(16,185,129,0.15)]' : w.pct >= 50 ? 'bg-gradient-to-t from-amber-500/40 to-amber-400/15' : 'bg-gradient-to-t from-rose-500/40 to-rose-400/15')}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-3">
-                  {weeklyTrend.map((w, i) => (
-                    <div key={i} className="flex-1 text-center">
-                      <span className="text-[8px] text-gray-500 font-bold block">{w.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* ──── Supplement Scoreboard (full width) ──── */}
-              <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-400/25 to-transparent" />
-                <div className="flex items-center gap-2 mb-3">
-                  <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
-                  <span className="text-[10px] font-bold text-white tracking-tight">Supplement Scoreboard</span>
-                  <div className="flex-1" />
-                  <span className="text-[8px] text-gray-500 font-bold">7d / 30d</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {suppAdherence.sort((a, b) => b.rate7 - a.rate7).map((s, i) => (
-                    <div key={s.id} className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-3 hover:border-white/[0.1] hover:bg-white/[0.03] transition-all duration-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className={'w-2.5 h-2.5 rounded-full shrink-0 ' + (s.rate7 >= 80 ? 'bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : s.rate7 >= 50 ? 'bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.5)]')} />
-                        <span className="text-[10px] font-bold text-white truncate flex-1">{s.name}</span>
-                        {s.rate7 >= 80 && <Flame className="w-3 h-3 text-orange-400 shrink-0" />}
-                      </div>
+                  }
+                  return null
+                }
+                const barData = weekDays.map(d => ({ name: d.letter, pct: d.pct, fill: d.pct >= 80 ? '#10b981' : d.pct >= 50 ? '#f59e0b' : d.pct > 0 ? '#ef4444' : '#374151' }))
+                return (
+                <div className="space-y-2.5">
+                  {/* Hero Row */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {/* Consistency Ring */}
+                    <div className="rounded-xl bg-gradient-to-br from-violet-500/[0.06] to-indigo-500/[0.02] border border-violet-500/15 p-3 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/25 to-transparent" />
                       <div className="flex items-center gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[7px] font-bold text-gray-500 uppercase">7d</span>
-                            <span className={'text-[11px] font-black tabular-nums ' + (s.rate7 >= 80 ? 'text-emerald-400' : s.rate7 >= 50 ? 'text-amber-400' : 'text-rose-400')}>{s.rate7}%</span>
+                        <div className="relative w-16 h-16 shrink-0">
+                          <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="7" />
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="url(#ovGrad)" strokeWidth="7" strokeLinecap="round"
+                              strokeDasharray={2 * Math.PI * 40}
+                              strokeDashoffset={2 * Math.PI * 40 * (1 - consistencyScore / 100)} />
+                            <defs><linearGradient id="ovGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#a78bfa" /><stop offset="100%" stopColor="#7c3aed" /></linearGradient></defs>
+                          </svg>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-xl font-black text-white tabular-nums leading-none">{consistencyScore}</span>
+                            <span className="text-[7px] font-bold text-gray-500 mt-0.5">%</span>
                           </div>
-                          <div className="w-full h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: s.rate7 + '%' }}
-                              transition={{ duration: 0.8, delay: i * 0.05 }}
-                              className={'h-full rounded-full ' + (s.rate7 >= 80 ? 'bg-emerald-500' : s.rate7 >= 50 ? 'bg-amber-500' : 'bg-rose-500')} />
-                          </div>
+                          {consistencyScore >= 80 && <div className="absolute inset-0 rounded-full animate-ping opacity-[0.06] bg-violet-500" />}
                         </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[7px] font-bold text-gray-500 uppercase">30d</span>
-                            <span className={'text-[11px] font-black tabular-nums ' + (s.rate30 >= 80 ? 'text-emerald-400/70' : s.rate30 >= 50 ? 'text-amber-400/70' : 'text-rose-400/70')}>{s.rate30}%</span>
+                        <div className="flex-1 space-y-1.5">
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-orange-500/[0.06] border border-orange-500/10">
+                            <Flame className="w-3 h-3 text-orange-400" />
+                            <span className="text-[8px] text-gray-500 flex-1">Streak</span>
+                            <span className="text-[11px] font-black text-orange-300 tabular-nums">{currentStreak}d</span>
                           </div>
-                          <div className="w-full h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: s.rate30 + '%' }}
-                              transition={{ duration: 0.8, delay: i * 0.06 + 0.1 }}
-                              className={'h-full rounded-full ' + (s.rate30 >= 80 ? 'bg-emerald-500/60' : s.rate30 >= 50 ? 'bg-amber-500/60' : 'bg-rose-500/60')} />
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/10">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                            <span className="text-[8px] text-gray-500 flex-1">Perfect</span>
+                            <span className="text-[11px] font-black text-emerald-300 tabular-nums">{perfectDays}/7</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-cyan-500/[0.06] border border-cyan-500/10">
+                            <Activity className="w-3 h-3 text-cyan-400" />
+                            <span className="text-[8px] text-gray-500 flex-1">Active</span>
+                            <span className="text-[11px] font-black text-cyan-300 tabular-nums">{activeDays}/7</span>
                           </div>
                         </div>
                       </div>
+                      <div className="mt-2 text-center">
+                        <span className={'text-[8px] font-bold px-3 py-1 rounded-full inline-block ' +
+                          (consistencyScore >= 80 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15' :
+                           consistencyScore >= 50 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/15' :
+                           consistencyScore > 0 ? 'bg-rose-500/10 text-rose-400 border border-rose-500/15' :
+                           'bg-gray-500/10 text-gray-400 border border-gray-500/15')}>
+                          {consistencyScore >= 80 ? 'Excellent!' : consistencyScore >= 50 ? 'Good progress' : consistencyScore > 0 ? 'Room to improve' : 'Start today!'}
+                        </span>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
 
-                </>
-              )}
+                    {/* Weekly Bar Chart */}
+                    <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent" />
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <TrendingUp className="w-3 h-3 text-cyan-400" />
+                        <span className="text-[9px] font-bold text-white">7-Day Trend</span>
+                        <div className="flex-1" />
+                        {(() => {
+                          const diffs = weeklyTrend.map((w, i) => i > 0 ? w.pct - weeklyTrend[i-1].pct : 0).slice(1)
+                          const avg = diffs.length > 0 ? diffs.reduce((a, b) => a + b, 0) / diffs.length : 0
+                          const arrow = avg > 3 ? '\u2191' : avg < -3 ? '\u2193' : '\u2192'
+                          const color = avg > 3 ? 'text-emerald-400' : avg < -3 ? 'text-rose-400' : 'text-amber-400'
+                          return <span className={'text-[10px] font-black ' + color}>{arrow}</span>
+                        })()}
+                      </div>
+                      <div className="h-24">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={barData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                            <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 7, fill: '#4b5563' }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                            <Tooltip content={<CustomTip />} cursor={false} />
+                            <Bar dataKey="pct" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                              {barData.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.7} />)}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
 
-              {/* ─── MODE: OPTIMIZATION ─── */}
-              {coachMode === 'optimization' && (
-                <>
-              {/* ──── Daily Timeline (full width) ──── */}
-              <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden mb-3">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent" />
-                <div className="flex items-center gap-2 mb-3">
-                  <Clock className="w-3.5 h-3.5 text-cyan-400" />
-                  <span className="text-[10px] font-bold text-white tracking-tight">Daily Timeline</span>
-                  <div className="flex-1" />
-                  <span className="text-[10px] font-black text-cyan-300 tabular-nums">{timingScore}%</span>
-                  <span className="text-[8px] text-gray-500 font-bold">optimized</span>
-                </div>
-                <div className="grid grid-cols-4 gap-2">
-                  {TIMES_OF_DAY.map(t => {
-                    const Icon = TIME_ICONS[t]
-                    const tc = TIME_COLORS[t]
-                    const scheduled = timingRecs.filter(r => r.current.includes(t) || (t === 'Morning' && r.optimal === 'Morning'))
-                    const optimalHere = timingRecs.filter(r => r.optimal === t && r.match)
-                    const mismatchHere = timingRecs.filter(r => r.optimal === t && !r.match)
-                    return (
-                      <div key={t} className={'rounded-xl p-3 border relative overflow-hidden transition-all duration-300 bg-gradient-to-br ' + tc.bg + ' ' + tc.border +
-                        (optimalHere.length > 0 ? ' shadow-lg ' + tc.glow : '')}>
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <Icon className={'w-3.5 h-3.5 ' + tc.icon} />
-                          <span className={'text-[10px] font-bold ' + tc.text}>{t}</span>
+                  {/* 7-Day Heatmap */}
+                  <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent" />
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <CalendarCheck className="w-3 h-3 text-emerald-400" />
+                      <span className="text-[9px] font-bold text-white">7-Day Activity</span>
+                      <div className="flex-1" />
+                      <span className="text-[7px] font-bold text-gray-500">{perfectDays}/7 perfect</span>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1.5">
+                      {weekDays.map((d, i) => (
+                        <div key={i} className={'group flex flex-col items-center gap-1 p-1.5 rounded-lg border transition-all duration-200 hover:scale-105 ' +
+                          (d.isToday ? 'bg-violet-500/10 border-violet-500/25 shadow-md shadow-violet-500/10' : 'bg-white/[0.02] border-white/[0.04] hover:bg-white/[0.04]')}>
+                          <span className={'text-[7px] font-bold ' + (d.isToday ? 'text-violet-400' : 'text-gray-500')}>{d.letter}</span>
+                          <div className={'w-7 h-7 rounded-md flex items-center justify-center border transition-all ' +
+                            (d.pct === 100 ? 'bg-emerald-500/15 border-emerald-500/25' :
+                             d.pct >= 50 ? 'bg-amber-500/10 border-amber-500/15' :
+                             d.pct > 0 ? 'bg-rose-500/10 border-rose-500/15' : 'bg-white/[0.02] border-white/[0.04]')}>
+                            {d.pct === 100 ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> :
+                             d.pct > 0 ? <span className="text-[8px] font-black text-rose-300">{d.pct}</span> :
+                             <span className="text-[8px] text-gray-600">{'\u2014'}</span>}
+                          </div>
+                          <div className="w-full h-0.5 rounded-full bg-white/[0.04] overflow-hidden">
+                            <div className={'h-full rounded-full transition-all ' + (d.pct === 100 ? 'bg-emerald-400' : d.pct >= 50 ? 'bg-amber-400' : d.pct > 0 ? 'bg-rose-400' : 'bg-white/10')}
+                              style={{ width: Math.max(d.pct, 2) + '%' }} />
+                          </div>
                         </div>
-                        <div className="space-y-1 min-h-[40px]">
-                          {scheduled.length > 0 ? scheduled.map((r, j) => (
-                            <div key={j} className="flex items-center gap-1">
-                              <div className={'w-1 h-1 rounded-full shrink-0 ' + (r.match ? 'bg-emerald-400' : 'bg-amber-400')} />
-                              <span className="text-[8px] text-gray-300 truncate">{r.name}</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Supplement Scoreboard */}
+                  <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-400/20 to-transparent" />
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <BarChart3 className="w-3 h-3 text-indigo-400" />
+                      <span className="text-[9px] font-bold text-white">Supplement Scoreboard</span>
+                      <div className="flex-1" />
+                      <span className="text-[7px] text-gray-500">7d / 30d</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {suppAdherence.sort((a, b) => b.rate7 - a.rate7).map((s, i) => (
+                        <div key={s.id} className="rounded-lg bg-white/[0.02] border border-white/[0.04] p-2 hover:border-white/[0.08] transition-all">
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <div className={'w-2 h-2 rounded-full shrink-0 ' + (s.rate7 >= 80 ? 'bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.4)]' : s.rate7 >= 50 ? 'bg-amber-400' : 'bg-rose-400')} />
+                            <span className="text-[9px] font-bold text-white truncate flex-1">{s.name}</span>
+                            {s.rate7 >= 80 && <Flame className="w-2.5 h-2.5 text-orange-400 shrink-0" />}
+                          </div>
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="text-[6px] font-bold text-gray-500">7d</span>
+                                <span className={'text-[9px] font-black tabular-nums ' + (s.rate7 >= 80 ? 'text-emerald-400' : s.rate7 >= 50 ? 'text-amber-400' : 'text-rose-400')}>{s.rate7}%</span>
+                              </div>
+                              <div className="w-full h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                                <motion.div initial={{ width: 0 }} animate={{ width: s.rate7 + '%' }}
+                                  transition={{ duration: 0.6, delay: i * 0.04 }}
+                                  className={'h-full rounded-full ' + (s.rate7 >= 80 ? 'bg-emerald-500' : s.rate7 >= 50 ? 'bg-amber-500' : 'bg-rose-500')} />
+                              </div>
                             </div>
-                          )) : (
-                            <span className="text-[8px] text-gray-600 italic">Empty</span>
-                          )}
-                        </div>
-                        {mismatchHere.length > 0 && (
-                          <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
-                            <span className="text-[7px] font-black text-amber-400">{mismatchHere.length}</span>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="text-[6px] font-bold text-gray-500">30d</span>
+                                <span className={'text-[9px] font-black tabular-nums ' + (s.rate30 >= 80 ? 'text-emerald-400/70' : s.rate30 >= 50 ? 'text-amber-400/70' : 'text-rose-400/70')}>{s.rate30}%</span>
+                              </div>
+                              <div className="w-full h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                                <motion.div initial={{ width: 0 }} animate={{ width: s.rate30 + '%' }}
+                                  transition={{ duration: 0.6, delay: i * 0.04 + 0.1 }}
+                                  className={'h-full rounded-full ' + (s.rate30 >= 80 ? 'bg-emerald-500/60' : s.rate30 >= 50 ? 'bg-amber-500/60' : 'bg-rose-500/60')} />
+                              </div>
+                            </div>
                           </div>
-                        )}
-                        {optimalHere.length > 0 && mismatchHere.length === 0 && scheduled.length > 0 && (
-                          <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
-                            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                )
+              })()}
+
+              {/* ──── MODE: OPTIMIZATION ──── */}
+              {coachMode === 'optimization' && (() => {
+                const optData = [
+                  { name: 'Matched', value: timingRecs.filter(r => r.match).length, fill: '#10b981' },
+                  { name: 'Mismatched', value: timingRecs.filter(r => !r.match).length, fill: '#f59e0b' },
+                ]
+                return (
+                <div className="space-y-2.5">
+                  {/* Timeline */}
+                  <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent" />
+                    <div className="flex items-center gap-1.5 mb-2.5">
+                      <Clock className="w-3 h-3 text-cyan-400" />
+                      <span className="text-[9px] font-bold text-white">Daily Timeline</span>
+                      <div className="flex-1" />
+                      <span className="text-[8px] font-black text-cyan-300">{timingScore}%</span>
+                      <span className="text-[7px] text-gray-500">optimized</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {TIMES_OF_DAY.map(t => {
+                        const Icon = TIME_ICONS[t]
+                        const tc = TIME_COLORS[t]
+                        const scheduled = timingRecs.filter(r => r.current.includes(t) || (t === 'Morning' && r.optimal === 'Morning'))
+                        const optimalHere = timingRecs.filter(r => r.optimal === t && r.match)
+                        const mismatchHere = timingRecs.filter(r => r.optimal === t && !r.match)
+                        return (
+                          <div key={t} className={'rounded-lg p-2 border relative overflow-hidden transition-all bg-gradient-to-br ' + tc.bg + ' ' + tc.border +
+                            (optimalHere.length > 0 ? ' shadow-md ' + tc.glow : '')}>
+                            <div className="flex items-center gap-1 mb-1.5">
+                              <Icon className={'w-3 h-3 ' + tc.icon} />
+                              <span className={'text-[8px] font-bold ' + tc.text}>{t}</span>
+                            </div>
+                            <div className="space-y-0.5 min-h-[28px]">
+                              {scheduled.length > 0 ? scheduled.slice(0, 3).map((r, j) => (
+                                <div key={j} className="flex items-center gap-1">
+                                  <div className={'w-1 h-1 rounded-full shrink-0 ' + (r.match ? 'bg-emerald-400' : 'bg-amber-400')} />
+                                  <span className="text-[7px] text-gray-300 truncate">{r.name}</span>
+                                </div>
+                              )) : <span className="text-[7px] text-gray-600 italic">Empty</span>}
+                              {scheduled.length > 3 && <span className="text-[6px] text-gray-500">+{scheduled.length - 3} more</span>}
+                            </div>
+                            {mismatchHere.length > 0 && (
+                              <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
+                                <span className="text-[6px] font-black text-amber-400">{mismatchHere.length}</span>
+                              </div>
+                            )}
+                            {optimalHere.length > 0 && mismatchHere.length === 0 && scheduled.length > 0 && (
+                              <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+                                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
+                        )
+                      })}
+                    </div>
+                  </div>
 
-              {/* ──── Timing Recommendations (full width) ──── */}
-              <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden mb-3">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/25 to-transparent" />
-                <div className="flex items-center gap-2 mb-3">
-                  <Sun className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="text-[10px] font-bold text-white tracking-tight">Timing Recommendations</span>
-                  <div className="flex-1" />
-                  <span className="text-[8px] text-gray-500 font-bold">{timingRecs.filter(r => r.match).length}/{timingRecs.length} optimal</span>
-                </div>
-                <div className="space-y-2">
-                  {timingRecs.map((r, i) => (
-                    <div key={i} className={'flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 ' +
-                      (r.match ? 'bg-emerald-500/[0.04] border-emerald-500/15 hover:border-emerald-500/25' :
-                       'bg-white/[0.02] border-white/[0.05] hover:border-white/[0.1]')}>
-                      <div className={'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ' +
-                        (r.match ? 'bg-emerald-500/15 border border-emerald-500/20' : 'bg-amber-500/10 border border-amber-500/15')}>
-                        {r.match ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Clock className="w-4 h-4 text-amber-400" />}
+                  {/* Timing + Pie */}
+                  <div className="grid grid-cols-3 gap-2.5">
+                    <div className="col-span-2 rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Sun className="w-3 h-3 text-amber-400" />
+                        <span className="text-[9px] font-bold text-white">Timing Recommendations</span>
+                        <div className="flex-1" />
+                        <span className="text-[7px] text-gray-500">{timingRecs.filter(r => r.match).length}/{timingRecs.length} optimal</span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-[10px] font-bold text-white truncate">{r.name}</span>
-                          <span className={'text-[7px] font-bold px-1.5 py-0.5 rounded-full ' +
-                            (r.category === 'fat-soluble' ? 'bg-amber-500/10 text-amber-400' :
-                             r.category === 'mineral' ? 'bg-blue-500/10 text-blue-400' :
-                             r.category === 'protein' ? 'bg-red-500/10 text-red-400' :
-                             r.category === 'stimulant' ? 'bg-orange-500/10 text-orange-400' :
-                             r.category === 'performance' ? 'bg-cyan-500/10 text-cyan-400' :
-                             r.category === 'gut' ? 'bg-teal-500/10 text-teal-400' :
-                             'bg-gray-500/10 text-gray-400')}>{r.category}</span>
+                      <div className="space-y-1.5">
+                        {timingRecs.slice(0, 5).map((r, i) => (
+                          <div key={i} className={'flex items-center gap-2 p-2 rounded-lg border transition-all ' +
+                            (r.match ? 'bg-emerald-500/[0.04] border-emerald-500/10' : 'bg-white/[0.02] border-white/[0.04] hover:border-white/[0.08]')}>
+                            <div className={'w-5 h-5 rounded flex items-center justify-center shrink-0 ' +
+                              (r.match ? 'bg-emerald-500/15' : 'bg-amber-500/10')}>
+                              {r.match ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Clock className="w-3 h-3 text-amber-400" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-bold text-white truncate">{r.name}</span>
+                                <span className={'text-[6px] font-bold px-1 py-0.5 rounded ' +
+                                  (r.category === 'fat-soluble' ? 'bg-amber-500/10 text-amber-400' :
+                                   r.category === 'mineral' ? 'bg-blue-500/10 text-blue-400' :
+                                   r.category === 'protein' ? 'bg-red-500/10 text-red-400' :
+                                   r.category === 'stimulant' ? 'bg-orange-500/10 text-orange-400' :
+                                   r.category === 'performance' ? 'bg-cyan-500/10 text-cyan-400' :
+                                   'bg-gray-500/10 text-gray-400')}>{r.category}</span>
+                              </div>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <span className="text-[7px] text-gray-500">{r.current}</span>
+                                {!r.match && <span className="text-[7px] text-gray-600">{'\u2192'}</span>}
+                                {!r.match && <span className="text-[7px] font-bold text-cyan-400">{r.optimal}</span>}
+                                {r.match && <span className="text-[7px] text-emerald-400 font-bold">{'\u2713'}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/20 to-transparent" />
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Sparkles className="w-3 h-3 text-violet-400" />
+                        <span className="text-[9px] font-bold text-white">Match</span>
+                      </div>
+                      <div className="h-20">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie data={optData} cx="50%" cy="50%" innerRadius={22} outerRadius={35} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                              {optData.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.8} />)}
+                            </Pie>
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="flex justify-center gap-3 mt-1">
+                        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-emerald-500" /><span className="text-[7px] text-gray-500">{timingRecs.filter(r => r.match).length} opt</span></div>
+                        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-amber-500" /><span className="text-[7px] text-gray-500">{timingRecs.filter(r => !r.match).length} fix</span></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Synergy Stats */}
+                  <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/20 to-transparent" />
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Layers className="w-3 h-3 text-violet-400" />
+                      <span className="text-[9px] font-bold text-white">Synergy Map</span>
+                      <div className="flex-1" />
+                      <span className="text-[8px] font-black text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded">{synergyScore}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5 mb-2">
+                      <div className="text-center p-2 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
+                        <span className="text-[14px] font-black text-emerald-400 block">{synergies.length}</span>
+                        <span className="text-[6px] text-gray-500 font-bold uppercase">Syn</span>
+                      </div>
+                      <div className="text-center p-2 rounded-lg bg-rose-500/[0.04] border border-rose-500/10">
+                        <span className="text-[14px] font-black text-rose-400 block">{conflicts.length}</span>
+                        <span className="text-[6px] text-gray-500 font-bold uppercase">Con</span>
+                      </div>
+                      <div className="text-center p-2 rounded-lg bg-amber-500/[0.04] border border-amber-500/10">
+                        <span className="text-[14px] font-black text-amber-400 block">{timingPairs.length}</span>
+                        <span className="text-[6px] text-gray-500 font-bold uppercase">Tim</span>
+                      </div>
+                      <div className="text-center p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                        <span className="text-[14px] font-black text-gray-400 block">{synergyPairs.filter(s => s.type === 'neutral').length}</span>
+                        <span className="text-[6px] text-gray-500 font-bold uppercase">Neu</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      {synergies.slice(0, 2).map((s, i) => (
+                        <div key={'sy' + i} className="flex items-center gap-2 p-1.5 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
+                          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                          <span className="text-[8px] text-emerald-300 font-bold truncate">{s.a} + {s.b}</span>
+                          <span className="text-[7px] text-gray-500 ml-auto truncate">{s.message}</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[8px] text-gray-500">{r.current}</span>
-                          {!r.match && <span className="text-[8px] text-gray-600">→</span>}
-                          {!r.match && <span className="text-[9px] font-bold text-cyan-400">{r.optimal}</span>}
-                          {r.match && <span className="text-[8px] text-emerald-400 font-bold">✓ optimal</span>}
+                      ))}
+                      {conflicts.slice(0, 1).map((s, i) => (
+                        <div key={'co' + i} className="flex items-center gap-2 p-1.5 rounded-lg bg-rose-500/[0.04] border border-rose-500/10">
+                          <AlertTriangle className="w-2.5 h-2.5 text-rose-400 shrink-0" />
+                          <span className="text-[8px] text-rose-300 font-bold truncate">{s.a} + {s.b}</span>
+                          <span className="text-[7px] text-gray-500 ml-auto truncate">{s.message}</span>
                         </div>
-                      </div>
-                      <span className="text-[7px] text-gray-500 shrink-0 max-w-[120px] truncate text-right">{r.reason}</span>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
-                <p className="text-[7px] text-gray-500 mt-3 flex items-center gap-1">
-                  <Info className="w-2.5 h-2.5 text-cyan-400 shrink-0" />
-                  Timing based on absorption science
-                </p>
-              </div>
+                )
+              })()}
 
-              {/* ──── Synergy Visual (full width) ──── */}
-              {synergyPairs.filter(s => s.type !== 'neutral').length > 0 && (
-              <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden mb-3">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/25 to-transparent" />
-                <div className="flex items-center gap-2 mb-3">
-                  <Layers className="w-3.5 h-3.5 text-violet-400" />
-                  <span className="text-[10px] font-bold text-white tracking-tight">Synergy Matrix</span>
-                  <div className="flex-1" />
-                  <span className="text-[8px] font-black text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded">{synergyScore}</span>
-                  <span className="text-[9px] font-black text-emerald-400">{synergies.length}</span>
-                  <span className="text-[8px] text-gray-500">syn</span>
-                  <span className="text-[9px] font-black text-rose-400">{conflicts.length}</span>
-                  <span className="text-[8px] text-gray-500">con</span>
-                  <span className="text-[9px] font-black text-amber-400">{timingPairs.length}</span>
-                  <span className="text-[8px] text-gray-500">tim</span>
-                </div>
-                <div className="grid grid-cols-4 gap-1.5 mb-3">
-                  <div className="text-center p-2.5 rounded-xl bg-emerald-500/[0.05] border border-emerald-500/10">
-                    <span className="text-[16px] font-black text-emerald-400 block">{synergies.length}</span>
-                    <span className="text-[7px] text-gray-500 font-bold uppercase">Synergy</span>
-                  </div>
-                  <div className="text-center p-2.5 rounded-xl bg-rose-500/[0.05] border border-rose-500/10">
-                    <span className="text-[16px] font-black text-rose-400 block">{conflicts.length}</span>
-                    <span className="text-[7px] text-gray-500 font-bold uppercase">Conflict</span>
-                  </div>
-                  <div className="text-center p-2.5 rounded-xl bg-amber-500/[0.05] border border-amber-500/10">
-                    <span className="text-[16px] font-black text-amber-400 block">{timingPairs.length}</span>
-                    <span className="text-[7px] text-gray-500 font-bold uppercase">Timing</span>
-                  </div>
-                  <div className="text-center p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                    <span className="text-[16px] font-black text-gray-400 block">{synergyPairs.filter(s => s.type === 'neutral').length}</span>
-                    <span className="text-[7px] text-gray-500 font-bold uppercase">Neutral</span>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  {synergies.map((s, i) => (
-                    <div key={'sy' + i} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-emerald-500/[0.04] border border-emerald-500/15 hover:border-emerald-500/25 transition-all duration-200">
-                      <div className="w-6 h-6 rounded-md bg-emerald-500/15 flex items-center justify-center shrink-0">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-[9px] text-emerald-300 font-bold">{s.a} + {s.b}</span>
-                        <span className="text-[8px] text-gray-500 ml-2">{s.message}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {conflicts.map((s, i) => (
-                    <div key={'co' + i} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-rose-500/[0.04] border border-rose-500/15 hover:border-rose-500/25 transition-all duration-200">
-                      <div className="w-6 h-6 rounded-md bg-rose-500/15 flex items-center justify-center shrink-0">
-                        <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-[9px] text-rose-300 font-bold">{s.a} + {s.b}</span>
-                        <span className="text-[8px] text-gray-500 ml-2">{s.message}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {timingPairs.map((s, i) => (
-                    <div key={'ti' + i} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-amber-500/[0.04] border border-amber-500/15 hover:border-amber-500/25 transition-all duration-200">
-                      <div className="w-6 h-6 rounded-md bg-amber-500/15 flex items-center justify-center shrink-0">
-                        <Clock className="w-3.5 h-3.5 text-amber-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-[9px] text-amber-300 font-bold">{s.a} + {s.b}</span>
-                        <span className="text-[8px] text-gray-500 ml-2">{s.message}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              )}
+              {/* ──── MODE: PLANNING ──── */}
+              {coachMode === 'planning' && (() => {
+                const COLORS = ['#f59e0b', '#f97316', '#8b5cf6', '#6366f1', '#06b6d4', '#10b981']
+                const costPieData = costBreakdown.map((c, i) => ({ name: c.name, value: c.cost, fill: COLORS[i % COLORS.length] }))
+                return (
+                <div className="space-y-2.5">
 
-              {/* ──── Interaction Alerts (full width) ──── */}
-              {conflicts.length > 0 && (
-              <div className="rounded-2xl bg-gradient-to-br from-rose-500/[0.05] to-rose-500/[0.01] border border-rose-500/15 p-4 relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-rose-400/30 to-transparent" />
-                <div className="flex items-center gap-2 mb-3">
-                  <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
-                  <span className="text-[10px] font-bold text-white tracking-tight">Interaction Alerts</span>
-                  <div className="flex-1" />
-                  <span className="text-[9px] font-bold text-rose-400">{conflicts.length} conflict{conflicts.length !== 1 ? 's' : ''}</span>
-                </div>
-                <div className="space-y-2">
-                  {conflicts.map((s, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-rose-500/[0.06] border border-rose-500/15 hover:border-rose-500/25 transition-all">
-                      <div className="w-8 h-8 rounded-lg bg-rose-500/15 border border-rose-500/20 flex items-center justify-center shrink-0">
-                        <AlertTriangle className="w-4 h-4 text-rose-400" />
+                  {/* Cost Row */}
+                  <div className="grid grid-cols-3 gap-2.5">
+                    <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <DollarSign className="w-3 h-3 text-amber-400" />
+                        <span className="text-[9px] font-bold text-white">Spending</span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-[10px] text-rose-300 font-bold">{s.a} + {s.b}</span>
-                        <p className="text-[8px] text-gray-400 mt-0.5">{s.message}</p>
+                      {costPieData.length > 0 ? (
+                        <>
+                          <div className="h-24">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie data={costPieData} cx="50%" cy="50%" innerRadius={25} outerRadius={40} paddingAngle={2} dataKey="value" strokeWidth={0}>
+                                  {costPieData.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.8} />)}
+                                </Pie>
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="flex flex-wrap justify-center gap-2 mt-1">
+                            {costBreakdown.slice(0, 3).map((c, i) => (
+                              <div key={i} className="flex items-center gap-1">
+                                <div className="w-1.5 h-1.5 rounded" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                <span className="text-[6px] text-gray-500">{c.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="h-24 flex items-center justify-center">
+                          <span className="text-[8px] text-gray-600">No cost data</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="col-span-2 rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <DollarSign className="w-3 h-3 text-amber-400" />
+                        <span className="text-[9px] font-bold text-white">Cost Overview</span>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              )}
-
-                </>
-              )}
-
-              {/* ─── MODE: PLANNING ─── */}
-              {coachMode === 'planning' && (
-                <>
-              {/* ──── Cost Overview (full width) ──── */}
-              <div className="rounded-2xl bg-gradient-to-br from-amber-500/[0.05] to-amber-500/[0.01] border border-amber-500/15 p-5 relative overflow-hidden mb-3">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/30 to-transparent" />
-                <div className="absolute -top-20 -right-20 w-48 h-48 bg-amber-500/[0.03] rounded-full blur-[60px] pointer-events-none" />
-                <div className="flex items-center gap-2 mb-4 relative z-10">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500/25 to-orange-500/15 border border-amber-500/25 flex items-center justify-center">
-                    <DollarSign className="w-4 h-4 text-amber-400" />
-                  </div>
-                  <div>
-                    <span className="text-[11px] font-bold text-white tracking-tight block">Cost Overview</span>
-                    <span className="text-[8px] text-gray-500">Your supplement investment</span>
-                  </div>
-                </div>
-                <div className="text-center mb-5 relative z-10">
-                  <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Daily Cost</span>
-                  <div className="text-4xl font-black text-white tabular-nums mt-1">
-                    <span className="text-lg text-gray-500">$</span>{costPerDay}
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3 relative z-10">
-                  <div className="text-center p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all">
-                    <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center mx-auto mb-1.5">
-                      <Calendar className="w-3 h-3 text-amber-400" />
-                    </div>
-                    <span className="text-[16px] font-black text-amber-300 block tabular-nums">${costPerWeek}</span>
-                    <span className="text-[7px] text-gray-500 font-bold uppercase tracking-wider">Per Week</span>
-                  </div>
-                  <div className="text-center p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all">
-                    <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center mx-auto mb-1.5">
-                      <BarChart3 className="w-3 h-3 text-amber-400" />
-                    </div>
-                    <span className="text-[16px] font-black text-amber-300 block tabular-nums">${monthlyProjection}</span>
-                    <span className="text-[7px] text-gray-500 font-bold uppercase tracking-wider">Per Month</span>
-                  </div>
-                  <div className="text-center p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all">
-                    <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center mx-auto mb-1.5">
-                      <TrendingUp className="w-3 h-3 text-amber-400" />
-                    </div>
-                    <span className="text-[16px] font-black text-amber-300 block tabular-nums">${yearlyProjection}</span>
-                    <span className="text-[7px] text-gray-500 font-bold uppercase tracking-wider">Per Year</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* ──── Spending Breakdown (full width) ──── */}
-              {costBreakdown.length > 0 && (
-              <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden mb-3">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/25 to-transparent" />
-                <div className="flex items-center gap-2 mb-3">
-                  <BarChart3 className="w-3.5 h-3.5 text-violet-400" />
-                  <span className="text-[10px] font-bold text-white tracking-tight">Spending Breakdown</span>
-                  <div className="flex-1" />
-                  <span className="text-[8px] text-gray-500 font-bold">{costBreakdown.length} items</span>
-                </div>
-                <div className="space-y-3">
-                  {costBreakdown.map((c, i) => (
-                    <div key={i}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-bold text-white truncate">{c.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-black text-amber-300 tabular-nums">${c.perDay}/d</span>
-                          <span className="text-[8px] font-bold text-gray-500 tabular-nums">{c.pct}%</span>
+                      <div className="grid grid-cols-2 gap-1.5 mb-2">
+                        <div className="text-center p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                          <span className="text-[14px] font-black text-amber-300 block">{'$' + costPerDay}</span>
+                          <span className="text-[6px] text-gray-500 font-bold uppercase">Per Day</span>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                          <span className="text-[14px] font-black text-amber-300 block">{'$' + costPerWeek}</span>
+                          <span className="text-[6px] text-gray-500 font-bold uppercase">Per Week</span>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                          <span className="text-[14px] font-black text-amber-300 block">{'$' + monthlyProjection}</span>
+                          <span className="text-[6px] text-gray-500 font-bold uppercase">Monthly</span>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                          <span className="text-[14px] font-black text-amber-300 block">{'$' + yearlyProjection}</span>
+                          <span className="text-[6px] text-gray-500 font-bold uppercase">Yearly</span>
                         </div>
                       </div>
-                      <div className="w-full h-2 rounded-full bg-white/[0.04] overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: c.pct + '%' }}
-                          transition={{ duration: 0.8, delay: i * 0.1 }}
-                          className="h-full rounded-full bg-gradient-to-r from-amber-500/60 to-amber-400/40" />
-                      </div>
+                      {costBreakdown.length > 0 && (
+                        <div className="space-y-1 pt-1.5 border-t border-white/[0.04]">
+                          {costBreakdown.slice(0, 3).map((c, i) => (
+                            <div key={i} className="flex items-center gap-1.5">
+                              <span className="text-[7px] text-gray-400 truncate w-14 shrink-0">{c.name}</span>
+                              <div className="flex-1 h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                                <div className="h-full rounded-full bg-amber-500/40" style={{ width: c.pct + '%' }} />
+                              </div>
+                              <span className="text-[7px] font-bold text-amber-300 tabular-nums w-6 text-right">{'$' + c.perDay + '/d'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
-              )}
+                  </div>
 
-              {/* ──── Gap Analysis (full width) ──── */}
-              {missing.length > 0 && (
-              <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden mb-3">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-rose-400/25 to-transparent" />
-                <div className="flex items-center gap-2 mb-3">
-                  <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
-                  <span className="text-[10px] font-bold text-white tracking-tight">Gap Analysis</span>
-                  <div className="flex-1" />
-                  <span className="text-[8px] text-gray-500 font-bold">{missing.length} missing</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {missing.map((m, i) => (
-                    <div key={i} className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-3 hover:border-white/[0.1] transition-all duration-200">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <div className={'w-2.5 h-2.5 rounded-full shrink-0 ' + (m.priority === 'high' ? 'bg-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : m.priority === 'medium' ? 'bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-gray-500')} />
-                        <span className="text-[10px] font-bold text-white truncate flex-1">{m.name}</span>
-                        <span className={'text-[7px] font-bold px-1.5 py-0.5 rounded-full ' +
-                          (m.priority === 'high' ? 'bg-rose-500/10 text-rose-400' :
-                           m.priority === 'medium' ? 'bg-amber-500/10 text-amber-400' :
-                           'bg-gray-500/10 text-gray-400')}>{m.priority}</span>
+                  {missing.length > 0 && (
+                    <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-rose-400/20 to-transparent" />
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <ShieldAlert className="w-3 h-3 text-rose-400" />
+                        <span className="text-[9px] font-bold text-white">Gap Analysis</span>
+                        <div className="flex-1" />
+                        <span className="text-[7px] text-gray-500">{missing.length} missing</span>
                       </div>
-                      <p className="text-[8px] text-gray-400 leading-relaxed">{m.why}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              )}
-
-              {/* ──── Action Items (full width) ──── */}
-              <div className="rounded-2xl bg-gradient-to-br from-violet-500/[0.04] to-violet-500/[0.01] border border-violet-500/15 p-4 relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/30 to-transparent" />
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-3.5 h-3.5 text-violet-400" />
-                  <span className="text-[10px] font-bold text-white tracking-tight">Action Items</span>
-                  <div className="flex-1" />
-                  <span className="text-[8px] text-gray-500 font-bold">{timingRecs.filter(r => !r.match).length + missing.length} items</span>
-                </div>
-                <div className="space-y-2">
-                  {timingRecs.filter(r => !r.match).slice(0, 3).map((r, i) => (
-                    <div key={'act' + i} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-amber-500/15 transition-all">
-                      <div className="w-6 h-6 rounded-lg bg-amber-500/10 border border-amber-500/15 flex items-center justify-center shrink-0">
-                        <Clock className="w-3 h-3 text-amber-400" />
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {missing.slice(0, 4).map(m => (
+                          <div key={m.name} className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                            <div className={'w-1.5 h-1.5 rounded-full shrink-0 ' + (m.priority === 'high' ? 'bg-rose-400 shadow-[0_0_4px_rgba(239,68,68,0.4)]' : m.priority === 'medium' ? 'bg-amber-400' : 'bg-gray-500')} />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[9px] font-bold text-white block truncate">{m.name}</span>
+                              <span className="text-[7px] text-gray-500 truncate block">{m.why}</span>
+                            </div>
+                            <span className={'text-[6px] font-bold uppercase px-1 py-0.5 rounded shrink-0 ' +
+                              (m.priority === 'high' ? 'bg-rose-500/10 text-rose-400' :
+                               m.priority === 'medium' ? 'bg-amber-500/10 text-amber-400' :
+                               'bg-gray-500/10 text-gray-400')}>{m.priority}</span>
+                          </div>
+                        ))}
                       </div>
-                      <span className="text-[9px] text-gray-300">Move <span className="text-white font-bold">{r.name}</span> to <span className="text-cyan-400 font-bold">{r.optimal}</span></span>
-                    </div>
-                  ))}
-                  {missing.slice(0, 3).map((m, i) => (
-                    <div key={'gap' + i} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-rose-500/15 transition-all">
-                      <div className="w-6 h-6 rounded-lg bg-rose-500/10 border border-rose-500/15 flex items-center justify-center shrink-0">
-                        <Plus className="w-3 h-3 text-rose-400" />
-                      </div>
-                      <span className="text-[9px] text-gray-300">Consider adding <span className="text-white font-bold">{m.name}</span> for {m.why.toLowerCase()}</span>
-                    </div>
-                  ))}
-                  {parseFloat(costPerDay) > 0 && (
-                    <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-emerald-500/15 transition-all">
-                      <div className="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center shrink-0">
-                        <DollarSign className="w-3 h-3 text-emerald-400" />
-                      </div>
-                      <span className="text-[9px] text-gray-300">Budget <span className="text-emerald-400 font-bold">${monthlyProjection}/mo</span> for your supplement stack</span>
                     </div>
                   )}
-                </div>
-              </div>
 
-                </>
-              )}            </div>
+                  <div className="rounded-xl bg-gradient-to-br from-violet-500/[0.04] to-indigo-500/[0.01] border border-violet-500/10 p-3 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/20 to-transparent" />
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Zap className="w-3 h-3 text-violet-400" />
+                      <span className="text-[9px] font-bold text-white">Action Items</span>
+                    </div>
+                    <div className="space-y-1">
+                      {timingRecs.filter(r => !r.match).slice(0, 2).map((r, i) => (
+                        <div key={'ta' + i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-amber-500/[0.04] border border-amber-500/10">
+                          <Clock className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                          <span className="text-[8px] text-gray-300">Move <span className="font-bold text-white">{r.name}</span> to <span className="font-bold text-cyan-400">{r.optimal}</span></span>
+                        </div>
+                      ))}
+                      {missing.slice(0, 2).map((m, i) => (
+                        <div key={'ma' + i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-rose-500/[0.04] border border-rose-500/10">
+                          <Plus className="w-2.5 h-2.5 text-rose-400 shrink-0" />
+                          <span className="text-[8px] text-gray-300">Add <span className="font-bold text-white">{m.name}</span> {'\u2014'} {m.why}</span>
+                        </div>
+                      ))}
+                      {totalCost > 0 && (
+                        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
+                          <DollarSign className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                          <span className="text-[8px] text-gray-300">Budget: <span className="font-bold text-emerald-400">{'$' + costPerDay + '/day'}</span> {'\u2014'} {'$' + yearlyProjection + '/year'}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                )
+              })()}
+
+            </div>
           </motion.div>
           )
         })()}
 
+
       </AnimatePresence>
 
-      {/* ═══════ HERO: WELLNESS COMMAND CENTER ═══════ */}
+              {/* ═══════ HERO: WELLNESS COMMAND CENTER ═══════ */}
       {totalCount > 0 && (
         <motion.div initial={{ opacity: 0, y: 24, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.8, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
           className="relative overflow-hidden rounded-[28px] border border-white/[0.07] bg-[#08080f] shadow-[0_0_60px_-12px_rgba(0,0,0,0.8)]">
