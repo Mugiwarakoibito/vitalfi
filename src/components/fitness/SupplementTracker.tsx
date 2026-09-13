@@ -9,7 +9,7 @@ import {
   ChevronLeft, ChevronRight, RotateCcw, Flame,
   TrendingUp, ChevronDown,
 } from 'lucide-react'
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { generateId, cn } from '@/lib/utils'
@@ -697,8 +697,10 @@ export function SupplementTracker() {
           // ─── Consistency Score ───
           const weekPct = weekDays.reduce((s, d) => s + d.taken, 0) > 0 ? Math.round((weekDays.reduce((s, d) => s + d.taken, 0) / Math.max(weekDays.reduce((s, d) => s + d.total, 0), 1)) * 100) : 0
           const consistencyScore = weekPct
-          const perfectDays = weekDays.filter(d => d.pct === 100).length
-          const activeDays = weekDays.filter(d => d.pct > 0).length
+
+          // ─── Trend Average ───
+          const trendDiffs = weeklyTrend.map((w, i) => i > 0 ? w.pct - weeklyTrend[i-1].pct : 0).slice(1)
+          const trendAvg = trendDiffs.length > 0 ? trendDiffs.reduce((a, b) => a + b, 0) / trendDiffs.length : 0
 
           // ─── takenAt: Real Timing Analysis ───
           const realTiming = supplements.map(s => {
@@ -738,13 +740,6 @@ export function SupplementTracker() {
           }).filter(Boolean) as { name: string; id: string; refillDays: number; daysSinceCreated: number; daysUntilRefill: number; urgency: string; pctUsed: number }[]
           const criticalRefills = refillData.filter(r => r.urgency === 'critical')
 
-          // ─── Tracking Duration ───
-          const trackingDurations = supplements.map(s => {
-            if (!s.createdAt) return null
-            const days = Math.floor((Date.now() - new Date(s.createdAt).getTime()) / 86400000)
-            return { name: s.name, id: s.id, days, established: days >= 30 }
-          }).filter(Boolean) as { name: string; id: string; days: number; established: boolean }[]
-          const avgTrackingDays = trackingDurations.length > 0 ? Math.round(trackingDurations.reduce((s, t) => s + t.days, 0) / trackingDurations.length) : 0
 
           // ─── Today's Live Status ───
           const todayStatus = dailySupps.map(s => {
@@ -760,6 +755,48 @@ export function SupplementTracker() {
 
           // ─── Long-term Streak (365d) ───
           const longTermStreak = suppStreak
+
+          // ─── Momentum Score (composite) ───
+          const momentumScore = Math.round(
+            (consistencyScore * 0.35) +
+            (Math.min(longTermStreak, 30) / 30 * 100 * 0.25) +
+            (timingAlignmentPct * 0.2) +
+            (Math.max(0, trendAvg + 50) * 0.2)
+          )
+
+          // ─── Weak Days (cross-week pattern) ───
+          const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+          const dayAdherence = Array.from({ length: 7 }, (_, dayIdx) => {
+            const relevantLogs = logs.filter(l => {
+              const d = new Date(l.date + 'T12:00:00')
+              return d.getDay() === dayIdx
+            })
+            const uniqueDates = new Set(relevantLogs.map(l => l.date)).size
+            const totalPossible = uniqueDates * dailySupps.length
+            const taken = new Set(relevantLogs.map(l => l.supplementId + '_' + l.date)).size
+            const pct = totalPossible > 0 ? Math.round((taken / totalPossible) * 100) : 0
+            return { name: dayNames[dayIdx], pct, idx: dayIdx }
+          })
+          const weakDays = dayAdherence.filter(d => d.pct < 70 && d.pct > 0).sort((a, b) => a.pct - b.pct)
+          const strongDays = dayAdherence.filter(d => d.pct >= 80).sort((a, b) => b.pct - a.pct)
+
+          // ─── Supplement Trend (7d vs 30d delta) ───
+          const suppTrends = suppAdherence.map(s => {
+            const delta = s.rate7 - s.rate30
+            const trend = delta > 10 ? 'rising' : delta < -10 ? 'dropping' : 'stable'
+            return { ...s, delta, trend }
+          }).sort((a, b) => a.delta - b.delta)
+
+          // ─── Smart Insights (auto-generated) ───
+          const insights: string[] = []
+          if (todayProgress === todayTotal && todayTotal > 0) insights.push('All done for today!')
+          else if (remainingToday.length > 0) insights.push(remainingToday.length + ' left today: ' + remainingToday.map(r => r.name).join(', '))
+          if (longTermStreak >= 7) insights.push(longTermStreak + 'd streak — keep the momentum')
+          if (weakDays.length > 0) insights.push('Weakest day: ' + weakDays[0].name + ' (' + weakDays[0].pct + '%)')
+          const dropping = suppTrends.filter(s => s.trend === 'dropping')
+          if (dropping.length > 0) insights.push(dropping.length + ' supplement' + (dropping.length > 1 ? 's' : '') + ' declining: ' + dropping.map(s => s.name).join(', '))
+          if (criticalRefills.length > 0) insights.push(criticalRefills.length + ' refill' + (criticalRefills.length > 1 ? 's' : '') + ' urgent')
+          if (timingAlignmentPct < 50 && realTiming.length > 0) insights.push('Timing alignment low (' + timingAlignmentPct + '%) — check Optimize tab')
 
 
 
@@ -827,200 +864,135 @@ export function SupplementTracker() {
               </div>
               {/* ──── MODE: OVERVIEW ──── */}
               {coachMode === 'overview' && (() => {
-                const CustomTip = ({ active, payload, label }: any) => {
-                  if (active && payload && payload.length) {
-                    return (
-                      <div className="bg-[#0e0e18] border border-white/10 rounded-lg px-2.5 py-1.5 shadow-xl">
-                        <p className="text-[9px] text-gray-400">{label}</p>
-                        <p className="text-[11px] font-bold text-white">{payload[0].value}%</p>
-                      </div>
-                    )
-                  }
-                  return null
-                }
-                const barData = weekDays.map(d => ({ name: d.letter, pct: d.pct, fill: d.pct >= 80 ? '#10b981' : d.pct >= 50 ? '#f59e0b' : d.pct > 0 ? '#ef4444' : '#374151' }))
-                const trendDiffs = weeklyTrend.map((w, i) => i > 0 ? w.pct - weeklyTrend[i-1].pct : 0).slice(1)
-                const trendAvg = trendDiffs.length > 0 ? trendDiffs.reduce((a, b) => a + b, 0) / trendDiffs.length : 0
-                const trendArrow = trendAvg > 3 ? '\u2191' : trendAvg < -3 ? '\u2193' : '\u2192'
-                const trendColor = trendAvg > 3 ? 'text-emerald-400' : trendAvg < -3 ? 'text-rose-400' : 'text-amber-400'
-                const moodLabel = consistencyScore >= 80 ? 'Crushing it' : consistencyScore >= 50 ? 'On track' : consistencyScore > 0 ? 'Building' : 'Go time'
-                const moodColor = consistencyScore >= 80 ? 'text-emerald-400' : consistencyScore >= 50 ? 'text-amber-400' : consistencyScore > 0 ? 'text-rose-400' : 'text-gray-400'
                 return (
                 <div className="flex flex-col gap-2" style={{ maxHeight: '520px' }}>
-                  {/* HERO: Ring + Stats + Trend in one row */}
+                  {/* 1. MOMENTUM — single composite score */}
                   <div className="rounded-xl bg-gradient-to-br from-violet-500/[0.06] to-indigo-500/[0.02] border border-violet-500/15 p-3 relative overflow-hidden">
                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/25 to-transparent" />
                     <div className="flex items-center gap-3">
-                      {/* Ring */}
                       <div className="relative w-14 h-14 shrink-0">
                         <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
                           <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="7" />
-                          <circle cx="50" cy="50" r="40" fill="none" stroke="url(#ovGrad)" strokeWidth="7" strokeLinecap="round"
+                          <circle cx="50" cy="50" r="40" fill="none" stroke="url(#momGrad)" strokeWidth="7" strokeLinecap="round"
                             strokeDasharray={2 * Math.PI * 40}
-                            strokeDashoffset={2 * Math.PI * 40 * (1 - consistencyScore / 100)} />
-                          <defs><linearGradient id="ovGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#a78bfa" /><stop offset="100%" stopColor="#7c3aed" /></linearGradient></defs>
+                            strokeDashoffset={2 * Math.PI * 40 * (1 - momentumScore / 100)} />
+                          <defs><linearGradient id="momGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#a78bfa" /><stop offset="100%" stopColor="#7c3aed" /></linearGradient></defs>
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="text-lg font-black text-white tabular-nums leading-none">{consistencyScore}</span>
-                          <span className="text-[6px] font-bold text-gray-500 mt-0.5">%</span>
+                          <span className="text-lg font-black text-white tabular-nums leading-none">{momentumScore}</span>
+                          <span className="text-[6px] font-bold text-gray-500 mt-0.5">score</span>
                         </div>
                       </div>
-                      {/* Stats stack */}
-                      <div className="flex-1 grid grid-cols-3 gap-1.5">
-                        <div className="text-center p-1.5 rounded-lg bg-orange-500/[0.06] border border-orange-500/10">
-                          <Flame className="w-3 h-3 text-orange-400 mx-auto mb-0.5" />
-                          <span className="text-[12px] font-black text-orange-300 block tabular-nums">{longTermStreak}d</span>
-                          <span className="text-[5px] text-gray-500 font-bold uppercase">Streak</span>
+                      <div className="flex-1 grid grid-cols-4 gap-1">
+                        <div className="text-center">
+                          <span className="text-[10px] font-black text-white block tabular-nums">{consistencyScore}%</span>
+                          <span className="text-[5px] text-gray-500 font-bold">ADHERE</span>
                         </div>
-                        <div className="text-center p-1.5 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/10">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-400 mx-auto mb-0.5" />
-                          <span className="text-[12px] font-black text-emerald-300 block tabular-nums">{perfectDays}/7</span>
-                          <span className="text-[5px] text-gray-500 font-bold uppercase">Perfect</span>
+                        <div className="text-center">
+                          <span className="text-[10px] font-black text-orange-300 block tabular-nums">{longTermStreak}d</span>
+                          <span className="text-[5px] text-gray-500 font-bold">STREAK</span>
                         </div>
-                        <div className="text-center p-1.5 rounded-lg bg-cyan-500/[0.06] border border-cyan-500/10">
-                          <Activity className="w-3 h-3 text-cyan-400 mx-auto mb-0.5" />
-                          <span className="text-[12px] font-black text-cyan-300 block tabular-nums">{activeDays}/7</span>
-                          <span className="text-[5px] text-gray-500 font-bold uppercase">Active</span>
+                        <div className="text-center">
+                          <span className="text-[10px] font-black text-cyan-300 block tabular-nums">{timingAlignmentPct}%</span>
+                          <span className="text-[5px] text-gray-500 font-bold">TIMING</span>
                         </div>
-                      </div>
-                      {/* Trend */}
-                      <div className="text-center shrink-0">
-                        <span className={'text-xl font-black ' + trendColor}>{trendArrow}</span>
-                        <p className={'text-[7px] font-bold ' + moodColor}>{moodLabel}</p>
-                        <p className="text-[6px] text-gray-500">{avgTrackingDays}d tracked</p>
+                        <div className="text-center">
+                          <span className={'text-[10px] font-black block tabular-nums ' + (trendAvg > 3 ? 'text-emerald-400' : trendAvg < -3 ? 'text-rose-400' : 'text-amber-400')}>{trendAvg > 3 ? '\u2191' : trendAvg < -3 ? '\u2193' : '\u2192'}</span>
+                          <span className="text-[5px] text-gray-500 font-bold">TREND</span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Today's Pills + Bar Chart merged */}
-                  <div className="grid grid-cols-5 gap-2">
-                    {/* Today's status - compact pills */}
-                    <div className="col-span-3 rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-2.5 relative overflow-hidden">
-                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/20 to-transparent" />
-                      <div className="flex items-center gap-1.5 mb-1.5">
-                        <Activity className="w-3 h-3 text-violet-400" />
-                        <span className="text-[9px] font-bold text-white">Today</span>
-                        <div className="flex-1" />
-                        <span className="text-[9px] font-black text-white tabular-nums">{todayProgress}/{todayTotal}</span>
-                      </div>
-                      <div className="w-full h-1 rounded-full bg-white/[0.06] overflow-hidden mb-1.5">
-                        <motion.div initial={{ width: 0 }} animate={{ width: todayPct + '%' }} transition={{ duration: 0.8 }}
-                          className="h-full rounded-full" style={{ background: todayPct === 100 ? '#10b981' : todayPct >= 50 ? '#f59e0b' : '#ef4444' }} />
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {todayStatus.slice(0, 8).map(s => (
-                          <div key={s.id} className={'flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[7px] font-bold transition-all ' +
-                            (s.taken ? 'bg-emerald-500/10 text-emerald-400 line-through opacity-60' : 'bg-white/[0.03] text-gray-400 border border-white/[0.04]')}>
-                            <div className={'w-1.5 h-1.5 rounded-full shrink-0 ' + (s.taken ? 'bg-emerald-400' : 'bg-gray-600')} />
-                            {s.name}
-                            {s.taken && s.takenAtTime && <span className="text-[5px] opacity-70">{s.takenAtTime}</span>}
-                          </div>
-                        ))}
-                        {todayStatus.length > 8 && <span className="text-[6px] text-gray-500 self-center">+{todayStatus.length - 8}</span>}
-                      </div>
-                      {remainingToday.length > 0 && (
-                        <p className="text-[7px] text-amber-400 mt-1 font-bold">{remainingToday.length} remaining: {remainingToday.map(r => r.name).join(', ')}</p>
-                      )}
-                    </div>
-                    {/* Mini bar chart */}
-                    <div className="col-span-2 rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-2.5 relative overflow-hidden">
-                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent" />
-                      <div className="flex items-center gap-1 mb-1">
-                        <TrendingUp className="w-2.5 h-2.5 text-cyan-400" />
-                        <span className="text-[8px] font-bold text-white">7d</span>
-                      </div>
-                      <div className="h-16">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={barData} margin={{ top: 2, right: 2, bottom: 0, left: -20 }}>
-                            <XAxis dataKey="name" tick={{ fontSize: 7, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                            <Tooltip content={<CustomTip />} cursor={false} />
-                            <Bar dataKey="pct" radius={[3, 3, 0, 0]} maxBarSize={20}>
-                              {barData.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.7} />)}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 7-Day Heatmap - compact horizontal scroll */}
-                  <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] px-3 py-2 relative overflow-hidden">
+                  {/* 2. TODAY — compact command */}
+                  <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-2.5 relative overflow-hidden">
                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent" />
                     <div className="flex items-center gap-1.5 mb-1.5">
-                      <CalendarCheck className="w-3 h-3 text-emerald-400" />
-                      <span className="text-[9px] font-bold text-white">Week</span>
+                      <Activity className="w-3 h-3 text-emerald-400" />
+                      <span className="text-[9px] font-bold text-white">Today</span>
                       <div className="flex-1" />
-                      <span className="text-[7px] font-bold text-gray-500">{perfectDays}/7 perfect</span>
+                      <span className="text-[9px] font-black text-white tabular-nums">{todayProgress}/{todayTotal}</span>
                     </div>
-                    <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
-                      {weekDays.map((d, i) => (
-                        <div key={i} className={'flex flex-col items-center gap-0.5 p-1.5 rounded-lg border transition-all duration-200 hover:scale-105 shrink-0 min-w-[38px] ' +
-                          (d.isToday ? 'bg-violet-500/10 border-violet-500/25 shadow-md shadow-violet-500/10' : 'bg-white/[0.02] border-white/[0.04] hover:bg-white/[0.04]')}>
-                          <span className={'text-[7px] font-bold ' + (d.isToday ? 'text-violet-400' : 'text-gray-500')}>{d.letter}</span>
-                          <div className={'w-6 h-6 rounded flex items-center justify-center border transition-all ' +
-                            (d.pct === 100 ? 'bg-emerald-500/15 border-emerald-500/25' :
-                             d.pct >= 50 ? 'bg-amber-500/10 border-amber-500/15' :
-                             d.pct > 0 ? 'bg-rose-500/10 border-rose-500/15' : 'bg-white/[0.02] border-white/[0.04]')}>
-                            {d.pct === 100 ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> :
-                             d.pct > 0 ? <span className="text-[7px] font-black text-rose-300">{d.pct}</span> :
-                             <span className="text-[7px] text-gray-600">-</span>}
-                          </div>
+                    <div className="w-full h-1 rounded-full bg-white/[0.06] overflow-hidden mb-1.5">
+                      <motion.div initial={{ width: 0 }} animate={{ width: todayPct + '%' }} transition={{ duration: 0.8 }}
+                        className="h-full rounded-full" style={{ background: todayPct === 100 ? '#10b981' : todayPct >= 50 ? '#f59e0b' : '#ef4444' }} />
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {todayStatus.map(s => (
+                        <div key={s.id} className={'flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[7px] font-bold transition-all ' +
+                          (s.taken ? 'bg-emerald-500/10 text-emerald-400 line-through opacity-60' : 'bg-white/[0.03] text-gray-400 border border-white/[0.04]')}>
+                          <div className={'w-1.5 h-1.5 rounded-full shrink-0 ' + (s.taken ? 'bg-emerald-400' : 'bg-gray-600')} />
+                          {s.name}
+                          {s.taken && s.takenAtTime && <span className="text-[5px] opacity-70">{s.takenAtTime}</span>}
+                          {!s.taken && s.dosage && <span className="text-[5px] opacity-50">{s.dosage}</span>}
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {/* Supplement Scoreboard - compact scrollable list */}
-                  <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-2.5 relative overflow-hidden flex-1 min-h-0">
-                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-400/20 to-transparent" />
+                  {/* 3. WEEK PATTERN — which days you fail */}
+                  <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-2.5 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
                     <div className="flex items-center gap-1.5 mb-1.5">
-                      <BarChart3 className="w-3 h-3 text-indigo-400" />
-                      <span className="text-[9px] font-bold text-white">Scoreboard</span>
+                      <CalendarCheck className="w-3 h-3 text-amber-400" />
+                      <span className="text-[9px] font-bold text-white">Day Pattern</span>
                       <div className="flex-1" />
-                      <span className="text-[7px] text-gray-500">7d / 30d</span>
+                      {strongDays.length > 0 && <span className="text-[6px] text-emerald-400 font-bold">Best: {strongDays[0].name}</span>}
+                      {weakDays.length > 0 && <span className="text-[6px] text-rose-400 font-bold ml-1">Weak: {weakDays[0].name}</span>}
                     </div>
-                    <div className="overflow-y-auto space-y-1" style={{ maxHeight: '180px', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
-                      {suppAdherence.sort((a, b) => b.rate7 - a.rate7).map((s, i) => {
-                        const taken = takenTodayIds.has(s.id)
-                        return (
-                        <div key={s.id} className="flex items-center gap-2 p-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08] transition-all">
-                          <div className={'w-2 h-2 rounded-full shrink-0 ' + (taken ? 'bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.4)]' : s.rate7 >= 80 ? 'bg-emerald-400' : s.rate7 >= 50 ? 'bg-amber-400' : 'bg-rose-400')} />
-                          <span className="text-[8px] font-bold text-white truncate flex-1">{s.name}</span>
-                          {s.rate7 >= 80 && <Flame className="w-2 h-2 text-orange-400 shrink-0" />}
-                          <div className="flex gap-1.5 items-center shrink-0">
-                            <div className="w-12">
-                              <div className="flex items-center justify-between mb-0.5">
-                                <span className="text-[5px] text-gray-500">7d</span>
-                                <span className={'text-[8px] font-black tabular-nums ' + (s.rate7 >= 80 ? 'text-emerald-400' : s.rate7 >= 50 ? 'text-amber-400' : 'text-rose-400')}>{s.rate7}%</span>
-                              </div>
-                              <div className="w-full h-0.5 rounded-full bg-white/[0.04] overflow-hidden">
-                                <motion.div initial={{ width: 0 }} animate={{ width: s.rate7 + '%' }}
-                                  transition={{ duration: 0.5, delay: i * 0.03 }}
-                                  className={'h-full rounded-full ' + (s.rate7 >= 80 ? 'bg-emerald-500' : s.rate7 >= 50 ? 'bg-amber-500' : 'bg-rose-500')} />
-                              </div>
-                            </div>
-                            <div className="w-12">
-                              <div className="flex items-center justify-between mb-0.5">
-                                <span className="text-[5px] text-gray-500">30d</span>
-                                <span className={'text-[8px] font-black tabular-nums ' + (s.rate30 >= 80 ? 'text-emerald-400/70' : s.rate30 >= 50 ? 'text-amber-400/70' : 'text-rose-400/70')}>{s.rate30}%</span>
-                              </div>
-                              <div className="w-full h-0.5 rounded-full bg-white/[0.04] overflow-hidden">
-                                <motion.div initial={{ width: 0 }} animate={{ width: s.rate30 + '%' }}
-                                  transition={{ duration: 0.5, delay: i * 0.03 + 0.05 }}
-                                  className={'h-full rounded-full ' + (s.rate30 >= 80 ? 'bg-emerald-500/60' : s.rate30 >= 50 ? 'bg-amber-500/60' : 'bg-rose-500/60')} />
-                              </div>
-                            </div>
+                    <div className="flex gap-1">
+                      {dayAdherence.map((d, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                          <div className="w-full h-8 rounded bg-white/[0.03] relative overflow-hidden flex items-end">
+                            <motion.div initial={{ height: 0 }} animate={{ height: Math.max(d.pct, 4) + '%' }} transition={{ duration: 0.5, delay: i * 0.04 }}
+                              className={'w-full rounded-t transition-all ' +
+                                (d.pct >= 80 ? 'bg-emerald-500/50' : d.pct >= 50 ? 'bg-amber-500/40' : d.pct > 0 ? 'bg-rose-500/40' : 'bg-white/[0.04]')} />
+                            <span className="absolute bottom-0.5 left-0 right-0 text-center text-[6px] font-black text-white/80 tabular-nums">{d.pct > 0 ? d.pct : '-'}</span>
                           </div>
+                          <span className="text-[6px] font-bold text-gray-500">{d.name}</span>
                         </div>
-                        )
-                      })}
+                      ))}
                     </div>
+                  </div>
+
+                  {/* 4. TRENDING — supplement delta + insights */}
+                  <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-2.5 relative overflow-hidden flex-1 min-h-0">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent" />
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <TrendingUp className="w-3 h-3 text-cyan-400" />
+                      <span className="text-[9px] font-bold text-white">Trending</span>
+                      <div className="flex-1" />
+                      <span className="text-[6px] text-gray-500">7d vs 30d</span>
+                    </div>
+                    <div className="overflow-y-auto space-y-1" style={{ maxHeight: '130px', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
+                      {suppTrends.slice(0, 6).map((s) => (
+                        <div key={s.id} className="flex items-center gap-2 py-1 px-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                          <div className={'w-1.5 h-1.5 rounded-full shrink-0 ' + (s.trend === 'rising' ? 'bg-emerald-400' : s.trend === 'dropping' ? 'bg-rose-400' : 'bg-gray-500')} />
+                          <span className="text-[8px] font-bold text-white truncate flex-1">{s.name}</span>
+                          <span className="text-[7px] font-bold text-gray-400 tabular-nums">{s.rate7}%</span>
+                          <span className={'text-[7px] font-black tabular-nums ' + (s.delta > 0 ? 'text-emerald-400' : s.delta < 0 ? 'text-rose-400' : 'text-gray-500')}>
+                            {s.delta > 0 ? '+' : ''}{s.delta}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Smart Insights */}
+                    {insights.length > 0 && (
+                      <div className="mt-1.5 pt-1.5 border-t border-white/[0.04] space-y-0.5">
+                        {insights.slice(0, 3).map((insight, i) => (
+                          <div key={i} className="flex items-center gap-1.5">
+                            <Zap className="w-2 h-2 text-violet-400 shrink-0" />
+                            <span className="text-[7px] text-gray-300">{insight}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
                 )
               })()}
 
-                            {/* ──── MODE: OPTIMIZATION ──── */}
+                                          {/* ──── MODE: OPTIMIZATION ──── */}
               {coachMode === 'optimization' && (() => {
                 const optData = [
                   { name: 'Aligned', value: timingAlignment, fill: '#10b981' },
