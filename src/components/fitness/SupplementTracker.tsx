@@ -966,9 +966,11 @@ export function SupplementTracker() {
                     </div>
                   </div>
 
-                  {/* 3. SUPPLY HEALTH — refill status per supplement */}
+                  {/* 3. SUPPLY HEALTH — decorative bar chart with glow */}
                   <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-rose-400/20 to-transparent" />
+                    {/* Decorative glow blob */}
+                    <div className="absolute -top-8 -right-8 w-24 h-24 bg-rose-500/[0.04] rounded-full blur-2xl" />
                     <div className="flex items-center gap-1.5 mb-2">
                       <Package className="w-3 h-3 text-rose-400" />
                       <span className="text-[9px] font-bold text-white">Supply Health</span>
@@ -976,62 +978,112 @@ export function SupplementTracker() {
                       {criticalRefills.length > 0 && <span className="text-[6px] font-black text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded">{criticalRefills.length} urgent</span>}
                     </div>
                     {refillData.length > 0 ? (
-                      <div className="overflow-y-auto space-y-1" style={{ maxHeight: '110px', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
-                        {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).map((r) => (
-                          <div key={r.id} className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                            <div className={'w-2 h-2 rounded-full shrink-0 ' + (r.urgency === 'critical' ? 'bg-rose-400 shadow-[0_0_4px_rgba(239,68,68,0.4)]' : r.urgency === 'warning' ? 'bg-amber-400' : 'bg-emerald-400')} />
-                            <span className="text-[8px] font-bold text-white truncate flex-1">{r.name}</span>
-                            <div className="w-12 h-1.5 rounded-full bg-white/[0.06] overflow-hidden shrink-0">
-                              <div className={'h-full rounded-full ' + (r.urgency === 'critical' ? 'bg-rose-500' : r.urgency === 'warning' ? 'bg-amber-500' : 'bg-emerald-500/50')}
-                                style={{ width: Math.max(100 - r.pctUsed, 5) + '%' }} />
+                      <>
+                        {/* Recharts horizontal bar chart */}
+                        <div className="h-[90px] mb-1">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 5).map(r => ({
+                              name: r.name.length > 8 ? r.name.substring(0, 8) + '..' : r.name,
+                              days: Math.max(r.daysUntilRefill, 0),
+                              pct: Math.max(100 - r.pctUsed, 5),
+                              urgency: r.urgency
+                            }))} layout="vertical" margin={{ top: 0, right: 40, bottom: 0, left: 0 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" horizontal={false} />
+                              <XAxis type="number" tick={{ fontSize: 7, fill: '#6b7280' }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                              <YAxis type="category" dataKey="name" tick={{ fontSize: 7, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={55} />
+                              <Tooltip cursor={false} contentStyle={{ background: '#0e0e18', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px' }}
+                                formatter={(value: number, name: string) => [name === 'pct' ? value + '% remaining' : value + 'd left', '']} />
+                              <Bar dataKey="pct" radius={[0, 6, 6, 0]} maxBarSize={16}>
+                                {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 5).map((r, i) => (
+                                  <Cell key={i} fill={r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981'} fillOpacity={0.7} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                        {/* Urgency pills row */}
+                        <div className="flex gap-1 flex-wrap pt-1.5 border-t border-white/[0.04]">
+                          {refillData.filter(r => r.urgency !== 'ok').slice(0, 3).map(r => (
+                            <div key={r.id} className={'flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[6px] font-bold border ' +
+                              (r.urgency === 'critical'
+                                ? 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                                : 'bg-amber-500/10 border-amber-500/20 text-amber-300')}>
+                              <div className={'w-1.5 h-1.5 rounded-full animate-pulse ' + (r.urgency === 'critical' ? 'bg-rose-400' : 'bg-amber-400')} />
+                              {r.name}: {r.daysUntilRefill}d
                             </div>
-                            <span className={'text-[7px] font-black tabular-nums w-10 text-right shrink-0 ' +
-                              (r.urgency === 'critical' ? 'text-rose-400' : r.urgency === 'warning' ? 'text-amber-400' : 'text-gray-500')}>
-                              {r.daysUntilRefill <= 0 ? 'EMPTY' : r.daysUntilRefill + 'd'}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      </>
                     ) : (
                       <p className="text-[7px] text-gray-500 italic">No refill data — add refill days to supplements</p>
                     )}
                   </div>
 
-                  {/* 4. TRENDING — recharts bar chart + insights */}
+                  {/* 4. TRENDING — decorative recharts + sparklines */}
                   <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden flex-1 min-h-0">
                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent" />
+                    {/* Decorative glow blobs */}
+                    <div className="absolute -top-8 -left-8 w-20 h-20 bg-cyan-500/[0.04] rounded-full blur-2xl" />
+                    <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-emerald-500/[0.04] rounded-full blur-2xl" />
                     <div className="flex items-center gap-1.5 mb-2">
                       <TrendingUp className="w-3 h-3 text-cyan-400" />
                       <span className="text-[9px] font-bold text-white">Trending</span>
                       <div className="flex-1" />
                       <span className="text-[6px] text-gray-500">7d vs 30d</span>
                     </div>
-                    {/* Recharts horizontal bar chart */}
                     {suppTrends.length > 0 ? (
-                      <div className="h-[120px] mb-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={suppTrends.slice(0, 5).map(s => ({
-                            name: s.name.length > 8 ? s.name.substring(0, 8) + '..' : s.name,
-                            delta: s.delta,
-                            fill: s.delta > 0 ? '#10b981' : s.delta < 0 ? '#ef4444' : '#6b7280'
-                          }))} layout="vertical" margin={{ top: 0, right: 30, bottom: 0, left: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
-                            <XAxis type="number" tick={{ fontSize: 7, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                            <YAxis type="category" dataKey="name" tick={{ fontSize: 7, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={55} />
-                            <Tooltip cursor={false} contentStyle={{ background: '#0e0e18', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px' }}
-                              formatter={(value: number) => [value > 0 ? '+' + value : value, 'Delta']} />
-                            <Bar dataKey="delta" radius={[0, 4, 4, 0]} maxBarSize={14}>
-                              {suppTrends.slice(0, 5).map((s, i) => <Cell key={i} fill={s.delta > 0 ? '#10b981' : s.delta < 0 ? '#ef4444' : '#6b7280'} fillOpacity={0.6} />)}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
+                      <div className="space-y-2">
+                        {/* Recharts bar chart */}
+                        <div className="h-[100px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={suppTrends.slice(0, 5).map(s => ({
+                              name: s.name.length > 8 ? s.name.substring(0, 8) + '..' : s.name,
+                              delta: s.delta
+                            }))} layout="vertical" margin={{ top: 0, right: 30, bottom: 0, left: 0 }}>
+                              <defs>
+                                <linearGradient id="trendGreen" x1="0" y1="0" x2="1" y2="0">
+                                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.2} />
+                                  <stop offset="100%" stopColor="#10b981" stopOpacity={0.8} />
+                                </linearGradient>
+                                <linearGradient id="trendRed" x1="0" y1="0" x2="1" y2="0">
+                                  <stop offset="0%" stopColor="#ef4444" stopOpacity={0.8} />
+                                  <stop offset="100%" stopColor="#ef4444" stopOpacity={0.2} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" horizontal={false} />
+                              <XAxis type="number" tick={{ fontSize: 7, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                              <YAxis type="category" dataKey="name" tick={{ fontSize: 7, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={55} />
+                              <Tooltip cursor={false} contentStyle={{ background: '#0e0e18', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px' }}
+                                formatter={(value: number) => [value > 0 ? '+' + value : value, 'Delta']} />
+                              <Bar dataKey="delta" radius={[0, 6, 6, 0]} maxBarSize={14}>
+                                {suppTrends.slice(0, 5).map((s, i) => (
+                                  <Cell key={i} fill={s.delta > 0 ? 'url(#trendGreen)' : 'url(#trendRed)'} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                        {/* Per-supplement sparkline cards */}
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {suppTrends.slice(0, 4).map(s => (
+                            <div key={s.id} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.05] transition-colors">
+                              <div className={'w-1.5 h-8 rounded-full ' + (s.delta > 0 ? 'bg-gradient-to-b from-emerald-400 to-emerald-600' : s.delta < 0 ? 'bg-gradient-to-b from-rose-400 to-rose-600' : 'bg-gray-500')} />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-[7px] font-bold text-white block truncate">{s.name}</span>
+                                <span className={'text-[8px] font-black tabular-nums ' + (s.delta > 0 ? 'text-emerald-400' : s.delta < 0 ? 'text-rose-400' : 'text-gray-500')}>
+                                  {s.delta > 0 ? '+' : ''}{s.delta}%
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ) : (
                       <div className="h-[120px] flex items-center justify-center"><span className="text-[7px] text-gray-500">No trend data yet</span></div>
                     )}
                     {/* Smart Insights */}
                     {insights.length > 0 && (
-                      <div className="pt-2 border-t border-white/[0.04] space-y-1">
+                      <div className="pt-2 border-t border-white/[0.04] space-y-1 mt-2">
                         {insights.slice(0, 3).map((insight, i) => (
                           <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-violet-500/[0.04] border border-violet-500/10">
                             <Zap className="w-2.5 h-2.5 text-violet-400 shrink-0" />
