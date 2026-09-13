@@ -402,18 +402,18 @@ export function SupplementTracker() {
                   {(() => {
                     const totalDoses = weekDays.reduce((s, d) => s + d.taken, 0)
                     const avgPerDay = (totalDoses / 7).toFixed(1)
-                    const perfectDaysCount = weekDays.filter(d => d.pct === 100).length
+                    const worstDay = weekDays.reduce((worst, d) => d.pct < worst.pct ? d : worst, weekDays[0])
                     return (
                       <>
-                        <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-green-500/5 border border-emerald-500/20 cursor-default">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-[11px] font-black text-emerald-300 tabular-nums">{perfectDaysCount}</span>
-                          <span className="text-[9px] text-emerald-400/60 font-bold">perfect</span>
+                        <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-orange-500/10 to-amber-500/5 border border-orange-500/20 cursor-default">
+                          <Flame className="w-3.5 h-3.5 text-orange-400" />
+                          <span className="text-[11px] font-black text-orange-300 tabular-nums">{bestStreak}d</span>
+                          <span className="text-[9px] text-orange-400/60 font-bold">streak</span>
                         </motion.div>
-                        <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/5 border border-cyan-500/20 cursor-default">
-                          <Activity className="w-3.5 h-3.5 text-cyan-400" />
-                          <span className="text-[11px] font-black text-cyan-300 tabular-nums">{avgPerDay}</span>
-                          <span className="text-[9px] text-cyan-400/60 font-bold">avg/day</span>
+                        <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-red-500/10 to-rose-500/5 border border-red-500/20 cursor-default">
+                          <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+                          <span className="text-[11px] font-black text-red-300">{worstDay.letter}</span>
+                          <span className="text-[9px] text-red-400/60 font-bold">{worstDay.pct}% weak</span>
                         </motion.div>
                       </>
                     )
