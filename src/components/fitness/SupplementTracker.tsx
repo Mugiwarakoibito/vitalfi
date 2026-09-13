@@ -80,6 +80,7 @@ export function SupplementTracker() {
   })
   const [activePanel, setActivePanel] = useState<'patterns' | 'coach' | null>(null)
   const [weekOffset, setWeekOffset] = useState(0)
+  const [coachMode, setCoachMode] = useState<'overview' | 'optimization' | 'planning'>('overview')
 
   const today = toLocalDate(new Date())
   const [selectedDate, setSelectedDate] = useState(today)
@@ -749,6 +750,27 @@ export function SupplementTracker() {
                     <p className="text-[9px] text-gray-500">Intelligence · Timing · Synergy</p>
                   </div>
                 </div>
+                {/* Mode Selector */}
+                <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  {([
+                    { key: 'overview' as const, label: 'Overview', icon: Activity },
+                    { key: 'optimization' as const, label: 'Optimize', icon: Zap },
+                    { key: 'planning' as const, label: 'Planning', icon: DollarSign },
+                  ]).map(m => {
+                    const Icon = m.icon
+                    return (
+                      <button key={m.key} onClick={() => setCoachMode(m.key)}
+                        className={'flex items-center gap-1 px-2.5 py-1 rounded-md text-[9px] font-bold transition-all duration-200 ' +
+                          (coachMode === m.key
+                            ? 'bg-gradient-to-r from-violet-500/20 to-indigo-500/15 border border-violet-500/25 text-violet-300 shadow-sm shadow-violet-500/10'
+                            : 'text-gray-500 hover:text-gray-300 border border-transparent')
+                        }>
+                        <Icon className="w-3 h-3" />
+                        {m.label}
+                      </button>
+                    )
+                  })}
+                </div>
                 <div className="flex items-center gap-1.5">
                   <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-emerald-500/15 to-emerald-600/10 border border-emerald-500/20">
                     <Flame className="w-3 h-3 text-emerald-400" />
@@ -763,6 +785,9 @@ export function SupplementTracker() {
                 </div>
               </div>
 
+              {/* ─── MODE: OVERVIEW ─── */}
+              {coachMode === 'overview' && (
+                <>
               {/* ─── Row 2: Consistency + Habit Grid + Trend ─── */}
               <div className="grid grid-cols-3 gap-2.5 mb-3">
                 {/* Consistency Ring */}
@@ -866,8 +891,8 @@ export function SupplementTracker() {
                 </div>
               </div>
 
-              {/* ─── Row 3: Supplement Breakdown + Timing Engine ─── */}
-              <div className="grid grid-cols-2 gap-2.5 mb-3">
+
+              {/* ─── Supplement Breakdown (full width) ─── */}
                 {/* Supplement Breakdown */}
                 <div className="rounded-xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
                   <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-400/20 to-transparent" />
@@ -878,7 +903,7 @@ export function SupplementTracker() {
                     <span className="text-[7px] text-gray-600">7d/30d</span>
                   </div>
                   <div className="space-y-2">
-                    {suppAdherence.sort((a, b) => b.rate7 - a.rate7).slice(0, 4).map((s, i) => (
+                    {suppAdherence.sort((a, b) => b.rate7 - a.rate7).map((s, i) => (
                       <div key={s.id} className="flex items-center gap-2">
                         <span className="text-[9px] font-bold text-white truncate w-20 shrink-0">{s.name}</span>
                         <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
@@ -894,6 +919,14 @@ export function SupplementTracker() {
                   </div>
                 </div>
 
+                </>
+              )}
+
+              {/* ─── MODE: OPTIMIZATION ─── */}
+              {coachMode === 'optimization' && (
+                <>
+
+              {/* ─── Timing Engine (full width) ─── */}
                 {/* Timing Engine */}
                 <div className="rounded-xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
                   <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/15 to-transparent" />
@@ -904,7 +937,7 @@ export function SupplementTracker() {
                     <span className="text-[8px] font-black text-cyan-300 tabular-nums">{timingScore}%</span>
                   </div>
                   <div className="space-y-2">
-                    {timingRecs.slice(0, 4).map((r, i) => (
+                    {timingRecs.map((r, i) => (
                       <div key={i} className="flex items-center gap-1.5">
                         <div className={'w-1.5 h-1.5 rounded-full shrink-0 ' + (r.match ? 'bg-emerald-400' : 'bg-amber-400')} />
                         <span className="text-[9px] font-bold text-white truncate w-20 shrink-0">{r.name}</span>
@@ -927,10 +960,8 @@ export function SupplementTracker() {
                     Timing based on absorption science
                   </p>
                 </div>
-              </div>
 
-              {/* ─── Row 4: Synergy Map + Cost Intelligence ─── */}
-              <div className="grid grid-cols-2 gap-2.5 mb-3">
+              {/* ─── Synergy Map (full width) ─── */}
                 {/* Synergy Map */}
                 <div className="rounded-xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
                   <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-400/15 to-transparent" />
@@ -959,21 +990,21 @@ export function SupplementTracker() {
                     </div>
                   </div>
                   <div className="space-y-1">
-                    {synergies.slice(0, 2).map((s, i) => (
+                    {synergies.map((s, i) => (
                       <div key={i} className="flex items-center gap-1.5 p-1.5 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
                         <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
                         <span className="text-[8px] text-emerald-300 font-bold truncate">{s.a} + {s.b}</span>
                         <span className="text-[7px] text-gray-500 ml-auto truncate">{s.message}</span>
                       </div>
                     ))}
-                    {conflicts.slice(0, 1).map((s, i) => (
+                    {conflicts.map((s, i) => (
                       <div key={i} className="flex items-center gap-1.5 p-1.5 rounded-lg bg-rose-500/[0.04] border border-rose-500/10">
                         <AlertTriangle className="w-2.5 h-2.5 text-rose-400 shrink-0" />
                         <span className="text-[8px] text-rose-300 font-bold truncate">{s.a} + {s.b}</span>
                         <span className="text-[7px] text-gray-500 ml-auto truncate">{s.message}</span>
                       </div>
                     ))}
-                    {timingPairs.slice(0, 1).map((s, i) => (
+                    {timingPairs.map((s, i) => (
                       <div key={i} className="flex items-center gap-1.5 p-1.5 rounded-lg bg-amber-500/[0.04] border border-amber-500/10">
                         <Clock className="w-2.5 h-2.5 text-amber-400 shrink-0" />
                         <span className="text-[8px] text-amber-300 font-bold truncate">{s.a} + {s.b}</span>
@@ -983,6 +1014,14 @@ export function SupplementTracker() {
                   </div>
                 </div>
 
+                </>
+              )}
+
+              {/* ─── MODE: PLANNING ─── */}
+              {coachMode === 'planning' && (
+                <>
+
+              {/* ─── Cost Intelligence (full width) ─── */}
                 {/* Cost Intelligence */}
                 <div className="rounded-xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
                   <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/15 to-transparent" />
@@ -1010,7 +1049,7 @@ export function SupplementTracker() {
                   </div>
                   {costBreakdown.length > 0 && (
                     <div className="space-y-1.5 pt-2 border-t border-white/[0.04]">
-                      {costBreakdown.slice(0, 3).map((c, i) => (
+                      {costBreakdown.map((c, i) => (
                         <div key={i} className="flex items-center gap-1.5">
                           <span className="text-[8px] text-gray-400 truncate w-16 shrink-0">{c.name}</span>
                           <div className="flex-1 h-1 rounded-full bg-white/[0.04] overflow-hidden">
@@ -1022,8 +1061,6 @@ export function SupplementTracker() {
                     </div>
                   )}
                 </div>
-              </div>
-
               {/* ─── Row 5: Gap Analysis (compact horizontal) ─── */}
               {missing.length > 0 && (
                 <div className="rounded-xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
@@ -1035,7 +1072,7 @@ export function SupplementTracker() {
                     <span className="text-[8px] text-gray-600">{missing.length} missing</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {missing.slice(0, 5).map(m => (
+                    {missing.map(m => (
                       <div key={m.name} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                         <div className={'w-1.5 h-1.5 rounded-full ' + (m.priority === 'high' ? 'bg-rose-400' : m.priority === 'medium' ? 'bg-amber-400' : 'bg-gray-500')} />
                         <span className="text-[8px] font-bold text-white">{m.name}</span>
@@ -1045,6 +1082,8 @@ export function SupplementTracker() {
                     ))}
                   </div>
                 </div>
+              )}
+                </>
               )}
             </div>
           </motion.div>
