@@ -400,28 +400,23 @@ export function SupplementTracker() {
                 </div>
                 <div className="flex items-center gap-2.5">
                   {(() => {
-                    const compliance = weekTotal > 0 ? Math.round((weekTaken / weekTotal) * 100) : 0
-                    const supplyDays = supplements.reduce((min, s) => {
-                      if (!s.totalServings || !s.dosage) return min
-                      const dailyQty = s.frequency === 'daily' ? s.times.length : s.frequency === 'weekly' ? s.times.length / 7 : 1
-                      const daysLeft = Math.floor(s.totalServings / Math.max(dailyQty, 0.1))
-                      return daysLeft < min ? daysLeft : min
-                    }, Infinity)
-                    const hasSupply = supplyDays !== Infinity && supplyDays > 0
+                    const dosesMissed = weekTotal - weekTaken
+                    const bestTimeLabel = [totalMorning, totalAfternoon, totalEvening, totalNight].every(c => c === 0) ? '—'
+                      : totalMorning >= totalAfternoon && totalMorning >= totalEvening && totalMorning >= totalNight ? 'Morning'
+                      : totalAfternoon >= totalEvening && totalAfternoon >= totalNight ? 'Afternoon'
+                      : totalEvening >= totalNight ? 'Evening' : 'Night'
                     return (
                       <>
-                        <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-500/10 to-violet-500/5 border border-indigo-500/20 cursor-default">
-                          <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
-                          <span className="text-[11px] font-black text-indigo-300 tabular-nums">{compliance}%</span>
-                          <span className="text-[9px] text-indigo-400/60 font-bold">covered</span>
+                        <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-500/10 to-pink-500/5 border border-rose-500/20 cursor-default">
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                          <span className="text-[11px] font-black text-rose-300 tabular-nums">{dosesMissed}</span>
+                          <span className="text-[9px] text-rose-400/60 font-bold">missed</span>
                         </motion.div>
-                        {hasSupply && (
-                          <motion.div whileHover={{ scale: 1.05 }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border cursor-default ${supplyDays <= 7 ? 'bg-gradient-to-r from-red-500/10 to-rose-500/5 border-red-500/20' : 'bg-gradient-to-r from-emerald-500/10 to-green-500/5 border-emerald-500/20'}`}>
-                            <Package className={`w-3.5 h-3.5 ${supplyDays <= 7 ? 'text-red-400' : 'text-emerald-400'}`} />
-                            <span className={`text-[11px] font-black tabular-nums ${supplyDays <= 7 ? 'text-red-300' : 'text-emerald-300'}`}>{supplyDays}</span>
-                            <span className={`text-[9px] font-bold ${supplyDays <= 7 ? 'text-red-400/60' : 'text-emerald-400/60'}`}>days left</span>
-                          </motion.div>
-                        )}
+                        <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/5 border border-amber-500/20 cursor-default">
+                          <Zap className="w-3.5 h-3.5 text-amber-400" />
+                          <span className="text-[11px] font-black text-amber-300">{bestTimeLabel}</span>
+                          <span className="text-[9px] text-amber-400/60 font-bold">peak</span>
+                        </motion.div>
                       </>
                     )
                   })()}
