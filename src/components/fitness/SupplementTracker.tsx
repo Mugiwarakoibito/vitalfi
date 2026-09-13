@@ -400,8 +400,6 @@ export function SupplementTracker() {
                 </div>
                 <div className="flex items-center gap-2.5">
                   {(() => {
-                    const totalDoses = weekDays.reduce((s, d) => s + d.taken, 0)
-                    const avgPerDay = (totalDoses / 7).toFixed(1)
                     const worstDay = weekDays.reduce((worst, d) => d.pct < worst.pct ? d : worst, weekDays[0])
                     return (
                       <>
