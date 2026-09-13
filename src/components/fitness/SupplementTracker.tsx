@@ -16,7 +16,7 @@ import { generateId, cn } from '@/lib/utils'
 interface Supplement {
   id: string; name: string; dosage: string; frequency: 'daily' | 'weekly' | 'custom'
   times: string[]; notes?: string; refillDays?: number; stack?: string
-  cost?: number; totalServings?: number
+  cost?: number; totalServings?: number; createdAt?: string
 }
 
 interface SupplementLog { id: string; supplementId: string; takenAt: string; date: string }
@@ -472,62 +472,66 @@ export function SupplementTracker() {
 
                 {/* Consistency Ring + Time Distribution + Heatmap */}
                 <div className="w-52 flex flex-col gap-3 shrink-0">
-                  {/* Consistency Ring */}
-                  <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden flex flex-col items-center">
+                  {/* Refill Tracker */}
+                  <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden flex flex-col gap-2">
                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/15 to-transparent" />
-                    <div className="flex items-center gap-2 mb-4 w-full">
-                      <Target className="w-3.5 h-3.5 text-violet-400" />
-                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.15em]">Consistency</span>
+                    <div className="flex items-center gap-2">
+                      <Package className="w-3.5 h-3.5 text-violet-400" />
+                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.15em]">Refill soon</span>
                     </div>
-                    <div className="relative w-28 h-28">
-                      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="6" />
-                        <circle cx="50" cy="50" r="42" fill="none" stroke="url(#consistencyGrad)" strokeWidth="6" strokeLinecap="round"
-                          strokeDasharray={`${2 * Math.PI * 42}`}
-                          strokeDashoffset={`${2 * Math.PI * 42 * (1 - weekPct / 100)}`}
-                          style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1)' }} />
-                        <defs>
-                          <linearGradient id="consistencyGrad" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0%" stopColor="#a78bfa" />
-                            <stop offset="100%" stopColor="#7c3aed" />
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-2xl font-black text-white tabular-nums">{weekPct}</span>
-                        <span className="text-[8px] text-gray-500 font-bold tracking-wider">%CONSISTENT</span>
-                      </div>
-                    </div>
+                    {supplements.filter(s => s.refillDays && s.refillDays > 0).slice(0, 4).map(s => {
+                      const daysSinceCreation = Math.floor((new Date(selectedDate).getTime() - new Date(s.createdAt || selectedDate).getTime()) / 86400000)
+                      const daysLeft = (s.refillDays || 30) - daysSinceCreation
+                      const pct = Math.max(0, Math.min(100, (daysLeft / (s.refillDays || 30)) * 100))
+                      const urgent = daysLeft <= 5
+                      return (
+                        <div key={s.id} className="flex items-center gap-2">
+                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${urgent ? 'bg-red-400 animate-pulse' : 'bg-emerald-400'}`} />
+                          <span className="text-[9px] text-gray-300 truncate flex-1">{s.name}</span>
+                          <span className={`text-[8px] font-bold tabular-nums ${urgent ? 'text-red-400' : 'text-gray-500'}`}>{daysLeft}d</span>
+                        </div>
+                      )
+                    })}
+                    {supplements.filter(s => s.refillDays && s.refillDays > 0).length === 0 && (
+                      <p className="text-[8px] text-gray-600">Set refill days to track</p>
+                    )}
                   </div>
 
                   {/* Time Distribution */}
-                  <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden flex flex-col gap-2.5">
+                  <div className="flex-1 rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden flex flex-col gap-2.5">
                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/15 to-transparent" />
                     <div className="flex items-center gap-2">
                       <Clock className="w-3.5 h-3.5 text-violet-400" />
                       <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.15em]">Time split</span>
                     </div>
-                    {[
-                      { label: 'AM', count: totalMorning, color: '#f97316', icon: Sun },
-                      { label: 'Mid', count: totalAfternoon, color: '#8b5cf6', icon: Sparkles },
-                      { label: 'Eve', count: totalEvening, color: '#06b6d4', icon: Sunset },
-                      { label: 'Night', count: totalNight, color: '#6366f1', icon: Moon },
-                    ].filter(t => t.count > 0).map(t => {
-                      const maxCount = Math.max(totalMorning, totalAfternoon, totalEvening, totalNight, 1)
-                      const pct = Math.round((t.count / maxCount) * 100)
-                      const Icon = t.icon
-                      return (
-                        <div key={t.label} className="flex items-center gap-2">
-                          <Icon className="w-3 h-3 shrink-0" style={{ color: t.color }} />
-                          <div className="flex-1 h-2 rounded-full bg-white/[0.04] overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                              transition={{ duration: 0.8, ease: 'easeOut' }}
-                              className="h-full rounded-full" style={{ backgroundColor: t.color + '99' }} />
+                    <div className="flex-1 flex flex-col justify-center gap-3">
+                      {[
+                        { label: 'AM', count: totalMorning, color: '#f97316', icon: Sun },
+                        { label: 'Mid', count: totalAfternoon, color: '#8b5cf6', icon: Sparkles },
+                        { label: 'Eve', count: totalEvening, color: '#06b6d4', icon: Sunset },
+                        { label: 'Night', count: totalNight, color: '#6366f1', icon: Moon },
+                      ].filter(t => t.count > 0).map(t => {
+                        const maxCount = Math.max(totalMorning, totalAfternoon, totalEvening, totalNight, 1)
+                        const pct = Math.round((t.count / maxCount) * 100)
+                        const Icon = t.icon
+                        return (
+                          <div key={t.label} className="flex items-center gap-2.5">
+                            <Icon className="w-4 h-4 shrink-0" style={{ color: t.color }} />
+                            <div className="flex-1 flex flex-col gap-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-bold text-gray-400">{t.label}</span>
+                                <span className="text-[10px] font-black tabular-nums" style={{ color: t.color }}>{t.count}</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-white/[0.04] overflow-hidden">
+                                <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                                  className="h-full rounded-full" style={{ backgroundColor: t.color + '99' }} />
+                              </div>
+                            </div>
                           </div>
-                          <span className="text-[9px] font-bold tabular-nums w-5 text-right" style={{ color: t.color }}>{t.count}</span>
-                        </div>
-                      )
-                    })}
+                        )
+                      })}
+                    </div>
                   </div>
 
                   {/* Weekly Supplements Count */}
