@@ -736,87 +736,121 @@ export function SupplementTracker() {
             </div>
 
             <div className="relative p-6">
-          {/* ─── Header ─── */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-500/25 to-indigo-500/15 border border-violet-500/25 flex items-center justify-center shadow-lg shadow-violet-500/15 relative">
-                    <Brain className="w-5.5 h-5.5 text-violet-400" />
+              {/* ─── Header ─── */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500/25 to-indigo-500/15 border border-violet-500/25 flex items-center justify-center relative">
+                    <Brain className="w-4.5 h-4.5 text-violet-400" />
                     <motion.div animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0, 0.4] }} transition={{ duration: 3, repeat: Infinity }}
-                      className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-violet-400" />
+                      className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-violet-400" />
                   </div>
                   <div>
-                    <h3 className="text-[15px] font-bold text-white tracking-tight">AI Coach</h3>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Intelligence · Timing · Synergy</p>
+                    <h3 className="text-[14px] font-bold text-white tracking-tight">AI Coach</h3>
+                    <p className="text-[9px] text-gray-500">Intelligence · Timing · Synergy</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/15 to-emerald-600/10 border border-emerald-500/20 cursor-default">
-                    <Flame className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-[12px] font-black text-emerald-300 tabular-nums">{currentStreak}</span>
-                    <span className="text-[8px] text-emerald-400/60 font-bold">streak</span>
-                  </motion.div>
-                  <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-violet-500/15 to-indigo-500/10 border border-violet-500/20 cursor-default">
-                    <Brain className="w-3.5 h-3.5 text-violet-400" />
-                    <span className="text-[12px] font-black text-violet-300 tabular-nums">{supplements.length}</span>
-                    <span className="text-[8px] text-violet-400/60 font-bold">supps</span>
-                  </motion.div>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-emerald-500/15 to-emerald-600/10 border border-emerald-500/20">
+                    <Flame className="w-3 h-3 text-emerald-400" />
+                    <span className="text-[11px] font-black text-emerald-300 tabular-nums">{currentStreak}</span>
+                    <span className="text-[7px] text-emerald-400/60 font-bold">streak</span>
+                  </div>
+                  <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-violet-500/15 to-indigo-500/10 border border-violet-500/20">
+                    <Brain className="w-3 h-3 text-violet-400" />
+                    <span className="text-[11px] font-black text-violet-300 tabular-nums">{supplements.length}</span>
+                    <span className="text-[7px] text-violet-400/60 font-bold">supps</span>
+                  </div>
                 </div>
               </div>
 
-              {/* ─── Consistency Ring + Weekly Trend ─── */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
+              {/* ─── Row 2: Consistency + Habit Grid + Trend ─── */}
+              <div className="grid grid-cols-3 gap-2.5 mb-3">
                 {/* Consistency Ring */}
-                <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden">
+                <div className="rounded-xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
                   <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/20 to-transparent" />
-                  <div className="flex items-center gap-2 mb-3">
-                    <Activity className="w-3.5 h-3.5 text-violet-400" />
-                    <span className="text-[10px] font-bold text-white">Consistency</span>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Activity className="w-3 h-3 text-violet-400" />
+                    <span className="text-[9px] font-bold text-white">Consistency</span>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="relative w-16 h-16 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-14 h-14 shrink-0">
                       <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="6" />
-                        <circle cx="50" cy="50" r="42" fill="none" stroke="url(#consGrad)" strokeWidth="6" strokeLinecap="round"
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="7" />
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="url(#consGrad2)" strokeWidth="7" strokeLinecap="round"
                           strokeDasharray={2 * Math.PI * 42}
                           strokeDashoffset={2 * Math.PI * 42 * (1 - consistencyScore / 100)} />
-                        <defs><linearGradient id="consGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#a78bfa" /><stop offset="100%" stopColor="#7c3aed" /></linearGradient></defs>
+                        <defs><linearGradient id="consGrad2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#a78bfa" /><stop offset="100%" stopColor="#7c3aed" /></linearGradient></defs>
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-xl font-black text-white tabular-nums">{consistencyScore}%</span>
+                        <span className="text-lg font-black text-white tabular-nums">{consistencyScore}%</span>
                       </div>
                     </div>
-                    <div className="flex-1 space-y-1.5">
+                    <div className="flex-1 space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-[9px] text-gray-500">Perfect days</span>
-                        <span className="text-[10px] font-black text-emerald-400">{perfectDays}/7</span>
+                        <span className="text-[8px] text-gray-500">Perfect</span>
+                        <span className="text-[9px] font-black text-emerald-400">{perfectDays}/7</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[9px] text-gray-500">Active days</span>
-                        <span className="text-[10px] font-black text-cyan-400">{activeDays}/7</span>
+                        <span className="text-[8px] text-gray-500">Active</span>
+                        <span className="text-[9px] font-black text-cyan-400">{activeDays}/7</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[9px] text-gray-500">Best streak</span>
-                        <span className="text-[10px] font-black text-amber-400">{bestStreak}d</span>
+                        <span className="text-[8px] text-gray-500">Best</span>
+                        <span className="text-[9px] font-black text-amber-400">{bestStreak}d</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Weekly Trend Sparkline */}
-                <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent" />
-                  <div className="flex items-center gap-2 mb-3">
-                    <TrendingUp className="w-3.5 h-3.5 text-cyan-400" />
-                    <span className="text-[10px] font-bold text-white">4-Week Trend</span>
+                {/* Weekly Habit Grid */}
+                <div className="rounded-xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/15 to-transparent" />
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <CalendarCheck className="w-3 h-3 text-violet-400" />
+                      <span className="text-[9px] font-bold text-white">Habit Grid</span>
+                    </div>
+                    <span className="text-[8px] font-black text-violet-300">{perfectDays}/7</span>
                   </div>
-                  <div className="flex items-end gap-1.5 h-12 mb-2">
+                  <div className="grid grid-cols-7 gap-1.5 mb-2">
+                    {weekDays.map((d, i) => (
+                      <div key={i} className="flex flex-col items-center gap-1">
+                        <span className={'text-[7px] font-bold ' + (d.isToday ? 'text-violet-400' : 'text-gray-500')}>{d.letter}</span>
+                        <div className={'w-full aspect-square rounded-lg flex items-center justify-center transition-all duration-300 relative ' +
+                          (d.pct === 100 ? 'bg-gradient-to-br from-emerald-500/30 to-emerald-600/20 border border-emerald-500/30' :
+                           d.pct >= 50 ? 'bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/20' :
+                           d.pct > 0 ? 'bg-gradient-to-br from-rose-500/20 to-rose-600/10 border border-rose-500/20' :
+                           'bg-white/[0.02] border border-white/[0.04]') +
+                          (d.isToday ? ' ring-1 ring-violet-500/30' : '')}>
+                          {d.pct === 100 ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> :
+                           d.pct > 0 ? <span className="text-[8px] font-black text-rose-300">{d.pct}</span> :
+                           <span className="text-[8px] text-gray-600">—</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-center gap-3 pt-1.5 border-t border-white/[0.04]">
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-emerald-500/30 border border-emerald-500/30" /><span className="text-[7px] text-gray-500">100%</span></div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-amber-500/20 border border-amber-500/20" /><span className="text-[7px] text-gray-500">50%+</span></div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-rose-500/20 border border-rose-500/20" /><span className="text-[7px] text-gray-500">&lt;50%</span></div>
+                  </div>
+                </div>
+
+                {/* 4-Week Trend */}
+                <div className="rounded-xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent" />
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <TrendingUp className="w-3 h-3 text-cyan-400" />
+                    <span className="text-[9px] font-bold text-white">4-Wk Trend</span>
+                  </div>
+                  <div className="flex items-end gap-1.5 h-10 mb-1.5">
                     {weeklyTrend.map((w, i) => (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                      <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
                         <motion.div
                           initial={{ height: 0 }}
-                          animate={{ height: Math.max(4, (w.pct / 100) * 48) + 'px' }}
+                          animate={{ height: Math.max(3, (w.pct / 100) * 40) + 'px' }}
                           transition={{ duration: 0.6, delay: i * 0.1 }}
-                          className={'w-full rounded-lg ' + (w.pct >= 80 ? 'bg-gradient-to-t from-emerald-500/40 to-emerald-400/20' : w.pct >= 50 ? 'bg-gradient-to-t from-amber-500/30 to-amber-400/15' : 'bg-gradient-to-t from-rose-500/30 to-rose-400/15')}
+                          className={'w-full rounded ' + (w.pct >= 80 ? 'bg-gradient-to-t from-emerald-500/40 to-emerald-400/20' : w.pct >= 50 ? 'bg-gradient-to-t from-amber-500/30 to-amber-400/15' : 'bg-gradient-to-t from-rose-500/30 to-rose-400/15')}
                         />
                       </div>
                     ))}
@@ -824,104 +858,60 @@ export function SupplementTracker() {
                   <div className="flex gap-1.5">
                     {weeklyTrend.map((w, i) => (
                       <div key={i} className="flex-1 text-center">
-                        <span className="text-[7px] text-gray-600 block">{w.label}</span>
-                        <span className={'text-[9px] font-black tabular-nums ' + (w.pct >= 80 ? 'text-emerald-400' : w.pct >= 50 ? 'text-amber-400' : 'text-rose-400')}>{w.pct}%</span>
+                        <span className="text-[6px] text-gray-600 block leading-tight">{w.label}</span>
+                        <span className={'text-[8px] font-black tabular-nums ' + (w.pct >= 80 ? 'text-emerald-400' : w.pct >= 50 ? 'text-amber-400' : 'text-rose-400')}>{w.pct}%</span>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* ─── Weekly Habit Grid ─── */}
-              <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-5 relative overflow-hidden mb-4">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/15 to-transparent" />
-                <div className="flex items-center gap-2 mb-4">
-                  <CalendarCheck className="w-4 h-4 text-violet-400" />
-                  <span className="text-[11px] font-bold text-white">Weekly Habit Grid</span>
-                  <div className="flex-1" />
-                  <span className="text-[9px] font-black text-violet-300 tabular-nums">{perfectDays}/7</span>
-                  <span className="text-[8px] text-gray-600">perfect</span>
-                </div>
-                <div className="grid grid-cols-7 gap-2">
-                  {weekDays.map((d, i) => (
-                    <div key={i} className="flex flex-col items-center gap-1.5">
-                      <span className={'text-[8px] font-bold ' + (d.isToday ? 'text-violet-400' : 'text-gray-500')}>{d.letter}</span>
-                      <div className={'w-full aspect-square rounded-xl flex items-center justify-center transition-all duration-300 relative ' +
-                        (d.pct === 100 ? 'bg-gradient-to-br from-emerald-500/30 to-emerald-600/20 border border-emerald-500/30 shadow-lg shadow-emerald-500/10' :
-                         d.pct >= 50 ? 'bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/20' :
-                         d.pct > 0 ? 'bg-gradient-to-br from-rose-500/20 to-rose-600/10 border border-rose-500/20' :
-                         'bg-white/[0.02] border border-white/[0.04]') +
-                        (d.isToday ? ' ring-1 ring-violet-500/30' : '')}>
-                        {d.pct === 100 ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> :
-                         d.pct > 0 ? <span className="text-[10px] font-black text-rose-300">{d.pct}</span> :
-                         <span className="text-[10px] text-gray-600">—</span>}
-                        {d.isToday && <div className="absolute -bottom-1 w-1 h-1 rounded-full bg-violet-400" />}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-center justify-center gap-4 mt-4 pt-3 border-t border-white/[0.04]">
-                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-emerald-500/30 border border-emerald-500/30" /><span className="text-[8px] text-gray-500">100%</span></div>
-                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-amber-500/20 border border-amber-500/20" /><span className="text-[8px] text-gray-500">50%+</span></div>
-                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-rose-500/20 border border-rose-500/20" /><span className="text-[8px] text-gray-500">&lt;50%</span></div>
-                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-white/[0.02] border border-white/[0.04]" /><span className="text-[8px] text-gray-500">None</span></div>
-                </div>
-              </div>
-
-              {/* ─── Supplement Breakdown ─── */}
-              <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-5 relative overflow-hidden mb-4">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-400/20 to-transparent" />
-                <div className="flex items-center gap-2 mb-4">
-                  <BarChart3 className="w-4 h-4 text-indigo-400" />
-                  <span className="text-[11px] font-bold text-white">Supplement Breakdown</span>
-                  <div className="flex-1" />
-                  <span className="text-[9px] text-gray-600">7d / 30d</span>
-                </div>
-                <div className="space-y-2.5">
-                  {suppAdherence.sort((a, b) => b.rate7 - a.rate7).slice(0, 6).map((s, i) => (
-                    <div key={s.id} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold text-white truncate flex-1">{s.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className={'text-[10px] font-black tabular-nums ' + (s.rate7 >= 80 ? 'text-emerald-400' : s.rate7 >= 50 ? 'text-amber-400' : 'text-rose-400')}>{s.rate7}%</span>
-                          <span className="text-[8px] text-gray-600">/</span>
-                          <span className={'text-[10px] font-bold tabular-nums ' + (s.rate30 >= 80 ? 'text-emerald-400/70' : s.rate30 >= 50 ? 'text-amber-400/70' : 'text-rose-400/70')}>{s.rate30}%</span>
+              {/* ─── Row 3: Supplement Breakdown + Timing Engine ─── */}
+              <div className="grid grid-cols-2 gap-2.5 mb-3">
+                {/* Supplement Breakdown */}
+                <div className="rounded-xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-400/20 to-transparent" />
+                  <div className="flex items-center gap-1.5 mb-2.5">
+                    <BarChart3 className="w-3 h-3 text-indigo-400" />
+                    <span className="text-[9px] font-bold text-white">Supplement Breakdown</span>
+                    <div className="flex-1" />
+                    <span className="text-[7px] text-gray-600">7d/30d</span>
+                  </div>
+                  <div className="space-y-2">
+                    {suppAdherence.sort((a, b) => b.rate7 - a.rate7).slice(0, 4).map((s, i) => (
+                      <div key={s.id} className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold text-white truncate w-20 shrink-0">{s.name}</span>
+                        <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                          <motion.div initial={{ width: 0 }} animate={{ width: s.rate7 + '%' }}
+                            transition={{ duration: 0.8, delay: i * 0.05 }}
+                            className={'h-full rounded-full ' + (s.rate7 >= 80 ? 'bg-emerald-500' : s.rate7 >= 50 ? 'bg-amber-500' : 'bg-rose-500')} />
                         </div>
+                        <span className={'text-[9px] font-black tabular-nums w-7 text-right ' + (s.rate7 >= 80 ? 'text-emerald-400' : s.rate7 >= 50 ? 'text-amber-400' : 'text-rose-400')}>{s.rate7}%</span>
+                        <span className="text-[7px] text-gray-600">/</span>
+                        <span className={'text-[8px] font-bold tabular-nums w-7 text-right ' + (s.rate30 >= 80 ? 'text-emerald-400/70' : s.rate30 >= 50 ? 'text-amber-400/70' : 'text-rose-400/70')}>{s.rate30}%</span>
                       </div>
-                      <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden flex gap-0.5">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: s.rate7 + '%' }}
-                          transition={{ duration: 0.8, delay: i * 0.05 }}
-                          className={'h-full rounded-full ' + (s.rate7 >= 80 ? 'bg-emerald-500' : s.rate7 >= 50 ? 'bg-amber-500' : 'bg-rose-500')}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between mt-1.5">
-                        <span className="text-[7px] text-gray-600">{s.taken7}/{s.total7} this week</span>
-                        <span className="text-[7px] text-gray-600">{s.taken30}/{s.total30} this month</span>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* ─── Timing Engine ─── */}
-              <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-5 relative overflow-hidden mb-4">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/15 to-transparent" />
-                <div className="flex items-center gap-2 mb-4">
-                  <Clock className="w-4 h-4 text-cyan-400" />
-                  <span className="text-[11px] font-bold text-white">Optimal Timing Engine</span>
-                  <div className="flex-1" />
-                  <span className="text-[9px] font-black text-cyan-300 tabular-nums">{timingScore}%</span>
-                  <span className="text-[8px] text-gray-600">optimized</span>
-                </div>
-                <div className="space-y-2">
-                  {timingRecs.slice(0, 5).map((r, i) => (
-                    <div key={i} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <div className={'w-2 h-2 rounded-full shrink-0 ' + (r.match ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'bg-amber-400')} />
-                        <span className="text-[10px] font-bold text-white truncate flex-1">{r.name}</span>
-                        <span className={'text-[8px] font-bold px-1.5 py-0.5 rounded-md ' +
+                {/* Timing Engine */}
+                <div className="rounded-xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/15 to-transparent" />
+                  <div className="flex items-center gap-1.5 mb-2.5">
+                    <Clock className="w-3 h-3 text-cyan-400" />
+                    <span className="text-[9px] font-bold text-white">Optimal Timing</span>
+                    <div className="flex-1" />
+                    <span className="text-[8px] font-black text-cyan-300 tabular-nums">{timingScore}%</span>
+                  </div>
+                  <div className="space-y-2">
+                    {timingRecs.slice(0, 4).map((r, i) => (
+                      <div key={i} className="flex items-center gap-1.5">
+                        <div className={'w-1.5 h-1.5 rounded-full shrink-0 ' + (r.match ? 'bg-emerald-400' : 'bg-amber-400')} />
+                        <span className="text-[9px] font-bold text-white truncate w-20 shrink-0">{r.name}</span>
+                        <span className="text-[7px] text-gray-500 truncate">{r.current}</span>
+                        <span className="text-[7px] text-gray-600">→</span>
+                        <span className={'text-[8px] font-bold truncate ' + (r.match ? 'text-emerald-400' : 'text-cyan-400')}>{r.optimal}</span>
+                        <span className={'text-[7px] font-bold px-1 py-0.5 rounded shrink-0 ' +
                           (r.category === 'fat-soluble' ? 'bg-amber-500/10 text-amber-400' :
                            r.category === 'mineral' ? 'bg-blue-500/10 text-blue-400' :
                            r.category === 'protein' ? 'bg-red-500/10 text-red-400' :
@@ -930,149 +920,127 @@ export function SupplementTracker() {
                            'bg-gray-500/10 text-gray-400')
                         }>{r.category}</span>
                       </div>
-                      <div className="flex items-center gap-1.5 ml-4">
-                        <span className="text-[8px] text-gray-500">Current:</span>
-                        <span className="text-[8px] text-gray-400 font-medium">{r.current}</span>
-                        <span className="text-[8px] text-gray-600">→</span>
-                        <span className={'text-[8px] font-bold ' + (r.match ? 'text-emerald-400' : 'text-cyan-400')}>{r.optimal}</span>
-                      </div>
-                      <p className="text-[7px] text-gray-600 ml-4 mt-1">{r.reason}</p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  <p className="text-[7px] text-gray-500 mt-2 flex items-center gap-1">
+                    <Info className="w-2.5 h-2.5 text-cyan-400 shrink-0" />
+                    Timing based on absorption science
+                  </p>
                 </div>
-                <p className="text-[9px] text-gray-500 mt-3 flex items-center gap-1.5">
-                  <Info className="w-3 h-3 text-cyan-400 shrink-0" />
-                  Timing based on absorption science &amp; circadian rhythm
-                </p>
               </div>
 
-              {/* ─── Synergy Map ─── */}
-              <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-5 relative overflow-hidden mb-4">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-400/15 to-transparent" />
-                <div className="flex items-center gap-2 mb-4">
-                  <Layers className="w-4 h-4 text-emerald-400" />
-                  <span className="text-[11px] font-bold text-white">Synergy Map</span>
-                  <div className="flex-1" />
-                  <span className="text-[9px] font-black text-emerald-300 tabular-nums">{synergyScore}</span>
-                  <span className="text-[8px] text-gray-600">score</span>
-                </div>
-                <div className="grid grid-cols-4 gap-2 mb-3">
-                  <div className="text-center p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                    <span className="text-[14px] font-black text-emerald-400 block">{synergies.length}</span>
-                    <span className="text-[7px] text-gray-500 font-bold uppercase">Synergies</span>
-                  </div>
-                  <div className="text-center p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                    <span className="text-[14px] font-black text-rose-400 block">{conflicts.length}</span>
-                    <span className="text-[7px] text-gray-500 font-bold uppercase">Conflicts</span>
-                  </div>
-                  <div className="text-center p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                    <span className="text-[14px] font-black text-amber-400 block">{timingPairs.length}</span>
-                    <span className="text-[7px] text-gray-500 font-bold uppercase">Timing</span>
-                  </div>
-                  <div className="text-center p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                    <span className="text-[14px] font-black text-gray-400 block">{synergyPairs.filter(s => s.type === 'neutral').length}</span>
-                    <span className="text-[7px] text-gray-500 font-bold uppercase">Neutral</span>
-                  </div>
-                </div>
-                {synergies.length > 0 && (
-                  <div className="space-y-1.5">
-                    {synergies.slice(0, 3).map((s, i) => (
-                      <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
-                        <span className="text-[9px] text-emerald-300 font-bold">{s.a} + {s.b}</span>
-                        <span className="text-[8px] text-gray-500 ml-auto">{s.message}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {conflicts.length > 0 && (
-                  <div className="space-y-1.5 mt-2">
-                    {conflicts.slice(0, 2).map((s, i) => (
-                      <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-rose-500/[0.04] border border-rose-500/10">
-                        <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" />
-                        <span className="text-[9px] text-rose-300 font-bold">{s.a} + {s.b}</span>
-                        <span className="text-[8px] text-gray-500 ml-auto">{s.message}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {timingPairs.length > 0 && (
-                  <div className="space-y-1.5 mt-2">
-                    {timingPairs.slice(0, 2).map((s, i) => (
-                      <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/[0.04] border border-amber-500/10">
-                        <Clock className="w-3 h-3 text-amber-400 shrink-0" />
-                        <span className="text-[9px] text-amber-300 font-bold">{s.a} + {s.b}</span>
-                        <span className="text-[8px] text-gray-500 ml-auto">{s.message}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* ─── Cost Intelligence ─── */}
-              <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-5 relative overflow-hidden mb-4">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/15 to-transparent" />
-                <div className="flex items-center gap-2 mb-4">
-                  <DollarSign className="w-4 h-4 text-amber-400" />
-                  <span className="text-[11px] font-bold text-white">Cost Intelligence</span>
-                </div>
-                <div className="grid grid-cols-4 gap-2 mb-3">
-                  <div className="text-center p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                    <span className="text-[14px] font-black text-amber-300 block">${costPerDay}</span>
-                    <span className="text-[7px] text-gray-500 font-bold uppercase">Per Day</span>
-                  </div>
-                  <div className="text-center p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                    <span className="text-[14px] font-black text-amber-300 block">${costPerWeek}</span>
-                    <span className="text-[7px] text-gray-500 font-bold uppercase">Per Week</span>
-                  </div>
-                  <div className="text-center p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                    <span className="text-[14px] font-black text-amber-300 block">${monthlyProjection}</span>
-                    <span className="text-[7px] text-gray-500 font-bold uppercase">Monthly</span>
-                  </div>
-                  <div className="text-center p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                    <span className="text-[14px] font-black text-amber-300 block">${yearlyProjection}</span>
-                    <span className="text-[7px] text-gray-500 font-bold uppercase">Yearly</span>
-                  </div>
-                </div>
-                {costBreakdown.length > 0 && (
-                  <div className="space-y-1.5 pt-3 border-t border-white/[0.04]">
-                    <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Breakdown</span>
-                    {costBreakdown.slice(0, 4).map((c, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <span className="text-[9px] text-gray-400 truncate flex-1">{c.name}</span>
-                        <div className="flex-1 h-1 rounded-full bg-white/[0.04] overflow-hidden">
-                          <div className="h-full rounded-full bg-amber-500/40" style={{ width: c.pct + '%' }} />
-                        </div>
-                        <span className="text-[9px] font-bold text-amber-300 tabular-nums w-8 text-right">${c.perDay}/d</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* ─── Gap Analysis ─── */}
-              {missing.length > 0 && (
-                <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-5 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-rose-400/15 to-transparent" />
-                  <div className="flex items-center gap-2 mb-3">
-                    <ShieldAlert className="w-4 h-4 text-rose-400" />
-                    <span className="text-[11px] font-bold text-white">Gap Analysis</span>
+              {/* ─── Row 4: Synergy Map + Cost Intelligence ─── */}
+              <div className="grid grid-cols-2 gap-2.5 mb-3">
+                {/* Synergy Map */}
+                <div className="rounded-xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-400/15 to-transparent" />
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Layers className="w-3 h-3 text-emerald-400" />
+                    <span className="text-[9px] font-bold text-white">Synergy Map</span>
                     <div className="flex-1" />
-                    <span className="text-[9px] text-gray-600">{missing.length} missing</span>
+                    <span className="text-[8px] font-black text-emerald-300 tabular-nums">{synergyScore}</span>
                   </div>
-                  <div className="space-y-2">
-                    {missing.slice(0, 5).map(m => (
-                      <div key={m.name} className="flex items-center gap-2.5 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                        <div className={'w-1.5 h-1.5 rounded-full shrink-0 ' + (m.priority === 'high' ? 'bg-rose-400' : m.priority === 'medium' ? 'bg-amber-400' : 'bg-gray-500')} />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[10px] font-bold text-white block">{m.name}</span>
-                          <span className="text-[8px] text-gray-500">{m.why}</span>
+                  <div className="grid grid-cols-4 gap-1 mb-2">
+                    <div className="text-center p-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                      <span className="text-[12px] font-black text-emerald-400 block">{synergies.length}</span>
+                      <span className="text-[6px] text-gray-500 font-bold uppercase">Syn</span>
+                    </div>
+                    <div className="text-center p-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                      <span className="text-[12px] font-black text-rose-400 block">{conflicts.length}</span>
+                      <span className="text-[6px] text-gray-500 font-bold uppercase">Con</span>
+                    </div>
+                    <div className="text-center p-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                      <span className="text-[12px] font-black text-amber-400 block">{timingPairs.length}</span>
+                      <span className="text-[6px] text-gray-500 font-bold uppercase">Tim</span>
+                    </div>
+                    <div className="text-center p-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                      <span className="text-[12px] font-black text-gray-400 block">{synergyPairs.filter(s => s.type === 'neutral').length}</span>
+                      <span className="text-[6px] text-gray-500 font-bold uppercase">Neu</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    {synergies.slice(0, 2).map((s, i) => (
+                      <div key={i} className="flex items-center gap-1.5 p-1.5 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
+                        <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                        <span className="text-[8px] text-emerald-300 font-bold truncate">{s.a} + {s.b}</span>
+                        <span className="text-[7px] text-gray-500 ml-auto truncate">{s.message}</span>
+                      </div>
+                    ))}
+                    {conflicts.slice(0, 1).map((s, i) => (
+                      <div key={i} className="flex items-center gap-1.5 p-1.5 rounded-lg bg-rose-500/[0.04] border border-rose-500/10">
+                        <AlertTriangle className="w-2.5 h-2.5 text-rose-400 shrink-0" />
+                        <span className="text-[8px] text-rose-300 font-bold truncate">{s.a} + {s.b}</span>
+                        <span className="text-[7px] text-gray-500 ml-auto truncate">{s.message}</span>
+                      </div>
+                    ))}
+                    {timingPairs.slice(0, 1).map((s, i) => (
+                      <div key={i} className="flex items-center gap-1.5 p-1.5 rounded-lg bg-amber-500/[0.04] border border-amber-500/10">
+                        <Clock className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                        <span className="text-[8px] text-amber-300 font-bold truncate">{s.a} + {s.b}</span>
+                        <span className="text-[7px] text-gray-500 ml-auto truncate">{s.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Cost Intelligence */}
+                <div className="rounded-xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/15 to-transparent" />
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <DollarSign className="w-3 h-3 text-amber-400" />
+                    <span className="text-[9px] font-bold text-white">Cost Intelligence</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5 mb-2">
+                    <div className="text-center p-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                      <span className="text-[11px] font-black text-amber-300 block">${costPerDay}</span>
+                      <span className="text-[6px] text-gray-500 font-bold uppercase">Day</span>
+                    </div>
+                    <div className="text-center p-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                      <span className="text-[11px] font-black text-amber-300 block">${costPerWeek}</span>
+                      <span className="text-[6px] text-gray-500 font-bold uppercase">Week</span>
+                    </div>
+                    <div className="text-center p-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                      <span className="text-[11px] font-black text-amber-300 block">${monthlyProjection}</span>
+                      <span className="text-[6px] text-gray-500 font-bold uppercase">Month</span>
+                    </div>
+                    <div className="text-center p-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                      <span className="text-[11px] font-black text-amber-300 block">${yearlyProjection}</span>
+                      <span className="text-[6px] text-gray-500 font-bold uppercase">Year</span>
+                    </div>
+                  </div>
+                  {costBreakdown.length > 0 && (
+                    <div className="space-y-1.5 pt-2 border-t border-white/[0.04]">
+                      {costBreakdown.slice(0, 3).map((c, i) => (
+                        <div key={i} className="flex items-center gap-1.5">
+                          <span className="text-[8px] text-gray-400 truncate w-16 shrink-0">{c.name}</span>
+                          <div className="flex-1 h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                            <div className="h-full rounded-full bg-amber-500/40" style={{ width: c.pct + '%' }} />
+                          </div>
+                          <span className="text-[8px] font-bold text-amber-300 tabular-nums w-7 text-right">${c.perDay}/d</span>
                         </div>
-                        <span className={'text-[7px] font-bold uppercase px-1.5 py-0.5 rounded ' +
-                          (m.priority === 'high' ? 'bg-rose-500/10 text-rose-400' :
-                           m.priority === 'medium' ? 'bg-amber-500/10 text-amber-400' :
-                           'bg-gray-500/10 text-gray-400')
-                        }>{m.priority}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ─── Row 5: Gap Analysis (compact horizontal) ─── */}
+              {missing.length > 0 && (
+                <div className="rounded-xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-rose-400/15 to-transparent" />
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <ShieldAlert className="w-3 h-3 text-rose-400" />
+                    <span className="text-[9px] font-bold text-white">Gap Analysis</span>
+                    <div className="flex-1" />
+                    <span className="text-[8px] text-gray-600">{missing.length} missing</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {missing.slice(0, 5).map(m => (
+                      <div key={m.name} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                        <div className={'w-1.5 h-1.5 rounded-full ' + (m.priority === 'high' ? 'bg-rose-400' : m.priority === 'medium' ? 'bg-amber-400' : 'bg-gray-500')} />
+                        <span className="text-[8px] font-bold text-white">{m.name}</span>
+                        <span className="text-[7px] text-gray-500">·</span>
+                        <span className="text-[7px] text-gray-500">{m.why}</span>
                       </div>
                     ))}
                   </div>
