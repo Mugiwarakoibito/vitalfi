@@ -400,13 +400,6 @@ export function SupplementTracker() {
                 </div>
                 <div className="flex items-center gap-2.5">
                   {(() => {
-                    const mostTakenSupp = dailySupps.reduce((best, s) => {
-                      const count = Array.from({ length: 7 }, (_, j) => {
-                        const d = new Date(weekStart); d.setDate(d.getDate() + j)
-                        return logs.some(l => l.supplementId === s.id && l.date === toLocalDate(d))
-                      }).filter(Boolean).length
-                      return count > best.count ? { name: s.name, count } : best
-                    }, { name: '', count: 0 })
                     const weeklyCost = supplements.reduce((sum, s) => {
                       const taken = Array.from({ length: 7 }, (_, j) => {
                         const d = new Date(weekStart); d.setDate(d.getDate() + j)
@@ -415,12 +408,14 @@ export function SupplementTracker() {
                       if (s.cost && s.totalServings && s.totalServings > 0) return sum + (s.cost / s.totalServings) * taken
                       return sum
                     }, 0)
+                    const totalDoses = weekDays.reduce((s, d) => s + d.taken, 0)
+                    const maxPossible = weekDays.reduce((s, d) => s + d.total, 0)
                     return (
                       <>
                         <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-500/5 border border-violet-500/20 cursor-default">
-                          <Zap className="w-3.5 h-3.5 text-violet-400" />
-                          <span className="text-[11px] font-black text-violet-300">{mostTakenSupp.name || '—'}</span>
-                          <span className="text-[9px] text-violet-400/60 font-bold">{mostTakenSupp.count}x</span>
+                          <Target className="w-3.5 h-3.5 text-violet-400" />
+                          <span className="text-[11px] font-black text-violet-300 tabular-nums">{totalDoses}/{maxPossible}</span>
+                          <span className="text-[9px] text-violet-400/60 font-bold">doses</span>
                         </motion.div>
                         {weeklyCost > 0 && (
                           <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-green-500/5 border border-emerald-500/20 cursor-default">
@@ -443,8 +438,8 @@ export function SupplementTracker() {
                     <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
                     <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.15em]">Adherence radar</span>
                     <div className="flex-1" />
-                    <span className="text-[12px] font-black text-violet-400 tabular-nums">{weekPct}%</span>
-                    <span className="text-[8px] text-gray-600 font-bold">avg</span>
+                    <span className="text-[12px] font-black text-violet-400 tabular-nums">{weekTaken}</span>
+                    <span className="text-[8px] text-gray-600 font-bold">/ {weekTotal}</span>
                   </div>
                   <div className="flex-1 flex items-center justify-center min-h-0">
                     <svg viewBox="0 0 280 280" className="w-full max-w-[280px] h-full max-h-[280px]">
@@ -521,36 +516,32 @@ export function SupplementTracker() {
                   </div>
 
                   {/* Time Distribution */}
-                  <div className="flex-1 rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden flex flex-col gap-2.5">
+                  <div className="flex-1 rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden flex flex-col gap-2">
                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/15 to-transparent" />
                     <div className="flex items-center gap-2">
                       <Clock className="w-3.5 h-3.5 text-violet-400" />
                       <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.15em]">Time split</span>
                     </div>
-                    <div className="flex-1 flex flex-col justify-center gap-3">
+                    <div className="flex-1 flex flex-col justify-between py-1">
                       {[
-                        { label: 'AM', count: totalMorning, color: '#f97316', icon: Sun },
-                        { label: 'Mid', count: totalAfternoon, color: '#8b5cf6', icon: Sparkles },
-                        { label: 'Eve', count: totalEvening, color: '#06b6d4', icon: Sunset },
+                        { label: 'Morning', count: totalMorning, color: '#f97316', icon: Sun },
+                        { label: 'Afternoon', count: totalAfternoon, color: '#8b5cf6', icon: Sparkles },
+                        { label: 'Evening', count: totalEvening, color: '#06b6d4', icon: Sunset },
                         { label: 'Night', count: totalNight, color: '#6366f1', icon: Moon },
-                      ].filter(t => t.count > 0).map(t => {
+                      ].map(t => {
                         const maxCount = Math.max(totalMorning, totalAfternoon, totalEvening, totalNight, 1)
                         const pct = Math.round((t.count / maxCount) * 100)
                         const Icon = t.icon
                         return (
-                          <div key={t.label} className="flex items-center gap-2.5">
-                            <Icon className="w-4 h-4 shrink-0" style={{ color: t.color }} />
-                            <div className="flex-1 flex flex-col gap-1">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[9px] font-bold text-gray-400">{t.label}</span>
-                                <span className="text-[10px] font-black tabular-nums" style={{ color: t.color }}>{t.count}</span>
-                              </div>
-                              <div className="h-2 rounded-full bg-white/[0.04] overflow-hidden">
-                                <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                                  transition={{ duration: 0.8, ease: 'easeOut' }}
-                                  className="h-full rounded-full" style={{ backgroundColor: t.color + '99' }} />
-                              </div>
+                          <div key={t.label} className="flex items-center gap-2">
+                            <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: t.color }} />
+                            <span className="text-[8px] font-bold text-gray-500 w-10 shrink-0">{t.label}</span>
+                            <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                              <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                                transition={{ duration: 0.8, ease: 'easeOut' }}
+                                className="h-full rounded-full" style={{ backgroundColor: t.color + '99' }} />
                             </div>
+                            <span className="text-[9px] font-black tabular-nums w-3 text-right" style={{ color: t.color }}>{t.count}</span>
                           </div>
                         )
                       })}
