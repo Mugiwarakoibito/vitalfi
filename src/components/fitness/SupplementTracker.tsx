@@ -334,7 +334,6 @@ export function SupplementTracker() {
           const weekPct = weekTotal > 0 ? Math.round((weekTaken / weekTotal) * 100) : 0
           let bestStreak = 0, cur = 0
           for (const d of weekDays) { if (d.pct === 100) { cur++; bestStreak = Math.max(bestStreak, cur) } else cur = 0 }
-          const perfectDays = weekDays.filter(d => d.pct === 100).length
 
           const totalMorning = weekDays.reduce((s, d) => s + d.morning, 0)
           const totalAfternoon = weekDays.reduce((s, d) => s + d.afternoon, 0)
@@ -507,7 +506,6 @@ export function SupplementTracker() {
                     {supplements.filter(s => s.refillDays && s.refillDays > 0).slice(0, 4).map(s => {
                       const daysSinceCreation = Math.floor((new Date(selectedDate).getTime() - new Date(s.createdAt || selectedDate).getTime()) / 86400000)
                       const daysLeft = (s.refillDays || 30) - daysSinceCreation
-                      const pct = Math.max(0, Math.min(100, (daysLeft / (s.refillDays || 30)) * 100))
                       const urgent = daysLeft <= 5
                       return (
                         <div key={s.id} className="flex items-center gap-2">
