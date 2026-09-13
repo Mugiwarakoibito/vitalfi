@@ -530,48 +530,28 @@ export function SupplementTracker() {
                     })}
                   </div>
 
-                  {/* 30-Day Heatmap */}
-                  <div className="flex-1 rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden flex flex-col min-h-0">
+                  {/* Weekly Supplements Count */}
+                  <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden flex flex-col gap-2.5">
                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/15 to-transparent" />
-                    <div className="flex items-center gap-2 mb-3 shrink-0">
-                      <Calendar className="w-3.5 h-3.5 text-violet-400" />
-                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.15em]">30-day map</span>
+                    <div className="flex items-center gap-2">
+                      <Pill className="w-3.5 h-3.5 text-violet-400" />
+                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.15em]">Supps taken</span>
                     </div>
-                    <div className="flex-1 flex flex-col justify-center min-h-0">
-                      <div className="grid grid-cols-7 gap-[3px]">
-                        {Array.from({ length: 28 }, (_, i) => {
-                          const d = new Date(now); d.setDate(d.getDate() - (27 - i))
-                          const dateStr = toLocalDate(d)
-                          const dayLogs = logs.filter(l => l.date === dateStr)
-                          const dayTaken = new Set(dayLogs.map(l => l.supplementId)).size
-                          const dayTotal = dailySupps.length
-                          const dayPct = dayTotal > 0 ? (dayTaken / dayTotal) * 100 : 0
-                          const heat = dayPct >= 100 ? '#10b981' : dayPct >= 75 ? '#34d399' : dayPct >= 50 ? '#f59e0b' : dayPct > 0 ? '#ef4444' : 'rgba(255,255,255,0.04)'
-                          return (
-                            <div key={i} className="aspect-square rounded-[3px] transition-colors duration-300"
-                              style={{ backgroundColor: heat, boxShadow: dayPct === 100 ? '0 0 4px rgba(16,185,129,0.3)' : 'none' }}
-                              title={`${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${dayTaken}/${dayTotal}`} />
-                          )
-                        })}
-                      </div>
-                      <div className="flex justify-between mt-2">
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-[1px] bg-white/[0.04]" />
-                          <span className="text-[7px] text-gray-600">0%</span>
+                    <div className="flex items-end gap-[3px] h-12">
+                      {weekDays.map((d, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                          <span className="text-[7px] font-bold tabular-nums" style={{ color: d.pct >= 80 ? '#10b981' : d.pct >= 50 ? '#f59e0b' : '#ef4444' }}>{d.taken}</span>
+                          <div className="w-full rounded-t transition-all duration-500" style={{
+                            height: `${Math.max(d.pct, 4)}%`,
+                            backgroundColor: d.pct >= 80 ? 'rgba(16,185,129,0.5)' : d.pct >= 50 ? 'rgba(245,158,11,0.45)' : d.pct > 0 ? 'rgba(239,68,68,0.45)' : 'rgba(255,255,255,0.04)',
+                          }} />
                         </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-[1px] bg-red-500/35" />
-                          <span className="text-[7px] text-gray-600">25%</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-[1px] bg-amber-500/35" />
-                          <span className="text-[7px] text-gray-600">50%</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-[1px] bg-emerald-500/40" />
-                          <span className="text-[7px] text-gray-600">100%</span>
-                        </div>
-                      </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between px-0.5">
+                      {weekDays.map((d, i) => (
+                        <span key={i} className="text-[7px] text-gray-500 font-bold flex-1 text-center">{d.letter}</span>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -586,12 +566,12 @@ export function SupplementTracker() {
                   <div className="flex-1 overflow-y-auto space-y-2 min-h-0" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(139,92,246,0.3) transparent' }}>
                     {dailySupps.map((s, i) => {
                       const takenInWeek = Array.from({ length: 7 }, (_, j) => {
-                        const d = new Date(now); d.setDate(d.getDate() - (6 - j))
+                        const d = new Date(weekStart); d.setDate(d.getDate() + j)
                         return logs.some(l => l.supplementId === s.id && l.date === toLocalDate(d))
                       }).filter(Boolean).length
                       const pct = Math.round((takenInWeek / 7) * 100)
                       const dayDots = Array.from({ length: 7 }, (_, j) => {
-                        const d = new Date(now); d.setDate(d.getDate() - (6 - j))
+                        const d = new Date(weekStart); d.setDate(d.getDate() + j)
                         return logs.some(l => l.supplementId === s.id && l.date === toLocalDate(d))
                       })
                       return (
