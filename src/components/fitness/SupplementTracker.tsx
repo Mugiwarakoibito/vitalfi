@@ -580,14 +580,6 @@ export function SupplementTracker() {
             const total = dailySupps.length
             return { letter: d.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0), taken, total, pct: total > 0 ? Math.round((taken / total) * 100) : 0, date: dateStr }
           })
-          const weekPct = Math.round((weekDays.reduce((s, d) => s + d.taken, 0) / Math.max(weekDays.reduce((s, d) => s + d.total, 0), 1)) * 100)
-
-          // ─── Prediction Engine ───
-          const recentPcts = weekDays.slice(-3).map(d => d.pct)
-          const trend = recentPcts[2] - recentPcts[0]
-          const momentum = trend > 10 ? 'accelerating' : trend < -10 ? 'declining' : 'stable'
-          const predictConfidence = Math.min(95, Math.max(20, weekPct + (momentum === 'accelerating' ? 10 : momentum === 'declining' ? -10 : 0)))
-          const predictTomorrow = Math.min(100, Math.max(0, Math.round(predictConfidence + (Math.random() * 6 - 3))))
 
           // ─── Timing Intelligence ───
           const timingRecs = supplements.map(s => {
@@ -637,9 +629,6 @@ export function SupplementTracker() {
           const commonSupps = ['Vitamin D', 'Omega-3', 'Magnesium', 'Probiotics', 'Zinc', 'B12', 'Iron', 'Collagen']
           const missing = commonSupps.filter(c => !supplements.some(s => s.name.toLowerCase().includes(c.toLowerCase())))
 
-          // ─── AI Score ───
-          const aiScore = Math.round((weekPct * 0.3) + (timingScore * 0.2) + (synergyScore * 0.25) + (predictConfidence * 0.25))
-
           return (
           <motion.div key="coach" initial={{ opacity: 0, y: -12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -12, scale: 0.98 }}
             transition={{ duration: 0.4, ease: smooth }}
@@ -662,48 +651,45 @@ export function SupplementTracker() {
                     <p className="text-[10px] text-gray-500 mt-0.5">Powered by supplement intelligence</p>
                   </div>
                 </div>
-                <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500/15 to-indigo-500/10 border border-violet-500/25 cursor-default">
-                  <Zap className="w-4 h-4 text-violet-400" />
-                  <span className="text-[14px] font-black text-violet-300 tabular-nums">{aiScore}</span>
-                  <span className="text-[9px] text-violet-400/60 font-bold">AI Score</span>
+                <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500/15 to-blue-500/10 border border-cyan-500/25 cursor-default">
+                  <Brain className="w-4 h-4 text-cyan-400" />
+                  <span className="text-[14px] font-black text-cyan-300 tabular-nums">{supplements.length}</span>
+                  <span className="text-[9px] text-cyan-400/60 font-bold">tracked</span>
                 </motion.div>
               </div>
 
-              {/* ─── Prediction Panel ─── */}
+              {/* ─── Weekly Habit Grid ─── */}
               <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-5 relative overflow-hidden mb-4">
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/15 to-transparent" />
                 <div className="flex items-center gap-2 mb-4">
-                  <Activity className="w-4 h-4 text-violet-400" />
-                  <span className="text-[11px] font-bold text-white">Tomorrow's Prediction</span>
+                  <CalendarCheck className="w-4 h-4 text-violet-400" />
+                  <span className="text-[11px] font-bold text-white">Weekly Habit Grid</span>
                   <div className="flex-1" />
-                  <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg ${momentum === 'accelerating' ? 'bg-emerald-500/10 text-emerald-400' : momentum === 'declining' ? 'bg-rose-500/10 text-rose-400' : 'bg-gray-500/10 text-gray-400'}`}>{momentum}</span>
+                  <span className="text-[9px] font-black text-violet-300 tabular-nums">{weekDays.filter(d => d.pct === 100).length}/7</span>
+                  <span className="text-[8px] text-gray-600">perfect</span>
                 </div>
-                <div className="flex items-center gap-6">
-                  <div className="relative w-24 h-24 shrink-0">
-                    <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                      <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="5" />
-                      <circle cx="50" cy="50" r="42" fill="none" stroke="url(#predGrad)" strokeWidth="5" strokeLinecap="round"
-                        strokeDasharray={`${2 * Math.PI * 42}`}
-                        strokeDashoffset={`${2 * Math.PI * 42 * (1 - predictTomorrow / 100)}`} />
-                      <defs><linearGradient id="predGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#a78bfa" /><stop offset="100%" stopColor="#7c3aed" /></linearGradient></defs>
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-2xl font-black text-white tabular-nums">{predictTomorrow}%</span>
-                      <span className="text-[7px] text-gray-500 font-bold">PREDICTED</span>
+                <div className="grid grid-cols-7 gap-2">
+                  {weekDays.map((d, i) => (
+                    <div key={i} className="flex flex-col items-center gap-1.5">
+                      <span className="text-[8px] font-bold text-gray-500">{d.letter}</span>
+                      <div className={`w-full aspect-square rounded-xl flex items-center justify-center transition-all duration-300 ${
+                        d.pct === 100 ? 'bg-gradient-to-br from-emerald-500/30 to-emerald-600/20 border border-emerald-500/30 shadow-lg shadow-emerald-500/10' :
+                        d.pct >= 50 ? 'bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/20' :
+                        d.pct > 0 ? 'bg-gradient-to-br from-rose-500/20 to-rose-600/10 border border-rose-500/20' :
+                        'bg-white/[0.02] border border-white/[0.04]'
+                      }`}>
+                        {d.pct === 100 ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> :
+                         d.pct > 0 ? <span className="text-[10px] font-black text-rose-300">{d.pct}</span> :
+                         <span className="text-[10px] text-gray-600">—</span>}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-400">Confidence</span>
-                      <span className="text-[10px] font-bold text-violet-300">{predictConfidence}%</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                      <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-500" style={{ width: `${predictConfidence}%` }} />
-                    </div>
-                    <p className="text-[9px] text-gray-500 leading-relaxed">
-                      {predictTomorrow >= 80 ? 'Strong momentum — keep the streak going!' : predictTomorrow >= 50 ? 'Moderate — one missed dose could break the pattern.' : 'Struggling — try setting phone reminders.'}
-                    </p>
-                  </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-center gap-4 mt-4 pt-3 border-t border-white/[0.04]">
+                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-emerald-500/30 border border-emerald-500/30" /><span className="text-[8px] text-gray-500">100%</span></div>
+                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-amber-500/20 border border-amber-500/20" /><span className="text-[8px] text-gray-500">50%+</span></div>
+                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-rose-500/20 border border-rose-500/20" /><span className="text-[8px] text-gray-500">&lt;50%</span></div>
+                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-white/[0.02] border border-white/[0.04]" /><span className="text-[8px] text-gray-500">None</span></div>
                 </div>
               </div>
 
