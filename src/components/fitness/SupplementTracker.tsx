@@ -5,7 +5,7 @@ import {
   Trash2, Sunrise, Sunset, Moon, Sun, Sparkles, Activity,
   DollarSign, Layers, CalendarCheck, Calendar,
   Brain, ShieldCheck, ShieldAlert, Info, Zap, Package,
-  CheckCircle2, Dumbbell, BarChart3, ChevronDown,
+  CheckCircle2, Dumbbell, BarChart3,
   ChevronLeft, ChevronRight, RotateCcw, Target, Flame,
   TrendingUp,
 } from 'lucide-react'
@@ -80,8 +80,7 @@ export function SupplementTracker() {
   })
   const [activePanel, setActivePanel] = useState<'patterns' | 'coach' | null>(null)
   const [weekOffset, setWeekOffset] = useState(0)
-  const [coachMode, setCoachMode] = useState<'insight' | 'refill' | 'stack' | 'timing' | 'cost'>('insight')
-  const [showCoachModeDropdown, setShowCoachModeDropdown] = useState(false)
+  const [coachMode, setCoachMode] = useState<'insight' | 'refill' | 'stack' | 'timing' | 'cost' | 'supply' | 'health' | 'goals'>('insight')
   const today = toLocalDate(new Date())
   const [selectedDate, setSelectedDate] = useState(today)
   const [justTaken, setJustTaken] = useState<Supplement | null>(null)
@@ -637,47 +636,52 @@ export function SupplementTracker() {
 
             <div className="relative p-5">
               {/* Header */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2.5">
-                  <div className="relative w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-cyan-400" />
-                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border-[1.5px] border-[#0c0c14] animate-pulse" />
-                  </div>
-                  <div>
-                    <h3 className="text-[13px] font-bold text-white">AI Coach</h3>
-                    <p className="text-[10px] text-gray-500">{smartRecs.length} insight{smartRecs.length !== 1 ? 's' : ''} available</p>
-                  </div>
+              <div className="flex items-center gap-2.5 mb-5">
+                <div className="relative w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-cyan-400" />
+                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border-[1.5px] border-[#0c0c14] animate-pulse" />
                 </div>
-                <div className="relative">
-                  <button onClick={() => setShowCoachModeDropdown(p => !p)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[10px] font-bold text-gray-400 hover:text-white transition-all">
-                    {coachMode === 'insight' ? <Brain className="w-3 h-3" /> : coachMode === 'refill' ? <Package className="w-3 h-3" /> : coachMode === 'stack' ? <Layers className="w-3 h-3" /> : coachMode === 'timing' ? <Clock className="w-3 h-3" /> : <DollarSign className="w-3 h-3" />}
-                    <span className="hidden sm:inline capitalize">{coachMode}</span>
-                    <ChevronDown className="w-3 h-3" />
-                  </button>
-                  {showCoachModeDropdown && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setShowCoachModeDropdown(false)} />
-                      <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                        className="absolute right-0 top-9 z-20 w-44 rounded-xl bg-gray-900 border border-white/[0.08] shadow-2xl p-1.5">
-                        {([
-                          { k: 'insight' as const, icon: Brain, label: 'Insights', desc: 'Smart tips' },
-                          { k: 'timing' as const, icon: Clock, label: 'Timing', desc: 'Schedule' },
-                          { k: 'cost' as const, icon: DollarSign, label: 'Cost', desc: 'Spending' },
-                          { k: 'refill' as const, icon: Package, label: 'Refills', desc: 'Supply' },
-                          { k: 'stack' as const, icon: Layers, label: 'Stack', desc: 'Interactions' },
-                        ]).map(o => (
-                          <button key={o.k} onClick={() => { setCoachMode(o.k); setShowCoachModeDropdown(false) }}
-                            className={cn('w-full text-left px-3 py-2 rounded-lg text-[11px] font-medium transition-all flex items-center gap-2',
-                              coachMode === o.k ? 'bg-cyan-500/10 text-cyan-300' : 'text-gray-400 hover:text-white hover:bg-white/5')}>
-                            <o.icon className="w-3 h-3 shrink-0" />
-                            <div><div className="font-bold">{o.label}</div><div className="text-[8px] text-gray-600">{o.desc}</div></div>
-                          </button>
-                        ))}
-                      </motion.div>
-                    </>
-                  )}
+                <div>
+                  <h3 className="text-[13px] font-bold text-white">AI Coach</h3>
+                  <p className="text-[10px] text-gray-500">{smartRecs.length} insight{smartRecs.length !== 1 ? 's' : ''} available</p>
                 </div>
+              </div>
+
+              <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-1 border border-white/[0.06] mb-5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                {([
+                  { k: 'insight' as const, icon: Brain, label: 'Insights', color: 'cyan' },
+                  { k: 'timing' as const, icon: Clock, label: 'Timing', color: 'violet' },
+                  { k: 'cost' as const, icon: DollarSign, label: 'Cost', color: 'emerald' },
+                  { k: 'refill' as const, icon: Package, label: 'Refills', color: 'amber' },
+                  { k: 'stack' as const, icon: Layers, label: 'Stack', color: 'blue' },
+                  { k: 'supply' as const, icon: AlertTriangle, label: 'Supply', color: 'rose' },
+                  { k: 'health' as const, icon: ShieldCheck, label: 'Health', color: 'green' },
+                  { k: 'goals' as const, icon: Target, label: 'Goals', color: 'orange' },
+                ]).map(o => {
+                  const isActive = coachMode === o.k
+                  const colors: Record<string, string> = {
+                    cyan: 'text-cyan-300 bg-gradient-to-b from-cyan-500/20 to-cyan-500/5 border-cyan-500/25 shadow-cyan-500/8',
+                    violet: 'text-violet-300 bg-gradient-to-b from-violet-500/20 to-violet-500/5 border-violet-500/25 shadow-violet-500/8',
+                    emerald: 'text-emerald-300 bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border-emerald-500/25 shadow-emerald-500/8',
+                    amber: 'text-amber-300 bg-gradient-to-b from-amber-500/20 to-amber-500/5 border-amber-500/25 shadow-amber-500/8',
+                    blue: 'text-blue-300 bg-gradient-to-b from-blue-500/20 to-blue-500/5 border-blue-500/25 shadow-blue-500/8',
+                    rose: 'text-rose-300 bg-gradient-to-b from-rose-500/20 to-rose-500/5 border-rose-500/25 shadow-rose-500/8',
+                    green: 'text-green-300 bg-gradient-to-b from-green-500/20 to-green-500/5 border-green-500/25 shadow-green-500/8',
+                    orange: 'text-orange-300 bg-gradient-to-b from-orange-500/20 to-orange-500/5 border-orange-500/25 shadow-orange-500/8',
+                  }
+                  return (
+                    <button key={o.k} onClick={() => setCoachMode(o.k)}
+                      className={`relative px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 shrink-0 border ${
+                        isActive ? colors[o.color] : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border-transparent'
+                      }`}>
+                      <span className="relative z-10 flex items-center gap-1.5">
+                        <o.icon className="w-3 h-3" />
+                        {o.label}
+                      </span>
+                      {isActive && <span className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/[0.06]" />}
+                    </button>
+                  )
+                })}
               </div>
 
               {/* ═══ Insight Mode ═══ */}
@@ -893,6 +897,131 @@ export function SupplementTracker() {
                   {supplementInteractions.length === 0 && (
                     <div className="py-8 text-center"><Layers className="w-8 h-8 text-gray-600 mx-auto mb-2" /><p className="text-[11px] text-gray-500">Add more supplements for interactions.</p></div>
                   )}
+                </div>
+              )}
+
+              {/* ═══ Supply Mode ═══ */}
+              {coachMode === 'supply' && (
+                <div className="space-y-3">
+                  {supplements.filter(s => s.refillDays && s.refillDays > 0).length === 0 ? (
+                    <div className="py-8 text-center"><Package className="w-8 h-8 text-gray-600 mx-auto mb-2" /><p className="text-[11px] text-gray-500">Set refill days on supplements to track supply.</p></div>
+                  ) : supplements.filter(s => s.refillDays && s.refillDays > 0).map((s, i) => {
+                    const daysSince = Math.floor((new Date(selectedDate).getTime() - new Date(s.createdAt || selectedDate).getTime()) / 86400000)
+                    const daysLeft = (s.refillDays || 30) - daysSince
+                    const pct = Math.max(0, Math.min(100, (daysLeft / (s.refillDays || 30)) * 100))
+                    const urgent = daysLeft <= 7
+                    return (
+                      <motion.div key={s.id} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                        className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[11px] font-bold text-white">{s.name}</span>
+                          <span className={`text-[10px] font-black ${urgent ? 'text-red-400' : 'text-emerald-400'}`}>{daysLeft}d left</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8 }}
+                            className="h-full rounded-full" style={{ backgroundColor: urgent ? '#ef4444' : '#10b981' }} />
+                        </div>
+                        {urgent && <p className="text-[9px] text-red-400/70 mt-2">Order soon — running low</p>}
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* ═══ Health Mode ═══ */}
+              {coachMode === 'health' && (
+                <div className="space-y-3">
+                  {(() => {
+                    const interactions = supplements.flatMap(s =>
+                      SUPP_INTERACTIONS.filter(i =>
+                        (i.a.toLowerCase() === s.name.toLowerCase() || i.b.toLowerCase() === s.name.toLowerCase())
+                      ).map(i => ({ ...i, suppA: s.name }))
+                    )
+                    const uniqueInteractions = interactions.filter((v, i, a) => a.findIndex(t => t.a === v.a && t.b === v.b) === i)
+                    const totalSupps = supplements.length
+                    const dailyCount = supplements.filter(s => s.frequency === 'daily').length
+                    const coverage = totalSupps > 0 ? Math.round((dailyCount / totalSupps) * 100) : 0
+                    return (
+                      <>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-3 text-center">
+                            <span className="text-[16px] font-black text-cyan-400 block">{totalSupps}</span>
+                            <span className="text-[7px] text-gray-500 font-bold uppercase">Total</span>
+                          </div>
+                          <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-3 text-center">
+                            <span className="text-[16px] font-black text-emerald-400 block">{dailyCount}</span>
+                            <span className="text-[7px] text-gray-500 font-bold uppercase">Daily</span>
+                          </div>
+                          <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-3 text-center">
+                            <span className="text-[16px] font-black text-violet-400 block">{coverage}%</span>
+                            <span className="text-[7px] text-gray-500 font-bold uppercase">Coverage</span>
+                          </div>
+                        </div>
+                        {uniqueInteractions.length > 0 && (
+                          <div className="rounded-xl border border-amber-500/10 bg-amber-500/[0.03] p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+                              <span className="text-[10px] font-bold text-amber-300">Interactions Found</span>
+                            </div>
+                            {uniqueInteractions.slice(0, 3).map((inter, i) => (
+                              <div key={i} className="flex items-center gap-2 py-1.5">
+                                <div className={`w-1.5 h-1.5 rounded-full ${inter.type === 'conflict' ? 'bg-red-400' : inter.type === 'timing' ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+                                <span className="text-[9px] text-gray-300">{inter.a} + {inter.b}</span>
+                                <span className="text-[8px] text-gray-500 ml-auto">{inter.message}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {uniqueInteractions.length === 0 && (
+                          <div className="rounded-xl bg-emerald-500/[0.03] border border-emerald-500/10 p-3 flex items-center gap-2">
+                            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                            <span className="text-[10px] text-emerald-300 font-bold">No harmful interactions detected</span>
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
+                </div>
+              )}
+
+              {/* ═══ Goals Mode ═══ */}
+              {coachMode === 'goals' && (
+                <div className="space-y-3">
+                  {(() => {
+                    const totalTarget = dailySupps.length
+                    const takenToday = new Set(todayLogs.map(l => l.supplementId)).size
+                    const todayPct = totalTarget > 0 ? Math.round((takenToday / totalTarget) * 100) : 0
+                    const now = new Date(selectedDate + 'T12:00:00')
+                    const weekStart = new Date(now)
+                    weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+                    weekStart.setHours(0, 0, 0, 0)
+                    const weekTaken = Array.from({ length: 7 }, (_, i) => {
+                      const d = new Date(weekStart); d.setDate(d.getDate() + i)
+                      const dateStr = toLocalDate(d)
+                      return new Set(logs.filter(l => l.date === dateStr).map(l => l.supplementId)).size
+                    }).reduce((s, v) => s + v, 0)
+                    const weeklyTarget = totalTarget * 7
+                    const weeklyPct = weeklyTarget > 0 ? Math.round((weekTaken / weeklyTarget) * 100) : 0
+                    const goals = [
+                      { label: 'Today', current: takenToday, target: totalTarget, pct: todayPct, color: '#06b6d4' },
+                      { label: 'This Week', current: weekTaken, target: weeklyTarget, pct: weeklyPct, color: '#8b5cf6' },
+                      { label: 'Monthly', current: weekTaken * 4, target: weeklyTarget * 4, pct: weeklyPct, color: '#f59e0b' },
+                    ]
+                    return goals.map((g, i) => (
+                      <motion.div key={g.label} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
+                        className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[11px] font-bold text-white">{g.label}</span>
+                          <span className="text-[10px] font-black tabular-nums" style={{ color: g.color }}>{g.current}/{g.target}</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-white/[0.04] overflow-hidden">
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${g.pct}%` }} transition={{ duration: 0.8, delay: i * 0.1 }}
+                            className="h-full rounded-full" style={{ backgroundColor: g.color }} />
+                        </div>
+                        <p className="text-[8px] text-gray-500 mt-1.5">{g.pct}% {g.pct >= 80 ? 'on track' : g.pct >= 50 ? 'needs focus' : 'falling behind'}</p>
+                      </motion.div>
+                    ))
+                  })()}
                 </div>
               )}
             </div>
