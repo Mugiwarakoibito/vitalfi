@@ -9,7 +9,7 @@ import {
   ChevronLeft, ChevronRight, RotateCcw, Flame,
   TrendingUp, ChevronDown,
 } from 'lucide-react'
-import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { generateId, cn } from '@/lib/utils'
@@ -868,17 +868,6 @@ export function SupplementTracker() {
                   selectedDate === (() => { const d = new Date(); d.setDate(d.getDate() - 1); return toLocalDate(d) })() ? 'Yesterday' :
                   new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
-                // 30-day streak dots
-                const streakDots = Array.from({ length: 30 }, (_, i) => {
-                  const d = new Date(now); d.setDate(d.getDate() - (29 - i))
-                  const dateStr = toLocalDate(d)
-                  const dayLogs = logs.filter(l => l.date === dateStr)
-                  const taken = new Set(dayLogs.map(l => l.supplementId)).size
-                  const total = dailySupps.length
-                  const pct = total > 0 ? (taken / total) * 100 : 0
-                  return { pct, isToday: dateStr === today, isFuture: dateStr > today }
-                })
-
                 return (
                 <div className="flex flex-col gap-2" style={{ maxHeight: '520px' }}>
                   {/* 1. MOMENTUM — enhanced design */}
@@ -977,70 +966,69 @@ export function SupplementTracker() {
                     </div>
                   </div>
 
-                  {/* 3. 30-DAY STREAK CALENDAR */}
+                  {/* 3. SUPPLY HEALTH — refill status per supplement */}
                   <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-400/20 to-transparent" />
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-rose-400/20 to-transparent" />
                     <div className="flex items-center gap-1.5 mb-2">
-                      <Flame className="w-3 h-3 text-orange-400" />
-                      <span className="text-[9px] font-bold text-white">30-Day Streak</span>
+                      <Package className="w-3 h-3 text-rose-400" />
+                      <span className="text-[9px] font-bold text-white">Supply Health</span>
                       <div className="flex-1" />
-                      <span className="text-[7px] text-gray-500">{streakDots.filter(d => d.pct === 100).length}/30 perfect</span>
+                      {criticalRefills.length > 0 && <span className="text-[6px] font-black text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded">{criticalRefills.length} urgent</span>}
                     </div>
-                    <div className="flex gap-[3px] flex-wrap">
-                      {streakDots.map((d, i) => (
-                        <motion.div key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.2, delay: i * 0.01 }}
-                          className={'w-2 h-2 rounded-[3px] transition-all hover:scale-150 cursor-default ' +
-                            (d.isFuture ? 'bg-white/[0.02]' :
-                             d.pct === 100 ? 'bg-emerald-400 shadow-[0_0_4px_rgba(16,185,129,0.3)]' :
-                             d.pct >= 50 ? 'bg-amber-400/60' :
-                             d.pct > 0 ? 'bg-rose-400/50' :
-                             'bg-white/[0.06]') +
-                            (d.isToday ? ' ring-1 ring-violet-400 ring-offset-1 ring-offset-[#07070d]' : '')}
-                          title={`${30 - i}d ago: ${d.pct}%`} />
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-3 mt-2 pt-2 border-t border-white/[0.04]">
-                      <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-[3px] bg-emerald-400" /><span className="text-[6px] text-gray-500">100%</span></div>
-                      <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-[3px] bg-amber-400/60" /><span className="text-[6px] text-gray-500">50%+</span></div>
-                      <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-[3px] bg-rose-400/50" /><span className="text-[6px] text-gray-500">&lt;50%</span></div>
-                      <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-[3px] bg-white/[0.06]" /><span className="text-[6px] text-gray-500">Missed</span></div>
-                    </div>
+                    {refillData.length > 0 ? (
+                      <div className="overflow-y-auto space-y-1" style={{ maxHeight: '110px', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
+                        {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).map((r) => (
+                          <div key={r.id} className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                            <div className={'w-2 h-2 rounded-full shrink-0 ' + (r.urgency === 'critical' ? 'bg-rose-400 shadow-[0_0_4px_rgba(239,68,68,0.4)]' : r.urgency === 'warning' ? 'bg-amber-400' : 'bg-emerald-400')} />
+                            <span className="text-[8px] font-bold text-white truncate flex-1">{r.name}</span>
+                            <div className="w-12 h-1.5 rounded-full bg-white/[0.06] overflow-hidden shrink-0">
+                              <div className={'h-full rounded-full ' + (r.urgency === 'critical' ? 'bg-rose-500' : r.urgency === 'warning' ? 'bg-amber-500' : 'bg-emerald-500/50')}
+                                style={{ width: Math.max(100 - r.pctUsed, 5) + '%' }} />
+                            </div>
+                            <span className={'text-[7px] font-black tabular-nums w-10 text-right shrink-0 ' +
+                              (r.urgency === 'critical' ? 'text-rose-400' : r.urgency === 'warning' ? 'text-amber-400' : 'text-gray-500')}>
+                              {r.daysUntilRefill <= 0 ? 'EMPTY' : r.daysUntilRefill + 'd'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[7px] text-gray-500 italic">No refill data — add refill days to supplements</p>
+                    )}
                   </div>
 
-                  {/* 4. TRENDING — horizontal bar chart + insights */}
+                  {/* 4. TRENDING — recharts bar chart + insights */}
                   <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden flex-1 min-h-0">
                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent" />
                     <div className="flex items-center gap-1.5 mb-2">
                       <TrendingUp className="w-3 h-3 text-cyan-400" />
                       <span className="text-[9px] font-bold text-white">Trending</span>
                       <div className="flex-1" />
-                      <span className="text-[6px] text-gray-500">7d vs 30d delta</span>
+                      <span className="text-[6px] text-gray-500">7d vs 30d</span>
                     </div>
-                    {/* Horizontal bar chart */}
-                    <div className="space-y-1.5 mb-2">
-                      {suppTrends.slice(0, 5).map((s, i) => (
-                        <div key={s.id} className="flex items-center gap-2">
-                          <span className="text-[7px] font-bold text-gray-400 w-14 truncate shrink-0">{s.name}</span>
-                          <div className="flex-1 h-3 rounded bg-white/[0.03] relative overflow-hidden">
-                            {/* Center line at 0 */}
-                            <div className="absolute top-0 bottom-0 left-1/2 w-px bg-white/10" />
-                            {s.delta > 0 ? (
-                              <motion.div initial={{ width: 0 }} animate={{ width: Math.min(Math.abs(s.delta), 50) + '%' }} transition={{ duration: 0.6, delay: i * 0.08 }}
-                                className="absolute top-0 bottom-0 left-1/2 rounded-r bg-emerald-500/40" />
-                            ) : s.delta < 0 ? (
-                              <motion.div initial={{ width: 0 }} animate={{ width: Math.min(Math.abs(s.delta), 50) + '%' }} transition={{ duration: 0.6, delay: i * 0.08 }}
-                                className="absolute top-0 bottom-0 right-1/2 rounded-l bg-rose-500/40" />
-                            ) : (
-                              <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-1 rounded bg-gray-500/40" />
-                            )}
-                          </div>
-                          <span className={'text-[8px] font-black tabular-nums w-8 text-right shrink-0 ' +
-                            (s.delta > 0 ? 'text-emerald-400' : s.delta < 0 ? 'text-rose-400' : 'text-gray-500')}>
-                            {s.delta > 0 ? '+' : ''}{s.delta}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                    {/* Recharts horizontal bar chart */}
+                    {suppTrends.length > 0 ? (
+                      <div className="h-[120px] mb-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={suppTrends.slice(0, 5).map(s => ({
+                            name: s.name.length > 8 ? s.name.substring(0, 8) + '..' : s.name,
+                            delta: s.delta,
+                            fill: s.delta > 0 ? '#10b981' : s.delta < 0 ? '#ef4444' : '#6b7280'
+                          }))} layout="vertical" margin={{ top: 0, right: 30, bottom: 0, left: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
+                            <XAxis type="number" tick={{ fontSize: 7, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                            <YAxis type="category" dataKey="name" tick={{ fontSize: 7, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={55} />
+                            <Tooltip cursor={false} contentStyle={{ background: '#0e0e18', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px' }}
+                              formatter={(value: number) => [value > 0 ? '+' + value : value, 'Delta']} />
+                            <Bar dataKey="delta" radius={[0, 4, 4, 0]} maxBarSize={14}>
+                              {suppTrends.slice(0, 5).map((s, i) => <Cell key={i} fill={s.delta > 0 ? '#10b981' : s.delta < 0 ? '#ef4444' : '#6b7280'} fillOpacity={0.6} />)}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : (
+                      <div className="h-[120px] flex items-center justify-center"><span className="text-[7px] text-gray-500">No trend data yet</span></div>
+                    )}
                     {/* Smart Insights */}
                     {insights.length > 0 && (
                       <div className="pt-2 border-t border-white/[0.04] space-y-1">
