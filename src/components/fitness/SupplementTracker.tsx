@@ -401,15 +401,13 @@ export function SupplementTracker() {
                 <div className="flex items-center gap-2.5">
                   {(() => {
                     const totalDoses = weekDays.reduce((s, d) => s + d.taken, 0)
-                    const maxPossible = weekDays.reduce((s, d) => s + d.total, 0)
-                    const compliance = maxPossible > 0 ? Math.round((totalDoses / maxPossible) * 100) : 0
                     const avgPerDay = (totalDoses / 7).toFixed(1)
                     return (
                       <>
-                        <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-500/5 border border-violet-500/20 cursor-default">
-                          <Target className="w-3.5 h-3.5 text-violet-400" />
-                          <span className="text-[11px] font-black text-violet-300 tabular-nums">{compliance}%</span>
-                          <span className="text-[9px] text-violet-400/60 font-bold">compliance</span>
+                        <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-green-500/5 border border-emerald-500/20 cursor-default">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-[11px] font-black text-emerald-300 tabular-nums">{perfectDaysCount}</span>
+                          <span className="text-[9px] text-emerald-400/60 font-bold">perfect</span>
                         </motion.div>
                         <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/5 border border-cyan-500/20 cursor-default">
                           <Activity className="w-3.5 h-3.5 text-cyan-400" />
@@ -430,8 +428,15 @@ export function SupplementTracker() {
                     <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
                     <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.15em]">Adherence radar</span>
                     <div className="flex-1" />
-                    <span className="text-[12px] font-black text-violet-400 tabular-nums">{weekTaken}</span>
-                    <span className="text-[8px] text-gray-600 font-bold">/ {weekTotal}</span>
+                    {(() => {
+                      const bestDay = weekDays.reduce((best, d) => d.pct > best.pct ? d : best, weekDays[0])
+                      return (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[12px] font-black text-emerald-400">{bestDay.letter}</span>
+                          <span className="text-[8px] text-gray-600 font-bold">{bestDay.pct}% best</span>
+                        </div>
+                      )
+                    })()}
                   </div>
                   <div className="flex-1 flex items-center justify-center min-h-0">
                     <svg viewBox="0 0 280 280" className="w-full max-w-[280px] h-full max-h-[280px]">
