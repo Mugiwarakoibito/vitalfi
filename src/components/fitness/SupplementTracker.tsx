@@ -650,35 +650,7 @@ export function SupplementTracker() {
             return { label, pct, taken, total }
           }).reverse()
 
-          // ─── Timing Intelligence ───
-          const timingRecs = supplements.map(s => {
-            const times = s.times || []
-            let optimal = '', reason = '', category = ''
-            const name = s.name.toLowerCase()
-            if (name.includes('vitamin d') || name.includes('b12')) {
-              optimal = 'Morning'; reason = 'Absorbs best with sunlight'; category = 'fat-soluble'
-            } else if (name.includes('magnesium') || name.includes('zinc')) {
-              optimal = 'Night'; reason = 'Supports sleep & recovery'; category = 'mineral'
-            } else if (name.includes('iron')) {
-              optimal = 'Morning'; reason = 'Empty stomach = 2x absorption'; category = 'mineral'
-            } else if (name.includes('omega') || name.includes('fish')) {
-              optimal = 'With meal'; reason = 'Fat-soluble, needs food'; category = 'fat-soluble'
-            } else if (name.includes('caffeine') || name.includes('pre-workout')) {
-              optimal = '30min pre'; reason = 'Peak effects in 30-60min'; category = 'stimulant'
-            } else if (name.includes('creatine')) {
-              optimal = 'Post-workout'; reason = 'Muscle uptake peaks after exercise'; category = 'performance'
-            } else if (name.includes('collagen')) {
-              optimal = 'Morning'; reason = 'Empty stomach for best absorption'; category = 'protein'
-            } else if (name.includes('probiotic')) {
-              optimal = 'Morning'; reason = 'Stomach acid lower in AM'; category = 'gut'
-            } else if (name.includes('whey') || name.includes('protein')) {
-              optimal = 'Post-workout'; reason = 'Muscle protein synthesis window'; category = 'protein'
-            } else {
-              optimal = times[0] || 'Morning'; reason = 'Based on your current schedule'; category = 'general'
-            }
-            return { name: s.name, id: s.id, current: times.join(', ') || 'Not set', optimal, reason, category, match: times.includes(optimal) || times.some(t => optimal.toLowerCase().includes(t.toLowerCase())) }
-          })
-          const timingScore = timingRecs.length > 0 ? Math.round((timingRecs.filter(r => r.match).length / timingRecs.length) * 100) : 0
+
 
           // ─── Synergy Intelligence ───
           const synergyPairs = supplements.flatMap((s, i) =>
@@ -727,6 +699,72 @@ export function SupplementTracker() {
           const consistencyScore = weekPct
           const perfectDays = weekDays.filter(d => d.pct === 100).length
           const activeDays = weekDays.filter(d => d.pct > 0).length
+
+          // ─── takenAt: Real Timing Analysis ───
+          const realTiming = supplements.map(s => {
+            const suppLogs = logs.filter(l => l.supplementId === s.id && l.takenAt)
+            const plannedTimes = s.times || []
+            const actualHours = suppLogs.map(l => {
+              const h = new Date(l.takenAt).getHours()
+              return h
+            }).filter(h => !isNaN(h))
+            const avgHour = actualHours.length > 0 ? actualHours.reduce((a, b) => a + b, 0) / actualHours.length : null
+            const timeCategory = (h: number) => h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : h < 21 ? 'Evening' : 'Night'
+            const actualCategory = avgHour !== null ? timeCategory(avgHour) : 'Unknown'
+            const plannedCategory = plannedTimes[0] || 'Not set'
+            const isAligned = actualCategory !== 'Unknown' && plannedCategory !== 'Not set' &&
+              (actualCategory === plannedCategory ||
+               (actualCategory === 'Morning' && plannedCategory === 'Morning') ||
+               (actualCategory === 'Night' && plannedCategory === 'Night'))
+            const consistency = actualHours.length > 1 ? (() => {
+              const sorted = [...actualHours].sort((a, b) => a - b)
+              const range = sorted[sorted.length - 1] - sorted[0]
+              return range < 2 ? 'Very consistent' : range < 4 ? 'Somewhat consistent' : 'Variable timing'
+            })() : 'First dose logged'
+            return { name: s.name, id: s.id, avgHour, actualCategory, plannedCategory, isAligned, consistency, doseCount: suppLogs.length, plannedTimes }
+          })
+          const timingAlignment = realTiming.filter(r => r.isAligned).length
+          const timingAlignmentPct = realTiming.length > 0 ? Math.round((timingAlignment / realTiming.length) * 100) : 0
+
+          // ─── Refill Intelligence ───
+          const refillData = supplements.map(s => {
+            if (!s.refillDays || s.refillDays <= 0) return null
+            const created = s.createdAt ? new Date(s.createdAt) : null
+            const daysSinceCreated = created ? Math.floor((Date.now() - created.getTime()) / 86400000) : 0
+            const daysUntilRefill = s.refillDays - daysSinceCreated
+            const urgency = daysUntilRefill <= 3 ? 'critical' : daysUntilRefill <= 7 ? 'warning' : 'ok'
+            const pctUsed = Math.min(100, Math.round((daysSinceCreated / s.refillDays) * 100))
+            return { name: s.name, id: s.id, refillDays: s.refillDays, daysSinceCreated, daysUntilRefill, urgency, pctUsed }
+          }).filter(Boolean) as { name: string; id: string; refillDays: number; daysSinceCreated: number; daysUntilRefill: number; urgency: string; pctUsed: number }[]
+          const criticalRefills = refillData.filter(r => r.urgency === 'critical')
+
+          // ─── Tracking Duration ───
+          const trackingDurations = supplements.map(s => {
+            if (!s.createdAt) return null
+            const days = Math.floor((Date.now() - new Date(s.createdAt).getTime()) / 86400000)
+            return { name: s.name, id: s.id, days, established: days >= 30 }
+          }).filter(Boolean) as { name: string; id: string; days: number; established: boolean }[]
+          const avgTrackingDays = trackingDurations.length > 0 ? Math.round(trackingDurations.reduce((s, t) => s + t.days, 0) / trackingDurations.length) : 0
+
+          // ─── Today's Live Status ───
+          const todayStatus = dailySupps.map(s => {
+            const taken = takenTodayIds.has(s.id)
+            const log = todayLogs.find(l => l.supplementId === s.id)
+            const takenAtTime = log?.takenAt ? new Date(log.takenAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : null
+            return { name: s.name, id: s.id, dosage: s.dosage, times: s.times, taken, takenAtTime, frequency: s.frequency, notes: s.notes }
+          })
+          const todayProgress = todayStatus.filter(s => s.taken).length
+          const todayTotal = todayStatus.length
+          const todayPct = todayTotal > 0 ? Math.round((todayProgress / todayTotal) * 100) : 0
+          const remainingToday = todayStatus.filter(s => !s.taken)
+
+          // ─── Long-term Streak (365d) ───
+          const longTermStreak = suppStreak
+
+
+          // ─── Frequency Breakdown ───
+          const freqBreakdown = { daily: supplements.filter(s => s.frequency === 'daily').length, weekly: supplements.filter(s => s.frequency === 'weekly').length, custom: supplements.filter(s => s.frequency === 'custom').length }
+
 
           return (
           <motion.div key="coach" initial={{ opacity: 0, y: -12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -12, scale: 0.98 }}
@@ -805,7 +843,41 @@ export function SupplementTracker() {
                 const barData = weekDays.map(d => ({ name: d.letter, pct: d.pct, fill: d.pct >= 80 ? '#10b981' : d.pct >= 50 ? '#f59e0b' : d.pct > 0 ? '#ef4444' : '#374151' }))
                 return (
                 <div className="space-y-2.5">
-                  {/* Hero Row */}
+                  {/* Today's Live Status */}
+                  <div className="rounded-xl bg-gradient-to-br from-violet-500/[0.06] to-indigo-500/[0.02] border border-violet-500/15 p-3 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/25 to-transparent" />
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Activity className="w-3 h-3 text-violet-400" />
+                      <span className="text-[9px] font-bold text-white">Today</span>
+                      <div className="flex-1" />
+                      <span className="text-[11px] font-black text-white tabular-nums">{todayProgress}/{todayTotal}</span>
+                      <span className="text-[7px] text-gray-500">taken</span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden mb-2">
+                      <motion.div initial={{ width: 0 }} animate={{ width: todayPct + '%' }} transition={{ duration: 0.8, ease: 'easeOut' }}
+                        className="h-full rounded-full" style={{ background: todayPct === 100 ? '#10b981' : todayPct >= 50 ? '#f59e0b' : '#ef4444' }} />
+                    </div>
+                    {todayStatus.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-1">
+                        {todayStatus.slice(0, 6).map(s => (
+                          <div key={s.id} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                            <div className={'w-2 h-2 rounded-full shrink-0 ' + (s.taken ? 'bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.4)]' : 'bg-gray-600 border border-gray-500')} />
+                            <span className={'text-[8px] font-bold truncate flex-1 ' + (s.taken ? 'text-emerald-300 line-through opacity-60' : 'text-white')}>{s.name}</span>
+                            {s.taken && s.takenAtTime && <span className="text-[6px] text-gray-500 shrink-0">{s.takenAtTime}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[8px] text-gray-500 italic">No supplements scheduled today</p>
+                    )}
+                    {remainingToday.length > 0 && (
+                      <div className="mt-2 px-2 py-1.5 rounded-lg bg-amber-500/[0.06] border border-amber-500/10">
+                        <span className="text-[8px] text-amber-300 font-bold">{remainingToday.length} remaining</span>
+                        <span className="text-[7px] text-gray-500 ml-1">{'\u2014'} {remainingToday.map(r => r.name).join(', ')}</span>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-2 gap-2.5">
                     {/* Consistency Ring */}
                     <div className="rounded-xl bg-gradient-to-br from-violet-500/[0.06] to-indigo-500/[0.02] border border-violet-500/15 p-3 relative overflow-hidden">
@@ -829,7 +901,7 @@ export function SupplementTracker() {
                           <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-orange-500/[0.06] border border-orange-500/10">
                             <Flame className="w-3 h-3 text-orange-400" />
                             <span className="text-[8px] text-gray-500 flex-1">Streak</span>
-                            <span className="text-[11px] font-black text-orange-300 tabular-nums">{currentStreak}d</span>
+                            <span className="text-[11px] font-black text-orange-300 tabular-nums">{longTermStreak}d</span>
                           </div>
                           <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/10">
                             <CheckCircle2 className="w-3 h-3 text-emerald-400" />
@@ -881,6 +953,36 @@ export function SupplementTracker() {
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tracking Duration + Frequency */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <CalendarCheck className="w-3 h-3 text-amber-400" />
+                        <span className="text-[9px] font-bold text-white">Tracking</span>
+                      </div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-[18px] font-black text-amber-300 tabular-nums">{avgTrackingDays}</span>
+                        <span className="text-[7px] text-gray-500">days avg</span>
+                      </div>
+                      {trackingDurations.filter(t => t.established).length > 0 && (
+                        <p className="text-[7px] text-gray-500 mt-1">{trackingDurations.filter(t => t.established).length} established (30d+)</p>
+                      )}
+                    </div>
+                    <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-400/20 to-transparent" />
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <Package className="w-3 h-3 text-indigo-400" />
+                        <span className="text-[9px] font-bold text-white">Frequency</span>
+                      </div>
+                      <div className="flex gap-2">
+                        {freqBreakdown.daily > 0 && <div className="text-center"><span className="text-[14px] font-black text-indigo-300 block">{freqBreakdown.daily}</span><span className="text-[6px] text-gray-500 font-bold">Daily</span></div>}
+                        {freqBreakdown.weekly > 0 && <div className="text-center"><span className="text-[14px] font-black text-indigo-300 block">{freqBreakdown.weekly}</span><span className="text-[6px] text-gray-500 font-bold">Weekly</span></div>}
+                        {freqBreakdown.custom > 0 && <div className="text-center"><span className="text-[14px] font-black text-indigo-300 block">{freqBreakdown.custom}</span><span className="text-[6px] text-gray-500 font-bold">Custom</span></div>}
                       </div>
                     </div>
                   </div>
@@ -957,6 +1059,7 @@ export function SupplementTracker() {
                               </div>
                             </div>
                           </div>
+                          {s.notes && <p className="text-[6px] text-gray-500 mt-1 truncate italic">{s.notes}</p>}
                         </div>
                       ))}
                     </div>
@@ -968,50 +1071,52 @@ export function SupplementTracker() {
               {/* ──── MODE: OPTIMIZATION ──── */}
               {coachMode === 'optimization' && (() => {
                 const optData = [
-                  { name: 'Matched', value: timingRecs.filter(r => r.match).length, fill: '#10b981' },
-                  { name: 'Mismatched', value: timingRecs.filter(r => !r.match).length, fill: '#f59e0b' },
+                  { name: 'Aligned', value: timingAlignment, fill: '#10b981' },
+                  { name: 'Misaligned', value: realTiming.length - timingAlignment, fill: '#f59e0b' },
                 ]
                 return (
                 <div className="space-y-2.5">
-                  {/* Timeline */}
+                  {/* Real Timing Timeline */}
                   <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent" />
                     <div className="flex items-center gap-1.5 mb-2.5">
                       <Clock className="w-3 h-3 text-cyan-400" />
-                      <span className="text-[9px] font-bold text-white">Daily Timeline</span>
+                      <span className="text-[9px] font-bold text-white">Real Timing (from takenAt)</span>
                       <div className="flex-1" />
-                      <span className="text-[8px] font-black text-cyan-300">{timingScore}%</span>
-                      <span className="text-[7px] text-gray-500">optimized</span>
+                      <span className="text-[8px] font-black text-cyan-300">{timingAlignmentPct}%</span>
+                      <span className="text-[7px] text-gray-500">aligned</span>
                     </div>
                     <div className="grid grid-cols-4 gap-1.5">
                       {TIMES_OF_DAY.map(t => {
                         const Icon = TIME_ICONS[t]
                         const tc = TIME_COLORS[t]
-                        const scheduled = timingRecs.filter(r => r.current.includes(t) || (t === 'Morning' && r.optimal === 'Morning'))
-                        const optimalHere = timingRecs.filter(r => r.optimal === t && r.match)
-                        const mismatchHere = timingRecs.filter(r => r.optimal === t && !r.match)
+                        const scheduled = realTiming.filter(r => r.plannedTimes.includes(t))
+                        const alignedHere = scheduled.filter(r => r.actualCategory === t)
+                        const misalignedHere = scheduled.filter(r => r.actualCategory !== t && r.actualCategory !== 'Unknown')
                         return (
                           <div key={t} className={'rounded-lg p-2 border relative overflow-hidden transition-all bg-gradient-to-br ' + tc.bg + ' ' + tc.border +
-                            (optimalHere.length > 0 ? ' shadow-md ' + tc.glow : '')}>
+                            (alignedHere.length > 0 && misalignedHere.length === 0 ? ' shadow-md ' + tc.glow : '')}>
                             <div className="flex items-center gap-1 mb-1.5">
                               <Icon className={'w-3 h-3 ' + tc.icon} />
                               <span className={'text-[8px] font-bold ' + tc.text}>{t}</span>
                             </div>
                             <div className="space-y-0.5 min-h-[28px]">
-                              {scheduled.length > 0 ? scheduled.slice(0, 3).map((r, j) => (
+                              {scheduled.length > 0 ? scheduled.map((r, j) => (
                                 <div key={j} className="flex items-center gap-1">
-                                  <div className={'w-1 h-1 rounded-full shrink-0 ' + (r.match ? 'bg-emerald-400' : 'bg-amber-400')} />
+                                  <div className={'w-1 h-1 rounded-full shrink-0 ' + (r.actualCategory === t ? 'bg-emerald-400' : r.actualCategory === 'Unknown' ? 'bg-gray-500' : 'bg-amber-400')} />
                                   <span className="text-[7px] text-gray-300 truncate">{r.name}</span>
+                                  {r.actualCategory !== 'Unknown' && r.actualCategory !== t && (
+                                    <span className="text-[5px] text-amber-400 shrink-0">{r.actualCategory}</span>
+                                  )}
                                 </div>
                               )) : <span className="text-[7px] text-gray-600 italic">Empty</span>}
-                              {scheduled.length > 3 && <span className="text-[6px] text-gray-500">+{scheduled.length - 3} more</span>}
                             </div>
-                            {mismatchHere.length > 0 && (
+                            {misalignedHere.length > 0 && (
                               <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
-                                <span className="text-[6px] font-black text-amber-400">{mismatchHere.length}</span>
+                                <span className="text-[6px] font-black text-amber-400">{misalignedHere.length}</span>
                               </div>
                             )}
-                            {optimalHere.length > 0 && mismatchHere.length === 0 && scheduled.length > 0 && (
+                            {alignedHere.length > 0 && misalignedHere.length === 0 && scheduled.length > 0 && (
                               <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
                                 <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
                               </div>
@@ -1022,40 +1127,45 @@ export function SupplementTracker() {
                     </div>
                   </div>
 
-                  {/* Timing + Pie */}
+                  {/* Per-Supp Real vs Planned */}
                   <div className="grid grid-cols-3 gap-2.5">
                     <div className="col-span-2 rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
                       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
                       <div className="flex items-center gap-1.5 mb-2">
                         <Sun className="w-3 h-3 text-amber-400" />
-                        <span className="text-[9px] font-bold text-white">Timing Recommendations</span>
+                        <span className="text-[9px] font-bold text-white">Real vs Planned Timing</span>
                         <div className="flex-1" />
-                        <span className="text-[7px] text-gray-500">{timingRecs.filter(r => r.match).length}/{timingRecs.length} optimal</span>
+                        <span className="text-[7px] text-gray-500">{timingAlignment}/{realTiming.length} aligned</span>
                       </div>
                       <div className="space-y-1.5">
-                        {timingRecs.slice(0, 5).map((r, i) => (
+                        {realTiming.slice(0, 6).map((r, i) => (
                           <div key={i} className={'flex items-center gap-2 p-2 rounded-lg border transition-all ' +
-                            (r.match ? 'bg-emerald-500/[0.04] border-emerald-500/10' : 'bg-white/[0.02] border-white/[0.04] hover:border-white/[0.08]')}>
+                            (r.isAligned ? 'bg-emerald-500/[0.04] border-emerald-500/10' : 'bg-white/[0.02] border-white/[0.04] hover:border-white/[0.08]')}>
                             <div className={'w-5 h-5 rounded flex items-center justify-center shrink-0 ' +
-                              (r.match ? 'bg-emerald-500/15' : 'bg-amber-500/10')}>
-                              {r.match ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Clock className="w-3 h-3 text-amber-400" />}
+                              (r.isAligned ? 'bg-emerald-500/15' : r.actualCategory === 'Unknown' ? 'bg-gray-500/10' : 'bg-amber-500/10')}>
+                              {r.isAligned ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> :
+                               r.actualCategory === 'Unknown' ? <Clock className="w-3 h-3 text-gray-500" /> :
+                               <Clock className="w-3 h-3 text-amber-400" />}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <span className="text-[9px] font-bold text-white truncate">{r.name}</span>
-                                <span className={'text-[6px] font-bold px-1 py-0.5 rounded ' +
-                                  (r.category === 'fat-soluble' ? 'bg-amber-500/10 text-amber-400' :
-                                   r.category === 'mineral' ? 'bg-blue-500/10 text-blue-400' :
-                                   r.category === 'protein' ? 'bg-red-500/10 text-red-400' :
-                                   r.category === 'stimulant' ? 'bg-orange-500/10 text-orange-400' :
-                                   r.category === 'performance' ? 'bg-cyan-500/10 text-cyan-400' :
-                                   'bg-gray-500/10 text-gray-400')}>{r.category}</span>
+                                <span className="text-[6px] text-gray-500">{r.doseCount} doses logged</span>
                               </div>
                               <div className="flex items-center gap-1 mt-0.5">
-                                <span className="text-[7px] text-gray-500">{r.current}</span>
-                                {!r.match && <span className="text-[7px] text-gray-600">{'\u2192'}</span>}
-                                {!r.match && <span className="text-[7px] font-bold text-cyan-400">{r.optimal}</span>}
-                                {r.match && <span className="text-[7px] text-emerald-400 font-bold">{'\u2713'}</span>}
+                                {r.actualCategory !== 'Unknown' ? (
+                                  <>
+                                    <span className="text-[7px] text-cyan-400">{r.actualCategory}</span>
+                                    {!r.isAligned && <span className="text-[7px] text-gray-600">{'\u2192'}</span>}
+                                    {!r.isAligned && <span className="text-[7px] font-bold text-amber-400">Plan: {r.plannedCategory}</span>}
+                                    {r.isAligned && <span className="text-[7px] text-emerald-400 font-bold">{'\u2713'}</span>}
+                                  </>
+                                ) : (
+                                  <span className="text-[7px] text-gray-500 italic">No takenAt data yet</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <span className="text-[6px] text-gray-500">{r.consistency}</span>
                               </div>
                             </div>
                           </div>
@@ -1067,7 +1177,7 @@ export function SupplementTracker() {
                       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/20 to-transparent" />
                       <div className="flex items-center gap-1.5 mb-1">
                         <Sparkles className="w-3 h-3 text-violet-400" />
-                        <span className="text-[9px] font-bold text-white">Match</span>
+                        <span className="text-[9px] font-bold text-white">Alignment</span>
                       </div>
                       <div className="h-20">
                         <ResponsiveContainer width="100%" height="100%">
@@ -1079,8 +1189,8 @@ export function SupplementTracker() {
                         </ResponsiveContainer>
                       </div>
                       <div className="flex justify-center gap-3 mt-1">
-                        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-emerald-500" /><span className="text-[7px] text-gray-500">{timingRecs.filter(r => r.match).length} opt</span></div>
-                        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-amber-500" /><span className="text-[7px] text-gray-500">{timingRecs.filter(r => !r.match).length} fix</span></div>
+                        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-emerald-500" /><span className="text-[7px] text-gray-500">{timingAlignment} opt</span></div>
+                        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-amber-500" /><span className="text-[7px] text-gray-500">{realTiming.length - timingAlignment} fix</span></div>
                       </div>
                     </div>
                   </div>
@@ -1139,6 +1249,46 @@ export function SupplementTracker() {
                 const costPieData = costBreakdown.map((c, i) => ({ name: c.name, value: c.cost, fill: COLORS[i % COLORS.length] }))
                 return (
                 <div className="space-y-2.5">
+                  {/* Refill Countdown */}
+                  {refillData.length > 0 && (
+                    <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-rose-400/20 to-transparent" />
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Package className="w-3 h-3 text-rose-400" />
+                        <span className="text-[9px] font-bold text-white">Refill Countdown</span>
+                        <div className="flex-1" />
+                        {criticalRefills.length > 0 && <span className="text-[7px] font-black text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded">{criticalRefills.length} urgent</span>}
+                      </div>
+                      <div className="space-y-1.5">
+                        {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).map((r) => (
+                          <div key={r.id} className={'flex items-center gap-2 p-2 rounded-lg border transition-all ' +
+                            (r.urgency === 'critical' ? 'bg-rose-500/[0.06] border-rose-500/15' :
+                             r.urgency === 'warning' ? 'bg-amber-500/[0.04] border-amber-500/10' :
+                             'bg-white/[0.02] border-white/[0.04]')}>
+                            <div className={'w-5 h-5 rounded flex items-center justify-center shrink-0 ' +
+                              (r.urgency === 'critical' ? 'bg-rose-500/15' : r.urgency === 'warning' ? 'bg-amber-500/10' : 'bg-white/[0.03]')}>
+                              {r.urgency === 'critical' ? <AlertTriangle className="w-3 h-3 text-rose-400" /> :
+                               r.urgency === 'warning' ? <Clock className="w-3 h-3 text-amber-400" /> :
+                               <CheckCircle2 className="w-3 h-3 text-gray-500" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-bold text-white truncate">{r.name}</span>
+                                <span className={'text-[7px] font-bold ' + (r.urgency === 'critical' ? 'text-rose-400' : r.urgency === 'warning' ? 'text-amber-400' : 'text-gray-500')}>
+                                  {r.daysUntilRefill <= 0 ? 'EMPTY' : r.daysUntilRefill + 'd left'}
+                                </span>
+                              </div>
+                              <div className="w-full h-1 rounded-full bg-white/[0.04] overflow-hidden mt-1">
+                                <div className={'h-full rounded-full transition-all ' + (r.urgency === 'critical' ? 'bg-rose-500' : r.urgency === 'warning' ? 'bg-amber-500' : 'bg-emerald-500/50')}
+                                  style={{ width: Math.max(r.pctUsed, 2) + '%' }} />
+                              </div>
+                              <span className="text-[6px] text-gray-500">{r.pctUsed}% of {r.refillDays}-day supply used</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Cost Row */}
                   <div className="grid grid-cols-3 gap-2.5">
@@ -1249,24 +1399,30 @@ export function SupplementTracker() {
                       <span className="text-[9px] font-bold text-white">Action Items</span>
                     </div>
                     <div className="space-y-1">
-                      {timingRecs.filter(r => !r.match).slice(0, 2).map((r, i) => (
+                      {realTiming.filter(r => !r.isAligned && r.actualCategory !== 'Unknown').slice(0, 2).map((r, i) => (
                         <div key={'ta' + i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-amber-500/[0.04] border border-amber-500/10">
                           <Clock className="w-2.5 h-2.5 text-amber-400 shrink-0" />
-                          <span className="text-[8px] text-gray-300">Move <span className="font-bold text-white">{r.name}</span> to <span className="font-bold text-cyan-400">{r.optimal}</span></span>
+                          <span className="text-[8px] text-gray-300">Move <span className="font-bold text-white">{r.name}</span> from <span className="font-bold text-cyan-400">{r.actualCategory}</span> to <span className="font-bold text-emerald-400">{r.plannedCategory}</span></span>
                         </div>
                       ))}
-                      {missing.slice(0, 2).map((m, i) => (
-                        <div key={'ma' + i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-rose-500/[0.04] border border-rose-500/10">
-                          <Plus className="w-2.5 h-2.5 text-rose-400 shrink-0" />
-                          <span className="text-[8px] text-gray-300">Add <span className="font-bold text-white">{m.name}</span> {'\u2014'} {m.why}</span>
+                      {criticalRefills.slice(0, 1).map((r, i) => (
+                        <div key={'ra' + i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-rose-500/[0.04] border border-rose-500/10">
+                          <Package className="w-2.5 h-2.5 text-rose-400 shrink-0" />
+                          <span className="text-[8px] text-gray-300">Restock <span className="font-bold text-white">{r.name}</span> {'\u2014'} {r.daysUntilRefill <= 0 ? 'EMPTY' : r.daysUntilRefill + 'd remaining'}</span>
                         </div>
                       ))}
-                      {totalCost > 0 && (
-                        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
-                          <DollarSign className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
-                          <span className="text-[8px] text-gray-300">Budget: <span className="font-bold text-emerald-400">{'$' + costPerDay + '/day'}</span> {'\u2014'} {'$' + yearlyProjection + '/year'}</span>
+                      {remainingToday.length > 0 && (
+                        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-cyan-500/[0.04] border border-cyan-500/10">
+                          <AlertTriangle className="w-2.5 h-2.5 text-cyan-400 shrink-0" />
+                          <span className="text-[8px] text-gray-300">Still need: <span className="font-bold text-white">{remainingToday.map(r => r.name).join(', ')}</span></span>
                         </div>
                       )}
+                      {missing.slice(0, 1).map((m, i) => (
+                        <div key={'ma' + i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-violet-500/[0.04] border border-violet-500/10">
+                          <Plus className="w-2.5 h-2.5 text-violet-400 shrink-0" />
+                          <span className="text-[8px] text-gray-300">Consider <span className="font-bold text-white">{m.name}</span> {'\u2014'} {m.why}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
