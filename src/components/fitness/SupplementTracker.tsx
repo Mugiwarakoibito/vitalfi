@@ -430,11 +430,12 @@ export function SupplementTracker() {
                     <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.15em]">Adherence radar</span>
                     <div className="flex-1" />
                     {(() => {
-                      const bestDay = weekDays.reduce((best, d) => d.pct > best.pct ? d : best, weekDays[0])
+                      const bestPct = Math.max(...weekDays.map(d => d.pct))
+                      const bestDays = weekDays.filter(d => d.pct === bestPct)
                       return (
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[12px] font-black text-emerald-400">{bestDay.letter}</span>
-                          <span className="text-[8px] text-gray-600 font-bold">{bestDay.pct}% best</span>
+                          <span className="text-[12px] font-black text-emerald-400">{bestDays.length}</span>
+                          <span className="text-[8px] text-gray-600 font-bold">day{bestDays.length !== 1 ? 's' : ''} at {bestPct}%</span>
                         </div>
                       )
                     })()}
