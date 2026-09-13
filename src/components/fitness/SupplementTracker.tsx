@@ -402,6 +402,7 @@ export function SupplementTracker() {
                   {(() => {
                     const totalDoses = weekDays.reduce((s, d) => s + d.taken, 0)
                     const avgPerDay = (totalDoses / 7).toFixed(1)
+                    const perfectDaysCount = weekDays.filter(d => d.pct === 100).length
                     return (
                       <>
                         <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-green-500/5 border border-emerald-500/20 cursor-default">
