@@ -7,7 +7,7 @@ import {
   Brain, ShieldAlert, Zap, Package, Info,
   CheckCircle2, BarChart3,
   ChevronLeft, ChevronRight, RotateCcw, Flame,
-  TrendingUp,
+  TrendingUp, ChevronDown,
 } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
@@ -81,6 +81,7 @@ export function SupplementTracker() {
   const [activePanel, setActivePanel] = useState<'patterns' | 'coach' | null>(null)
   const [weekOffset, setWeekOffset] = useState(0)
   const [coachMode, setCoachMode] = useState<'overview' | 'optimization' | 'planning'>('overview')
+  const [coachDropdownOpen, setCoachDropdownOpen] = useState(false)
 
   const today = toLocalDate(new Date())
   const [selectedDate, setSelectedDate] = useState(today)
@@ -751,37 +752,40 @@ export function SupplementTracker() {
                   </div>
                 </div>
                 {/* Mode Selector */}
-                <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                  {([
-                    { key: 'overview' as const, label: 'Overview', icon: Activity },
-                    { key: 'optimization' as const, label: 'Optimize', icon: Zap },
-                    { key: 'planning' as const, label: 'Planning', icon: DollarSign },
-                  ]).map(m => {
-                    const Icon = m.icon
-                    return (
-                      <button key={m.key} onClick={() => setCoachMode(m.key)}
-                        className={'flex items-center gap-1 px-2.5 py-1 rounded-md text-[9px] font-bold transition-all duration-200 ' +
-                          (coachMode === m.key
-                            ? 'bg-gradient-to-r from-violet-500/20 to-indigo-500/15 border border-violet-500/25 text-violet-300 shadow-sm shadow-violet-500/10'
-                            : 'text-gray-500 hover:text-gray-300 border border-transparent')
-                        }>
-                        <Icon className="w-3 h-3" />
-                        {m.label}
-                      </button>
-                    )
-                  })}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-emerald-500/15 to-emerald-600/10 border border-emerald-500/20">
-                    <Flame className="w-3 h-3 text-emerald-400" />
-                    <span className="text-[11px] font-black text-emerald-300 tabular-nums">{currentStreak}</span>
-                    <span className="text-[7px] text-emerald-400/60 font-bold">streak</span>
-                  </div>
-                  <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-violet-500/15 to-indigo-500/10 border border-violet-500/20">
-                    <Brain className="w-3 h-3 text-violet-400" />
-                    <span className="text-[11px] font-black text-violet-300 tabular-nums">{supplements.length}</span>
-                    <span className="text-[7px] text-violet-400/60 font-bold">supps</span>
-                  </div>
+                <div className="relative">
+                  <button onClick={() => setCoachDropdownOpen(!coachDropdownOpen)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[10px] font-bold text-gray-300 hover:bg-white/[0.06] hover:border-white/[0.1] transition-all duration-200">
+                    {coachMode === 'overview' && <><Activity className="w-3 h-3 text-violet-400" /> Overview</>}
+                    {coachMode === 'optimization' && <><Zap className="w-3 h-3 text-amber-400" /> Optimize</>}
+                    {coachMode === 'planning' && <><DollarSign className="w-3 h-3 text-emerald-400" /> Planning</>}
+                    <ChevronDown className={'w-3 h-3 text-gray-500 transition-transform duration-200 ' + (coachDropdownOpen ? 'rotate-180' : '')} />
+                  </button>
+                  {coachDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setCoachDropdownOpen(false)} />
+                      <div className="absolute right-0 top-full mt-1 z-50 w-40 rounded-xl bg-[#0e0e18] border border-white/[0.08] shadow-2xl shadow-black/60 overflow-hidden">
+                        {([
+                          { key: 'overview' as const, label: 'Overview', icon: Activity, desc: 'Adherence & trends', color: 'text-violet-400' },
+                          { key: 'optimization' as const, label: 'Optimize', icon: Zap, desc: 'Timing & synergy', color: 'text-amber-400' },
+                          { key: 'planning' as const, label: 'Planning', icon: DollarSign, desc: 'Cost & gaps', color: 'text-emerald-400' },
+                        ]).map(m => {
+                          const Icon = m.icon
+                          return (
+                            <button key={m.key} onClick={() => { setCoachMode(m.key); setCoachDropdownOpen(false) }}
+                              className={'w-full flex items-center gap-2 px-3 py-2 text-left transition-all duration-150 ' +
+                                (coachMode === m.key ? 'bg-violet-500/10' : 'hover:bg-white/[0.04]')}>
+                              <Icon className={'w-3.5 h-3.5 ' + m.color} />
+                              <div>
+                                <span className={'text-[10px] font-bold block ' + (coachMode === m.key ? 'text-white' : 'text-gray-300')}>{m.label}</span>
+                                <span className="text-[8px] text-gray-500">{m.desc}</span>
+                              </div>
+                              {coachMode === m.key && <Check className="w-3 h-3 text-violet-400 ml-auto" />}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
