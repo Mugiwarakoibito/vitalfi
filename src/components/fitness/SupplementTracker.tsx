@@ -4,7 +4,7 @@ import {
   Pill, Plus, Check, AlertTriangle, Undo2, Clock,
   Trash2, Sunrise, Sunset, Moon, Sun, Sparkles, Activity,
   DollarSign, Layers, CalendarCheck, Calendar,
-  Brain, ShieldAlert, Zap, Package, Info,
+  Brain, ShieldAlert, Zap, Package,
   CheckCircle2, BarChart3,
   ChevronLeft, ChevronRight, RotateCcw, Flame,
   TrendingUp, ChevronDown,
