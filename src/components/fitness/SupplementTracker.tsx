@@ -381,21 +381,21 @@ export function SupplementTracker() {
                   <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/10 border border-violet-500/20 flex items-center justify-center shadow-lg shadow-violet-500/10">
                     <TrendingUp className="w-5 h-5 text-violet-400" />
                   </div>
-                  <div className="flex items-center gap-1.5 bg-white/[0.04] rounded-xl px-2 py-1 border border-white/[0.08]">
-                    <button onClick={() => setWeekOffset(o => o + 1)} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
-                      <ChevronLeft className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setWeekOffset(o => o + 1)} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
+                      <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <span className="text-[10px] text-gray-400 font-medium px-2 min-w-[110px] text-center select-none">
+                    <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">
                       {weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
                     <button onClick={() => setWeekOffset(o => Math.max(0, o - 1))} disabled={isCurrentWeek}
-                      className={`p-1.5 rounded-lg border transition-all ${isCurrentWeek ? 'bg-white/[0.02] border-white/[0.04] text-gray-600 cursor-not-allowed' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20'}`}>
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      className={`p-1.5 rounded-xl border transition-all ${isCurrentWeek ? 'bg-white/[0.02] border-white/[0.04] text-gray-600 cursor-not-allowed' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20'}`}>
+                      <ChevronRight className="w-4 h-4" />
                     </button>
                     <button onClick={() => setWeekOffset(0)}
-                      className={`p-1.5 rounded-lg border transition-all ${isCurrentWeek ? 'bg-white/[0.02] border-white/[0.04] text-gray-600' : 'bg-violet-500/10 border-violet-500/20 text-violet-400 hover:bg-violet-500/20'}`}
+                      className={`p-1.5 rounded-xl border transition-all ${isCurrentWeek ? 'bg-white/[0.02] border-white/[0.04] text-gray-600' : 'bg-violet-500/10 border-violet-500/20 text-violet-400 hover:bg-violet-500/20'}`}
                       title={isCurrentWeek ? 'Current week' : 'This week'}>
-                      <RotateCcw className="w-3 h-3" />
+                      <RotateCcw className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
