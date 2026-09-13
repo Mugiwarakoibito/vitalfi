@@ -400,14 +400,39 @@ export function SupplementTracker() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2.5">
-                  <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-orange-500/10 to-amber-500/5 border border-orange-500/20 cursor-default">
-                    <Flame className="w-3.5 h-3.5 text-orange-400" />
-                    <span className="text-[11px] font-black text-orange-300 tabular-nums">{bestStreak}d streak</span>
-                  </motion.div>
-                  <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-green-500/5 border border-emerald-500/20 cursor-default">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-[11px] font-black text-emerald-300 tabular-nums">{perfectDays}/7 perfect</span>
-                  </motion.div>
+                  {(() => {
+                    const mostTakenSupp = dailySupps.reduce((best, s) => {
+                      const count = Array.from({ length: 7 }, (_, j) => {
+                        const d = new Date(weekStart); d.setDate(d.getDate() + j)
+                        return logs.some(l => l.supplementId === s.id && l.date === toLocalDate(d))
+                      }).filter(Boolean).length
+                      return count > best.count ? { name: s.name, count } : best
+                    }, { name: '', count: 0 })
+                    const weeklyCost = supplements.reduce((sum, s) => {
+                      const taken = Array.from({ length: 7 }, (_, j) => {
+                        const d = new Date(weekStart); d.setDate(d.getDate() + j)
+                        return logs.some(l => l.supplementId === s.id && l.date === toLocalDate(d))
+                      }).filter(Boolean).length
+                      if (s.cost && s.totalServings && s.totalServings > 0) return sum + (s.cost / s.totalServings) * taken
+                      return sum
+                    }, 0)
+                    return (
+                      <>
+                        <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-500/5 border border-violet-500/20 cursor-default">
+                          <Zap className="w-3.5 h-3.5 text-violet-400" />
+                          <span className="text-[11px] font-black text-violet-300">{mostTakenSupp.name || '—'}</span>
+                          <span className="text-[9px] text-violet-400/60 font-bold">{mostTakenSupp.count}x</span>
+                        </motion.div>
+                        {weeklyCost > 0 && (
+                          <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-green-500/5 border border-emerald-500/20 cursor-default">
+                            <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="text-[11px] font-black text-emerald-300 tabular-nums">${weeklyCost.toFixed(0)}</span>
+                            <span className="text-[9px] text-emerald-400/60 font-bold">this week</span>
+                          </motion.div>
+                        )}
+                      </>
+                    )
+                  })()}
                 </div>
               </div>
 
