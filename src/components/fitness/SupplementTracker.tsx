@@ -400,30 +400,22 @@ export function SupplementTracker() {
                 </div>
                 <div className="flex items-center gap-2.5">
                   {(() => {
-                    const weeklyCost = supplements.reduce((sum, s) => {
-                      const taken = Array.from({ length: 7 }, (_, j) => {
-                        const d = new Date(weekStart); d.setDate(d.getDate() + j)
-                        return logs.some(l => l.supplementId === s.id && l.date === toLocalDate(d))
-                      }).filter(Boolean).length
-                      if (s.cost && s.totalServings && s.totalServings > 0) return sum + (s.cost / s.totalServings) * taken
-                      return sum
-                    }, 0)
                     const totalDoses = weekDays.reduce((s, d) => s + d.taken, 0)
                     const maxPossible = weekDays.reduce((s, d) => s + d.total, 0)
+                    const compliance = maxPossible > 0 ? Math.round((totalDoses / maxPossible) * 100) : 0
+                    const avgPerDay = (totalDoses / 7).toFixed(1)
                     return (
                       <>
                         <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-500/5 border border-violet-500/20 cursor-default">
                           <Target className="w-3.5 h-3.5 text-violet-400" />
-                          <span className="text-[11px] font-black text-violet-300 tabular-nums">{totalDoses}/{maxPossible}</span>
-                          <span className="text-[9px] text-violet-400/60 font-bold">doses</span>
+                          <span className="text-[11px] font-black text-violet-300 tabular-nums">{compliance}%</span>
+                          <span className="text-[9px] text-violet-400/60 font-bold">compliance</span>
                         </motion.div>
-                        {weeklyCost > 0 && (
-                          <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-green-500/5 border border-emerald-500/20 cursor-default">
-                            <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
-                            <span className="text-[11px] font-black text-emerald-300 tabular-nums">${weeklyCost.toFixed(0)}</span>
-                            <span className="text-[9px] text-emerald-400/60 font-bold">this week</span>
-                          </motion.div>
-                        )}
+                        <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/5 border border-cyan-500/20 cursor-default">
+                          <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                          <span className="text-[11px] font-black text-cyan-300 tabular-nums">{avgPerDay}</span>
+                          <span className="text-[9px] text-cyan-400/60 font-bold">avg/day</span>
+                        </motion.div>
                       </>
                     )
                   })()}
