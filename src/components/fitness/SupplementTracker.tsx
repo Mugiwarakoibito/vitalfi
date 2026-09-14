@@ -602,8 +602,11 @@ export function SupplementTracker() {
             else break
           }
 
+          // ─── Deduplicated supplements (by name) ───
+          const uniqueSupps = Array.from(new Map(supplements.map(s => [s.name, s])).values())
+
           // ─── Per-Supplement Adherence (7-day & 30-day) ───
-          const suppAdherence = supplements.map(s => {
+          const suppAdherence = uniqueSupps.map(s => {
             let taken7 = 0, total7 = 0, taken30 = 0, total30 = 0
             for (let i = 0; i < 30; i++) {
               const d = new Date(now); d.setDate(d.getDate() - i)
@@ -708,7 +711,7 @@ export function SupplementTracker() {
           const timingAlignmentPct = realTiming.length > 0 ? Math.round((timingAlignment / realTiming.length) * 100) : 0
 
           // ─── Refill Intelligence ───
-          const refillData = supplements.map(s => {
+          const refillData = uniqueSupps.map(s => {
             if (!s.refillDays || s.refillDays <= 0) return null
             const created = s.createdAt ? new Date(s.createdAt) : null
             const daysSinceCreated = created ? Math.floor((Date.now() - created.getTime()) / 86400000) : 0
@@ -1032,103 +1035,148 @@ export function SupplementTracker() {
                     </div>
                   )}
 
-                  {/* ── Supply Health (Donut + Gauges) ── */}
-                  <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5">
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <Package className="w-2.5 h-2.5 text-rose-400" />
-                      <span className="text-[9px] font-bold text-white uppercase tracking-wider">Supply Health</span>
-                      <div className="flex-1" />
-                      {refillData.length > 0 && (() => {
-                        const urgent = refillData.filter(r => r.urgency === 'critical' || r.urgency === 'warning').length
-                        return urgent > 0 ? <span className="text-[7px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded-full">{urgent} urgent</span> : <span className="text-[7px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">all good</span>
-                      })()}
-                    </div>
-                    {refillData.length > 0 ? (
-                      <div className="flex items-center gap-4">
-                        <div className="relative w-20 h-20 shrink-0">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie data={[
-                                { name: 'Critical', value: refillData.filter(r => r.urgency === 'critical').length, fill: '#ef4444' },
-                                { name: 'Warning', value: refillData.filter(r => r.urgency === 'warning').length, fill: '#f59e0b' },
-                                { name: 'OK', value: refillData.filter(r => r.urgency === 'ok').length, fill: '#10b981' },
-                              ].filter(d => d.value > 0)} cx="50%" cy="50%" innerRadius="52%" outerRadius="82%" paddingAngle={5} dataKey="value" strokeWidth={0} startAngle={90} endAngle={-270}>
-                                {[refillData.filter(r => r.urgency === 'critical').length, refillData.filter(r => r.urgency === 'warning').length, refillData.filter(r => r.urgency === 'ok').length].filter((_, i) => [refillData.filter(r => r.urgency === 'critical').length, refillData.filter(r => r.urgency === 'warning').length, refillData.filter(r => r.urgency === 'ok').length][i] > 0).map((_, i) => (
-                                  <Cell key={i} fill={['#ef4444', '#f59e0b', '#10b981'][i]} fillOpacity={0.8} />
-                                ))}
-                              </Pie>
-                            </PieChart>
-                          </ResponsiveContainer>
-                          <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-base font-black text-white leading-none">{refillData.length}</span>
-                            <span className="text-[6px] text-gray-500 font-bold">tracked</span>
-                          </div>
-                        </div>
-                        <div className="flex-1 grid grid-cols-2 gap-1.5">
-                          {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 4).map((r, i) => {
-                            const color = r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981'
-                            return (
-                              <div key={i} className="bg-white/[0.03] rounded-lg p-1.5 border border-white/[0.04]">
-                                <div className="flex items-center gap-1 mb-1">
-                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
-                                  <span className="text-[7px] text-gray-400 truncate flex-1">{r.name.split(' ')[0]}</span>
-                                </div>
-                                <div className="text-[11px] font-black" style={{ color }}>{r.daysUntilRefill}<span className="text-[7px] text-gray-500 font-bold">d</span></div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-4"><span className="text-[9px] text-gray-600 italic">No refill data tracked</span></div>
-                    )}
-                  </div>
-
-                  {/* ── Adherence Radar (Beautiful) ── */}
+                  {/* ── Supply Health (Radial Gauges + Donut) ── */}
                   <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5 relative overflow-hidden">
-                    <div className="absolute -top-16 -right-16 w-32 h-32 bg-violet-500/[0.04] rounded-full blur-3xl" />
+                    <div className="absolute -bottom-12 -left-12 w-28 h-28 bg-rose-500/[0.03] rounded-full blur-3xl" />
                     <div className="relative">
                       <div className="flex items-center gap-1.5 mb-3">
-                        <TrendingUp className="w-2.5 h-2.5 text-cyan-400" />
+                        <Package className="w-2.5 h-2.5 text-rose-400" />
+                        <span className="text-[9px] font-bold text-white uppercase tracking-wider">Supply Health</span>
+                        <div className="flex-1" />
+                        {refillData.length > 0 && (() => {
+                          const urgent = refillData.filter(r => r.urgency === 'critical').length
+                          const warn = refillData.filter(r => r.urgency === 'warning').length
+                          return urgent > 0 ? <span className="text-[7px] font-bold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full animate-pulse">{urgent} critical</span> :
+                            warn > 0 ? <span className="text-[7px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full">{warn} low</span> :
+                            <span className="text-[7px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">all stocked</span>
+                        })()}
+                      </div>
+                      {refillData.length > 0 ? (
+                        <div className="flex items-center gap-3">
+                          {/* Donut Summary */}
+                          <div className="relative w-[72px] h-[72px] shrink-0">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <defs>
+                                  <linearGradient id="sGradOk" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.9} />
+                                    <stop offset="100%" stopColor="#059669" stopOpacity={0.6} />
+                                  </linearGradient>
+                                  <linearGradient id="sGradWarn" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.9} />
+                                    <stop offset="100%" stopColor="#d97706" stopOpacity={0.6} />
+                                  </linearGradient>
+                                  <linearGradient id="sGradCrit" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0%" stopColor="#ef4444" stopOpacity={0.9} />
+                                    <stop offset="100%" stopColor="#dc2626" stopOpacity={0.6} />
+                                  </linearGradient>
+                                </defs>
+                                <Pie data={[
+                                  { name: 'Critical', value: refillData.filter(r => r.urgency === 'critical').length, fill: 'url(#sGradCrit)' },
+                                  { name: 'Warning', value: refillData.filter(r => r.urgency === 'warning').length, fill: 'url(#sGradWarn)' },
+                                  { name: 'OK', value: refillData.filter(r => r.urgency === 'ok').length, fill: 'url(#sGradOk)' },
+                                ].filter(d => d.value > 0)} cx="50%" cy="50%" innerRadius="55%" outerRadius="85%" paddingAngle={4} dataKey="value" strokeWidth={0} startAngle={90} endAngle={-270}>
+                                  {[
+                                    { count: refillData.filter(r => r.urgency === 'critical').length, fill: 'url(#sGradCrit)' },
+                                    { count: refillData.filter(r => r.urgency === 'warning').length, fill: 'url(#sGradWarn)' },
+                                    { count: refillData.filter(r => r.urgency === 'ok').length, fill: 'url(#sGradOk)' },
+                                  ].filter(d => d.count > 0).map((d, i) => (
+                                    <Cell key={i} fill={d.fill} stroke="none" />
+                                  ))}
+                                </Pie>
+                              </PieChart>
+                            </ResponsiveContainer>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <span className="text-[13px] font-black text-white leading-none">{refillData.length}</span>
+                              <span className="text-[5px] text-gray-500 font-bold uppercase tracking-wider">supps</span>
+                            </div>
+                          </div>
+                          {/* Per-Supplement Gauges */}
+                          <div className="flex-1 grid grid-cols-2 gap-1.5">
+                            {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 4).map((r, i) => {
+                              const color = r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981'
+                              const bg = r.urgency === 'critical' ? 'bg-red-500/[0.06] border-red-500/[0.12]' : r.urgency === 'warning' ? 'bg-amber-500/[0.06] border-amber-500/[0.12]' : 'bg-emerald-500/[0.06] border-emerald-500/[0.12]'
+                              const pct = Math.min(100, Math.max(0, Math.round((r.daysUntilRefill / r.refillDays) * 100)))
+                              const isUrgent = r.urgency === 'critical'
+                              return (
+                                <div key={i} className={`${bg} rounded-xl p-2 border transition-all ${isUrgent ? 'animate-pulse' : ''}`}>
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <span className="text-[7px] text-gray-400 font-bold truncate max-w-[70%]">{r.name.length > 10 ? r.name.slice(0, 10) + '…' : r.name}</span>
+                                    <span className="text-[7px] font-bold" style={{ color }}>{pct}%</span>
+                                  </div>
+                                  {/* Progress Bar */}
+                                  <div className="h-1 rounded-full bg-white/[0.06] mb-1.5 overflow-hidden">
+                                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${color}cc, ${color}80)` }} />
+                                  </div>
+                                  <div className="flex items-baseline gap-0.5">
+                                    <span className="text-[13px] font-black leading-none" style={{ color }}>{r.daysUntilRefill}</span>
+                                    <span className="text-[6px] text-gray-500 font-bold">days left</span>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4"><span className="text-[9px] text-gray-600 italic">No refill data tracked</span></div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ── Adherence Radar (Premium Dual-Layer) ── */}
+                  <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5 relative overflow-hidden">
+                    <div className="absolute -top-20 -right-20 w-40 h-40 bg-violet-500/[0.03] rounded-full blur-[60px]" />
+                    <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-cyan-500/[0.03] rounded-full blur-[50px]" />
+                    <div className="relative">
+                      <div className="flex items-center gap-1.5 mb-3">
+                        <Activity className="w-2.5 h-2.5 text-violet-400" />
                         <span className="text-[9px] font-bold text-white uppercase tracking-wider">Adherence Radar</span>
                         <div className="flex-1" />
                         {suppAdherence.length > 0 && (() => {
                           const avg7 = Math.round(suppAdherence.reduce((s, a) => s + a.rate7, 0) / suppAdherence.length)
                           const avg30 = Math.round(suppAdherence.reduce((s, a) => s + a.rate30, 0) / suppAdherence.length)
+                          const delta = avg7 - avg30
                           return (
                             <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-violet-400" /><span className="text-[7px] text-gray-500">7d: {avg7}%</span></div>
-                              <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-cyan-400" /><span className="text-[7px] text-gray-500">30d: {avg30}%</span></div>
+                              <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-violet-400 shadow-[0_0_4px_rgba(129,140,248,0.5)]" /><span className="text-[7px] text-gray-400 font-bold">7d {avg7}%</span></div>
+                              <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_4px_rgba(34,211,238,0.5)]" /><span className="text-[7px] text-gray-400 font-bold">30d {avg30}%</span></div>
+                              {delta !== 0 && <span className={`text-[7px] font-bold ${delta > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{delta > 0 ? '↑' : '↓'}{Math.abs(delta)}%</span>}
                             </div>
                           )
                         })()}
                       </div>
                       {suppAdherence.length > 0 ? (
-                        <div className="h-48">
+                        <div className="h-52">
                           <ResponsiveContainer width="100%" height="100%">
-                            <RadarChart data={suppAdherence.slice(0, 6).map(s => ({
-                              subject: s.name.length > 8 ? s.name.slice(0, 8) + '…' : s.name,
+                            <RadarChart data={suppAdherence.slice(0, 8).map(s => ({
+                              subject: s.name.length > 10 ? s.name.slice(0, 10) + '…' : s.name,
                               '7-day': s.rate7,
                               '30-day': s.rate30,
                               goal: 80,
                             }))}>
                               <defs>
                                 <linearGradient id="rGrad7" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor="#818cf8" stopOpacity={0.4} />
-                                  <stop offset="100%" stopColor="#6d28d9" stopOpacity={0.05} />
+                                  <stop offset="0%" stopColor="#a78bfa" stopOpacity={0.35} />
+                                  <stop offset="50%" stopColor="#7c3aed" stopOpacity={0.15} />
+                                  <stop offset="100%" stopColor="#4c1d95" stopOpacity={0.02} />
                                 </linearGradient>
                                 <linearGradient id="rGrad30" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.25} />
-                                  <stop offset="100%" stopColor="#0891b2" stopOpacity={0.02} />
+                                  <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.2} />
+                                  <stop offset="50%" stopColor="#0891b2" stopOpacity={0.08} />
+                                  <stop offset="100%" stopColor="#164e63" stopOpacity={0.01} />
                                 </linearGradient>
+                                <filter id="glowV">
+                                  <feGaussianBlur stdDeviation="2" result="blur" />
+                                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                                </filter>
                               </defs>
-                              <PolarGrid stroke="rgba(255,255,255,0.06)" />
+                              <PolarGrid stroke="rgba(255,255,255,0.05)" gridType="polygon" />
                               <PolarAngleAxis dataKey="subject" tick={{ fontSize: 7, fill: '#9ca3af', fontWeight: 600 }} />
                               <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
-                              <Radar name="30-day" dataKey="30-day" stroke="#22d3ee" fill="url(#rGrad30)" strokeWidth={1.5} dot={{ r: 1.5, fill: '#22d3ee' }} strokeOpacity={0.6} />
-                              <Radar name="7-day" dataKey="7-day" stroke="#818cf8" fill="url(#rGrad7)" strokeWidth={2} dot={{ r: 2.5, fill: '#818cf8', stroke: '#818cf8', strokeWidth: 1 }} />
-                              <Radar name="goal" dataKey="goal" stroke="rgba(255,255,255,0.15)" fill="none" strokeWidth={1} strokeDasharray="4 4" dot={false} />
-                              <Tooltip contentStyle={{ background: '#13131f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 9 }} />
+                              <Radar name="30-day" dataKey="30-day" stroke="#22d3ee" fill="url(#rGrad30)" strokeWidth={1.5} dot={{ r: 1.5, fill: '#22d3ee', stroke: '#22d3ee', strokeWidth: 1 }} strokeOpacity={0.5} animationDuration={1200} />
+                              <Radar name="7-day" dataKey="7-day" stroke="#a78bfa" fill="url(#rGrad7)" strokeWidth={2.5} dot={{ r: 2.5, fill: '#a78bfa', stroke: '#c4b5fd', strokeWidth: 1.5 }} strokeOpacity={0.9} filter="url(#glowV)" animationDuration={800} />
+                              <Radar name="goal" dataKey="goal" stroke="rgba(255,255,255,0.12)" fill="none" strokeWidth={1} strokeDasharray="3 3" dot={false} />
+                              <Tooltip contentStyle={{ background: 'rgba(15,15,25,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 9, backdropFilter: 'blur(8px)' }} />
                             </RadarChart>
                           </ResponsiveContainer>
                         </div>
@@ -1151,7 +1199,7 @@ export function SupplementTracker() {
                           </ResponsiveContainer>
                         </div>
                       ) : (
-                        <div className="text-center py-4"><span className="text-[9px] text-gray-600 italic">No trend data yet</span></div>
+                        <div className="text-center py-4"><span className="text-[9px] text-gray-600 italic">No adherence data yet</span></div>
                       )}
                     </div>
                   </div>
