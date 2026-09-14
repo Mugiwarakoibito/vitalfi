@@ -6,7 +6,7 @@ import {
   DollarSign, Layers, CalendarCheck, Calendar,
   Brain, ShieldAlert, Zap, Package,
   CheckCircle2, BarChart3,
-  ChevronLeft, ChevronRight, RotateCcw, Flame, Target,
+  ChevronLeft, ChevronRight, RotateCcw, Flame,
   TrendingUp, ChevronDown,
 } from 'lucide-react'
 import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
@@ -864,219 +864,228 @@ export function SupplementTracker() {
               {coachMode === 'overview' && (() => {
                 const dayLabel = selectedDate === today ? 'Today' :
                   selectedDate === (() => { const d = new Date(); d.setDate(d.getDate() - 1); return toLocalDate(d) })() ? 'Yesterday' :
-                  new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+                  new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 
-                // Deduplicate multi-dose supplements by name
-                const dedupedToday = (() => {
-                  const map = new Map<string, { name: string; id: string; dosage: string; frequency: string; times: string[]; doses: { taken: boolean; time?: string }[] }>()
+                // Deduplicate multi-dose supplements
+                const deduped = (() => {
+                  const map = new Map<string, { name: string; id: string; dosage: string; times: string[]; doses: { taken: boolean; time?: string }[] }>()
                   dailySupps.forEach(s => {
-                    const existing = map.get(s.name)
+                    const ex = map.get(s.name)
                     const log = todayLogs.find(l => l.supplementId === s.id)
                     const taken = takenTodayIds.has(s.id)
-                    const takenAtTime = log?.takenAt ? new Date(log.takenAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : undefined
-                    if (existing) {
-                      existing.doses.push({ taken, time: takenAtTime })
-                    } else {
-                      map.set(s.name, {
-                        name: s.name, id: s.id, dosage: s.dosage, frequency: s.frequency,
-                        times: s.times || [],
-                        doses: [{ taken, time: takenAtTime }]
-                      })
-                    }
+                    const t = log?.takenAt ? new Date(log.takenAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : undefined
+                    if (ex) ex.doses.push({ taken, time: t })
+                    else map.set(s.name, { name: s.name, id: s.id, dosage: s.dosage, times: s.times || [], doses: [{ taken, time: t }] })
                   })
                   return Array.from(map.values())
                 })()
-                const dedupedTaken = dedupedToday.filter(s => s.doses.some(d => d.taken)).length
+                const dedupedTaken = deduped.filter(s => s.doses.every(d => d.taken)).length
+
+                // Group by time of day
+                const timeGroups = (() => {
+                  const groups: Record<string, typeof deduped> = { 'Morning': [], 'Afternoon': [], 'Evening': [], 'Night': [], 'Unscheduled': [] }
+                  deduped.forEach(s => {
+                    const t = s.times[0]
+                    if (t === 'Morning') groups['Morning'].push(s)
+                    else if (t === 'Afternoon') groups['Afternoon'].push(s)
+                    else if (t === 'Evening') groups['Evening'].push(s)
+                    else if (t === 'Night') groups['Night'].push(s)
+                    else groups['Unscheduled'].push(s)
+                  })
+                  return Object.entries(groups).filter(([, v]) => v.length > 0)
+                })()
+
+                // Smart score breakdown
+                const scoreComponents = [
+                  { label: 'Adherence', value: consistencyScore, weight: 35, color: '#a78bfa' },
+                  { label: 'Streak', value: Math.min(longTermStreak / 30 * 100, 100), weight: 25, color: '#fb923c' },
+                  { label: 'Timing', value: timingAlignmentPct, weight: 20, color: '#22d3ee' },
+                  { label: 'Momentum', value: Math.max(0, Math.min(100, trendAvg * 2 + 50)), weight: 20, color: trendAvg > 0 ? '#34d399' : '#f87171' },
+                ]
+
+                // Smart alerts
+                const alerts: { icon: typeof Zap; text: string; color: string; action?: string }[] = []
+                if (criticalRefills.length > 0) alerts.push({ icon: Package, text: `${criticalRefills[0].name} empty in ${criticalRefills[0].daysUntilRefill}d — reorder now`, color: 'rose' })
+                const overdue = deduped.filter(s => s.doses.every(d => !d.taken) && todayProgress > 0)
+                if (overdue.length > 0 && overdue.length <= 2) alerts.push({ icon: AlertTriangle, text: `Missing: ${overdue.map(s => s.name).join(', ')}`, color: 'amber' })
+                if (timingAlignmentPct < 30 && realTiming.length > 0) alerts.push({ icon: Clock, text: `Timing drift detected — ${timingAlignmentPct}% on schedule`, color: 'cyan' })
+                if (longTermStreak >= 7) alerts.push({ icon: Flame, text: `${longTermStreak}d streak — you're in the zone`, color: 'orange' })
+                const dropping = suppTrends.filter(s => s.trend === 'dropping')
+                if (dropping.length > 0) alerts.push({ icon: TrendingUp, text: `${dropping[0].name} dropping ${Math.abs(dropping[0].delta)}% this week`, color: 'violet' })
+                if (todayProgress === todayTotal && todayTotal > 0) alerts.push({ icon: CheckCircle2, text: 'All supplements taken today — excellent consistency', color: 'emerald' })
+
+                // Weekly mini heatmap (4 weeks x 7 days)
+                const heatmap = Array.from({ length: 4 }, (_, wi) =>
+                  Array.from({ length: 7 }, (_, di) => {
+                    const d = new Date(now); d.setDate(d.getDate() - ((3 - wi) * 7 + (6 - di)))
+                    const dateStr = toLocalDate(d)
+                    const dayLogs = logs.filter(l => l.date === dateStr)
+                    const taken = new Set(dayLogs.map(l => l.supplementId)).size
+                    const total = dailySupps.length
+                    return total > 0 ? Math.round((taken / total) * 100) : 0
+                  })
+                )
 
                 return (
-                <div className="flex flex-col gap-3 overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
+                <div className="space-y-2.5 max-h-[480px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.08) transparent' }}>
 
-                  {/* ── Hero Metric Strip ── */}
-                  <div className="grid grid-cols-4 gap-2">
-                    {[
-                      { label: 'Score', value: momentumScore, suffix: '', icon: Target, color: 'violet', bg: 'from-violet-500/10 to-violet-500/5', border: 'border-violet-500/15', textColor: 'text-violet-300' },
-                      { label: 'Streak', value: longTermStreak, suffix: 'd', icon: Flame, color: 'orange', bg: 'from-orange-500/10 to-orange-500/5', border: 'border-orange-500/15', textColor: 'text-orange-300' },
-                      { label: 'Timing', value: timingAlignmentPct, suffix: '%', icon: Clock, color: 'cyan', bg: 'from-cyan-500/10 to-cyan-500/5', border: 'border-cyan-500/15', textColor: 'text-cyan-300' },
-                      { label: 'Trend', value: Math.abs(trendAvg).toFixed(0), suffix: '', icon: TrendingUp, color: trendAvg > 3 ? 'emerald' : trendAvg < -3 ? 'rose' : 'amber', bg: trendAvg > 3 ? 'from-emerald-500/10 to-emerald-500/5' : trendAvg < -3 ? 'from-rose-500/10 to-rose-500/5' : 'from-amber-500/10 to-amber-500/5', border: trendAvg > 3 ? 'border-emerald-500/15' : trendAvg < -3 ? 'border-rose-500/15' : 'border-amber-500/15', textColor: trendAvg > 3 ? 'text-emerald-300' : trendAvg < -3 ? 'text-rose-300' : 'text-amber-300' },
-                    ].map((m, i) => {
-                      const Icon = m.icon
-                      return (
-                        <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }}
-                          className={`rounded-xl bg-gradient-to-b ${m.bg} border ${m.border} p-3 flex flex-col items-center gap-1 relative overflow-hidden`}>
-                          <Icon className={`w-4 h-4 ${m.textColor} opacity-60`} />
-                          <span className={`text-xl font-black ${m.textColor} tabular-nums leading-none`}>{m.value}{m.suffix}</span>
-                          <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">{m.label}</span>
-                        </motion.div>
-                      )
-                    })}
-                  </div>
-
-                  {/* ── Today's Doses ── */}
-                  <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent" />
-                    <div className="flex items-center gap-2 mb-3">
-                      <Calendar className="w-5 h-5 text-emerald-400" />
-                      <span className="text-sm font-bold text-white">{dayLabel}</span>
-                      <div className="flex-1" />
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-black text-white tabular-nums">{dedupedTaken}</span>
-                        <span className="text-xs text-gray-500">/</span>
-                        <span className="text-sm font-black text-gray-400 tabular-nums">{dedupedToday.length}</span>
-                        <span className="text-xs text-gray-500">supps</span>
+                  {/* ── Score Bar ── */}
+                  <div className="rounded-xl bg-[#0c0c14] border border-white/[0.06] p-3 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-violet-500/[0.03] via-transparent to-indigo-500/[0.03]" />
+                    <div className="relative flex items-center gap-3">
+                      <div className="relative w-14 h-14 shrink-0">
+                        <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                          <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2.5" />
+                          <circle cx="18" cy="18" r="15.5" fill="none" stroke="url(#sGrad)" strokeWidth="2.5" strokeLinecap="round"
+                            strokeDasharray={2 * Math.PI * 15.5}
+                            strokeDashoffset={2 * Math.PI * 15.5 * (1 - momentumScore / 100)} />
+                          <defs><linearGradient id="sGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#a78bfa" /><stop offset="100%" stopColor="#6d28d9" /></linearGradient></defs>
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-sm font-black text-white leading-none">{momentumScore}</span>
+                        </div>
+                      </div>
+                      <div className="flex-1 grid grid-cols-4 gap-1.5">
+                        {scoreComponents.map((c, i) => (
+                          <div key={i} className="text-center">
+                            <div className="w-full h-1 rounded-full bg-white/[0.04] overflow-hidden mb-1">
+                              <div className="h-full rounded-full" style={{ width: c.value + '%', background: c.color }} />
+                            </div>
+                            <span className="text-[8px] font-bold text-gray-500 block">{c.label}</span>
+                            <span className="text-[10px] font-black tabular-nums" style={{ color: c.color }}>{Math.round(c.value)}%</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-[10px] text-gray-500 block">{dayLabel}</span>
+                        <span className="text-xs font-black text-white">{dedupedTaken}/{deduped.length}</span>
                       </div>
                     </div>
-                    {/* Progress dots */}
-                    <div className="flex gap-1.5 mb-3">
-                      {dedupedToday.map((s, i) => {
-                        const allTaken = s.doses.every(d => d.taken)
-                        const someTaken = s.doses.some(d => d.taken)
+                  </div>
+
+                  {/* ── Today's Doses — Time-grouped ── */}
+                  {timeGroups.map(([time, supps], gi) => {
+                    const TIME_ICONS_MAP: Record<string, typeof Sun> = { Morning: Sun, Afternoon: Sunrise, Evening: Sunset, Night: Moon }
+                    const TIME_CLR: Record<string, string> = { Morning: 'text-amber-400', Afternoon: 'text-yellow-400', Evening: 'text-orange-400', Night: 'text-blue-400', Unscheduled: 'text-gray-400' }
+                    const Icon = TIME_ICONS_MAP[time] || Clock
+                    const allDone = supps.every(s => s.doses.every(d => d.taken))
+                    const takenCount = supps.filter(s => s.doses.some(d => d.taken)).length
+                    return (
+                      <div key={gi} className="rounded-xl bg-[#0c0c14] border border-white/[0.06] p-3 relative overflow-hidden">
+                        {allDone && <div className="absolute inset-0 bg-emerald-500/[0.02]" />}
+                        <div className="flex items-center gap-2 mb-2">
+                          <Icon className={`w-3.5 h-3.5 ${TIME_CLR[time] || 'text-gray-400'}`} />
+                          <span className="text-[10px] font-bold text-white">{time}</span>
+                          <div className="flex-1" />
+                          <span className="text-[9px] text-gray-500">{takenCount}/{supps.length}</span>
+                          {allDone && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
+                        </div>
+                        <div className="space-y-1">
+                          {supps.map((s, i) => (
+                            <div key={i} className="flex items-center gap-2 py-1">
+                              <div className="flex gap-0.5">
+                                {s.doses.map((d, di) => (
+                                  <div key={di} className={`w-2 h-2 rounded-full transition-all ${d.taken ? 'bg-emerald-400 shadow-[0_0_3px_rgba(16,185,129,0.3)]' : 'border border-gray-600 bg-transparent'}`} />
+                                ))}
+                              </div>
+                              <span className={`text-[11px] font-bold flex-1 ${s.doses.every(d => d.taken) ? 'text-gray-500 line-through' : 'text-white'}`}>{s.name}</span>
+                              <div className="flex items-center gap-1.5">
+                                {s.doses.filter(d => d.taken).map((d, di) => (
+                                  <span key={di} className="text-[9px] font-bold text-emerald-400/60 tabular-nums">{d.time}</span>
+                                ))}
+                                {s.doses.filter(d => !d.taken).length > 0 && s.dosage && (
+                                  <span className="text-[9px] text-gray-600">{s.dosage}</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  {/* ── AI Alerts ── */}
+                  {alerts.length > 0 && (
+                    <div className="space-y-1.5">
+                      {alerts.slice(0, 4).map((a, i) => {
+                        const Icon = a.icon
+                        const clr = a.color === 'rose' ? 'bg-rose-500/[0.06] border-rose-500/15 text-rose-300' :
+                          a.color === 'amber' ? 'bg-amber-500/[0.06] border-amber-500/15 text-amber-300' :
+                          a.color === 'cyan' ? 'bg-cyan-500/[0.06] border-cyan-500/15 text-cyan-300' :
+                          a.color === 'orange' ? 'bg-orange-500/[0.06] border-orange-500/15 text-orange-300' :
+                          a.color === 'emerald' ? 'bg-emerald-500/[0.06] border-emerald-500/15 text-emerald-300' :
+                          'bg-violet-500/[0.06] border-violet-500/15 text-violet-300'
                         return (
-                          <motion.div key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.2, delay: i * 0.04 }}
-                            className={`w-8 h-2 rounded-full transition-all ${
-                              allTaken ? 'bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.3)]' :
-                              someTaken ? 'bg-gradient-to-r from-emerald-400 to-gray-600' :
-                              'bg-white/[0.08]'
-                            }`} />
+                          <motion.div key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${clr} cursor-pointer hover:brightness-125 transition-all`}>
+                            <Icon className="w-3.5 h-3.5 shrink-0" />
+                            <span className="text-[10px] font-bold flex-1">{a.text}</span>
+                          </motion.div>
                         )
                       })}
                     </div>
-                    {/* Supplement cards */}
-                    <div className="space-y-2">
-                      {dedupedToday.map((s, i) => (
-                        <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-all">
-                          {/* Dose indicator dots */}
-                          <div className="flex gap-1">
-                            {s.doses.map((d, di) => (
-                              <div key={di} className={`w-3 h-3 rounded-full border-2 transition-all ${
-                                d.taken
-                                  ? 'bg-emerald-400 border-emerald-400 shadow-[0_0_4px_rgba(16,185,129,0.3)]'
-                                  : 'bg-transparent border-gray-600'
-                              }`} />
-                            ))}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-sm font-bold ${s.doses.every(d => d.taken) ? 'text-emerald-400 line-through opacity-60' : 'text-white'}`}>{s.name}</span>
-                              {s.doses.length > 1 && <span className="text-[9px] font-bold text-gray-500 bg-white/[0.05] px-1.5 py-0.5 rounded">{s.doses.length}x</span>}
-                            </div>
-                            {s.dosage && <span className="text-[10px] text-gray-500">{s.dosage}</span>}
-                          </div>
-                          {/* Taken times */}
-                          <div className="flex flex-col items-end gap-0.5">
-                            {s.doses.filter(d => d.taken).map((d, di) => (
-                              <span key={di} className="text-[10px] font-bold text-emerald-400/70 tabular-nums">{d.time}</span>
-                            ))}
-                            {s.doses.filter(d => !d.taken).map((_d, di) => (
-                              <span key={di} className="text-[10px] text-gray-600 tabular-nums">{s.times?.[di] || '--'}</span>
-                            ))}
-                          </div>
-                        </motion.div>
-                      ))}
-                      {dedupedToday.length === 0 && (
-                        <p className="text-xs text-gray-500 italic text-center py-2">No daily supplements</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* ── Weekly Pulse ── */}
-                  <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/20 to-transparent" />
-                    <div className="flex items-center gap-2 mb-3">
-                      <BarChart3 className="w-5 h-5 text-violet-400" />
-                      <span className="text-sm font-bold text-white">Weekly Pulse</span>
-                      <div className="flex-1" />
-                      <span className="text-xs text-gray-500">{consistencyScore}% adherence</span>
-                    </div>
-                    <div className="flex gap-1.5">
-                      {weekDays.map((d, i) => (
-                        <motion.div key={i} initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ duration: 0.3, delay: i * 0.05 }}
-                          className="flex-1 flex flex-col items-center gap-1.5">
-                          <div className="w-full h-16 rounded-lg bg-white/[0.03] border border-white/[0.05] relative overflow-hidden flex items-end">
-                            <motion.div initial={{ height: 0 }} animate={{ height: d.pct + '%' }} transition={{ duration: 0.6, delay: i * 0.05 }}
-                              className={`w-full rounded-b-md ${
-                                d.pct === 100 ? 'bg-emerald-500/40' : d.pct >= 50 ? 'bg-amber-500/30' : d.pct > 0 ? 'bg-rose-500/30' : 'bg-white/[0.02]'
-                              }`} />
-                          </div>
-                          <span className={`text-[10px] font-bold ${d.isToday ? 'text-violet-400' : 'text-gray-500'}`}>{d.letter}</span>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* ── Supply & Trend Grid ── */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Supply Health mini */}
-                    <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden">
-                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-rose-400/20 to-transparent" />
-                      <div className="flex items-center gap-2 mb-3">
-                        <Package className="w-4 h-4 text-rose-400" />
-                        <span className="text-xs font-bold text-white">Supply</span>
-                      </div>
-                      {refillData.length > 0 ? (
-                        <div className="space-y-2">
-                          {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 3).map((r, i) => (
-                            <div key={i} className="space-y-1">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-gray-300 truncate">{r.name}</span>
-                                <span className={`text-[10px] font-black tabular-nums ${r.urgency === 'critical' ? 'text-rose-400' : r.urgency === 'warning' ? 'text-amber-400' : 'text-gray-500'}`}>
-                                  {r.daysUntilRefill <= 0 ? 'EMPTY' : r.daysUntilRefill + 'd'}
-                                </span>
-                              </div>
-                              <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-                                <motion.div initial={{ width: 0 }} animate={{ width: Math.max(100 - r.pctUsed, 5) + '%' }} transition={{ duration: 0.6, delay: i * 0.1 }}
-                                  className={`h-full rounded-full ${r.urgency === 'critical' ? 'bg-rose-500' : r.urgency === 'warning' ? 'bg-amber-500' : 'bg-emerald-500/50'}`} />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-[10px] text-gray-500 italic">No refill data</p>
-                      )}
-                    </div>
-
-                    {/* Trend mini */}
-                    <div className="rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-4 relative overflow-hidden">
-                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent" />
-                      <div className="flex items-center gap-2 mb-3">
-                        <TrendingUp className="w-4 h-4 text-cyan-400" />
-                        <span className="text-xs font-bold text-white">Trending</span>
-                      </div>
-                      {suppTrends.length > 0 ? (
-                        <div className="space-y-2">
-                          {suppTrends.slice(0, 3).map((s, i) => (
-                            <div key={i} className="flex items-center gap-2">
-                              <div className={`w-1.5 h-6 rounded-full ${s.delta > 0 ? 'bg-emerald-400' : s.delta < 0 ? 'bg-rose-400' : 'bg-gray-500'}`} />
-                              <div className="flex-1 min-w-0">
-                                <span className="text-[10px] font-bold text-gray-300 block truncate">{s.name}</span>
-                              </div>
-                              <span className={`text-[10px] font-black tabular-nums ${s.delta > 0 ? 'text-emerald-400' : s.delta < 0 ? 'text-rose-400' : 'text-gray-500'}`}>
-                                {s.delta > 0 ? '+' : ''}{s.delta}%
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-[10px] text-gray-500 italic">No trends yet</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* ── Actionable Insights ── */}
-                  {insights.length > 0 && (
-                    <div className="space-y-2">
-                      {insights.map((insight, i) => (
-                        <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, delay: i * 0.06 }}
-                          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-violet-500/[0.04] border border-violet-500/10 hover:bg-violet-500/[0.08] transition-colors">
-                          <Zap className="w-4 h-4 text-violet-400 shrink-0" />
-                          <span className="text-xs text-gray-300">{insight}</span>
-                        </motion.div>
-                      ))}
-                    </div>
                   )}
+
+                  {/* ── Pattern Heatmap ── */}
+                  <div className="rounded-xl bg-[#0c0c14] border border-white/[0.06] p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Layers className="w-3.5 h-3.5 text-violet-400" />
+                      <span className="text-[10px] font-bold text-white">4-Week Pattern</span>
+                      <div className="flex-1" />
+                      <span className="text-[9px] text-gray-500">{consistencyScore}% avg</span>
+                    </div>
+                    <div className="grid gap-[3px]" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
+                      {heatmap.flat().map((pct, i) => (
+                        <motion.div key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.15, delay: i * 0.008 }}
+                          className={`aspect-square rounded-[3px] ${
+                            pct === 100 ? 'bg-emerald-400/50' : pct >= 70 ? 'bg-emerald-400/25' : pct >= 40 ? 'bg-amber-400/30' : pct > 0 ? 'bg-rose-400/30' : 'bg-white/[0.03]'
+                          }`} title={`${pct}%`} />
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-3 mt-2 pt-2 border-t border-white/[0.03]">
+                      <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-[2px] bg-emerald-400/50" /><span className="text-[8px] text-gray-500">100%</span></div>
+                      <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-[2px] bg-emerald-400/25" /><span className="text-[8px] text-gray-500">70%+</span></div>
+                      <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-[2px] bg-amber-400/30" /><span className="text-[8px] text-gray-500">40%+</span></div>
+                      <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-[2px] bg-rose-400/30" /><span className="text-[8px] text-gray-500">&lt;40%</span></div>
+                    </div>
+                  </div>
+
+                  {/* ── Supply & Trend Row ── */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Supply */}
+                    <div className="rounded-xl bg-[#0c0c14] border border-white/[0.06] p-3">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Package className="w-3 h-3 text-rose-400" />
+                        <span className="text-[10px] font-bold text-white">Supply</span>
+                      </div>
+                      {refillData.length > 0 ? refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 3).map((r, i) => (
+                        <div key={i} className="flex items-center gap-1.5 mb-1.5 last:mb-0">
+                          <div className={`w-1.5 h-1.5 rounded-full ${r.urgency === 'critical' ? 'bg-rose-400 animate-pulse' : r.urgency === 'warning' ? 'bg-amber-400' : 'bg-emerald-400/50'}`} />
+                          <span className="text-[9px] text-gray-400 flex-1 truncate">{r.name}</span>
+                          <span className={`text-[9px] font-bold tabular-nums ${r.urgency === 'critical' ? 'text-rose-400' : r.urgency === 'warning' ? 'text-amber-400' : 'text-gray-500'}`}>{r.daysUntilRefill}d</span>
+                        </div>
+                      )) : <span className="text-[9px] text-gray-500 italic">No data</span>}
+                    </div>
+                    {/* Trend */}
+                    <div className="rounded-xl bg-[#0c0c14] border border-white/[0.06] p-3">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <TrendingUp className="w-3 h-3 text-cyan-400" />
+                        <span className="text-[10px] font-bold text-white">Trend</span>
+                      </div>
+                      {suppTrends.length > 0 ? suppTrends.slice(0, 3).map((s, i) => (
+                        <div key={i} className="flex items-center gap-1.5 mb-1.5 last:mb-0">
+                          <div className={`w-1.5 h-4 rounded-full ${s.delta > 0 ? 'bg-emerald-400/50' : s.delta < 0 ? 'bg-rose-400/50' : 'bg-gray-500/30'}`} />
+                          <span className="text-[9px] text-gray-400 flex-1 truncate">{s.name}</span>
+                          <span className={`text-[9px] font-bold tabular-nums ${s.delta > 0 ? 'text-emerald-400' : s.delta < 0 ? 'text-rose-400' : 'text-gray-500'}`}>{s.delta > 0 ? '+' : ''}{s.delta}%</span>
+                        </div>
+                      )) : <span className="text-[9px] text-gray-500 italic">No data</span>}
+                    </div>
+                  </div>
+
                 </div>
                 )
               })()}
+
 
 
 
