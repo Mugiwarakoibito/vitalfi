@@ -5,11 +5,11 @@ import {
   Trash2, Sunrise, Sunset, Moon, Sun, Sparkles, Activity,
   DollarSign, Layers, CalendarCheck, Calendar,
   Brain, ShieldAlert, Zap, Package,
-  CheckCircle2, BarChart3, ListChecks, Target,
+  CheckCircle2, BarChart3, Target,
   ChevronLeft, ChevronRight, RotateCcw, Flame,
   TrendingUp, ChevronDown,
 } from 'lucide-react'
-import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, PieChart, Pie } from 'recharts'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { generateId, cn } from '@/lib/utils'
@@ -914,55 +914,58 @@ export function SupplementTracker() {
                 // ── Score stats ──
                 const complianceRate = deduped.length > 0 ? Math.round((dedupedDone / deduped.length) * 100) : 0
 
-                // ── AI Insights: top 3 only ──
+                // ── AI Insights: top 3 perfect insights ──
                 const insights: { icon: typeof Zap; title: string; detail: string; color: string }[] = []
 
-                // Priority 1: Current time window action
+                // 1. Current time window — most actionable
                 const currentSlotMissing = deduped.filter(s => s.times[0] === currentTod && !s.doses.every(d => d.taken))
                 if (currentSlotMissing.length > 0) {
-                  insights.push({ icon: Clock, title: `${currentTod} window active`, detail: `Take ${currentSlotMissing.map(s => s.name).join(', ')} — optimal absorption now`, color: 'cyan' })
+                  const names = currentSlotMissing.map(s => s.name).join(', ')
+                  insights.push({ icon: Clock, title: `${currentTod} window active — take ${names}`, detail: `${currentSlotMissing.length} supplement${currentSlotMissing.length > 1 ? 's' : ''} due now for optimal absorption`, color: 'cyan' })
                 }
 
-                // Priority 2: Urgent refill
-                const urgentRefills = refillData.filter(r => r.urgency === 'critical' || r.urgency === 'warning').sort((a, b) => a.daysUntilRefill - b.daysUntilRefill)
-                if (urgentRefills.length > 0 && insights.length < 3) {
-                  const r = urgentRefills[0]
-                  insights.push({ icon: Package, title: `${r.name} — ${r.daysUntilRefill}d left`, detail: r.urgency === 'critical' ? 'Critical: reorder now' : `Reorder within ${r.daysUntilRefill} days`, color: r.urgency === 'critical' ? 'rose' : 'amber' })
+                // 2. Streak — most motivating
+                if (insights.length < 3 && longTermStreak >= 3) {
+                  const pct = Math.round((longTermStreak / 30) * 100)
+                  insights.push({ icon: Flame, title: `${longTermStreak}-day streak — ${pct}% to elite`, detail: longTermStreak >= 30 ? 'Top 1% of users — elite discipline' : longTermStreak >= 14 ? 'Two weeks strong — habit locked in' : longTermStreak >= 7 ? 'One week — past the hardest part' : `${30 - longTermStreak} more days to form a permanent habit`, color: 'orange' })
                 }
 
-                // Priority 3: Streak milestone or decline
+                // 3. Refill — most urgent
                 if (insights.length < 3) {
-                  if (longTermStreak >= 7) {
-                    insights.push({ icon: Flame, title: `${longTermStreak}-day streak`, detail: longTermStreak >= 30 ? 'Elite — top 1% of users' : longTermStreak >= 14 ? 'Two weeks strong' : 'Building momentum', color: 'orange' })
-                  } else if (trendDiffs.length > 0) {
-                    const avgDiff = trendDiffs.reduce((a, b) => a + b, 0) / trendDiffs.length
-                    if (avgDiff < -10) insights.push({ icon: TrendingUp, title: 'Adherence declining', detail: `${Math.abs(avgDiff).toFixed(0)}% weekly drop — simplify your stack`, color: 'violet' })
+                  const urgent = refillData.filter(r => r.urgency === 'critical' || r.urgency === 'warning').sort((a, b) => a.daysUntilRefill - b.daysUntilRefill)
+                  if (urgent.length > 0) {
+                    const r = urgent[0]
+                    const action = r.urgency === 'critical' ? 'Reorder TODAY — will run out' : `Reorder within ${r.daysUntilRefill} days to avoid gap`
+                    insights.push({ icon: Package, title: `${r.name} — ${r.daysUntilRefill} days supply left`, detail: action, color: r.urgency === 'critical' ? 'rose' : 'amber' })
                   }
                 }
 
-                // Priority 4: Perfect day or worst supp (if slots open)
+                // 4. Compliance — most informative (if slots open)
                 if (insights.length < 3) {
                   if (dedupedDone === deduped.length && deduped.length > 0) {
-                    insights.push({ icon: CheckCircle2, title: 'Perfect compliance', detail: `All ${deduped.length} supplements logged today`, color: 'emerald' })
-                  } else {
-                    const worst = suppAdherence.sort((a, b) => a.rate7 - b.rate7)[0]
-                    if (worst && worst.rate7 < 70 && worst.rate7 > 0) {
-                      insights.push({ icon: Brain, title: `${worst.name} needs attention`, detail: `7-day: ${worst.rate7}% — link to an existing habit`, color: 'violet' })
-                    }
+                    insights.push({ icon: CheckCircle2, title: '100% compliance today', detail: `All ${deduped.length} supplements logged — consistency compounds`, color: 'emerald' })
+                  } else if (dedupedDone > 0) {
+                    const pct = Math.round((dedupedDone / deduped.length) * 100)
+                    const remaining = deduped.length - dedupedDone
+                    insights.push({ icon: Activity, title: `${pct}% done — ${remaining} remaining`, detail: remaining === 1 ? `1 supplement left to complete today` : `${remaining} supplements left to complete today`, color: pct >= 50 ? 'cyan' : 'amber' })
                   }
                 }
 
-                // Weekly heatmap
-                const heatmap = Array.from({ length: 4 }, (_, wi) =>
-                  Array.from({ length: 7 }, (_, di) => {
-                    const d = new Date(now); d.setDate(d.getDate() - ((3 - wi) * 7 + (6 - di)))
-                    const dateStr = toLocalDate(d)
-                    const dayLogs = logs.filter(l => l.date === dateStr)
-                    const taken = new Set(dayLogs.map(l => l.supplementId)).size
-                    const total = dailySupps.length
-                    return total > 0 ? Math.round((taken / total) * 100) : 0
-                  })
-                )
+                // 5. Trend — most strategic (if slots open)
+                if (insights.length < 3 && trendDiffs.length > 0) {
+                  const avgDiff = trendDiffs.reduce((a, b) => a + b, 0) / trendDiffs.length
+                  if (avgDiff > 5) insights.push({ icon: TrendingUp, title: `Adherence rising +${avgDiff.toFixed(0)}%/week`, detail: 'Momentum building — you\'re on the right track', color: 'emerald' })
+                  else if (avgDiff < -5) insights.push({ icon: TrendingUp, title: `Adherence declining ${avgDiff.toFixed(0)}%/week`, detail: 'Consider simplifying your stack or setting alarms', color: 'violet' })
+                }
+
+                // 6. Worst supplement — most targeted (if slots open)
+                if (insights.length < 3) {
+                  const sorted = [...suppAdherence].sort((a, b) => a.rate7 - b.rate7)
+                  const worst = sorted[0]
+                  if (worst && worst.rate7 < 70 && worst.rate7 > 0) {
+                    insights.push({ icon: Brain, title: `${worst.name} at ${worst.rate7}% this week`, detail: 'Link it to a daily habit like breakfast or bedtime', color: 'violet' })
+                  }
+                }
 
                 // Score components — useful stats
                 const scoreStats = [
@@ -1000,44 +1003,37 @@ export function SupplementTracker() {
                     </div>
                   </div>
 
-                  {/* ── Quick-Log Panel ── */}
-                  <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] overflow-hidden">
-                    <div className="px-3.5 py-2 flex items-center gap-1.5 border-b border-white/[0.04]">
-                      <ListChecks className="w-3 h-3 text-emerald-400" />
-                      <span className="text-[9px] font-bold text-emerald-300 uppercase tracking-wider">Quick Log</span>
-                      <div className="flex-1" />
-                      <span className="text-[9px] font-bold text-white">{dedupedDone}/{deduped.length}</span>
+                  {/* ── Weekly Progress ── */}
+                  {(() => {
+                    const weekData = weeklyTrend.map((w) => ({
+                      name: w.label.replace(' ', '\n'),
+                      pct: w.pct,
+                      fill: w.pct >= 90 ? '#10b981' : w.pct >= 60 ? '#a78bfa' : w.pct >= 30 ? '#f59e0b' : '#ef4444',
+                    }))
+                    return (
+                    <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <BarChart3 className="w-3 h-3 text-violet-400" />
+                        <span className="text-[9px] font-bold text-violet-300 uppercase tracking-wider">Weekly Progress</span>
+                        <div className="flex-1" />
+                        <span className="text-[8px] text-gray-500">{consistencyScore}% avg</span>
+                      </div>
+                      <div className="h-16">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={weekData} barCategoryGap="20%">
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                            <XAxis dataKey="name" tick={{ fontSize: 7, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                            <YAxis domain={[0, 100]} tick={false} axisLine={false} tickLine={false} width={0} />
+                            <Tooltip cursor={false} contentStyle={{ background: '#13131f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 9 }} labelStyle={{ color: '#9ca3af' }} formatter={(v: number) => [`${v}%`, 'Compliance']} />
+                            <Bar dataKey="pct" radius={[3, 3, 0, 0]}>
+                              {weekData.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.7} />)}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
-                    <div className="divide-y divide-white/[0.03]">
-                      {suppQuickData.map((s, i) => (
-                        <motion.div key={i} initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
-                          className="flex items-center gap-2.5 px-3.5 py-2 hover:bg-white/[0.02] transition-colors">
-                          <button onClick={() => { if (!s.done) { const sup = supplements.find(x => x.id === s.id); if (sup) markAsTaken(sup) } else { undoTakeById(s.id) } }}
-                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                              s.done ? 'bg-emerald-400/20 border-emerald-400/60' : 'border-gray-600/50 hover:border-violet-400/50'
-                            }`}>
-                            {s.done && <Check className="w-2.5 h-2.5 text-emerald-400" />}
-                          </button>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className={`text-[10px] font-bold ${s.done ? 'text-gray-500 line-through decoration-gray-600' : 'text-white'}`}>{s.name}</span>
-                              {s.streak >= 3 && (
-                                <span className="flex items-center gap-px text-[8px] text-orange-400">
-                                  <Flame className="w-2 h-2" />{s.streak}
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[8px] text-gray-600">{s.dosage} · {s.times[0] || 'Anytime'}</span>
-                          </div>
-                          {s.lastTaken ? (
-                            <span className="text-[8px] font-bold text-emerald-400/50 tabular-nums">{s.lastTaken}</span>
-                          ) : (
-                            <span className="text-[8px] text-gray-600">—</span>
-                          )}
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
+                    )
+                  })()}
 
                   {/* ── AI Insights ── */}
                   {insights.length > 0 && (
@@ -1074,100 +1070,109 @@ export function SupplementTracker() {
                     </div>
                   )}
 
-                  {/* ── 4-Week Heatmap ── */}
-                  <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5">
-                    <div className="flex items-center gap-2 mb-2.5">
-                      <Layers className="w-3 h-3 text-violet-400" />
-                      <span className="text-[10px] font-bold text-white">Pattern</span>
-                      <div className="flex-1" />
-                      <span className="text-[8px] text-gray-500">{consistencyScore}% avg</span>
-                    </div>
-                    <div className="flex gap-0.5 mb-1">
-                      {['M','T','W','T','F','S','S'].map((d, i) => (
-                        <div key={i} className="flex-1 text-center"><span className="text-[7px] text-gray-600 font-bold">{d}</span></div>
-                      ))}
-                    </div>
-                    <div className="space-y-0.5">
-                      {heatmap.map((week, wi) => (
-                        <div key={wi} className="flex gap-0.5">
-                          {week.map((pct, di) => (
-                            <div key={di} className={`flex-1 h-3 rounded-[2px] transition-all hover:scale-125 hover:z-10 ${
-                              pct === 100 ? 'bg-emerald-400/45' : pct >= 70 ? 'bg-emerald-400/20' : pct >= 40 ? 'bg-amber-400/25' : pct > 0 ? 'bg-rose-400/25' : 'bg-white/[0.03]'
-                            }`} title={`${pct}%`} />
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/[0.03]">
-                      <div className="flex items-center gap-0.5"><div className="w-2 h-2 rounded-[1px] bg-emerald-400/45" /><span className="text-[7px] text-gray-500">100</span></div>
-                      <div className="flex items-center gap-0.5"><div className="w-2 h-2 rounded-[1px] bg-emerald-400/20" /><span className="text-[7px] text-gray-500">70+</span></div>
-                      <div className="flex items-center gap-0.5"><div className="w-2 h-2 rounded-[1px] bg-amber-400/25" /><span className="text-[7px] text-gray-500">40+</span></div>
-                      <div className="flex items-center gap-0.5"><div className="w-2 h-2 rounded-[1px] bg-rose-400/25" /><span className="text-[7px] text-gray-500">&lt;40</span></div>
-                    </div>
-                  </div>
-
-                  {/* ── Supply & Trend Radial Gauges ── */}
+                  {/* ── Supply Health ── */}
                   {(() => {
-                    const criticalCount = refillData.filter(r => r.urgency === 'critical').length
-                    const warningCount = refillData.filter(r => r.urgency === 'warning').length
-                    const okCount = refillData.filter(r => r.urgency === 'ok').length
+                    const criticalRefills = refillData.filter(r => r.urgency === 'critical').sort((a, b) => a.daysUntilRefill - b.daysUntilRefill)
+                    const warningRefills = refillData.filter(r => r.urgency === 'warning').sort((a, b) => a.daysUntilRefill - b.daysUntilRefill)
+                    const okRefills = refillData.filter(r => r.urgency === 'ok')
                     const supplyTotal = refillData.length
-                    const supplyHealthPct = supplyTotal > 0 ? Math.round((okCount / supplyTotal) * 100) : 0
-                    const risingCount = suppTrends.filter(s => s.trend === 'rising').length
-                    const stableCount = suppTrends.filter(s => s.trend === 'stable').length
-                    const droppingCount = suppTrends.filter(s => s.trend === 'dropping').length
-                    const trendTotal = suppTrends.length
-                    const trendGoodPct = trendTotal > 0 ? Math.round(((risingCount + stableCount) / trendTotal) * 100) : 0
+                    const supplyHealthPct = supplyTotal > 0 ? Math.round((okRefills.length / supplyTotal) * 100) : 0
                     const supplyColor = supplyHealthPct >= 70 ? '#10b981' : supplyHealthPct >= 40 ? '#f59e0b' : '#ef4444'
-                    const trendColor = trendGoodPct >= 70 ? '#10b981' : trendGoodPct >= 40 ? '#f59e0b' : '#ef4444'
+                    const avgDaysLeft = supplyTotal > 0 ? Math.round(refillData.reduce((s, r) => s + r.daysUntilRefill, 0) / supplyTotal) : 0
                     return (
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5 flex items-center gap-3">
-                        <div className="relative w-14 h-14 shrink-0">
+                    <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="relative w-10 h-10 shrink-0">
                           <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                             <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
-                            <circle cx="18" cy="18" r="14" fill="none" stroke={supplyColor} strokeWidth="3" strokeLinecap="round" strokeOpacity={0.7}
+                            <circle cx="18" cy="18" r="14" fill="none" stroke={supplyColor} strokeWidth="3" strokeLinecap="round" strokeOpacity={0.8}
                               strokeDasharray={2 * Math.PI * 14} strokeDashoffset={2 * Math.PI * 14 * (1 - supplyHealthPct / 100)} />
                           </svg>
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-[10px] font-black text-white">{supplyHealthPct}%</span>
+                            <span className="text-[9px] font-black text-white">{supplyHealthPct}%</span>
                           </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1 mb-1.5">
-                            <Package className="w-2.5 h-2.5" style={{ color: supplyColor }} />
-                            <span className="text-[9px] font-bold text-white">Supply</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-1">
+                            <Package className="w-2.5 h-2.5 text-rose-400" />
+                            <span className="text-[10px] font-bold text-white">Supply Health</span>
                           </div>
-                          <div className="space-y-0.5">
-                            {criticalCount > 0 && <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" /><span className="text-[7px] text-rose-400">{criticalCount} critical</span></div>}
-                            {warningCount > 0 && <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-amber-400" /><span className="text-[7px] text-amber-400">{warningCount} low</span></div>}
-                            {okCount > 0 && <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span className="text-[7px] text-emerald-400">{okCount} ok</span></div>}
-                          </div>
+                          <span className="text-[8px] text-gray-500">{supplyTotal} tracked · avg {avgDaysLeft}d left</span>
                         </div>
+                        {criticalRefills.length > 0 && (
+                          <span className="text-[8px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded-full animate-pulse">{criticalRefills.length} urgent</span>
+                        )}
                       </div>
-                      <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5 flex items-center gap-3">
-                        <div className="relative w-14 h-14 shrink-0">
+                      {supplyTotal > 0 ? (
+                        <div className="space-y-1.5">
+                          {[...criticalRefills, ...warningRefills, ...okRefills].slice(0, 5).map((r, i) => {
+                            const barPct = Math.min(100, Math.round((r.daysUntilRefill / r.refillDays) * 100))
+                            const barColor = r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981'
+                            return (
+                              <div key={i} className="flex items-center gap-2">
+                                <span className="text-[8px] text-gray-400 w-16 truncate">{r.name.split(' ')[0]}</span>
+                                <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                                  <div className="h-full rounded-full transition-all" style={{ width: barPct + '%', background: barColor, opacity: 0.7 }} />
+                                </div>
+                                <span className={`text-[8px] font-bold tabular-nums w-6 text-right ${r.urgency === 'critical' ? 'text-rose-400' : r.urgency === 'warning' ? 'text-amber-400' : 'text-gray-500'}`}>{r.daysUntilRefill}d</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : <span className="text-[8px] text-gray-600 italic block text-center py-1">No refill data</span>}
+                    </div>
+                    )
+                  })()}
+
+                  {/* ── Supplement Trends ── */}
+                  {(() => {
+                    const rising = suppTrends.filter(s => s.trend === 'rising').sort((a, b) => b.delta - a.delta)
+                    const stable = suppTrends.filter(s => s.trend === 'stable')
+                    const dropping = suppTrends.filter(s => s.trend === 'dropping').sort((a, b) => a.delta - b.delta)
+                    const trendTotal = suppTrends.length
+                    const trendGoodPct = trendTotal > 0 ? Math.round(((rising.length + stable.length) / trendTotal) * 100) : 0
+                    const trendColor = trendGoodPct >= 70 ? '#10b981' : trendGoodPct >= 40 ? '#f59e0b' : '#ef4444'
+                    return (
+                    <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="relative w-10 h-10 shrink-0">
                           <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                             <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
-                            <circle cx="18" cy="18" r="14" fill="none" stroke={trendColor} strokeWidth="3" strokeLinecap="round" strokeOpacity={0.7}
+                            <circle cx="18" cy="18" r="14" fill="none" stroke={trendColor} strokeWidth="3" strokeLinecap="round" strokeOpacity={0.8}
                               strokeDasharray={2 * Math.PI * 14} strokeDashoffset={2 * Math.PI * 14 * (1 - trendGoodPct / 100)} />
                           </svg>
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-[10px] font-black text-white">{trendGoodPct}%</span>
+                            <span className="text-[9px] font-black text-white">{trendGoodPct}%</span>
                           </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1 mb-1.5">
-                            <TrendingUp className="w-2.5 h-2.5" style={{ color: trendColor }} />
-                            <span className="text-[9px] font-bold text-white">Trend</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-1">
+                            <TrendingUp className="w-2.5 h-2.5 text-cyan-400" />
+                            <span className="text-[10px] font-bold text-white">Supplement Trends</span>
                           </div>
-                          <div className="space-y-0.5">
-                            {risingCount > 0 && <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span className="text-[7px] text-emerald-400">{risingCount} rising</span></div>}
-                            {stableCount > 0 && <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-gray-400" /><span className="text-[7px] text-gray-400">{stableCount} stable</span></div>}
-                            {droppingCount > 0 && <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-rose-400" /><span className="text-[7px] text-rose-400">{droppingCount} dropping</span></div>}
-                          </div>
+                          <span className="text-[8px] text-gray-500">{trendTotal} tracked · 30-day analysis</span>
                         </div>
                       </div>
+                      {trendTotal > 0 ? (
+                        <div className="space-y-1.5">
+                          {[...rising, ...stable, ...dropping].slice(0, 5).map((s, i) => {
+                            const arrow = s.trend === 'rising' ? '↑' : s.trend === 'dropping' ? '↓' : '→'
+                            const color = s.trend === 'rising' ? 'text-emerald-400' : s.trend === 'dropping' ? 'text-rose-400' : 'text-gray-400'
+                            const barPct = Math.min(100, Math.abs(s.delta) + 50)
+                            const barColor = s.trend === 'rising' ? '#10b981' : s.trend === 'dropping' ? '#ef4444' : '#6b7280'
+                            return (
+                              <div key={i} className="flex items-center gap-2">
+                                <span className={`text-[9px] ${color}`}>{arrow}</span>
+                                <span className="text-[8px] text-gray-400 w-14 truncate">{s.name.split(' ')[0]}</span>
+                                <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                                  <div className="h-full rounded-full transition-all" style={{ width: barPct + '%', background: barColor, opacity: 0.6 }} />
+                                </div>
+                                <span className={`text-[8px] font-bold tabular-nums w-8 text-right ${color}`}>{s.delta > 0 ? '+' : ''}{s.delta}%</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : <span className="text-[8px] text-gray-600 italic block text-center py-1">No trend data</span>}
                     </div>
                     )
                   })()}
