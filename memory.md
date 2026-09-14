@@ -263,3 +263,35 @@
 
 ### Next steps
 - Deploy to Vercel and verify charts render on live site
+
+---
+
+## Session: SupplementTracker AI Coach — Overview v7
+
+### What was done
+- **AI Coach completely rebuilt** with 3 dropdown-selectable modes (Overview / Optimize / Planning)
+- **Overview v7 final iteration:**
+  - Score strip: large animated ring + 4 **full-name** micro progress bars (Adherence, Streak, Timing, Momentum) — no more abbreviated labels
+  - Time-grouped schedule with **window info** (Morning 6am-12pm, Afternoon 12pm-5pm, Evening 5pm-9pm, Night 9pm-12am) + "Anytime" replacing "Flexible"
+  - **AI Insights engine** — 8 contextual analysis types: completion status, current time window suggestions, refill prediction with urgency, adherence trajectory, streak milestones, worst/best supplement, timing drift detection
+  - 4-week heatmap with M-T-W-T-F-S-S labels
+  - **Removed Streak from bottom stats** — replaced with 2-column layout: Supply donut + Trend donut
+  - **Supply & Trend as Recharts donut charts** (PieChart with innerRadius) showing ALL tracked supplements: Critical/Warning/OK for supply, Rising/Stable/Dropping for trend, with legend
+- **Optimization mode**: Real timing from `takenAt` timestamps, 4-column timeline, pie chart, synergy map
+- **Planning mode**: Refill countdown, cost pie chart, gap analysis, action items
+- All builds pass clean (`npx tsc --noEmit` — zero errors)
+- Deployed to `https://vitalfi.vercel.app`
+
+### Key decisions
+- File corruption pattern: the `edit` tool can corrupt SupplementTracker.tsx on complex replacements — **use targeted edit calls** (one section at a time) instead of large splices
+- Recharts imports: `PieChart, Pie, Cell, ResponsiveContainer` needed for donut charts
+- `toLocalDate` function at module level replaces UTC date comparisons
+- `realTiming[].isAligned`, `realTiming[].actualCategory`, `realTiming[].plannedCategory` exist from Optimize mode scope
+- `suppAdherence[].rate7` exists for per-supplement 7-day adherence rate
+
+### Files modified
+- `src/components/fitness/SupplementTracker.tsx` — AI Coach IIFE completely rebuilt (~2025 lines total)
+
+### Deployed to
+- **GitHub:** https://github.com/Mugiwarakoibito/vitalfi (commits through `6b8c090`)
+- **Vercel:** https://vitalfi.vercel.app

@@ -5,7 +5,7 @@ import {
   Trash2, Sunrise, Sunset, Moon, Sun, Sparkles, Activity,
   DollarSign, Layers, CalendarCheck, Calendar,
   Brain, ShieldAlert, Zap, Package,
-  CheckCircle2, BarChart3,
+  CheckCircle2, BarChart3, ListChecks, Target,
   ChevronLeft, ChevronRight, RotateCcw, Flame,
   TrendingUp, ChevronDown,
 } from 'lucide-react'
@@ -700,7 +700,6 @@ export function SupplementTracker() {
 
           // ─── Trend Average ───
           const trendDiffs = weeklyTrend.map((w, i) => i > 0 ? w.pct - weeklyTrend[i-1].pct : 0).slice(1)
-          const trendAvg = trendDiffs.length > 0 ? trendDiffs.reduce((a, b) => a + b, 0) / trendDiffs.length : 0
 
           // ─── takenAt: Real Timing Analysis ───
           const realTiming = supplements.map(s => {
@@ -754,14 +753,6 @@ export function SupplementTracker() {
 
           // ─── Long-term Streak (365d) ───
           const longTermStreak = suppStreak
-
-          // ─── Momentum Score (composite) ───
-          const momentumScore = Math.round(
-            (consistencyScore * 0.35) +
-            (Math.min(longTermStreak, 30) / 30 * 100 * 0.25) +
-            (timingAlignmentPct * 0.2) +
-            (Math.max(0, trendAvg + 50) * 0.2)
-          )
 
           // ─── Weak Days (cross-week pattern) ───
           const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -862,9 +853,6 @@ export function SupplementTracker() {
               </div>
               {/* ──── MODE: OVERVIEW ──── */}
               {coachMode === 'overview' && (() => {
-                const dayLabel = selectedDate === today ? 'Today' :
-                  selectedDate === (() => { const d = new Date(); d.setDate(d.getDate() - 1); return toLocalDate(d) })() ? 'Yesterday' :
-                  new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 
                 // ── Dedup multi-dose ──
                 const deduped = (() => {
@@ -881,77 +869,86 @@ export function SupplementTracker() {
                 })()
                 const dedupedDone = deduped.filter(s => s.doses.every(d => d.taken)).length
 
-                // ── Time groups with window info ──
+                // ── Current time of day ──
                 const currentHour = new Date().getHours()
-                const TIME_WINDOWS: Record<string, string> = { Morning: '6am-12pm', Afternoon: '12pm-5pm', Evening: '5pm-9pm', Night: '9pm-12am' }
                 const currentTod = currentHour < 12 ? 'Morning' : currentHour < 17 ? 'Afternoon' : currentHour < 21 ? 'Evening' : 'Night'
-                const timeGroups = (() => {
-                  const g: Record<string, typeof deduped> = { 'Morning': [], 'Afternoon': [], 'Evening': [], 'Night': [], 'Anytime': [] }
-                  deduped.forEach(s => {
-                    const t = s.times[0]
-                    if (t === 'Morning') g['Morning'].push(s)
-                    else if (t === 'Afternoon') g['Afternoon'].push(s)
-                    else if (t === 'Evening') g['Evening'].push(s)
-                    else if (t === 'Night') g['Night'].push(s)
-                    else g['Anytime'].push(s)
+
+                // ── Quick-log data: per-supp streak + last taken ──
+                const suppQuickData = deduped.map(s => {
+                  let streak = 0
+                  for (let i = 0; i < 30; i++) {
+                    const d = new Date(); d.setDate(d.getDate() - i)
+                    const ds = toLocalDate(d)
+                    const hasLog = logs.some(l => l.supplementId === s.id && l.date === ds)
+                    if (hasLog) streak++; else break
+                  }
+                  const lastLog = logs.filter(l => l.supplementId === s.id && l.takenAt).sort((a, b) => new Date(b.takenAt!).getTime() - new Date(a.takenAt!).getTime())[0]
+                  const lastTaken = lastLog?.takenAt ? new Date(lastLog.takenAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : null
+                  const done = s.doses.every(d => d.taken)
+                  return { ...s, streak, lastTaken, done }
+                })
+
+                // ── Days active (last 14 days) ──
+                let daysActive14 = 0
+                for (let i = 0; i < 14; i++) {
+                  const d = new Date(); d.setDate(d.getDate() - i)
+                  const ds = toLocalDate(d)
+                  const dayTaken = new Set(logs.filter(l => l.date === ds).map(l => l.supplementId)).size
+                  if (dayTaken > 0) daysActive14++
+                }
+
+                // ── Next due supplement ──
+                const nextDue = (() => {
+                  const remaining = suppQuickData.filter(s => !s.done)
+                  if (remaining.length === 0) return null
+                  const timeOrder = ['Morning', 'Afternoon', 'Evening', 'Night']
+                  const curIdx = timeOrder.indexOf(currentTod)
+                  const sorted = remaining.sort((a, b) => {
+                    const aIdx = timeOrder.indexOf(a.times[0] || 'Morning')
+                    const bIdx = timeOrder.indexOf(b.times[0] || 'Morning')
+                    return ((aIdx - curIdx + 4) % 4) - ((bIdx - curIdx + 4) % 4)
                   })
-                  return Object.entries(g).filter(([, v]) => v.length > 0)
+                  return sorted[0]
                 })()
 
-                // ── AI Insights: deeper, smarter ──
+                // ── Score stats ──
+                const complianceRate = deduped.length > 0 ? Math.round((dedupedDone / deduped.length) * 100) : 0
+
+                // ── AI Insights: top 3 only ──
                 const insights: { icon: typeof Zap; title: string; detail: string; color: string }[] = []
 
-                // 1. Completion status
-                if (dedupedDone === deduped.length && deduped.length > 0) {
-                  insights.push({ icon: CheckCircle2, title: 'Perfect compliance', detail: `All ${deduped.length} supplements logged today — your body thanks you`, color: 'emerald' })
-                } else if (dedupedDone > 0) {
-                  const pct = Math.round((dedupedDone / deduped.length) * 100)
-                  insights.push({ icon: Activity, title: `${pct}% complete today`, detail: `${dedupedDone} of ${deduped.length} done — ${deduped.length - dedupedDone} remaining`, color: pct >= 50 ? 'cyan' : 'amber' })
-                }
-
-                // 2. Current time window intelligence
-                const currentSlotSupps = deduped.filter(s => s.times[0] === currentTod)
-                const currentSlotMissing = currentSlotSupps.filter(s => !s.doses.every(d => d.taken))
+                // Priority 1: Current time window action
+                const currentSlotMissing = deduped.filter(s => s.times[0] === currentTod && !s.doses.every(d => d.taken))
                 if (currentSlotMissing.length > 0) {
-                  insights.push({ icon: Clock, title: `Active: ${currentTod} window`, detail: `Take ${currentSlotMissing.map(s => s.name).join(', ')} — optimal absorption window`, color: 'cyan' })
+                  insights.push({ icon: Clock, title: `${currentTod} window active`, detail: `Take ${currentSlotMissing.map(s => s.name).join(', ')} — optimal absorption now`, color: 'cyan' })
                 }
 
-                // 3. Refill prediction with cost impact
+                // Priority 2: Urgent refill
                 const urgentRefills = refillData.filter(r => r.urgency === 'critical' || r.urgency === 'warning').sort((a, b) => a.daysUntilRefill - b.daysUntilRefill)
-                if (urgentRefills.length > 0) {
+                if (urgentRefills.length > 0 && insights.length < 3) {
                   const r = urgentRefills[0]
-                  insights.push({ icon: Package, title: `${r.name} — ${r.daysUntilRefill}d left`, detail: r.urgency === 'critical' ? `Critical: reorder now` : `Running low — reorder within ${r.daysUntilRefill} days`, color: r.urgency === 'critical' ? 'rose' : 'amber' })
+                  insights.push({ icon: Package, title: `${r.name} — ${r.daysUntilRefill}d left`, detail: r.urgency === 'critical' ? 'Critical: reorder now' : `Reorder within ${r.daysUntilRefill} days`, color: r.urgency === 'critical' ? 'rose' : 'amber' })
                 }
 
-                // 4. Adherence trajectory
-                if (trendDiffs.length > 0) {
-                  const avgDiff = trendDiffs.reduce((a, b) => a + b, 0) / trendDiffs.length
-                  if (avgDiff > 5) insights.push({ icon: TrendingUp, title: 'Upward trajectory', detail: `+${avgDiff.toFixed(0)}% weekly improvement — building momentum`, color: 'emerald' })
-                  else if (avgDiff < -5) insights.push({ icon: TrendingUp, title: 'Declining pattern', detail: `${Math.abs(avgDiff).toFixed(0)}% weekly drop — consider simplifying your stack`, color: 'violet' })
+                // Priority 3: Streak milestone or decline
+                if (insights.length < 3) {
+                  if (longTermStreak >= 7) {
+                    insights.push({ icon: Flame, title: `${longTermStreak}-day streak`, detail: longTermStreak >= 30 ? 'Elite — top 1% of users' : longTermStreak >= 14 ? 'Two weeks strong' : 'Building momentum', color: 'orange' })
+                  } else if (trendDiffs.length > 0) {
+                    const avgDiff = trendDiffs.reduce((a, b) => a + b, 0) / trendDiffs.length
+                    if (avgDiff < -10) insights.push({ icon: TrendingUp, title: 'Adherence declining', detail: `${Math.abs(avgDiff).toFixed(0)}% weekly drop — simplify your stack`, color: 'violet' })
+                  }
                 }
 
-                // 5. Streak milestone
-                if (longTermStreak >= 30) insights.push({ icon: Flame, title: `${longTermStreak}-day streak`, detail: 'Elite consistency — top 1% of supplement users', color: 'orange' })
-                else if (longTermStreak >= 14) insights.push({ icon: Flame, title: `${longTermStreak}-day streak`, detail: 'Two weeks strong — habit is forming', color: 'orange' })
-                else if (longTermStreak >= 7) insights.push({ icon: Flame, title: `${longTermStreak}-day streak`, detail: 'One week — past the hardest part', color: 'orange' })
-
-                // 6. Per-supplement deep insight
-                const worstSupp = suppAdherence.sort((a, b) => a.rate7 - b.rate7)[0]
-                if (worstSupp && worstSupp.rate7 < 70 && worstSupp.rate7 > 0) {
-                  insights.push({ icon: Brain, title: `${worstSupp.name} needs attention`, detail: `7-day adherence: ${worstSupp.rate7}% — try linking it to an existing habit`, color: 'violet' })
-                }
-
-                // 7. Best performer
-                const bestSupp = suppAdherence.sort((a, b) => b.rate7 - a.rate7)[0]
-                if (bestSupp && bestSupp.rate7 === 100 && suppAdherence.length > 1) {
-                  insights.push({ icon: Sparkles, title: `${bestSupp.name} — 100%`, detail: 'Perfect adherence this week — your most reliable habit', color: 'amber' })
-                }
-
-                // 8. Timing drift
-                if (timingAlignmentPct < 40 && realTiming.length > 0) {
-                  const misaligned = realTiming.filter(r => !r.isAligned)
-                  if (misaligned.length > 0) {
-                    insights.push({ icon: ShieldAlert, title: 'Timing drift detected', detail: `${misaligned[0].name}: taking ${misaligned[0].actualCategory} instead of ${misaligned[0].plannedCategory}`, color: 'cyan' })
+                // Priority 4: Perfect day or worst supp (if slots open)
+                if (insights.length < 3) {
+                  if (dedupedDone === deduped.length && deduped.length > 0) {
+                    insights.push({ icon: CheckCircle2, title: 'Perfect compliance', detail: `All ${deduped.length} supplements logged today`, color: 'emerald' })
+                  } else {
+                    const worst = suppAdherence.sort((a, b) => a.rate7 - b.rate7)[0]
+                    if (worst && worst.rate7 < 70 && worst.rate7 > 0) {
+                      insights.push({ icon: Brain, title: `${worst.name} needs attention`, detail: `7-day: ${worst.rate7}% — link to an existing habit`, color: 'violet' })
+                    }
                   }
                 }
 
@@ -967,81 +964,80 @@ export function SupplementTracker() {
                   })
                 )
 
-                // Score components
-                const scoreRing = [
-                  { label: 'Adherence', val: consistencyScore, color: '#a78bfa' },
-                  { label: 'Streak', val: Math.min(longTermStreak / 30 * 100, 100), color: '#fb923c' },
-                  { label: 'Timing', val: timingAlignmentPct, color: '#22d3ee' },
-                  { label: 'Momentum', val: Math.max(0, Math.min(100, trendAvg * 2 + 50)), color: trendAvg > 0 ? '#34d399' : '#f87171' },
+                // Score components — useful stats
+                const scoreStats = [
+                  { label: 'Days Active', val: `${daysActive14}/14`, icon: Calendar, color: '#a78bfa' },
+                  { label: 'Compliance', val: `${complianceRate}%`, icon: Target, color: '#34d399' },
+                  { label: 'Next Due', val: nextDue ? nextDue.name.split(' ')[0] : 'Done', icon: Clock, color: '#22d3ee' },
+                  { label: 'Best Streak', val: `${bestStreak}d`, icon: Flame, color: '#fb923c' },
                 ]
 
                 return (
                 <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.06) transparent' }}>
 
                   {/* ── Score Strip ── */}
-                  <div className="rounded-2xl bg-gradient-to-r from-violet-500/[0.06] to-indigo-500/[0.03] border border-violet-500/10 px-4 py-3 flex items-center gap-4">
+                  <div className="rounded-2xl bg-gradient-to-r from-violet-500/[0.06] to-indigo-500/[0.03] border border-violet-500/10 px-4 py-3 flex items-center gap-3">
                     <div className="relative w-12 h-12 shrink-0">
                       <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                         <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2.5" />
                         <circle cx="18" cy="18" r="15" fill="none" stroke="url(#oGrad)" strokeWidth="2.5" strokeLinecap="round"
-                          strokeDasharray={2 * Math.PI * 15} strokeDashoffset={2 * Math.PI * 15 * (1 - momentumScore / 100)} />
+                          strokeDasharray={2 * Math.PI * 15} strokeDashoffset={2 * Math.PI * 15 * (1 - complianceRate / 100)} />
                         <defs><linearGradient id="oGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#c4b5fd" /><stop offset="100%" stopColor="#7c3aed" /></linearGradient></defs>
                       </svg>
-                      <div className="absolute inset-0 flex items-center justify-center"><span className="text-xs font-black text-white">{momentumScore}</span></div>
+                      <div className="absolute inset-0 flex items-center justify-center"><span className="text-xs font-black text-white">{complianceRate}%</span></div>
                     </div>
-                    <div className="flex-1 flex items-center gap-3">
-                      {scoreRing.map((s, i) => (
-                        <div key={i} className="flex-1 text-center">
-                          <div className="w-full h-1 rounded-full bg-white/[0.04] overflow-hidden mb-0.5">
-                            <div className="h-full rounded-full" style={{ width: s.val + '%', background: s.color }} />
+                    <div className="flex-1 grid grid-cols-4 gap-1.5">
+                      {scoreStats.map((s, i) => {
+                        const Icon = s.icon
+                        return (
+                          <div key={i} className="text-center">
+                            <Icon className="w-2.5 h-2.5 mx-auto mb-0.5" style={{ color: s.color }} />
+                            <span className="text-[10px] font-black text-white block leading-none">{s.val}</span>
+                            <span className="text-[7px] font-bold text-gray-500 block">{s.label}</span>
                           </div>
-                          <span className="text-[8px] font-bold text-gray-500 block">{s.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="text-right shrink-0 border-l border-white/[0.06] pl-3">
-                      <span className="text-[9px] text-gray-500 block">{dayLabel}</span>
-                      <span className="text-xs font-black text-white">{dedupedDone}/{deduped.length}</span>
+                        )
+                      })}
                     </div>
                   </div>
 
-                  {/* ── Today's Schedule ── */}
-                  {timeGroups.map(([time, supps], gi) => {
-                    const ICONS: Record<string, typeof Sun> = { Morning: Sun, Afternoon: Sunrise, Evening: Sunset, Night: Moon, Anytime: Clock }
-                    const CLR: Record<string, string> = { Morning: 'text-amber-400', Afternoon: 'text-yellow-400', Evening: 'text-orange-400', Night: 'text-blue-400', Anytime: 'text-gray-400' }
-                    const BG: Record<string, string> = { Morning: 'from-amber-500/[0.04]', Afternoon: 'from-yellow-500/[0.04]', Evening: 'from-orange-500/[0.04]', Night: 'from-blue-500/[0.04]', Anytime: 'from-gray-500/[0.04]' }
-                    const Icon = ICONS[time] || Clock
-                    const done = supps.filter(s => s.doses.every(d => d.taken)).length
-                    const isCurrent = time === currentTod
-                    const window = TIME_WINDOWS[time]
-                    return (
-                      <div key={gi} className={`rounded-2xl bg-gradient-to-br ${BG[time] || 'from-gray-500/[0.04]'} to-transparent border ${isCurrent ? 'border-white/[0.1]' : 'border-white/[0.05]'} px-3.5 py-2.5 relative overflow-hidden`}>
-                        {isCurrent && <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-violet-400 to-indigo-500 rounded-r" />}
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <Icon className={`w-3 h-3 ${CLR[time]}`} />
-                          <span className="text-[10px] font-bold text-white">{time}</span>
-                          {window && <span className="text-[7px] text-gray-600">{window}</span>}
-                          {isCurrent && <span className="text-[7px] font-bold text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded-full">NOW</span>}
-                          <div className="flex-1" />
-                          <span className={`text-[9px] font-bold ${done === supps.length ? 'text-emerald-400' : 'text-gray-500'}`}>{done}/{supps.length}</span>
-                        </div>
-                        {supps.map((s, i) => (
-                          <div key={i} className="flex items-center gap-2 py-0.5">
-                            <div className="flex gap-px">
-                              {s.doses.map((d, di) => (
-                                <div key={di} className={`w-[7px] h-[7px] rounded-full transition-all ${d.taken ? 'bg-emerald-400 shadow-[0_0_3px_rgba(16,185,129,0.25)]' : 'border border-gray-600/50 bg-transparent'}`} />
-                              ))}
+                  {/* ── Quick-Log Panel ── */}
+                  <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] overflow-hidden">
+                    <div className="px-3.5 py-2 flex items-center gap-1.5 border-b border-white/[0.04]">
+                      <ListChecks className="w-3 h-3 text-emerald-400" />
+                      <span className="text-[9px] font-bold text-emerald-300 uppercase tracking-wider">Quick Log</span>
+                      <div className="flex-1" />
+                      <span className="text-[9px] font-bold text-white">{dedupedDone}/{deduped.length}</span>
+                    </div>
+                    <div className="divide-y divide-white/[0.03]">
+                      {suppQuickData.map((s, i) => (
+                        <motion.div key={i} initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
+                          className="flex items-center gap-2.5 px-3.5 py-2 hover:bg-white/[0.02] transition-colors">
+                          <button onClick={() => { if (!s.done) { const sup = supplements.find(x => x.id === s.id); if (sup) markAsTaken(sup) } else { undoTakeById(s.id) } }}
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                              s.done ? 'bg-emerald-400/20 border-emerald-400/60' : 'border-gray-600/50 hover:border-violet-400/50'
+                            }`}>
+                            {s.done && <Check className="w-2.5 h-2.5 text-emerald-400" />}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-[10px] font-bold ${s.done ? 'text-gray-500 line-through decoration-gray-600' : 'text-white'}`}>{s.name}</span>
+                              {s.streak >= 3 && (
+                                <span className="flex items-center gap-px text-[8px] text-orange-400">
+                                  <Flame className="w-2 h-2" />{s.streak}
+                                </span>
+                              )}
                             </div>
-                            <span className={`text-[10px] font-bold flex-1 ${s.doses.every(d => d.taken) ? 'text-gray-500 line-through decoration-gray-600' : 'text-gray-200'}`}>{s.name}</span>
-                            {s.doses.filter(d => d.taken).map((d, di) => (
-                              <span key={di} className="text-[8px] font-bold text-emerald-400/50 tabular-nums">{d.time}</span>
-                            ))}
-                            {s.doses.filter(d => !d.taken).length > 0 && <span className="text-[8px] text-gray-600">{s.dosage}</span>}
+                            <span className="text-[8px] text-gray-600">{s.dosage} · {s.times[0] || 'Anytime'}</span>
                           </div>
-                        ))}
-                      </div>
-                    )
-                  })}
+                          {s.lastTaken ? (
+                            <span className="text-[8px] font-bold text-emerald-400/50 tabular-nums">{s.lastTaken}</span>
+                          ) : (
+                            <span className="text-[8px] text-gray-600">—</span>
+                          )}
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
 
                   {/* ── AI Insights ── */}
                   {insights.length > 0 && (
@@ -1051,7 +1047,7 @@ export function SupplementTracker() {
                         <span className="text-[9px] font-bold text-violet-300 uppercase tracking-wider">AI Insights</span>
                       </div>
                       <div className="divide-y divide-white/[0.03]">
-                        {insights.slice(0, 5).map((ins, i) => {
+                        {insights.slice(0, 3).map((ins, i) => {
                           const Icon = ins.icon
                           const clrMap: Record<string, string> = {
                             rose: 'text-rose-400 bg-rose-500/[0.06]',
@@ -1110,73 +1106,67 @@ export function SupplementTracker() {
                     </div>
                   </div>
 
-                  {/* ── Supply & Trend Donuts ── */}
+                  {/* ── Supply & Trend Radial Gauges ── */}
                   {(() => {
-                    const supplyDonutData = refillData.length > 0 ? [
-                      { name: 'Critical', value: refillData.filter(r => r.urgency === 'critical').length, fill: '#ef4444' },
-                      { name: 'Warning', value: refillData.filter(r => r.urgency === 'warning').length, fill: '#f59e0b' },
-                      { name: 'OK', value: refillData.filter(r => r.urgency === 'ok').length, fill: '#10b981' },
-                    ].filter(d => d.value > 0) : []
-                    const trendDonutData = suppTrends.length > 0 ? [
-                      { name: 'Rising', value: suppTrends.filter(s => s.trend === 'rising').length, fill: '#10b981' },
-                      { name: 'Stable', value: suppTrends.filter(s => s.trend === 'stable').length, fill: '#6b7280' },
-                      { name: 'Dropping', value: suppTrends.filter(s => s.trend === 'dropping').length, fill: '#ef4444' },
-                    ].filter(d => d.value > 0) : []
+                    const criticalCount = refillData.filter(r => r.urgency === 'critical').length
+                    const warningCount = refillData.filter(r => r.urgency === 'warning').length
+                    const okCount = refillData.filter(r => r.urgency === 'ok').length
+                    const supplyTotal = refillData.length
+                    const supplyHealthPct = supplyTotal > 0 ? Math.round((okCount / supplyTotal) * 100) : 0
+                    const risingCount = suppTrends.filter(s => s.trend === 'rising').length
+                    const stableCount = suppTrends.filter(s => s.trend === 'stable').length
+                    const droppingCount = suppTrends.filter(s => s.trend === 'dropping').length
+                    const trendTotal = suppTrends.length
+                    const trendGoodPct = trendTotal > 0 ? Math.round(((risingCount + stableCount) / trendTotal) * 100) : 0
+                    const supplyColor = supplyHealthPct >= 70 ? '#10b981' : supplyHealthPct >= 40 ? '#f59e0b' : '#ef4444'
+                    const trendColor = trendGoodPct >= 70 ? '#10b981' : trendGoodPct >= 40 ? '#f59e0b' : '#ef4444'
                     return (
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5">
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <Package className="w-3 h-3 text-rose-400" />
-                          <span className="text-[10px] font-bold text-white">Supply Health</span>
-                        </div>
-                        {supplyDonutData.length > 0 ? (
-                          <div className="flex items-center gap-3">
-                            <div className="w-16 h-16 shrink-0">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <PieChart><Pie data={supplyDonutData} cx="50%" cy="50%" innerRadius={16} outerRadius={28} paddingAngle={3} dataKey="value" strokeWidth={0}>
-                                  {supplyDonutData.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.7} />)}
-                                </Pie></PieChart>
-                              </ResponsiveContainer>
-                            </div>
-                            <div className="flex-1 space-y-1">
-                              {supplyDonutData.map((d, i) => (
-                                <div key={i} className="flex items-center gap-1.5">
-                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: d.fill }} />
-                                  <span className="text-[8px] text-gray-400 flex-1">{d.name}</span>
-                                  <span className="text-[9px] font-bold text-white">{d.value}</span>
-                                </div>
-                              ))}
-                              <div className="pt-1 border-t border-white/[0.03]"><span className="text-[7px] text-gray-500">{refillData.length} supps tracked</span></div>
-                            </div>
+                      <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5 flex items-center gap-3">
+                        <div className="relative w-14 h-14 shrink-0">
+                          <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                            <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
+                            <circle cx="18" cy="18" r="14" fill="none" stroke={supplyColor} strokeWidth="3" strokeLinecap="round" strokeOpacity={0.7}
+                              strokeDasharray={2 * Math.PI * 14} strokeDashoffset={2 * Math.PI * 14 * (1 - supplyHealthPct / 100)} />
+                          </svg>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-[10px] font-black text-white">{supplyHealthPct}%</span>
                           </div>
-                        ) : <span className="text-[9px] text-gray-600 italic block text-center py-2">No refill data</span>}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1 mb-1.5">
+                            <Package className="w-2.5 h-2.5" style={{ color: supplyColor }} />
+                            <span className="text-[9px] font-bold text-white">Supply</span>
+                          </div>
+                          <div className="space-y-0.5">
+                            {criticalCount > 0 && <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" /><span className="text-[7px] text-rose-400">{criticalCount} critical</span></div>}
+                            {warningCount > 0 && <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-amber-400" /><span className="text-[7px] text-amber-400">{warningCount} low</span></div>}
+                            {okCount > 0 && <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span className="text-[7px] text-emerald-400">{okCount} ok</span></div>}
+                          </div>
+                        </div>
                       </div>
-                      <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5">
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <TrendingUp className="w-3 h-3 text-cyan-400" />
-                          <span className="text-[10px] font-bold text-white">Trend</span>
-                        </div>
-                        {trendDonutData.length > 0 ? (
-                          <div className="flex items-center gap-3">
-                            <div className="w-16 h-16 shrink-0">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <PieChart><Pie data={trendDonutData} cx="50%" cy="50%" innerRadius={16} outerRadius={28} paddingAngle={3} dataKey="value" strokeWidth={0}>
-                                  {trendDonutData.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.7} />)}
-                                </Pie></PieChart>
-                              </ResponsiveContainer>
-                            </div>
-                            <div className="flex-1 space-y-1">
-                              {trendDonutData.map((d, i) => (
-                                <div key={i} className="flex items-center gap-1.5">
-                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: d.fill }} />
-                                  <span className="text-[8px] text-gray-400 flex-1">{d.name}</span>
-                                  <span className="text-[9px] font-bold text-white">{d.value}</span>
-                                </div>
-                              ))}
-                              <div className="pt-1 border-t border-white/[0.03]"><span className="text-[7px] text-gray-500">{suppTrends.length} supps tracked</span></div>
-                            </div>
+                      <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5 flex items-center gap-3">
+                        <div className="relative w-14 h-14 shrink-0">
+                          <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                            <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
+                            <circle cx="18" cy="18" r="14" fill="none" stroke={trendColor} strokeWidth="3" strokeLinecap="round" strokeOpacity={0.7}
+                              strokeDasharray={2 * Math.PI * 14} strokeDashoffset={2 * Math.PI * 14 * (1 - trendGoodPct / 100)} />
+                          </svg>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-[10px] font-black text-white">{trendGoodPct}%</span>
                           </div>
-                        ) : <span className="text-[9px] text-gray-600 italic block text-center py-2">No trend data</span>}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1 mb-1.5">
+                            <TrendingUp className="w-2.5 h-2.5" style={{ color: trendColor }} />
+                            <span className="text-[9px] font-bold text-white">Trend</span>
+                          </div>
+                          <div className="space-y-0.5">
+                            {risingCount > 0 && <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span className="text-[7px] text-emerald-400">{risingCount} rising</span></div>}
+                            {stableCount > 0 && <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-gray-400" /><span className="text-[7px] text-gray-400">{stableCount} stable</span></div>}
+                            {droppingCount > 0 && <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-rose-400" /><span className="text-[7px] text-rose-400">{droppingCount} dropping</span></div>}
+                          </div>
+                        </div>
                       </div>
                     </div>
                     )
