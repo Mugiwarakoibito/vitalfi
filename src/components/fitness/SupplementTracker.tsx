@@ -880,17 +880,19 @@ export function SupplementTracker() {
                 })()
 
                 // ── AI Insights: 3 most powerful lines ──
-                const insights: { icon: typeof Zap; title: string; detail: string; color: string }[] = []
+                const insights: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string }[] = []
 
                 // 1. Absorption Intelligence — most powerful
-                const absorptionPairs: Record<string, { with: string; boost: string }[]> = {
-                  'Vitamin D': [{ with: 'fat/omega-3', boost: '3x absorption' }],
-                  'Omega-3': [{ with: 'fatty meal', boost: '2x bioavailability' }],
-                  'Iron': [{ with: 'vitamin C', boost: '2x uptake' }, { with: 'calcium', boost: '-60% absorption (avoid)' }],
-                  'Magnesium': [{ with: 'bedtime', boost: '25% better sleep' }],
-                  'B12': [{ with: 'morning', boost: 'peak energy timing' }],
-                  'Zinc': [{ with: 'food', boost: 'avoids nausea' }],
-                  'Calcium': [{ with: 'separate from iron', boost: 'no competition' }],
+                const absorptionPairs: Record<string, { with: string; boost: string; avoid?: string }[]> = {
+                  'Vitamin D': [{ with: 'fatty meal or omega-3', boost: '3x absorption', avoid: 'taking on empty stomach' }],
+                  'Omega-3': [{ with: 'fatty meal', boost: '2x bioavailability', avoid: 'taking with fiber' }],
+                  'Iron': [{ with: 'vitamin C rich food', boost: '2x uptake', avoid: 'calcium or coffee within 2h' }],
+                  'Magnesium': [{ with: 'bedtime', boost: '25% better sleep quality', avoid: 'taking with calcium' }],
+                  'B12': [{ with: 'morning on empty stomach', boost: 'peak energy timing', avoid: 'taking at night' }],
+                  'Zinc': [{ with: 'food', boost: 'avoids nausea', avoid: 'taking on empty stomach' }],
+                  'Calcium': [{ with: 'separated from iron by 2h', boost: 'no absorption competition', avoid: 'taking with iron' }],
+                  'Ashwagandha': [{ with: 'morning or evening', boost: 'cortisol regulation', avoid: 'taking with stimulants' }],
+                  'CoQ10': [{ with: 'fatty meal', boost: '4x absorption', avoid: 'taking with statins timing' }],
                 }
                 const suppNames = deduped.map(s => s.name)
                 for (const name of suppNames) {
@@ -901,9 +903,10 @@ export function SupplementTracker() {
                     const hour = takenAtTime ? new Date(takenAtTime).getHours() : null
                     const isOptimal = match === 'Vitamin D' || match === 'Omega-3' ? (hour !== null && hour >= 12) :
                       match === 'Magnesium' ? (hour !== null && hour >= 20) :
-                      match === 'B12' ? (hour !== null && hour < 12) : true
+                      match === 'B12' ? (hour !== null && hour < 12) :
+                      match === 'CoQ10' ? (hour !== null && hour >= 12) : true
                     if (!isOptimal || !takenAtTime) {
-                      insights.push({ icon: Sparkles, title: `${match}: take with ${rule.with}`, detail: `${rule.boost} — you're currently taking it ${takenAtTime ? `at ${new Date(takenAtTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : 'unscheduled'}`, color: 'amber' })
+                      insights.push({ icon: Sparkles, title: `${match}: take with ${rule.with}`, detail: `${rule.boost} — ${rule.avoid ? `avoid ${rule.avoid}` : 'optimize timing'}`, color: 'amber', metric: rule.boost })
                       break
                     }
                   }
@@ -914,12 +917,13 @@ export function SupplementTracker() {
                   const avgDiff = trendDiffs.reduce((a, b) => a + b, 0) / trendDiffs.length
                   const currentRate = complianceRate
                   const projected30 = Math.min(100, Math.round(currentRate + avgDiff * 4))
-                  const projected7 = Math.min(100, Math.round(currentRate + avgDiff))
                   if (avgDiff > 0 && currentRate < 100) {
-                    insights.push({ icon: TrendingUp, title: `Forecast: ${projected7}% this week → ${projected30}% by month end`, detail: `At +${avgDiff.toFixed(0)}%/week pace — ${projected30 >= 90 ? 'you\'ll hit elite compliance' : `${100 - projected30}% gap to close`}`, color: 'emerald' })
+                    const daysToElite = Math.ceil((90 - currentRate) / (avgDiff || 1))
+                    const eta = new Date(); eta.setDate(eta.getDate() + Math.min(daysToElite, 60))
+                    insights.push({ icon: TrendingUp, title: `+${avgDiff.toFixed(0)}%/week → ${projected30}% by month end`, detail: `Elite compliance (90%) ETA: ${eta.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${daysToElite <= 30 ? 'on track' : 'needs acceleration'}`, color: 'emerald', metric: `+${avgDiff.toFixed(0)}%/wk` })
                   } else if (avgDiff < -3) {
                     const dropRate = Math.abs(avgDiff).toFixed(0)
-                    insights.push({ icon: ShieldAlert, title: `Declining: ${dropRate}%/week drop projected`, detail: `If trend continues, compliance drops to ${projected30}% by month end — act now`, color: 'rose' })
+                    insights.push({ icon: ShieldAlert, title: `Declining ${dropRate}%/week — ${projected30}% by month end`, detail: `If trend continues, you'll lose ${Math.round((currentRate - projected30) / 10)}% compliance — simplify your stack`, color: 'rose', metric: `-${dropRate}%/wk` })
                   }
                 }
 
@@ -929,9 +933,19 @@ export function SupplementTracker() {
                   if (lowAdherence.length > 0) {
                     const worst = lowAdherence[0]
                     const daysToHabit = Math.ceil((100 - worst.rate7) / 5)
-                    insights.push({ icon: Brain, title: `${worst.name} at ${worst.rate7}% — ${daysToHabit} days to habit`, detail: worst.rate7 < 50 ? 'Critical: link to an existing routine (coffee, meals, bedtime)' : 'Set a daily phone alarm at scheduled time', color: 'violet' })
+                    const bestTime = worst.times?.[0] || 'morning'
+                    insights.push({ icon: Brain, title: `${worst.name}: ${worst.rate7}% adherence — ${daysToHabit}d to habit`, detail: worst.rate7 < 50 ? `Critical: link to ${bestTime} routine (coffee, meals, or bedtime)` : `Set alarm for ${bestTime} — consistent timing boosts adherence 40%`, color: 'violet', metric: `${worst.rate7}%` })
                   } else if (dedupedDone === deduped.length && deduped.length >= 3) {
-                    insights.push({ icon: CheckCircle2, title: `${deduped.length}/${deduped.length} perfect — top 5% of users`, detail: 'Maintain this pace for 21 more days to form a permanent habit', color: 'emerald' })
+                    insights.push({ icon: CheckCircle2, title: `${deduped.length}/${deduped.length} perfect — top 5% globally`, detail: `Maintain ${complianceRate}% for ${21 - longTermStreak > 0 ? 21 - longTermStreak : 0} more days to form a permanent habit`, color: 'emerald', metric: '100%' })
+                  }
+                }
+
+                // 4. Timing Drift — if slots open
+                if (insights.length < 3 && realTiming.length > 0) {
+                  const misaligned = realTiming.filter(r => !r.isAligned && r.actualCategory !== 'Unknown')
+                  if (misaligned.length > 0) {
+                    const m = misaligned[0]
+                    insights.push({ icon: Clock, title: `${m.name}: ${m.actualCategory} → ${m.plannedCategory}`, detail: `${m.consistency} — shift by ${m.actualCategory === 'Morning' ? '1h earlier' : '1h later'} for optimal results`, color: 'cyan', metric: `${timingAlignmentPct}% aligned` })
                   }
                 }
 
@@ -1005,7 +1019,10 @@ export function SupplementTracker() {
                                 <Icon className="w-3.5 h-3.5" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <span className="text-[10px] font-bold text-white block">{ins.title}</span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] font-bold text-white block flex-1">{ins.title}</span>
+                                  {ins.metric && <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full ${ins.color === 'emerald' ? 'text-emerald-400 bg-emerald-500/10' : ins.color === 'rose' ? 'text-rose-400 bg-rose-500/10' : ins.color === 'amber' ? 'text-amber-400 bg-amber-500/10' : ins.color === 'cyan' ? 'text-cyan-400 bg-cyan-500/10' : 'text-violet-400 bg-violet-500/10'}`}>{ins.metric}</span>}
+                                </div>
                                 <span className="text-[9px] text-gray-500 leading-tight">{ins.detail}</span>
                               </div>
                             </motion.div>
@@ -1015,90 +1032,128 @@ export function SupplementTracker() {
                     </div>
                   )}
 
-                  {/* ── Supply Health (Horizontal Bar Chart) ── */}
+                  {/* ── Supply Health (Donut + Gauges) ── */}
                   <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5">
                     <div className="flex items-center gap-1.5 mb-3">
                       <Package className="w-2.5 h-2.5 text-rose-400" />
-                      <span className="text-[9px] font-bold text-white uppercase tracking-wider">Supply Timeline</span>
+                      <span className="text-[9px] font-bold text-white uppercase tracking-wider">Supply Health</span>
                       <div className="flex-1" />
                       {refillData.length > 0 && (() => {
                         const urgent = refillData.filter(r => r.urgency === 'critical' || r.urgency === 'warning').length
-                        return urgent > 0 ? <span className="text-[7px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded-full">{urgent} urgent</span> : null
+                        return urgent > 0 ? <span className="text-[7px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded-full">{urgent} urgent</span> : <span className="text-[7px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">all good</span>
                       })()}
                     </div>
                     {refillData.length > 0 ? (
-                      <div className="h-32">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 6).map(r => ({
-                            name: r.name.length > 10 ? r.name.slice(0, 10) + '…' : r.name,
-                            days: r.daysUntilRefill,
-                            total: r.refillDays,
-                            fill: r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981',
-                            urgency: r.urgency,
-                          }))} layout="vertical" barCategoryGap="15%">
-                            <XAxis type="number" domain={[0, 'auto']} tick={{ fontSize: 7, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                            <YAxis type="category" dataKey="name" tick={{ fontSize: 7, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={70} />
-                            <Tooltip cursor={false} contentStyle={{ background: '#13131f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 9 }} formatter={(v: number) => [`${v}d left`, 'Days remaining']} />
-                            <Bar dataKey="days" radius={[0, 4, 4, 0]} barSize={10}>
-                              {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 6).map((r, i) => (
-                                <Cell key={i} fill={r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981'} fillOpacity={0.7} />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
+                      <div className="flex items-center gap-4">
+                        <div className="relative w-20 h-20 shrink-0">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={[
+                                { name: 'Critical', value: refillData.filter(r => r.urgency === 'critical').length, fill: '#ef4444' },
+                                { name: 'Warning', value: refillData.filter(r => r.urgency === 'warning').length, fill: '#f59e0b' },
+                                { name: 'OK', value: refillData.filter(r => r.urgency === 'ok').length, fill: '#10b981' },
+                              ].filter(d => d.value > 0)} cx="50%" cy="50%" innerRadius="52%" outerRadius="82%" paddingAngle={5} dataKey="value" strokeWidth={0} startAngle={90} endAngle={-270}>
+                                {[refillData.filter(r => r.urgency === 'critical').length, refillData.filter(r => r.urgency === 'warning').length, refillData.filter(r => r.urgency === 'ok').length].filter((_, i) => [refillData.filter(r => r.urgency === 'critical').length, refillData.filter(r => r.urgency === 'warning').length, refillData.filter(r => r.urgency === 'ok').length][i] > 0).map((_, i) => (
+                                  <Cell key={i} fill={['#ef4444', '#f59e0b', '#10b981'][i]} fillOpacity={0.8} />
+                                ))}
+                              </Pie>
+                            </PieChart>
+                          </ResponsiveContainer>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-base font-black text-white leading-none">{refillData.length}</span>
+                            <span className="text-[6px] text-gray-500 font-bold">tracked</span>
+                          </div>
+                        </div>
+                        <div className="flex-1 grid grid-cols-2 gap-1.5">
+                          {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 4).map((r, i) => {
+                            const color = r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981'
+                            return (
+                              <div key={i} className="bg-white/[0.03] rounded-lg p-1.5 border border-white/[0.04]">
+                                <div className="flex items-center gap-1 mb-1">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+                                  <span className="text-[7px] text-gray-400 truncate flex-1">{r.name.split(' ')[0]}</span>
+                                </div>
+                                <div className="text-[11px] font-black" style={{ color }}>{r.daysUntilRefill}<span className="text-[7px] text-gray-500 font-bold">d</span></div>
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
                     ) : (
                       <div className="text-center py-4"><span className="text-[9px] text-gray-600 italic">No refill data tracked</span></div>
                     )}
                   </div>
 
-                  {/* ── Supplement Trends (Radar Chart) ── */}
-                  <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5">
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <TrendingUp className="w-2.5 h-2.5 text-cyan-400" />
-                      <span className="text-[9px] font-bold text-white uppercase tracking-wider">Adherence Radar</span>
-                      <div className="flex-1" />
-                      {suppTrends.length > 0 && (() => {
-                        const avg = Math.round(suppTrends.reduce((s, t) => s + t.delta, 0) / suppTrends.length)
-                        return <span className={`text-[7px] font-bold ${avg >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{avg >= 0 ? '+' : ''}{avg}% avg</span>
-                      })()}
+                  {/* ── Adherence Radar (Beautiful) ── */}
+                  <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5 relative overflow-hidden">
+                    <div className="absolute -top-16 -right-16 w-32 h-32 bg-violet-500/[0.04] rounded-full blur-3xl" />
+                    <div className="relative">
+                      <div className="flex items-center gap-1.5 mb-3">
+                        <TrendingUp className="w-2.5 h-2.5 text-cyan-400" />
+                        <span className="text-[9px] font-bold text-white uppercase tracking-wider">Adherence Radar</span>
+                        <div className="flex-1" />
+                        {suppAdherence.length > 0 && (() => {
+                          const avg7 = Math.round(suppAdherence.reduce((s, a) => s + a.rate7, 0) / suppAdherence.length)
+                          const avg30 = Math.round(suppAdherence.reduce((s, a) => s + a.rate30, 0) / suppAdherence.length)
+                          return (
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-violet-400" /><span className="text-[7px] text-gray-500">7d: {avg7}%</span></div>
+                              <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-cyan-400" /><span className="text-[7px] text-gray-500">30d: {avg30}%</span></div>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                      {suppAdherence.length > 0 ? (
+                        <div className="h-48">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <RadarChart data={suppAdherence.slice(0, 6).map(s => ({
+                              subject: s.name.length > 8 ? s.name.slice(0, 8) + '…' : s.name,
+                              '7-day': s.rate7,
+                              '30-day': s.rate30,
+                              goal: 80,
+                            }))}>
+                              <defs>
+                                <linearGradient id="rGrad7" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#818cf8" stopOpacity={0.4} />
+                                  <stop offset="100%" stopColor="#6d28d9" stopOpacity={0.05} />
+                                </linearGradient>
+                                <linearGradient id="rGrad30" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.25} />
+                                  <stop offset="100%" stopColor="#0891b2" stopOpacity={0.02} />
+                                </linearGradient>
+                              </defs>
+                              <PolarGrid stroke="rgba(255,255,255,0.06)" />
+                              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 7, fill: '#9ca3af', fontWeight: 600 }} />
+                              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
+                              <Radar name="30-day" dataKey="30-day" stroke="#22d3ee" fill="url(#rGrad30)" strokeWidth={1.5} dot={{ r: 1.5, fill: '#22d3ee' }} strokeOpacity={0.6} />
+                              <Radar name="7-day" dataKey="7-day" stroke="#818cf8" fill="url(#rGrad7)" strokeWidth={2} dot={{ r: 2.5, fill: '#818cf8', stroke: '#818cf8', strokeWidth: 1 }} />
+                              <Radar name="goal" dataKey="goal" stroke="rgba(255,255,255,0.15)" fill="none" strokeWidth={1} strokeDasharray="4 4" dot={false} />
+                              <Tooltip contentStyle={{ background: '#13131f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 9 }} />
+                            </RadarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      ) : suppTrends.length > 0 ? (
+                        <div className="h-32">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={suppTrends.slice(0, 6).map(s => ({
+                              name: s.name.length > 10 ? s.name.slice(0, 10) + '…' : s.name,
+                              delta: s.delta,
+                            }))} barCategoryGap="20%">
+                              <XAxis dataKey="name" tick={{ fontSize: 7, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                              <YAxis tick={false} axisLine={false} tickLine={false} width={0} />
+                              <Tooltip cursor={false} contentStyle={{ background: '#13131f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 9 }} formatter={(v: number) => [`${v > 0 ? '+' : ''}${v}%`, 'Trend']} />
+                              <Bar dataKey="delta" radius={[3, 3, 0, 0]} barSize={14}>
+                                {suppTrends.slice(0, 6).map((s, i) => (
+                                  <Cell key={i} fill={s.trend === 'rising' ? '#10b981' : s.trend === 'dropping' ? '#ef4444' : '#6b7280'} fillOpacity={0.6} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4"><span className="text-[9px] text-gray-600 italic">No trend data yet</span></div>
+                      )}
                     </div>
-                    {suppAdherence.length > 0 ? (
-                      <div className="h-44">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RadarChart data={suppAdherence.slice(0, 6).map(s => ({
-                            subject: s.name.length > 8 ? s.name.slice(0, 8) + '…' : s.name,
-                            rate: s.rate7,
-                            fullMark: 100,
-                          }))}>
-                            <PolarGrid stroke="rgba(255,255,255,0.06)" />
-                            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 7, fill: '#9ca3af' }} />
-                            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
-                            <Radar name="7-day" dataKey="rate" stroke="#818cf8" fill="#818cf8" fillOpacity={0.2} strokeWidth={1.5} dot={{ r: 2, fill: '#818cf8' }} />
-                          </RadarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    ) : suppTrends.length > 0 ? (
-                      <div className="h-32">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={suppTrends.slice(0, 6).map(s => ({
-                            name: s.name.length > 10 ? s.name.slice(0, 10) + '…' : s.name,
-                            delta: s.delta,
-                          }))} barCategoryGap="20%">
-                            <XAxis dataKey="name" tick={{ fontSize: 7, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                            <YAxis tick={false} axisLine={false} tickLine={false} width={0} />
-                            <Tooltip cursor={false} contentStyle={{ background: '#13131f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 9 }} formatter={(v: number) => [`${v > 0 ? '+' : ''}${v}%`, 'Trend']} />
-                            <Bar dataKey="delta" radius={[3, 3, 0, 0]} barSize={14}>
-                              {suppTrends.slice(0, 6).map((s, i) => (
-                                <Cell key={i} fill={s.trend === 'rising' ? '#10b981' : s.trend === 'dropping' ? '#ef4444' : '#6b7280'} fillOpacity={0.6} />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    ) : (
-                      <div className="text-center py-4"><span className="text-[9px] text-gray-600 italic">No trend data yet</span></div>
-                    )}
                   </div>
 
                 </div>
