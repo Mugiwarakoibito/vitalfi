@@ -5,11 +5,11 @@ import {
   Trash2, Sunrise, Sunset, Moon, Sun, Sparkles, Activity,
   DollarSign, Layers, CalendarCheck, Calendar,
   Brain, ShieldAlert, Zap, Package,
-  CheckCircle2, BarChart3, Target,
+  CheckCircle2, BarChart3,
   ChevronLeft, ChevronRight, RotateCcw, Flame,
   TrendingUp, ChevronDown,
 } from 'lucide-react'
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, PieChart, Pie } from 'recharts'
+import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { generateId, cn } from '@/lib/utils'
@@ -575,22 +575,6 @@ export function SupplementTracker() {
         {activePanel === 'coach' && (() => {
           // ─── Predictive Intelligence ───
           const now = new Date(selectedDate + 'T12:00:00')
-          const weekDays = Array.from({ length: 7 }, (_, i) => {
-            const d = new Date(now); d.setDate(d.getDate() - (6 - i))
-            const dateStr = toLocalDate(d)
-            const dayLogs = logs.filter(l => l.date === dateStr)
-            const taken = new Set(dayLogs.map(l => l.supplementId)).size
-            const total = dailySupps.length
-            return {
-              letter: d.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0),
-              dayName: d.toLocaleDateString('en-US', { weekday: 'long' }),
-              taken, total,
-              pct: total > 0 ? Math.round((taken / total) * 100) : 0,
-              date: dateStr,
-              isToday: dateStr === today,
-              isPast: dateStr < today
-            }
-          })
 
           // ─── Streak Intelligence ───
           let currentStreak = 0
@@ -693,10 +677,6 @@ export function SupplementTracker() {
             { name: 'Collagen', why: 'Skin & joint health', priority: 'low' as const },
           ]
           const missing = commonSupps.filter(c => !supplements.some(s => s.name.toLowerCase().includes(c.name.toLowerCase())))
-
-          // ─── Consistency Score ───
-          const weekPct = weekDays.reduce((s, d) => s + d.taken, 0) > 0 ? Math.round((weekDays.reduce((s, d) => s + d.taken, 0) / Math.max(weekDays.reduce((s, d) => s + d.total, 0), 1)) * 100) : 0
-          const consistencyScore = weekPct
 
           // ─── Trend Average ───
           const trendDiffs = weeklyTrend.map((w, i) => i > 0 ? w.pct - weeklyTrend[i-1].pct : 0).slice(1)
@@ -873,20 +853,8 @@ export function SupplementTracker() {
                 const currentHour = new Date().getHours()
                 const currentTod = currentHour < 12 ? 'Morning' : currentHour < 17 ? 'Afternoon' : currentHour < 21 ? 'Evening' : 'Night'
 
-                // ── Quick-log data: per-supp streak + last taken ──
-                const suppQuickData = deduped.map(s => {
-                  let streak = 0
-                  for (let i = 0; i < 30; i++) {
-                    const d = new Date(); d.setDate(d.getDate() - i)
-                    const ds = toLocalDate(d)
-                    const hasLog = logs.some(l => l.supplementId === s.id && l.date === ds)
-                    if (hasLog) streak++; else break
-                  }
-                  const lastLog = logs.filter(l => l.supplementId === s.id && l.takenAt).sort((a, b) => new Date(b.takenAt!).getTime() - new Date(a.takenAt!).getTime())[0]
-                  const lastTaken = lastLog?.takenAt ? new Date(lastLog.takenAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : null
-                  const done = s.doses.every(d => d.taken)
-                  return { ...s, streak, lastTaken, done }
-                })
+                // ── Score stats ──
+                const complianceRate = deduped.length > 0 ? Math.round((dedupedDone / deduped.length) * 100) : 0
 
                 // ── Days active (last 14 days) ──
                 let daysActive14 = 0
@@ -898,8 +866,8 @@ export function SupplementTracker() {
                 }
 
                 // ── Next due supplement ──
-                const nextDue = (() => {
-                  const remaining = suppQuickData.filter(s => !s.done)
+                const remaining = deduped.filter(s => !s.doses.every(d => d.taken))
+                const nextDueName = (() => {
                   if (remaining.length === 0) return null
                   const timeOrder = ['Morning', 'Afternoon', 'Evening', 'Night']
                   const curIdx = timeOrder.indexOf(currentTod)
@@ -908,132 +876,101 @@ export function SupplementTracker() {
                     const bIdx = timeOrder.indexOf(b.times[0] || 'Morning')
                     return ((aIdx - curIdx + 4) % 4) - ((bIdx - curIdx + 4) % 4)
                   })
-                  return sorted[0]
+                  return sorted[0].name
                 })()
 
-                // ── Score stats ──
-                const complianceRate = deduped.length > 0 ? Math.round((dedupedDone / deduped.length) * 100) : 0
-
-                // ── AI Insights: top 3 perfect insights ──
+                // ── AI Insights: smart, non-duplicate ──
                 const insights: { icon: typeof Zap; title: string; detail: string; color: string }[] = []
 
-                // 1. Current time window — most actionable
-                const currentSlotMissing = deduped.filter(s => s.times[0] === currentTod && !s.doses.every(d => d.taken))
-                if (currentSlotMissing.length > 0) {
-                  const names = currentSlotMissing.map(s => s.name).join(', ')
-                  insights.push({ icon: Clock, title: `${currentTod} window active — take ${names}`, detail: `${currentSlotMissing.length} supplement${currentSlotMissing.length > 1 ? 's' : ''} due now for optimal absorption`, color: 'cyan' })
-                }
-
-                // 2. Streak — most motivating
-                if (insights.length < 3 && longTermStreak >= 3) {
-                  const pct = Math.round((longTermStreak / 30) * 100)
-                  insights.push({ icon: Flame, title: `${longTermStreak}-day streak — ${pct}% to elite`, detail: longTermStreak >= 30 ? 'Top 1% of users — elite discipline' : longTermStreak >= 14 ? 'Two weeks strong — habit locked in' : longTermStreak >= 7 ? 'One week — past the hardest part' : `${30 - longTermStreak} more days to form a permanent habit`, color: 'orange' })
-                }
-
-                // 3. Refill — most urgent
-                if (insights.length < 3) {
-                  const urgent = refillData.filter(r => r.urgency === 'critical' || r.urgency === 'warning').sort((a, b) => a.daysUntilRefill - b.daysUntilRefill)
-                  if (urgent.length > 0) {
-                    const r = urgent[0]
-                    const action = r.urgency === 'critical' ? 'Reorder TODAY — will run out' : `Reorder within ${r.daysUntilRefill} days to avoid gap`
-                    insights.push({ icon: Package, title: `${r.name} — ${r.daysUntilRefill} days supply left`, detail: action, color: r.urgency === 'critical' ? 'rose' : 'amber' })
+                // 1. Timing intelligence — not shown elsewhere
+                if (realTiming.length > 0) {
+                  const misaligned = realTiming.filter(r => !r.isAligned)
+                  if (misaligned.length > 0) {
+                    const m = misaligned[0]
+                    insights.push({ icon: ShieldAlert, title: `${m.name} timing off`, detail: `Taking ${m.actualCategory} instead of ${m.plannedCategory} — shift by ${m.actualCategory === 'Morning' ? 'earlier' : 'later'}`, color: 'cyan' })
                   }
                 }
 
-                // 4. Compliance — most informative (if slots open)
-                if (insights.length < 3) {
-                  if (dedupedDone === deduped.length && deduped.length > 0) {
-                    insights.push({ icon: CheckCircle2, title: '100% compliance today', detail: `All ${deduped.length} supplements logged — consistency compounds`, color: 'emerald' })
-                  } else if (dedupedDone > 0) {
-                    const pct = Math.round((dedupedDone / deduped.length) * 100)
-                    const remaining = deduped.length - dedupedDone
-                    insights.push({ icon: Activity, title: `${pct}% done — ${remaining} remaining`, detail: remaining === 1 ? `1 supplement left to complete today` : `${remaining} supplements left to complete today`, color: pct >= 50 ? 'cyan' : 'amber' })
-                  }
-                }
-
-                // 5. Trend — most strategic (if slots open)
-                if (insights.length < 3 && trendDiffs.length > 0) {
+                // 2. Adherence prediction — not shown elsewhere
+                if (trendDiffs.length > 0 && longTermStreak > 0) {
                   const avgDiff = trendDiffs.reduce((a, b) => a + b, 0) / trendDiffs.length
-                  if (avgDiff > 5) insights.push({ icon: TrendingUp, title: `Adherence rising +${avgDiff.toFixed(0)}%/week`, detail: 'Momentum building — you\'re on the right track', color: 'emerald' })
-                  else if (avgDiff < -5) insights.push({ icon: TrendingUp, title: `Adherence declining ${avgDiff.toFixed(0)}%/week`, detail: 'Consider simplifying your stack or setting alarms', color: 'violet' })
-                }
-
-                // 6. Worst supplement — most targeted (if slots open)
-                if (insights.length < 3) {
-                  const sorted = [...suppAdherence].sort((a, b) => a.rate7 - b.rate7)
-                  const worst = sorted[0]
-                  if (worst && worst.rate7 < 70 && worst.rate7 > 0) {
-                    insights.push({ icon: Brain, title: `${worst.name} at ${worst.rate7}% this week`, detail: 'Link it to a daily habit like breakfast or bedtime', color: 'violet' })
+                  if (avgDiff > 0 && longTermStreak < 30) {
+                    const daysToElite = Math.ceil((30 - longTermStreak) * 0.7)
+                    const eta = new Date(); eta.setDate(eta.getDate() + daysToElite)
+                    insights.push({ icon: TrendingUp, title: `On track for 30-day streak`, detail: `At +${avgDiff.toFixed(0)}%/week pace — ETA ${eta.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, color: 'emerald' })
+                  } else if (avgDiff < -5) {
+                    insights.push({ icon: TrendingUp, title: `Adherence dropping ${Math.abs(avgDiff).toFixed(0)}%/week`, detail: 'Try linking supplements to an existing daily habit', color: 'violet' })
                   }
                 }
 
-                // Score components — useful stats
-                const scoreStats = [
-                  { label: 'Days Active', val: `${daysActive14}/14`, icon: Calendar, color: '#a78bfa' },
-                  { label: 'Compliance', val: `${complianceRate}%`, icon: Target, color: '#34d399' },
-                  { label: 'Next Due', val: nextDue ? nextDue.name.split(' ')[0] : 'Done', icon: Clock, color: '#22d3ee' },
-                  { label: 'Best Streak', val: `${bestStreak}d`, icon: Flame, color: '#fb923c' },
-                ]
+                // 3. Synergy intelligence — not shown elsewhere
+                if (synergies.length > 0 && insights.length < 3) {
+                  insights.push({ icon: Sparkles, title: `${synergies.length} synergy pair${synergies.length > 1 ? 's' : ''} detected`, detail: `${synergies[0].a} + ${synergies[0].b} — ${synergies[0].message || 'work well together'}`, color: 'amber' })
+                }
+
+                // 4. Habit linking suggestion — not shown elsewhere
+                if (insights.length < 3) {
+                  const unscheduled = deduped.filter(s => !s.times[0] || s.times[0] === 'Anytime')
+                  if (unscheduled.length > 0) {
+                    insights.push({ icon: Brain, title: `${unscheduled[0].name} has no schedule`, detail: 'Assign a time slot to boost adherence by 40%', color: 'violet' })
+                  }
+                }
+
+                // 5. Cost intelligence — not shown elsewhere
+                if (insights.length < 3 && totalCost > 0) {
+                  const expensive = costBreakdown[0]
+                  if (expensive && expensive.pct > 30) {
+                    insights.push({ icon: DollarSign, title: `${expensive.name} = ${expensive.pct}% of cost`, detail: `$${expensive.perDay}/day — consider bulk buying for 20% savings`, color: 'amber' })
+                  }
+                }
 
                 return (
                 <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.06) transparent' }}>
 
                   {/* ── Score Strip ── */}
-                  <div className="rounded-2xl bg-gradient-to-r from-violet-500/[0.06] to-indigo-500/[0.03] border border-violet-500/10 px-4 py-3 flex items-center gap-3">
-                    <div className="relative w-12 h-12 shrink-0">
-                      <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                        <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2.5" />
-                        <circle cx="18" cy="18" r="15" fill="none" stroke="url(#oGrad)" strokeWidth="2.5" strokeLinecap="round"
-                          strokeDasharray={2 * Math.PI * 15} strokeDashoffset={2 * Math.PI * 15 * (1 - complianceRate / 100)} />
-                        <defs><linearGradient id="oGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#c4b5fd" /><stop offset="100%" stopColor="#7c3aed" /></linearGradient></defs>
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center"><span className="text-xs font-black text-white">{complianceRate}%</span></div>
-                    </div>
-                    <div className="flex-1 grid grid-cols-4 gap-1.5">
-                      {scoreStats.map((s, i) => {
-                        const Icon = s.icon
-                        return (
-                          <div key={i} className="text-center">
-                            <Icon className="w-2.5 h-2.5 mx-auto mb-0.5" style={{ color: s.color }} />
-                            <span className="text-[10px] font-black text-white block leading-none">{s.val}</span>
-                            <span className="text-[7px] font-bold text-gray-500 block">{s.label}</span>
+                  <div className="rounded-2xl bg-gradient-to-br from-violet-500/[0.08] via-indigo-500/[0.04] to-transparent border border-violet-500/10 p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="relative w-16 h-16 shrink-0">
+                        <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                          <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="2" />
+                          <circle cx="18" cy="18" r="15.5" fill="none" stroke="url(#scoreGrad)" strokeWidth="2.5" strokeLinecap="round"
+                            strokeDasharray={2 * Math.PI * 15.5} strokeDashoffset={2 * Math.PI * 15.5 * (1 - complianceRate / 100)} />
+                          <defs>
+                            <linearGradient id="scoreGrad" x1="0" y1="0" x2="1" y2="1">
+                              <stop offset="0%" stopColor="#c4b5fd" /><stop offset="50%" stopColor="#818cf8" /><stop offset="100%" stopColor="#7c3aed" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-sm font-black text-white leading-none">{complianceRate}%</span>
+                          <span className="text-[6px] text-violet-300/60 font-bold mt-0.5">TODAY</span>
+                        </div>
+                      </div>
+                      <div className="flex-1 grid grid-cols-3 gap-3">
+                        <div className="text-center">
+                          <div className="w-8 h-8 mx-auto rounded-xl bg-violet-500/10 flex items-center justify-center mb-1">
+                            <Calendar className="w-3.5 h-3.5 text-violet-400" />
                           </div>
-                        )
-                      })}
+                          <span className="text-[11px] font-black text-white block">{daysActive14}<span className="text-[8px] text-gray-500 font-bold">/14</span></span>
+                          <span className="text-[7px] text-gray-500 font-bold">Days Active</span>
+                        </div>
+                        <div className="text-center">
+                          <div className="w-8 h-8 mx-auto rounded-xl bg-cyan-500/10 flex items-center justify-center mb-1">
+                            <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                          </div>
+                          <span className="text-[11px] font-black text-white block truncate">{nextDueName ? nextDueName.split(' ')[0] : 'Done'}</span>
+                          <span className="text-[7px] text-gray-500 font-bold">Next Due</span>
+                        </div>
+                        <div className="text-center">
+                          <div className="w-8 h-8 mx-auto rounded-xl bg-orange-500/10 flex items-center justify-center mb-1">
+                            <Flame className="w-3.5 h-3.5 text-orange-400" />
+                          </div>
+                          <span className="text-[11px] font-black text-white block">{bestStreak}<span className="text-[8px] text-gray-500 font-bold">d</span></span>
+                          <span className="text-[7px] text-gray-500 font-bold">Best Streak</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-
-                  {/* ── Weekly Progress ── */}
-                  {(() => {
-                    const weekData = weeklyTrend.map((w) => ({
-                      name: w.label.replace(' ', '\n'),
-                      pct: w.pct,
-                      fill: w.pct >= 90 ? '#10b981' : w.pct >= 60 ? '#a78bfa' : w.pct >= 30 ? '#f59e0b' : '#ef4444',
-                    }))
-                    return (
-                    <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <BarChart3 className="w-3 h-3 text-violet-400" />
-                        <span className="text-[9px] font-bold text-violet-300 uppercase tracking-wider">Weekly Progress</span>
-                        <div className="flex-1" />
-                        <span className="text-[8px] text-gray-500">{consistencyScore}% avg</span>
-                      </div>
-                      <div className="h-16">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={weekData} barCategoryGap="20%">
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                            <XAxis dataKey="name" tick={{ fontSize: 7, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                            <YAxis domain={[0, 100]} tick={false} axisLine={false} tickLine={false} width={0} />
-                            <Tooltip cursor={false} contentStyle={{ background: '#13131f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 9 }} labelStyle={{ color: '#9ca3af' }} formatter={(v: number) => [`${v}%`, 'Compliance']} />
-                            <Bar dataKey="pct" radius={[3, 3, 0, 0]}>
-                              {weekData.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.7} />)}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                    )
-                  })()}
 
                   {/* ── AI Insights ── */}
                   {insights.length > 0 && (
@@ -1055,9 +992,9 @@ export function SupplementTracker() {
                           }
                           return (
                             <motion.div key={i} initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                              className="flex items-start gap-2.5 px-3.5 py-2 hover:bg-white/[0.02] transition-colors cursor-default">
-                              <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${clrMap[ins.color] || 'text-gray-400 bg-gray-500/[0.06]'}`}>
-                                <Icon className="w-3 h-3" />
+                              className="flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-white/[0.02] transition-colors cursor-default">
+                              <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${clrMap[ins.color] || 'text-gray-400 bg-gray-500/[0.06]'}`}>
+                                <Icon className="w-3.5 h-3.5" />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <span className="text-[10px] font-bold text-white block">{ins.title}</span>
@@ -1070,112 +1007,104 @@ export function SupplementTracker() {
                     </div>
                   )}
 
-                  {/* ── Supply Health ── */}
-                  {(() => {
-                    const criticalRefills = refillData.filter(r => r.urgency === 'critical').sort((a, b) => a.daysUntilRefill - b.daysUntilRefill)
-                    const warningRefills = refillData.filter(r => r.urgency === 'warning').sort((a, b) => a.daysUntilRefill - b.daysUntilRefill)
-                    const okRefills = refillData.filter(r => r.urgency === 'ok')
-                    const supplyTotal = refillData.length
-                    const supplyHealthPct = supplyTotal > 0 ? Math.round((okRefills.length / supplyTotal) * 100) : 0
-                    const supplyColor = supplyHealthPct >= 70 ? '#10b981' : supplyHealthPct >= 40 ? '#f59e0b' : '#ef4444'
-                    const avgDaysLeft = supplyTotal > 0 ? Math.round(refillData.reduce((s, r) => s + r.daysUntilRefill, 0) / supplyTotal) : 0
-                    return (
+                  {/* ── Supply Health (Donut) + Supplement Trends (Donut) ── */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Supply Donut */}
                     <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="relative w-10 h-10 shrink-0">
-                          <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                            <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
-                            <circle cx="18" cy="18" r="14" fill="none" stroke={supplyColor} strokeWidth="3" strokeLinecap="round" strokeOpacity={0.8}
-                              strokeDasharray={2 * Math.PI * 14} strokeDashoffset={2 * Math.PI * 14 * (1 - supplyHealthPct / 100)} />
-                          </svg>
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-[9px] font-black text-white">{supplyHealthPct}%</span>
-                          </div>
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-1">
-                            <Package className="w-2.5 h-2.5 text-rose-400" />
-                            <span className="text-[10px] font-bold text-white">Supply Health</span>
-                          </div>
-                          <span className="text-[8px] text-gray-500">{supplyTotal} tracked · avg {avgDaysLeft}d left</span>
-                        </div>
-                        {criticalRefills.length > 0 && (
-                          <span className="text-[8px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded-full animate-pulse">{criticalRefills.length} urgent</span>
-                        )}
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Package className="w-2.5 h-2.5 text-rose-400" />
+                        <span className="text-[9px] font-bold text-white">Supply</span>
                       </div>
-                      {supplyTotal > 0 ? (
-                        <div className="space-y-1.5">
-                          {[...criticalRefills, ...warningRefills, ...okRefills].slice(0, 5).map((r, i) => {
-                            const barPct = Math.min(100, Math.round((r.daysUntilRefill / r.refillDays) * 100))
-                            const barColor = r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981'
-                            return (
-                              <div key={i} className="flex items-center gap-2">
-                                <span className="text-[8px] text-gray-400 w-16 truncate">{r.name.split(' ')[0]}</span>
-                                <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                                  <div className="h-full rounded-full transition-all" style={{ width: barPct + '%', background: barColor, opacity: 0.7 }} />
-                                </div>
-                                <span className={`text-[8px] font-bold tabular-nums w-6 text-right ${r.urgency === 'critical' ? 'text-rose-400' : r.urgency === 'warning' ? 'text-amber-400' : 'text-gray-500'}`}>{r.daysUntilRefill}d</span>
+                      {refillData.length > 0 ? (() => {
+                        const c = refillData.filter(r => r.urgency === 'critical').length
+                        const w = refillData.filter(r => r.urgency === 'warning').length
+                        const o = refillData.filter(r => r.urgency === 'ok').length
+                        const donutData = [
+                          { name: 'Critical', value: c, fill: '#ef4444' },
+                          { name: 'Warning', value: w, fill: '#f59e0b' },
+                          { name: 'OK', value: o, fill: '#10b981' },
+                        ].filter(d => d.value > 0)
+                        const avgDays = Math.round(refillData.reduce((s, r) => s + r.daysUntilRefill, 0) / refillData.length)
+                        return (
+                          <>
+                            <div className="relative w-full aspect-square max-w-[90px] mx-auto mb-2">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                  <Pie data={donutData} cx="50%" cy="50%" innerRadius="55%" outerRadius="85%" paddingAngle={4} dataKey="value" strokeWidth={0}>
+                                    {donutData.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.75} />)}
+                                  </Pie>
+                                </PieChart>
+                              </ResponsiveContainer>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <span className="text-sm font-black text-white leading-none">{refillData.length}</span>
+                                <span className="text-[6px] text-gray-500 font-bold">tracked</span>
                               </div>
-                            )
-                          })}
-                        </div>
-                      ) : <span className="text-[8px] text-gray-600 italic block text-center py-1">No refill data</span>}
+                            </div>
+                            <div className="space-y-0.5">
+                              {donutData.map((d, i) => (
+                                <div key={i} className="flex items-center gap-1.5">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: d.fill }} />
+                                  <span className="text-[7px] text-gray-400 flex-1">{d.name}</span>
+                                  <span className="text-[8px] font-bold text-white">{d.value}</span>
+                                </div>
+                              ))}
+                              <div className="pt-1 border-t border-white/[0.03] text-center">
+                                <span className="text-[7px] text-gray-500">avg {avgDays}d left</span>
+                              </div>
+                            </div>
+                          </>
+                        )
+                      })() : <span className="text-[8px] text-gray-600 italic block text-center py-4">No data</span>}
                     </div>
-                    )
-                  })()}
 
-                  {/* ── Supplement Trends ── */}
-                  {(() => {
-                    const rising = suppTrends.filter(s => s.trend === 'rising').sort((a, b) => b.delta - a.delta)
-                    const stable = suppTrends.filter(s => s.trend === 'stable')
-                    const dropping = suppTrends.filter(s => s.trend === 'dropping').sort((a, b) => a.delta - b.delta)
-                    const trendTotal = suppTrends.length
-                    const trendGoodPct = trendTotal > 0 ? Math.round(((rising.length + stable.length) / trendTotal) * 100) : 0
-                    const trendColor = trendGoodPct >= 70 ? '#10b981' : trendGoodPct >= 40 ? '#f59e0b' : '#ef4444'
-                    return (
+                    {/* Trends Donut */}
                     <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="relative w-10 h-10 shrink-0">
-                          <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                            <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
-                            <circle cx="18" cy="18" r="14" fill="none" stroke={trendColor} strokeWidth="3" strokeLinecap="round" strokeOpacity={0.8}
-                              strokeDasharray={2 * Math.PI * 14} strokeDashoffset={2 * Math.PI * 14 * (1 - trendGoodPct / 100)} />
-                          </svg>
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-[9px] font-black text-white">{trendGoodPct}%</span>
-                          </div>
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-1">
-                            <TrendingUp className="w-2.5 h-2.5 text-cyan-400" />
-                            <span className="text-[10px] font-bold text-white">Supplement Trends</span>
-                          </div>
-                          <span className="text-[8px] text-gray-500">{trendTotal} tracked · 30-day analysis</span>
-                        </div>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <TrendingUp className="w-2.5 h-2.5 text-cyan-400" />
+                        <span className="text-[9px] font-bold text-white">Trends</span>
                       </div>
-                      {trendTotal > 0 ? (
-                        <div className="space-y-1.5">
-                          {[...rising, ...stable, ...dropping].slice(0, 5).map((s, i) => {
-                            const arrow = s.trend === 'rising' ? '↑' : s.trend === 'dropping' ? '↓' : '→'
-                            const color = s.trend === 'rising' ? 'text-emerald-400' : s.trend === 'dropping' ? 'text-rose-400' : 'text-gray-400'
-                            const barPct = Math.min(100, Math.abs(s.delta) + 50)
-                            const barColor = s.trend === 'rising' ? '#10b981' : s.trend === 'dropping' ? '#ef4444' : '#6b7280'
-                            return (
-                              <div key={i} className="flex items-center gap-2">
-                                <span className={`text-[9px] ${color}`}>{arrow}</span>
-                                <span className="text-[8px] text-gray-400 w-14 truncate">{s.name.split(' ')[0]}</span>
-                                <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                                  <div className="h-full rounded-full transition-all" style={{ width: barPct + '%', background: barColor, opacity: 0.6 }} />
-                                </div>
-                                <span className={`text-[8px] font-bold tabular-nums w-8 text-right ${color}`}>{s.delta > 0 ? '+' : ''}{s.delta}%</span>
+                      {suppTrends.length > 0 ? (() => {
+                        const r = suppTrends.filter(s => s.trend === 'rising').length
+                        const st = suppTrends.filter(s => s.trend === 'stable').length
+                        const d = suppTrends.filter(s => s.trend === 'dropping').length
+                        const donutData = [
+                          { name: 'Rising', value: r, fill: '#10b981' },
+                          { name: 'Stable', value: st, fill: '#6b7280' },
+                          { name: 'Dropping', value: d, fill: '#ef4444' },
+                        ].filter(x => x.value > 0)
+                        const avgDelta = suppTrends.length > 0 ? Math.round(suppTrends.reduce((s, t) => s + t.delta, 0) / suppTrends.length) : 0
+                        return (
+                          <>
+                            <div className="relative w-full aspect-square max-w-[90px] mx-auto mb-2">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                  <Pie data={donutData} cx="50%" cy="50%" innerRadius="55%" outerRadius="85%" paddingAngle={4} dataKey="value" strokeWidth={0}>
+                                    {donutData.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.75} />)}
+                                  </Pie>
+                                </PieChart>
+                              </ResponsiveContainer>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <span className="text-sm font-black text-white leading-none">{suppTrends.length}</span>
+                                <span className="text-[6px] text-gray-500 font-bold">tracked</span>
                               </div>
-                            )
-                          })}
-                        </div>
-                      ) : <span className="text-[8px] text-gray-600 italic block text-center py-1">No trend data</span>}
+                            </div>
+                            <div className="space-y-0.5">
+                              {donutData.map((x, i) => (
+                                <div key={i} className="flex items-center gap-1.5">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: x.fill }} />
+                                  <span className="text-[7px] text-gray-400 flex-1">{x.name}</span>
+                                  <span className="text-[8px] font-bold text-white">{x.value}</span>
+                                </div>
+                              ))}
+                              <div className="pt-1 border-t border-white/[0.03] text-center">
+                                <span className={`text-[7px] font-bold ${avgDelta >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{avgDelta >= 0 ? '+' : ''}{avgDelta}% avg</span>
+                              </div>
+                            </div>
+                          </>
+                        )
+                      })() : <span className="text-[8px] text-gray-600 italic block text-center py-4">No data</span>}
                     </div>
-                    )
-                  })()}
+                  </div>
 
                 </div>
                 )
