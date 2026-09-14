@@ -1079,6 +1079,7 @@ export function SupplementTracker() {
               })()}
 
 
+
                                                         {/* ──── MODE: OPTIMIZATION ──── */}
               {coachMode === 'optimization' && (() => {
                 const optData = [
