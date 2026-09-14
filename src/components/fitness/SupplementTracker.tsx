@@ -881,73 +881,78 @@ export function SupplementTracker() {
                 })()
                 const dedupedDone = deduped.filter(s => s.doses.every(d => d.taken)).length
 
-                // ── Time groups ──
+                // ── Time groups with window info ──
                 const currentHour = new Date().getHours()
+                const TIME_WINDOWS: Record<string, string> = { Morning: '6am-12pm', Afternoon: '12pm-5pm', Evening: '5pm-9pm', Night: '9pm-12am' }
+                const currentTod = currentHour < 12 ? 'Morning' : currentHour < 17 ? 'Afternoon' : currentHour < 21 ? 'Evening' : 'Night'
                 const timeGroups = (() => {
-                  const g: Record<string, typeof deduped> = { 'Morning': [], 'Afternoon': [], 'Evening': [], 'Night': [], 'Flexible': [] }
+                  const g: Record<string, typeof deduped> = { 'Morning': [], 'Afternoon': [], 'Evening': [], 'Night': [], 'Anytime': [] }
                   deduped.forEach(s => {
                     const t = s.times[0]
                     if (t === 'Morning') g['Morning'].push(s)
                     else if (t === 'Afternoon') g['Afternoon'].push(s)
                     else if (t === 'Evening') g['Evening'].push(s)
                     else if (t === 'Night') g['Night'].push(s)
-                    else g['Flexible'].push(s)
+                    else g['Anytime'].push(s)
                   })
                   return Object.entries(g).filter(([, v]) => v.length > 0)
                 })()
 
-                // ── Smart AI Insights ──
-                const smartInsights: { type: 'alert' | 'tip' | 'praise' | 'predict'; icon: typeof Zap; title: string; detail: string; color: string }[] = []
+                // ── AI Insights: deeper, smarter ──
+                const insights: { icon: typeof Zap; title: string; detail: string; color: string }[] = []
 
-                // All done?
+                // 1. Completion status
                 if (dedupedDone === deduped.length && deduped.length > 0) {
-                  smartInsights.push({ type: 'praise', icon: CheckCircle2, title: 'Perfect day', detail: 'All supplements taken — consistency builds results', color: 'emerald' })
+                  insights.push({ icon: CheckCircle2, title: 'Perfect compliance', detail: `All ${deduped.length} supplements logged today — your body thanks you`, color: 'emerald' })
+                } else if (dedupedDone > 0) {
+                  const pct = Math.round((dedupedDone / deduped.length) * 100)
+                  insights.push({ icon: Activity, title: `${pct}% complete today`, detail: `${dedupedDone} of ${deduped.length} done — ${deduped.length - dedupedDone} remaining`, color: pct >= 50 ? 'cyan' : 'amber' })
                 }
 
-                // Missing doses
-                const missing = deduped.filter(s => s.doses.some(d => !d.taken))
-                if (missing.length > 0 && todayProgress > 0) {
-                  smartInsights.push({ type: 'alert', icon: AlertTriangle, title: `${missing.length} remaining`, detail: missing.map(s => s.name).join(', '), color: 'amber' })
+                // 2. Current time window intelligence
+                const currentSlotSupps = deduped.filter(s => s.times[0] === currentTod)
+                const currentSlotMissing = currentSlotSupps.filter(s => !s.doses.every(d => d.taken))
+                if (currentSlotMissing.length > 0) {
+                  insights.push({ icon: Clock, title: `Active: ${currentTod} window`, detail: `Take ${currentSlotMissing.map(s => s.name).join(', ')} — optimal absorption window`, color: 'cyan' })
                 }
 
-                // Refill prediction
-                const urgentRefill = refillData.find(r => r.urgency === 'critical')
-                if (urgentRefill) {
-                  smartInsights.push({ type: 'predict', icon: Package, title: `${urgentRefill.name} running low`, detail: `${urgentRefill.daysUntilRefill} days until empty — consider reordering`, color: 'rose' })
+                // 3. Refill prediction with cost impact
+                const urgentRefills = refillData.filter(r => r.urgency === 'critical' || r.urgency === 'warning').sort((a, b) => a.daysUntilRefill - b.daysUntilRefill)
+                if (urgentRefills.length > 0) {
+                  const r = urgentRefills[0]
+                  insights.push({ icon: Package, title: `${r.name} — ${r.daysUntilRefill}d left`, detail: r.urgency === 'critical' ? `Critical: reorder now` : `Running low — reorder within ${r.daysUntilRefill} days`, color: r.urgency === 'critical' ? 'rose' : 'amber' })
                 }
 
-                // Timing intelligence
-                const currentTod = currentHour < 12 ? 'Morning' : currentHour < 17 ? 'Afternoon' : currentHour < 21 ? 'Evening' : 'Night'
-                const currentSlot = deduped.filter(s => s.times[0] === currentTod)
-                const currentSlotDone = currentSlot.filter(s => s.doses.every(d => d.taken))
-                if (currentSlot.length > 0 && currentSlotDone.length < currentSlot.length && currentSlot.length <= 3) {
-                  smartInsights.push({ type: 'alert', icon: Clock, title: `${currentTod} window active`, detail: `Take ${currentSlot.filter(s => !s.doses.every(d => d.taken)).map(s => s.name).join(', ')}`, color: 'cyan' })
+                // 4. Adherence trajectory
+                if (trendDiffs.length > 0) {
+                  const avgDiff = trendDiffs.reduce((a, b) => a + b, 0) / trendDiffs.length
+                  if (avgDiff > 5) insights.push({ icon: TrendingUp, title: 'Upward trajectory', detail: `+${avgDiff.toFixed(0)}% weekly improvement — building momentum`, color: 'emerald' })
+                  else if (avgDiff < -5) insights.push({ icon: TrendingUp, title: 'Declining pattern', detail: `${Math.abs(avgDiff).toFixed(0)}% weekly drop — consider simplifying your stack`, color: 'violet' })
                 }
 
-                // Streak intelligence
-                if (longTermStreak >= 3) {
-                  smartInsights.push({ type: 'tip', icon: Flame, title: `${longTermStreak}-day streak`, detail: longTermStreak >= 14 ? 'Outstanding discipline — top 5% of users' : longTermStreak >= 7 ? 'Strong momentum — keep stacking wins' : 'Building the habit — consistency compounds', color: 'orange' })
+                // 5. Streak milestone
+                if (longTermStreak >= 30) insights.push({ icon: Flame, title: `${longTermStreak}-day streak`, detail: 'Elite consistency — top 1% of supplement users', color: 'orange' })
+                else if (longTermStreak >= 14) insights.push({ icon: Flame, title: `${longTermStreak}-day streak`, detail: 'Two weeks strong — habit is forming', color: 'orange' })
+                else if (longTermStreak >= 7) insights.push({ icon: Flame, title: `${longTermStreak}-day streak`, detail: 'One week — past the hardest part', color: 'orange' })
+
+                // 6. Per-supplement deep insight
+                const worstSupp = suppAdherence.sort((a, b) => a.rate7 - b.rate7)[0]
+                if (worstSupp && worstSupp.rate7 < 70 && worstSupp.rate7 > 0) {
+                  insights.push({ icon: Brain, title: `${worstSupp.name} needs attention`, detail: `7-day adherence: ${worstSupp.rate7}% — try linking it to an existing habit`, color: 'violet' })
                 }
 
-                // Trend intelligence
-                const rising = suppTrends.filter(s => s.trend === 'rising')
-                const dropping = suppTrends.filter(s => s.trend === 'dropping')
-                if (rising.length > 0) {
-                  smartInsights.push({ type: 'tip', icon: TrendingUp, title: `${rising[0].name} improving`, detail: `+${rising[0].delta}% adherence this week vs last month`, color: 'emerald' })
-                }
-                if (dropping.length > 0 && rising.length === 0) {
-                  smartInsights.push({ type: 'alert', icon: TrendingUp, title: `${dropping[0].name} declining`, detail: `${Math.abs(dropping[0].delta)}% drop — may need schedule adjustment`, color: 'violet' })
-                }
-
-                // Adherence intelligence
-                if (consistencyScore < 60 && consistencyScore > 0) {
-                  smartInsights.push({ type: 'tip', icon: Brain, title: 'Room to grow', detail: `You're at ${consistencyScore}% — setting phone alarms can boost adherence by 40%`, color: 'violet' })
-                }
-
-                // Best supplement
+                // 7. Best performer
                 const bestSupp = suppAdherence.sort((a, b) => b.rate7 - a.rate7)[0]
                 if (bestSupp && bestSupp.rate7 === 100 && suppAdherence.length > 1) {
-                  smartInsights.push({ type: 'praise', icon: Sparkles, title: `${bestSupp.name} perfect`, detail: '100% this week — your most consistent supplement', color: 'amber' })
+                  insights.push({ icon: Sparkles, title: `${bestSupp.name} — 100%`, detail: 'Perfect adherence this week — your most reliable habit', color: 'amber' })
+                }
+
+                // 8. Timing drift
+                if (timingAlignmentPct < 40 && realTiming.length > 0) {
+                  const misaligned = realTiming.filter(r => !r.isAligned)
+                  if (misaligned.length > 0) {
+                    insights.push({ icon: ShieldAlert, title: 'Timing drift detected', detail: `${misaligned[0].name}: taking ${misaligned[0].actualCategory} instead of ${misaligned[0].plannedCategory}`, color: 'cyan' })
+                  }
                 }
 
                 // Weekly heatmap
@@ -964,10 +969,10 @@ export function SupplementTracker() {
 
                 // Score components
                 const scoreRing = [
-                  { label: 'ADH', val: consistencyScore, color: '#a78bfa' },
-                  { label: 'STK', val: Math.min(longTermStreak / 30 * 100, 100), color: '#fb923c' },
-                  { label: 'TMG', val: timingAlignmentPct, color: '#22d3ee' },
-                  { label: 'MOM', val: Math.max(0, Math.min(100, trendAvg * 2 + 50)), color: trendAvg > 0 ? '#34d399' : '#f87171' },
+                  { label: 'Adherence', val: consistencyScore, color: '#a78bfa' },
+                  { label: 'Streak', val: Math.min(longTermStreak / 30 * 100, 100), color: '#fb923c' },
+                  { label: 'Timing', val: timingAlignmentPct, color: '#22d3ee' },
+                  { label: 'Momentum', val: Math.max(0, Math.min(100, trendAvg * 2 + 50)), color: trendAvg > 0 ? '#34d399' : '#f87171' },
                 ]
 
                 return (
@@ -1002,18 +1007,20 @@ export function SupplementTracker() {
 
                   {/* ── Today's Schedule ── */}
                   {timeGroups.map(([time, supps], gi) => {
-                    const ICONS: Record<string, typeof Sun> = { Morning: Sun, Afternoon: Sunrise, Evening: Sunset, Night: Moon, Flexible: Clock }
-                    const CLR: Record<string, string> = { Morning: 'text-amber-400', Afternoon: 'text-yellow-400', Evening: 'text-orange-400', Night: 'text-blue-400', Flexible: 'text-gray-400' }
-                    const BG: Record<string, string> = { Morning: 'from-amber-500/[0.04]', Afternoon: 'from-yellow-500/[0.04]', Evening: 'from-orange-500/[0.04]', Night: 'from-blue-500/[0.04]', Flexible: 'from-gray-500/[0.04]' }
+                    const ICONS: Record<string, typeof Sun> = { Morning: Sun, Afternoon: Sunrise, Evening: Sunset, Night: Moon, Anytime: Clock }
+                    const CLR: Record<string, string> = { Morning: 'text-amber-400', Afternoon: 'text-yellow-400', Evening: 'text-orange-400', Night: 'text-blue-400', Anytime: 'text-gray-400' }
+                    const BG: Record<string, string> = { Morning: 'from-amber-500/[0.04]', Afternoon: 'from-yellow-500/[0.04]', Evening: 'from-orange-500/[0.04]', Night: 'from-blue-500/[0.04]', Anytime: 'from-gray-500/[0.04]' }
                     const Icon = ICONS[time] || Clock
                     const done = supps.filter(s => s.doses.every(d => d.taken)).length
                     const isCurrent = time === currentTod
+                    const window = TIME_WINDOWS[time]
                     return (
                       <div key={gi} className={`rounded-2xl bg-gradient-to-br ${BG[time] || 'from-gray-500/[0.04]'} to-transparent border ${isCurrent ? 'border-white/[0.1]' : 'border-white/[0.05]'} px-3.5 py-2.5 relative overflow-hidden`}>
                         {isCurrent && <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-violet-400 to-indigo-500 rounded-r" />}
                         <div className="flex items-center gap-2 mb-1.5">
                           <Icon className={`w-3 h-3 ${CLR[time]}`} />
                           <span className="text-[10px] font-bold text-white">{time}</span>
+                          {window && <span className="text-[7px] text-gray-600">{window}</span>}
                           {isCurrent && <span className="text-[7px] font-bold text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded-full">NOW</span>}
                           <div className="flex-1" />
                           <span className={`text-[9px] font-bold ${done === supps.length ? 'text-emerald-400' : 'text-gray-500'}`}>{done}/{supps.length}</span>
@@ -1037,14 +1044,14 @@ export function SupplementTracker() {
                   })}
 
                   {/* ── AI Insights ── */}
-                  {smartInsights.length > 0 && (
+                  {insights.length > 0 && (
                     <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] overflow-hidden">
                       <div className="px-3.5 py-2 flex items-center gap-1.5 border-b border-white/[0.04]">
                         <Brain className="w-3 h-3 text-violet-400" />
                         <span className="text-[9px] font-bold text-violet-300 uppercase tracking-wider">AI Insights</span>
                       </div>
                       <div className="divide-y divide-white/[0.03]">
-                        {smartInsights.slice(0, 5).map((ins, i) => {
+                        {insights.slice(0, 5).map((ins, i) => {
                           const Icon = ins.icon
                           const clrMap: Record<string, string> = {
                             rose: 'text-rose-400 bg-rose-500/[0.06]',
@@ -1103,51 +1110,77 @@ export function SupplementTracker() {
                     </div>
                   </div>
 
-                  {/* ── Quick Stats Row ── */}
-                  <div className="grid grid-cols-3 gap-2">
-                    {/* Supply */}
-                    <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3">
-                      <div className="flex items-center gap-1 mb-2">
-                        <Package className="w-3 h-3 text-rose-400" />
-                        <span className="text-[9px] font-bold text-gray-400">Supply</span>
-                      </div>
-                      {refillData.length > 0 ? (
-                        refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 2).map((r, i) => (
-                          <div key={i} className="flex items-center gap-1 mb-1 last:mb-0">
-                            <div className={`w-1 h-1 rounded-full ${r.urgency === 'critical' ? 'bg-rose-400 animate-pulse' : r.urgency === 'warning' ? 'bg-amber-400' : 'bg-emerald-400/40'}`} />
-                            <span className="text-[8px] text-gray-500 flex-1 truncate">{r.name.split(' ')[0]}</span>
-                            <span className={`text-[8px] font-bold tabular-nums ${r.urgency === 'critical' ? 'text-rose-400' : r.urgency === 'warning' ? 'text-amber-400' : 'text-gray-600'}`}>{r.daysUntilRefill}d</span>
+                  {/* ── Supply & Trend Donuts ── */}
+                  {(() => {
+                    const supplyDonutData = refillData.length > 0 ? [
+                      { name: 'Critical', value: refillData.filter(r => r.urgency === 'critical').length, fill: '#ef4444' },
+                      { name: 'Warning', value: refillData.filter(r => r.urgency === 'warning').length, fill: '#f59e0b' },
+                      { name: 'OK', value: refillData.filter(r => r.urgency === 'ok').length, fill: '#10b981' },
+                    ].filter(d => d.value > 0) : []
+                    const trendDonutData = suppTrends.length > 0 ? [
+                      { name: 'Rising', value: suppTrends.filter(s => s.trend === 'rising').length, fill: '#10b981' },
+                      { name: 'Stable', value: suppTrends.filter(s => s.trend === 'stable').length, fill: '#6b7280' },
+                      { name: 'Dropping', value: suppTrends.filter(s => s.trend === 'dropping').length, fill: '#ef4444' },
+                    ].filter(d => d.value > 0) : []
+                    return (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Package className="w-3 h-3 text-rose-400" />
+                          <span className="text-[10px] font-bold text-white">Supply Health</span>
+                        </div>
+                        {supplyDonutData.length > 0 ? (
+                          <div className="flex items-center gap-3">
+                            <div className="w-16 h-16 shrink-0">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart><Pie data={supplyDonutData} cx="50%" cy="50%" innerRadius={16} outerRadius={28} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                                  {supplyDonutData.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.7} />)}
+                                </Pie></PieChart>
+                              </ResponsiveContainer>
+                            </div>
+                            <div className="flex-1 space-y-1">
+                              {supplyDonutData.map((d, i) => (
+                                <div key={i} className="flex items-center gap-1.5">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: d.fill }} />
+                                  <span className="text-[8px] text-gray-400 flex-1">{d.name}</span>
+                                  <span className="text-[9px] font-bold text-white">{d.value}</span>
+                                </div>
+                              ))}
+                              <div className="pt-1 border-t border-white/[0.03]"><span className="text-[7px] text-gray-500">{refillData.length} supps tracked</span></div>
+                            </div>
                           </div>
-                        ))
-                      ) : <span className="text-[8px] text-gray-600">-</span>}
-                    </div>
-                    {/* Trend */}
-                    <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3">
-                      <div className="flex items-center gap-1 mb-2">
-                        <TrendingUp className="w-3 h-3 text-cyan-400" />
-                        <span className="text-[9px] font-bold text-gray-400">Trend</span>
+                        ) : <span className="text-[9px] text-gray-600 italic block text-center py-2">No refill data</span>}
                       </div>
-                      {suppTrends.length > 0 ? (
-                        suppTrends.slice(0, 2).map((s, i) => (
-                          <div key={i} className="flex items-center gap-1 mb-1 last:mb-0">
-                            <span className="text-[8px] text-gray-500 flex-1 truncate">{s.name.split(' ')[0]}</span>
-                            <span className={`text-[8px] font-bold tabular-nums ${s.delta > 0 ? 'text-emerald-400' : s.delta < 0 ? 'text-rose-400' : 'text-gray-600'}`}>{s.delta > 0 ? '+' : ''}{s.delta}%</span>
+                      <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <TrendingUp className="w-3 h-3 text-cyan-400" />
+                          <span className="text-[10px] font-bold text-white">Trend</span>
+                        </div>
+                        {trendDonutData.length > 0 ? (
+                          <div className="flex items-center gap-3">
+                            <div className="w-16 h-16 shrink-0">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart><Pie data={trendDonutData} cx="50%" cy="50%" innerRadius={16} outerRadius={28} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                                  {trendDonutData.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.7} />)}
+                                </Pie></PieChart>
+                              </ResponsiveContainer>
+                            </div>
+                            <div className="flex-1 space-y-1">
+                              {trendDonutData.map((d, i) => (
+                                <div key={i} className="flex items-center gap-1.5">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: d.fill }} />
+                                  <span className="text-[8px] text-gray-400 flex-1">{d.name}</span>
+                                  <span className="text-[9px] font-bold text-white">{d.value}</span>
+                                </div>
+                              ))}
+                              <div className="pt-1 border-t border-white/[0.03]"><span className="text-[7px] text-gray-500">{suppTrends.length} supps tracked</span></div>
+                            </div>
                           </div>
-                        ))
-                      ) : <span className="text-[8px] text-gray-600">-</span>}
-                    </div>
-                    {/* Streak */}
-                    <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3">
-                      <div className="flex items-center gap-1 mb-2">
-                        <Flame className="w-3 h-3 text-orange-400" />
-                        <span className="text-[9px] font-bold text-gray-400">Streak</span>
-                      </div>
-                      <div className="text-center">
-                        <span className="text-lg font-black text-orange-300 tabular-nums leading-none">{longTermStreak}</span>
-                        <span className="text-[8px] text-orange-400/50 block mt-0.5">days</span>
+                        ) : <span className="text-[9px] text-gray-600 italic block text-center py-2">No trend data</span>}
                       </div>
                     </div>
-                  </div>
+                    )
+                  })()}
 
                 </div>
                 )
