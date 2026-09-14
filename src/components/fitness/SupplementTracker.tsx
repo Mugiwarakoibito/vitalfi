@@ -9,7 +9,7 @@ import {
   ChevronLeft, ChevronRight, RotateCcw, Flame,
   TrendingUp, ChevronDown,
 } from 'lucide-react'
-import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { generateId, cn } from '@/lib/utils'
@@ -939,40 +939,42 @@ export function SupplementTracker() {
                 <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.06) transparent' }}>
 
                   {/* ── Score Strip ── */}
-                  <div className="rounded-2xl bg-gradient-to-br from-violet-500/[0.1] via-indigo-500/[0.05] to-cyan-500/[0.03] border border-violet-500/15 p-4 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/[0.06] rounded-full blur-2xl -translate-y-8 translate-x-8" />
-                    <div className="relative flex items-center gap-5">
-                      <div className="relative w-18 h-18 shrink-0" style={{ width: 72, height: 72 }}>
-                        <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                          <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2" />
-                          <circle cx="18" cy="18" r="15" fill="none" stroke="url(#scoreG)" strokeWidth="3" strokeLinecap="round"
-                            strokeDasharray={2 * Math.PI * 15} strokeDashoffset={2 * Math.PI * 15 * (1 - complianceRate / 100)} />
-                          <defs>
-                            <linearGradient id="scoreG" x1="0" y1="0" x2="1" y2="1">
-                              <stop offset="0%" stopColor="#c4b5fd" /><stop offset="50%" stopColor="#818cf8" /><stop offset="100%" stopColor="#6d28d9" />
-                            </linearGradient>
-                          </defs>
-                        </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="text-lg font-black text-white leading-none">{complianceRate}<span className="text-[10px]">%</span></span>
-                          <span className="text-[6px] text-violet-300/50 font-bold tracking-wider">TODAY</span>
+                  <div className="rounded-2xl border border-white/[0.06] p-4 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(59,130,246,0.04) 50%, rgba(6,182,212,0.03) 100%)' }}>
+                    <div className="absolute -top-12 -right-12 w-32 h-32 bg-violet-500/[0.06] rounded-full blur-3xl" />
+                    <div className="relative">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="relative w-10 h-10">
+                            <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                              <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="2.5" />
+                              <circle cx="18" cy="18" r="15" fill="none" stroke="url(#sGrad)" strokeWidth="3" strokeLinecap="round"
+                                strokeDasharray={2 * Math.PI * 15} strokeDashoffset={2 * Math.PI * 15 * (1 - complianceRate / 100)} />
+                              <defs><linearGradient id="sGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#c4b5fd" /><stop offset="100%" stopColor="#7c3aed" /></linearGradient></defs>
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center"><span className="text-[10px] font-black text-white">{complianceRate}%</span></div>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-black text-white">Daily Score</span>
+                            <span className="text-[7px] text-gray-500 block">{remaining.length === 0 ? 'All done today' : `${remaining.length} remaining`}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[7px] text-gray-500">Next:</span>
+                          <span className="text-[8px] font-bold text-cyan-400">{nextDueName ? nextDueName.split(' ')[0] : '—'}</span>
                         </div>
                       </div>
-                      <div className="flex-1 grid grid-cols-3 gap-2">
-                        <div className="rounded-xl bg-white/[0.04] p-2.5 text-center border border-white/[0.04]">
-                          <Calendar className="w-3 h-3 text-violet-400 mx-auto mb-1" />
-                          <div className="text-sm font-black text-white leading-none">{daysActive14}<span className="text-[9px] text-gray-500">/14</span></div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-white/[0.04] rounded-xl p-2 border border-white/[0.04] text-center">
+                          <div className="text-base font-black text-violet-300 leading-none">{daysActive14}<span className="text-[9px] text-gray-500">/14</span></div>
                           <div className="text-[7px] text-gray-500 font-bold mt-0.5">Active Days</div>
                         </div>
-                        <div className="rounded-xl bg-white/[0.04] p-2.5 text-center border border-white/[0.04]">
-                          <Clock className="w-3 h-3 text-cyan-400 mx-auto mb-1" />
-                          <div className="text-sm font-black text-white leading-none truncate">{nextDueName ? nextDueName.split(' ')[0] : 'Done'}</div>
-                          <div className="text-[7px] text-gray-500 font-bold mt-0.5">Next Due</div>
-                        </div>
-                        <div className="rounded-xl bg-white/[0.04] p-2.5 text-center border border-white/[0.04]">
-                          <Flame className="w-3 h-3 text-orange-400 mx-auto mb-1" />
-                          <div className="text-sm font-black text-white leading-none">{bestStreak}<span className="text-[9px] text-gray-500">d</span></div>
+                        <div className="bg-white/[0.04] rounded-xl p-2 border border-white/[0.04] text-center">
+                          <div className="text-base font-black text-orange-300 leading-none">{bestStreak}<span className="text-[9px] text-gray-500">d</span></div>
                           <div className="text-[7px] text-gray-500 font-bold mt-0.5">Best Streak</div>
+                        </div>
+                        <div className="bg-white/[0.04] rounded-xl p-2 border border-white/[0.04] text-center">
+                          <div className="text-base font-black text-cyan-300 leading-none">{dedupedDone}<span className="text-[9px] text-gray-500">/{deduped.length}</span></div>
+                          <div className="text-[7px] text-gray-500 font-bold mt-0.5">Done Today</div>
                         </div>
                       </div>
                     </div>
@@ -1013,89 +1015,89 @@ export function SupplementTracker() {
                     </div>
                   )}
 
-                  {/* ── Supply Health ── */}
+                  {/* ── Supply Health (Horizontal Bar Chart) ── */}
                   <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5">
                     <div className="flex items-center gap-1.5 mb-3">
                       <Package className="w-2.5 h-2.5 text-rose-400" />
-                      <span className="text-[9px] font-bold text-white uppercase tracking-wider">Supply Health</span>
+                      <span className="text-[9px] font-bold text-white uppercase tracking-wider">Supply Timeline</span>
+                      <div className="flex-1" />
                       {refillData.length > 0 && (() => {
                         const urgent = refillData.filter(r => r.urgency === 'critical' || r.urgency === 'warning').length
-                        return urgent > 0 ? <span className="ml-auto text-[7px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded-full">{urgent} need attention</span> : <span className="ml-auto text-[7px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">all stocked</span>
+                        return urgent > 0 ? <span className="text-[7px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded-full">{urgent} urgent</span> : null
                       })()}
                     </div>
                     {refillData.length > 0 ? (
-                      <div className="space-y-2">
-                        {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 4).map((r, i) => {
-                          const pct = Math.min(100, Math.round((r.daysUntilRefill / r.refillDays) * 100))
-                          const color = r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981'
-                          const bg = r.urgency === 'critical' ? 'bg-rose-500/10' : r.urgency === 'warning' ? 'bg-amber-500/10' : 'bg-emerald-500/10'
-                          return (
-                            <div key={i} className={`flex items-center gap-2.5 p-2 rounded-xl ${bg} border border-white/[0.03]`}>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[9px] font-bold text-white truncate">{r.name}</span>
-                                  {r.urgency === 'critical' && <span className="text-[6px] font-bold text-rose-400 animate-pulse">URGENT</span>}
-                                </div>
-                                <div className="w-full h-1.5 rounded-full bg-white/[0.06] mt-1 overflow-hidden">
-                                  <div className="h-full rounded-full transition-all" style={{ width: pct + '%', background: color }} />
-                                </div>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <div className={`text-sm font-black ${r.urgency === 'critical' ? 'text-rose-400' : r.urgency === 'warning' ? 'text-amber-400' : 'text-emerald-400'}`}>{r.daysUntilRefill}</div>
-                                <div className="text-[6px] text-gray-500">days left</div>
-                              </div>
-                            </div>
-                          )
-                        })}
+                      <div className="h-32">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 6).map(r => ({
+                            name: r.name.length > 10 ? r.name.slice(0, 10) + '…' : r.name,
+                            days: r.daysUntilRefill,
+                            total: r.refillDays,
+                            fill: r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981',
+                            urgency: r.urgency,
+                          }))} layout="vertical" barCategoryGap="15%">
+                            <XAxis type="number" domain={[0, 'auto']} tick={{ fontSize: 7, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                            <YAxis type="category" dataKey="name" tick={{ fontSize: 7, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={70} />
+                            <Tooltip cursor={false} contentStyle={{ background: '#13131f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 9 }} formatter={(v: number) => [`${v}d left`, 'Days remaining']} />
+                            <Bar dataKey="days" radius={[0, 4, 4, 0]} barSize={10}>
+                              {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 6).map((r, i) => (
+                                <Cell key={i} fill={r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981'} fillOpacity={0.7} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
                       </div>
                     ) : (
-                      <div className="text-center py-3">
-                        <span className="text-[9px] text-gray-600 italic">No refill data tracked</span>
-                      </div>
+                      <div className="text-center py-4"><span className="text-[9px] text-gray-600 italic">No refill data tracked</span></div>
                     )}
                   </div>
 
-                  {/* ── Supplement Trends ── */}
+                  {/* ── Supplement Trends (Radar Chart) ── */}
                   <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5">
                     <div className="flex items-center gap-1.5 mb-3">
                       <TrendingUp className="w-2.5 h-2.5 text-cyan-400" />
-                      <span className="text-[9px] font-bold text-white uppercase tracking-wider">Supplement Trends</span>
+                      <span className="text-[9px] font-bold text-white uppercase tracking-wider">Adherence Radar</span>
+                      <div className="flex-1" />
                       {suppTrends.length > 0 && (() => {
-                        const rising = suppTrends.filter(s => s.trend === 'rising').length
-                        const dropping = suppTrends.filter(s => s.trend === 'dropping').length
-                        if (rising > dropping) return <span className="ml-auto text-[7px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">mostly improving</span>
-                        if (dropping > rising) return <span className="ml-auto text-[7px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full">needs attention</span>
-                        return <span className="ml-auto text-[7px] font-bold text-gray-400 bg-white/[0.04] px-1.5 py-0.5 rounded-full">stable</span>
+                        const avg = Math.round(suppTrends.reduce((s, t) => s + t.delta, 0) / suppTrends.length)
+                        return <span className={`text-[7px] font-bold ${avg >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{avg >= 0 ? '+' : ''}{avg}% avg</span>
                       })()}
                     </div>
-                    {suppTrends.length > 0 ? (
-                      <div className="space-y-1.5">
-                        {suppTrends.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 4).map((s, i) => {
-                          const arrow = s.trend === 'rising' ? '↑' : s.trend === 'dropping' ? '↓' : '→'
-                          const color = s.trend === 'rising' ? 'text-emerald-400' : s.trend === 'dropping' ? 'text-rose-400' : 'text-gray-400'
-                          const bg = s.trend === 'rising' ? 'bg-emerald-500/10' : s.trend === 'dropping' ? 'bg-rose-500/10' : 'bg-white/[0.03]'
-                          const barW = Math.min(100, Math.abs(s.delta) * 3 + 20)
-                          const barColor = s.trend === 'rising' ? '#10b981' : s.trend === 'dropping' ? '#ef4444' : '#6b7280'
-                          return (
-                            <div key={i} className={`flex items-center gap-2 p-2 rounded-xl ${bg} border border-white/[0.03]`}>
-                              <span className={`text-sm ${color}`}>{arrow}</span>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[9px] font-bold text-white truncate">{s.name}</span>
-                                  <span className={`text-[8px] font-bold ${color}`}>{s.delta > 0 ? '+' : ''}{s.delta}%</span>
-                                </div>
-                                <div className="w-full h-1 rounded-full bg-white/[0.06] mt-1 overflow-hidden">
-                                  <div className="h-full rounded-full" style={{ width: barW + '%', background: barColor, opacity: 0.5 }} />
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })}
+                    {suppAdherence.length > 0 ? (
+                      <div className="h-44">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart data={suppAdherence.slice(0, 6).map(s => ({
+                            subject: s.name.length > 8 ? s.name.slice(0, 8) + '…' : s.name,
+                            rate: s.rate7,
+                            fullMark: 100,
+                          }))}>
+                            <PolarGrid stroke="rgba(255,255,255,0.06)" />
+                            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 7, fill: '#9ca3af' }} />
+                            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
+                            <Radar name="7-day" dataKey="rate" stroke="#818cf8" fill="#818cf8" fillOpacity={0.2} strokeWidth={1.5} dot={{ r: 2, fill: '#818cf8' }} />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : suppTrends.length > 0 ? (
+                      <div className="h-32">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={suppTrends.slice(0, 6).map(s => ({
+                            name: s.name.length > 10 ? s.name.slice(0, 10) + '…' : s.name,
+                            delta: s.delta,
+                          }))} barCategoryGap="20%">
+                            <XAxis dataKey="name" tick={{ fontSize: 7, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                            <YAxis tick={false} axisLine={false} tickLine={false} width={0} />
+                            <Tooltip cursor={false} contentStyle={{ background: '#13131f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 9 }} formatter={(v: number) => [`${v > 0 ? '+' : ''}${v}%`, 'Trend']} />
+                            <Bar dataKey="delta" radius={[3, 3, 0, 0]} barSize={14}>
+                              {suppTrends.slice(0, 6).map((s, i) => (
+                                <Cell key={i} fill={s.trend === 'rising' ? '#10b981' : s.trend === 'dropping' ? '#ef4444' : '#6b7280'} fillOpacity={0.6} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
                       </div>
                     ) : (
-                      <div className="text-center py-3">
-                        <span className="text-[9px] text-gray-600 italic">No trend data yet</span>
-                      </div>
+                      <div className="text-center py-4"><span className="text-[9px] text-gray-600 italic">No trend data yet</span></div>
                     )}
                   </div>
 
