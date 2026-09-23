@@ -863,164 +863,126 @@ export function SupplementTracker() {
                   return sorted[0].name
                 })()
 
-                // ── AI Insights: Extraordinary, data-driven from logs ──
+                // ── AI Insights: Truly helpful, specific to YOUR stack ──
                 const insights: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string }[] = []
 
-                // ── 1. Today's live status ──
+                // ── Helper: compute real adherence from logs for a supplement over N days ──
+                const getSuppRate = (suppId: string, days: number) => {
+                  let taken = 0, expected = 0
+                  for (let i = 0; i < days; i++) {
+                    const d = new Date(); d.setDate(d.getDate() - i)
+                    const ds = toLocalDate(d)
+                    const hasLog = logs.some(l => l.supplementId === suppId && l.date === ds)
+                    if (hasLog) taken++
+                    expected++
+                  }
+                  return expected > 0 ? Math.round((taken / expected) * 100) : 0
+                }
+
+                // ── 1. What's due now / next action ──
                 {
-                  const currentHour = new Date().getHours()
-                  const currentTod = currentHour < 12 ? 'Morning' : currentHour < 17 ? 'Afternoon' : currentHour < 21 ? 'Evening' : 'Night'
-                  const takenToday = dedupedDone
-                  const total = deduped.length
-                  const missed = total - takenToday
-                  const todayTakenAts = todayLogs.filter(l => l.takenAt).map(l => ({ takenAt: new Date(l.takenAt!), time: deduped.find(s => s.id === l.supplementId)?.times?.[0] || '' }))
-                  const avgTakenHour = todayTakenAts.length > 0 ? todayTakenAts.reduce((s, t) => s + t.takenAt.getHours(), 0) / todayTakenAts.length : 0
-                  const avgTakenMin = todayTakenAts.length > 0 ? todayTakenAts.reduce((s, t) => s + t.takenAt.getMinutes(), 0) / todayTakenAts.length : 0
-                  const avgTimeStr = todayTakenAts.length > 0 ? `${Math.floor(avgTakenHour)}:${String(Math.round(avgTakenMin)).padStart(2, '0')}` : ''
-                  const earliestTaken = todayTakenAts.length > 0 ? todayTakenAts.reduce((min, t) => t.takenAt < min.takenAt ? t : min) : null
-                  const latestTaken = todayTakenAts.length > 0 ? todayTakenAts.reduce((max, t) => t.takenAt > max.takenAt ? t : max) : null
-                  if (missed > 0) {
-                    const missedSupps = deduped.filter(s => !s.doses.every(d => d.taken))
-                    const nextDue = missedSupps.find(s => s.times?.includes(currentTod)) || missedSupps[0]
-                    const missedInCurrentSlot = missedSupps.filter(s => s.times?.includes(currentTod)).length
-                    const timeSinceLast = latestTaken ? Math.round((Date.now() - latestTaken.takenAt.getTime()) / 60000) : 0
-                    insights.push({ icon: Zap, title: `${takenToday}/${total} taken${missedInCurrentSlot > 0 ? ` · ${missedInCurrentSlot} due ${currentTod}` : ''}`, detail: `Next: ${nextDue?.name || '—'}${avgTimeStr ? ` · avg at ${avgTimeStr}` : ''}${timeSinceLast > 60 ? ` · last ${Math.round(timeSinceLast / 60)}h ago` : ''} — ${complianceRate >= 80 ? 'strong rhythm' : 'get back on track'}`, color: complianceRate >= 80 ? 'emerald' : 'amber', metric: `${complianceRate}%` })
+                  const notTaken = deduped.filter(s => !s.doses.every(d => d.taken))
+                  const dueNow = notTaken.filter(s => s.times?.includes(currentTod))
+                  const takenNames = deduped.filter(s => s.doses.every(d => d.taken)).map(s => s.name)
+                  const notTakenNames = notTaken.map(s => s.name)
+                  if (notTaken.length > 0) {
+                    const nextDue = notTaken.find(s => s.times?.includes(currentTod)) || notTaken[0]
+                    const takenTodayList = takenNames.length > 0 ? `Taken: ${takenNames.slice(0, 3).join(', ')}` : 'Nothing taken yet'
+                    const notTakenList = notTakenNames.slice(0, 3).join(', ')
+                    insights.push({ icon: Zap, title: `Next: ${nextDue.name} (${nextDue.dosage})`, detail: `${takenTodayList} · Still due: ${notTakenList}${notTaken.length > 3 ? ` +${notTaken.length - 3}` : ''} — ${dueNow.length} due ${currentTod}`, color: complianceRate >= 80 ? 'emerald' : 'amber', metric: `${dedupedDone}/${deduped.length}` })
                   } else {
-                    const span = earliestTaken && latestTaken ? Math.round((latestTaken.takenAt.getTime() - earliestTaken.takenAt.getTime()) / 60000) : 0
-                    insights.push({ icon: CheckCircle2, title: `${total}/${total} complete — perfect day`, detail: `${complianceRate}% weekly · ${span > 0 ? `spread over ${span}min` : 'single dose'}${longTermStreak > 3 ? ` · ${longTermStreak}d streak` : ''} — consistency compounds`, color: 'emerald', metric: '100%' })
+                    insights.push({ icon: CheckCircle2, title: `All ${deduped.length} done today`, detail: `Taken: ${takenNames.join(', ')} — ${complianceRate}% weekly · ${longTermStreak}d streak`, color: 'emerald', metric: '100%' })
                   }
                 }
 
-                // ── 2. Deep analysis from real data (pick best 2) ──
+                // ── 2. Most impactful insight from YOUR data ──
                 {
                   const candidates: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string; priority: number }[] = []
 
-                  // A: Time slot failure — which slot misses most (from takenAt patterns)
+                  // A: Specific supplement — lowest real adherence (computed from logs)
                   {
-                    const timeSlotMisses: Record<string, { total: number; missed: number; supps: string[]; takenAts: number[] }> = { Morning: { total: 0, missed: 0, supps: [], takenAts: [] }, Afternoon: { total: 0, missed: 0, supps: [], takenAts: [] }, Evening: { total: 0, missed: 0, supps: [], takenAts: [] }, Night: { total: 0, missed: 0, supps: [], takenAts: [] } }
+                    const rates = deduped.map(s => ({ name: s.name, id: s.id, dosage: s.dosage, rate7: getSuppRate(s.id, 7), rate30: getSuppRate(s.id, 30), times: s.times }))
+                    const worst = rates.filter(r => r.rate7 < 100 && r.rate7 > 0).sort((a, b) => a.rate7 - b.rate7)[0]
+                    if (worst) {
+                      const trend = worst.rate7 - worst.rate30
+                      const trendLabel = trend > 5 ? 'improving' : trend < -5 ? 'declining' : 'stable'
+                      const advice = worst.rate7 < 50 ? `critical — take ${worst.name} ${worst.dosage} with your ${worst.times?.[0] || 'morning'} routine` : `set a ${worst.times?.[0] || 'morning'} alarm for ${worst.name}`
+                      candidates.push({ icon: Brain, title: `${worst.name}: ${worst.rate7}% adherence (7d)`, detail: `${trendLabel} · ${worst.dosage} · ${advice}`, color: worst.rate7 < 50 ? 'rose' : worst.rate7 < 80 ? 'amber' : 'emerald', metric: `${worst.rate7}%`, priority: 7 })
+                    }
+                  }
+
+                  // B: Time slot — which specific time misses most
+                  {
+                    const slotMisses: Record<string, { missed: string[]; total: number }> = { Morning: { missed: [], total: 0 }, Afternoon: { missed: [], total: 0 }, Evening: { missed: [], total: 0 }, Night: { missed: [], total: 0 } }
                     deduped.forEach(s => {
                       s.times?.forEach(t => {
-                        if (timeSlotMisses[t]) {
-                          timeSlotMisses[t].total++
+                        if (slotMisses[t]) {
+                          slotMisses[t].total++
                           if (!s.doses.every(d => d.taken)) {
-                            timeSlotMisses[t].missed++
-                            if (!timeSlotMisses[t].supps.includes(s.name)) timeSlotMisses[t].supps.push(s.name)
+                            slotMisses[t].missed.push(s.name)
                           }
                         }
                       })
                     })
-                    todayLogs.forEach(l => {
-                      if (l.takenAt) {
-                        const hour = new Date(l.takenAt).getHours()
-                        const slot = hour < 12 ? 'Morning' : hour < 17 ? 'Afternoon' : hour < 21 ? 'Evening' : 'Night'
-                        timeSlotMisses[slot].takenAts.push(hour)
-                      }
-                    })
-                    const worstSlot = Object.entries(timeSlotMisses).filter(([, v]) => v.missed > 0).sort((a, b) => (b[1].missed / b[1].total) - (a[1].missed / a[1].total))[0]
-                    if (worstSlot) {
-                      const [slot, data] = worstSlot
-                      const missRate = Math.round((data.missed / data.total) * 100)
-                      const avgHour = data.takenAts.length > 0 ? Math.round(data.takenAts.reduce((s, h) => s + h, 0) / data.takenAts.length) : null
-                      candidates.push({ icon: Clock, title: `${slot}: ${data.missed}/${data.total} missed (${missRate}%)`, detail: `${data.supps.slice(0, 2).join(', ')} — ${avgHour !== null ? `your avg ${slot.toLowerCase()} time is ${avgHour}:00, set alarm 30min before` : `set a ${slot.toLowerCase()} alarm to fix this`}`, color: missRate > 50 ? 'rose' : 'amber', metric: `${missRate}%`, priority: 9 })
+                    const worst = Object.entries(slotMisses).filter(([, v]) => v.missed.length > 0).sort((a, b) => b[1].missed.length - a[1].missed.length)[0]
+                    if (worst) {
+                      const [slot, data] = worst
+                      const missRate = Math.round((data.missed.length / data.total) * 100)
+                      candidates.push({ icon: Clock, title: `${slot}s: ${data.missed.join(', ')} missed`, detail: `${data.missed.length}/${data.total} ${slot.toLowerCase()} supps skipped — set ${slot.toLowerCase()} alarm`, color: missRate > 50 ? 'rose' : 'amber', metric: `${missRate}%`, priority: 9 })
                     }
                   }
 
-                  // B: Supply urgency — precise days left
+                  // C: Supply — specific days left per supplement
                   {
                     const critical = refillData.filter(r => r.urgency === 'critical')
                     if (critical.length > 0) {
-                      candidates.push({ icon: Package, title: `${critical[0].name}: ${critical[0].daysUntilRefill}d left — order NOW`, detail: `${critical.length > 1 ? `${critical.length} supplements` : '1 supplement'} critically low — running out breaks your ${longTermStreak}d streak`, color: 'rose', metric: `${critical[0].daysUntilRefill}d`, priority: 10 })
-                    }
-                    const warnings = refillData.filter(r => r.urgency === 'warning')
-                    if (warnings.length > 0 && critical.length === 0) {
-                      candidates.push({ icon: Package, title: `${warnings[0].name}: ${warnings[0].daysUntilRefill}d supply`, detail: `${warnings.length} supplement${warnings.length > 1 ? 's' : ''} need reorder within 2 weeks — plan ahead`, color: 'amber', metric: `${warnings[0].daysUntilRefill}d`, priority: 8 })
+                      const names = critical.map(r => `${r.name} (${r.daysUntilRefill}d)`).join(', ')
+                      candidates.push({ icon: Package, title: `Order now: ${critical[0].name}`, detail: `${names} — ${critical.length > 1 ? critical.length + ' supps' : '1 supplement'} critically low, running out breaks your streak`, color: 'rose', metric: `${critical[0].daysUntilRefill}d`, priority: 10 })
                     }
                   }
 
-                  // C: Synergy/conflict — all interactions from your stack
+                  // D: Synergy/conflict — specific to YOUR stack
                   {
                     const suppNames = deduped.map(s => s.name)
-                    const foundInteractions = SUPP_INTERACTIONS.filter(x =>
+                    const found = SUPP_INTERACTIONS.filter(x =>
                       suppNames.some(n => n.toLowerCase().includes(x.a.toLowerCase())) &&
                       suppNames.some(n => n.toLowerCase().includes(x.b.toLowerCase()))
                     )
-                    const conflicts = foundInteractions.filter(x => x.type === 'conflict')
-                    const synergies = foundInteractions.filter(x => x.type === 'synergy')
-                    const timings = foundInteractions.filter(x => x.type === 'timing')
+                    const conflicts = found.filter(x => x.type === 'conflict')
+                    const synergies = found.filter(x => x.type === 'synergy')
                     if (conflicts.length > 0) {
                       const c = conflicts[0]
-                      candidates.push({ icon: ShieldAlert, title: `Conflict: ${c.a} + ${c.b}`, detail: `${c.message} — separate by 2h for full absorption${conflicts.length > 1 ? ` · ${conflicts.length - 1} more conflict${conflicts.length > 2 ? 's' : ''} found` : ''}`, color: 'rose', metric: 'conflict', priority: 9 })
+                      candidates.push({ icon: ShieldAlert, title: `${c.a} + ${c.b}: separate by 2h`, detail: `${c.message} — ${conflicts.length > 1 ? `${conflicts.length - 1} more conflicts in your stack` : 'take at different times for full absorption'}`, color: 'rose', metric: 'conflict', priority: 9 })
                     } else if (synergies.length > 0) {
                       const s = synergies[0]
-                      candidates.push({ icon: CheckCircle2, title: `Synergy: ${s.a} + ${s.b}`, detail: `${s.message} — ${synergies.length} synerg${synergies.length > 1 ? 'ies' : 'y'} in your stack, great combos`, color: 'emerald', metric: 'synergy', priority: 4 })
-                    } else if (timings.length > 0) {
-                      const t = timings[0]
-                      candidates.push({ icon: Clock, title: `Timing: ${t.a} + ${t.b}`, detail: `${t.message} — optimize when you take these`, color: 'amber', metric: 'timing', priority: 5 })
+                      candidates.push({ icon: CheckCircle2, title: `${s.a} + ${s.b}: great combo`, detail: `${s.message} — ${synergies.length} synerg${synergies.length > 1 ? 'ies' : 'y'} working for you`, color: 'emerald', metric: 'synergy', priority: 4 })
                     }
                   }
 
-                  // D: Weakest supplement — with specific improvement data
-                  {
-                    const sorted = [...suppAdherence].sort((a, b) => a.rate7 - b.rate7)
-                    const worst = sorted.find(s => s.rate7 < 100 && s.rate7 > 0)
-                    if (worst) {
-                      const dosesMissed = worst.total7 - worst.taken7
-                      const daysToHabit = Math.ceil((100 - worst.rate7) / 5)
-                      const bestTime = worst.times?.[0] || 'morning'
-                      const rate30delta = worst.rate7 - worst.rate30
-                      const trend = rate30delta > 5 ? 'improving' : rate30delta < -5 ? 'declining' : 'stable'
-                      const advice = worst.rate7 < 50 ? `critical — link to your ${bestTime} routine` : worst.rate7 < 80 ? `set alarm for ${bestTime}` : `almost there — lock it in`
-                      candidates.push({ icon: Brain, title: `${worst.name}: ${worst.rate7}% (${worst.taken7}/${worst.total7}) — ${dosesMissed} missed`, detail: `${trend} · ${daysToHabit}d to habit · ${advice}`, color: worst.rate7 < 50 ? 'rose' : worst.rate7 < 80 ? 'amber' : 'emerald', metric: `${worst.rate7}%`, priority: 7 })
-                    }
-                  }
-
-                  // E: Weekly trend — 7d vs 30d with direction
+                  // E: Weekly trend — real 7d vs 30d from logs
                   {
                     const avg7 = Math.round(suppAdherence.reduce((s, a) => s + a.rate7, 0) / suppAdherence.length)
                     const avg30 = Math.round(suppAdherence.reduce((s, a) => s + a.rate30, 0) / suppAdherence.length)
                     const delta = avg7 - avg30
                     if (Math.abs(delta) >= 5) {
-                      const direction = delta > 0 ? 'accelerating' : 'decelerating'
-                      candidates.push({ icon: delta > 0 ? TrendingUp : ShieldAlert, title: `${direction}: ${delta > 0 ? '+' : ''}${delta}% this week vs 30d`, detail: `7d: ${avg7}% · 30d: ${avg30}% — ${delta > 0 ? 'momentum building, maintain this pace' : 'slipping, simplify your routine'}`, color: delta > 0 ? 'emerald' : 'rose', metric: `${delta > 0 ? '+' : ''}${delta}%`, priority: 6 })
+                      candidates.push({ icon: delta > 0 ? TrendingUp : ShieldAlert, title: `${delta > 0 ? 'Up' : 'Down'} ${Math.abs(delta)}% this week`, detail: `7d avg: ${avg7}% · 30d avg: ${avg30}% — ${delta > 0 ? 'keep the momentum' : 'simplify your routine'}`, color: delta > 0 ? 'emerald' : 'rose', metric: `${delta > 0 ? '+' : ''}${delta}%`, priority: 6 })
                     }
                   }
 
-                  // F: Best day analysis — which day of week has highest adherence
-                  {
-                    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-                    const dayScores: Record<string, { taken: number; total: number }> = {}
-                    dayNames.forEach(d => dayScores[d] = { taken: 0, total: 0 })
-                    const last7 = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - i); return toLocalDate(d) })
-                    last7.forEach(dateStr => {
-                      const dayOfWeek = new Date(dateStr).getDay()
-                      const dayName = dayNames[dayOfWeek]
-                      const dayLogs = logs.filter(l => l.date === dateStr)
-                      const dayTaken = new Set(dayLogs.map(l => l.supplementId)).size
-                      dayScores[dayName].taken += dayTaken
-                      dayScores[dayName].total += dailySupps.length
-                    })
-                    const dayEntries = Object.entries(dayScores).filter(([, v]) => v.total > 0).map(([day, v]) => ({ day, pct: Math.round((v.taken / v.total) * 100) }))
-                    const bestDay = dayEntries.sort((a, b) => b.pct - a.pct)[0]
-                    const worstDay = dayEntries.sort((a, b) => a.pct - b.pct)[0]
-                    if (bestDay && worstDay && bestDay.day !== worstDay.day && bestDay.pct - worstDay.pct >= 20) {
-                      candidates.push({ icon: CalendarCheck, title: `${bestDay.day}s: ${bestDay.pct}% · ${worstDay.day}s: ${worstDay.pct}%`, detail: `${bestDay.day}s are your best day — ${worstDay.day}s need focus, align routines on weak days`, color: 'cyan', metric: `${bestDay.pct}%`, priority: 5 })
-                    }
-                  }
-
-                  // G: Streak milestone
+                  // F: Streak
                   {
                     const target = 21
                     const remaining = target - longTermStreak
                     if (longTermStreak > 0 && longTermStreak < target) {
-                      candidates.push({ icon: Flame, title: `${longTermStreak}d streak — ${remaining}d to permanent habit`, detail: `${Math.round((longTermStreak / target) * 100)}% to 21-day threshold — neuroscience says don't stop now`, color: 'amber', metric: `${longTermStreak}/${target}`, priority: 3 })
+                      candidates.push({ icon: Flame, title: `${longTermStreak}d streak — ${remaining}d to habit`, detail: `${Math.round((longTermStreak / target) * 100)}% to 21-day threshold — neuroscience says don't stop`, color: 'amber', metric: `${longTermStreak}/${target}`, priority: 3 })
                     } else if (longTermStreak >= target) {
-                      candidates.push({ icon: Flame, title: `${longTermStreak}d streak — habit locked in`, detail: `Past 21-day threshold — this is now automatic behavior, maintain`, color: 'emerald', metric: `${longTermStreak}d`, priority: 2 })
+                      candidates.push({ icon: Flame, title: `${longTermStreak}d streak — habit locked`, detail: `Past 21-day threshold — automatic behavior, maintain`, color: 'emerald', metric: `${longTermStreak}d`, priority: 2 })
                     }
                   }
 
-                  // H: Fallback
+                  // G: Fallback
                   if (candidates.length === 0) {
-                    candidates.push({ icon: CheckCircle2, title: `All ${deduped.length} supplements at 100%`, detail: `${longTermStreak > 0 ? `${longTermStreak}d streak` : 'Start a streak today'} — you're in the top tier of supplement users`, color: 'emerald', metric: '100%', priority: 1 })
+                    candidates.push({ icon: CheckCircle2, title: `All ${deduped.length} supplements at 100%`, detail: `${longTermStreak > 0 ? `${longTermStreak}d streak` : 'Start a streak today'} — top tier`, color: 'emerald', metric: '100%', priority: 1 })
                   }
 
                   candidates.sort((a, b) => b.priority - a.priority)
@@ -1030,7 +992,7 @@ export function SupplementTracker() {
                   }
                 }
 
-                // ── 3. Absorption tip (fills slot 3 if needed) ──
+                // ── 3. Absorption tip (fills slot 3) ──
                 {
                   const absorptionDB: Record<string, { tip: string; bestTime: string; multiplier: string }> = {
                     'Vitamin D': { tip: 'take with fatty meal', bestTime: 'afternoon', multiplier: '3x absorption' },
@@ -1056,8 +1018,8 @@ export function SupplementTracker() {
                       const tip = absorptionDB[key]
                       const takenAtTime = todayLogs.find(l => l.supplementId === suppTip.id)?.takenAt
                       const takenDate = takenAtTime ? new Date(takenAtTime) : null
-                      const timeLabel = takenDate ? takenDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 'not yet today'
-                      insights.push({ icon: Sparkles, title: `${suppTip.name}: ${tip.tip}`, detail: `Best time: ${tip.bestTime} · logged at ${timeLabel} — ${tip.multiplier}`, color: 'cyan', metric: tip.bestTime })
+                      const timeLabel = takenDate ? takenDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 'not yet'
+                      insights.push({ icon: Sparkles, title: `${suppTip.name}: ${tip.tip}`, detail: `Best time: ${tip.bestTime} · logged: ${timeLabel} — ${tip.multiplier}`, color: 'cyan', metric: tip.bestTime })
                     }
                   }
                 }
@@ -1210,7 +1172,7 @@ export function SupplementTracker() {
                               <span className="text-[6px] text-gray-600">body score</span>
                             </div>
                             {/* System cards */}
-                            <div className="grid grid-cols-2 gap-1.5">
+                            <div className="max-h-[280px] overflow-y-auto pr-1 space-y-1.5" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.06) transparent' }}>
                               {scored.map(({ name, sys, matched, coverage, adherence, healthScore, matchedDetails }) => {
                                 const Icon = sys.icon
                                 return (
