@@ -9,7 +9,7 @@ import {
   ChevronLeft, ChevronRight, RotateCcw, Flame,
   TrendingUp, ChevronDown,
 } from 'lucide-react'
-import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts'
+import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { generateId, cn } from '@/lib/utils'
@@ -621,22 +621,6 @@ export function SupplementTracker() {
             return { ...s, rate7, rate30, taken7, total7, taken30, total30 }
           })
 
-          // ─── Weekly Trend (last 4 weeks) ───
-          const weeklyTrend = Array.from({ length: 4 }, (_, wi) => {
-            let taken = 0, total = 0
-            for (let i = wi * 7; i < (wi + 1) * 7; i++) {
-              const d = new Date(now); d.setDate(d.getDate() - i)
-              const dateStr = toLocalDate(d)
-              const dayLogs = logs.filter(l => l.date === dateStr)
-              const dayTaken = new Set(dayLogs.map(l => l.supplementId)).size
-              taken += dayTaken
-              total += dailySupps.length
-            }
-            const pct = total > 0 ? Math.round((taken / total) * 100) : 0
-            const label = wi === 0 ? 'This wk' : wi === 1 ? 'Last wk' : (wi + 1) + ' wk ago'
-            return { label, pct, taken, total }
-          }).reverse()
-
 
 
           // ─── Synergy Intelligence ───
@@ -680,9 +664,6 @@ export function SupplementTracker() {
             { name: 'Collagen', why: 'Skin & joint health', priority: 'low' as const },
           ]
           const missing = commonSupps.filter(c => !supplements.some(s => s.name.toLowerCase().includes(c.name.toLowerCase())))
-
-          // ─── Trend Average ───
-          const trendDiffs = weeklyTrend.map((w, i) => i > 0 ? w.pct - weeklyTrend[i-1].pct : 0).slice(1)
 
           // ─── takenAt: Real Timing Analysis ───
           const realTiming = supplements.map(s => {
@@ -882,85 +863,73 @@ export function SupplementTracker() {
                   return sorted[0].name
                 })()
 
-                // ── AI Insights: exactly 3, zero duplicate supplements ──
+                // ── AI Insights: exactly 3, data-driven from logged supplements ──
                 const insights: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string }[] = []
-                const usedNames = new Set<string>() // tracks ALL supplement names used across insights
 
-                const isSuppUsed = (name: string) => {
-                  const n = name.toLowerCase()
-                  for (const u of usedNames) {
-                    if (n.includes(u) || u.includes(n)) return true
-                  }
-                  return false
-                }
-                const markSuppUsed = (name: string) => { usedNames.add(name.toLowerCase()) }
-
-                // 1. Absorption Intelligence
-                const absorptionPairs: Record<string, { with: string; boost: string; avoid?: string }> = {
-                  'Vitamin D': { with: 'fatty meal or omega-3', boost: '3x absorption', avoid: 'taking on empty stomach' },
-                  'Omega-3': { with: 'fatty meal', boost: '2x bioavailability', avoid: 'taking with fiber' },
-                  'Iron': { with: 'vitamin C rich food', boost: '2x uptake', avoid: 'calcium or coffee within 2h' },
-                  'Magnesium': { with: 'bedtime', boost: '25% better sleep quality', avoid: 'taking with calcium' },
-                  'B12': { with: 'morning on empty stomach', boost: 'peak energy timing', avoid: 'taking at night' },
-                  'Zinc': { with: 'food', boost: 'avoids nausea', avoid: 'taking on empty stomach' },
-                  'Calcium': { with: 'separated from iron by 2h', boost: 'no absorption competition', avoid: 'taking with iron' },
-                  'Ashwagandha': { with: 'morning or evening', boost: 'cortisol regulation', avoid: 'taking with stimulants' },
-                  'CoQ10': { with: 'fatty meal', boost: '4x absorption', avoid: 'taking with statins timing' },
-                }
-                for (const s of deduped) {
-                  const match = Object.keys(absorptionPairs).find(k => s.name.toLowerCase().includes(k.toLowerCase()))
-                  if (match && !isSuppUsed(s.name)) {
-                    const rule = absorptionPairs[match]
-                    const takenAtTime = todayLogs.find(l => l.supplementId === s.id)?.takenAt
-                    const hour = takenAtTime ? new Date(takenAtTime).getHours() : null
-                    const isOptimal = match === 'Vitamin D' || match === 'Omega-3' ? (hour !== null && hour >= 12) :
-                      match === 'Magnesium' ? (hour !== null && hour >= 20) :
-                      match === 'B12' ? (hour !== null && hour < 12) :
-                      match === 'CoQ10' ? (hour !== null && hour >= 12) : true
-                    if (!isOptimal || !takenAtTime) {
-                      insights.push({ icon: Sparkles, title: `${match}: take with ${rule.with}`, detail: `${rule.boost} — ${rule.avoid ? `avoid ${rule.avoid}` : 'optimize timing'}`, color: 'amber', metric: rule.boost })
-                      markSuppUsed(s.name)
-                      break // only 1 absorption insight
-                    }
+                // ── 1. Stack Health Summary (always shows) ──
+                {
+                  const takenToday = dedupedDone
+                  const total = deduped.length
+                  const rate = complianceRate
+                  const missed = total - takenToday
+                  if (missed > 0) {
+                    const missedSupps = deduped.filter(s => !s.doses.every(d => d.taken)).map(s => s.name).slice(0, 3)
+                    insights.push({ icon: Zap, title: `${takenToday}/${total} taken today — ${missed} remaining`, detail: `Pending: ${missedSupps.join(', ')}${missed > 3 ? ` +${missed - 3} more` : ''} — ${rate >= 80 ? 'strong consistency' : 'room to improve'}`, color: rate >= 80 ? 'emerald' : 'amber', metric: `${rate}%` })
+                  } else {
+                    insights.push({ icon: CheckCircle2, title: `${total}/${total} complete today — perfect score`, detail: `${rate}% weekly compliance${longTermStreak > 7 ? ` · ${longTermStreak}d streak` : ''} — you're in the top tier`, color: 'emerald', metric: '100%' })
                   }
                 }
 
-                // 2. Adherence Forecast (no supplement-specific data)
-                if (insights.length < 3 && trendDiffs.length > 0) {
-                  const avgDiff = trendDiffs.reduce((a, b) => a + b, 0) / trendDiffs.length
-                  const currentRate = complianceRate
-                  const projected30 = Math.min(100, Math.round(currentRate + avgDiff * 4))
-                  if (avgDiff > 0 && currentRate < 100) {
-                    const daysToElite = Math.ceil((90 - currentRate) / (avgDiff || 1))
-                    const eta = new Date(); eta.setDate(eta.getDate() + Math.min(daysToElite, 60))
-                    insights.push({ icon: TrendingUp, title: `+${avgDiff.toFixed(0)}%/week → ${projected30}% by month end`, detail: `Elite compliance (90%) ETA: ${eta.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${daysToElite <= 30 ? 'on track' : 'needs acceleration'}`, color: 'emerald', metric: `+${avgDiff.toFixed(0)}%/wk` })
-                  } else if (avgDiff < -3) {
-                    const dropRate = Math.abs(avgDiff).toFixed(0)
-                    insights.push({ icon: ShieldAlert, title: `Declining ${dropRate}%/week — ${projected30}% by month end`, detail: `If trend continues, you'll lose ${Math.round((currentRate - projected30) / 10)}% compliance — simplify your stack`, color: 'rose', metric: `-${dropRate}%/wk` })
-                  }
-                }
-
-                // 3. Stack Optimization — only supplements NOT already featured
-                if (insights.length < 3) {
-                  const lowAdherence = [...suppAdherence].sort((a, b) => a.rate7 - b.rate7).filter(s => s.rate7 > 0 && s.rate7 < 80 && !isSuppUsed(s.name))
-                  if (lowAdherence.length > 0) {
-                    const worst = lowAdherence[0]
+                // ── 2. Weakest Supplement (lowest 7d adherence) ──
+                {
+                  const sorted = [...suppAdherence].sort((a, b) => a.rate7 - b.rate7)
+                  const worst = sorted.find(s => s.rate7 < 100 && s.rate7 > 0)
+                  if (worst) {
                     const daysToHabit = Math.ceil((100 - worst.rate7) / 5)
+                    const dosesTaken = worst.taken7
+                    const dosesTotal = worst.total7
                     const bestTime = worst.times?.[0] || 'morning'
-                    insights.push({ icon: Brain, title: `${worst.name}: ${worst.rate7}% adherence — ${daysToHabit}d to habit`, detail: worst.rate7 < 50 ? `Critical: link to ${bestTime} routine (coffee, meals, or bedtime)` : `Set alarm for ${bestTime} — consistent timing boosts adherence 40%`, color: 'violet', metric: `${worst.rate7}%` })
-                    markSuppUsed(worst.name)
-                  } else if (dedupedDone === deduped.length && deduped.length >= 3) {
-                    insights.push({ icon: CheckCircle2, title: `${deduped.length}/${deduped.length} perfect — top 5% globally`, detail: `Maintain ${complianceRate}% for ${21 - longTermStreak > 0 ? 21 - longTermStreak : 0} more days to form a permanent habit`, color: 'emerald', metric: '100%' })
+                    const advice = worst.rate7 < 50 ? `Critical: link to your ${bestTime} routine` : worst.rate7 < 80 ? `Set daily alarm for ${bestTime}` : `Almost perfect — lock in the habit`
+                    insights.push({ icon: Brain, title: `${worst.name}: ${worst.rate7}% this week (${dosesTaken}/${dosesTotal} doses)`, detail: `${daysToHabit}d to habit — ${advice}`, color: worst.rate7 < 50 ? 'rose' : worst.rate7 < 80 ? 'amber' : 'emerald', metric: `${worst.rate7}%` })
+                  } else {
+                    insights.push({ icon: CheckCircle2, title: `All ${deduped.length} supplements at 100% this week`, detail: `${longTermStreak > 0 ? `${longTermStreak}d streak running` : 'Start a streak today'} — consistency compounds`, color: 'emerald', metric: '100%' })
                   }
                 }
 
-                // 4. Timing Drift — only supplements NOT already featured
-                if (insights.length < 3 && realTiming.length > 0) {
-                  const misaligned = realTiming.filter(r => !r.isAligned && r.actualCategory !== 'Unknown' && !isSuppUsed(r.name))
-                  if (misaligned.length > 0) {
-                    const m = misaligned[0]
-                    insights.push({ icon: Clock, title: `${m.name}: ${m.actualCategory} → ${m.plannedCategory}`, detail: `${m.consistency} — shift by ${m.actualCategory === 'Morning' ? '1h earlier' : '1h later'} for optimal results`, color: 'cyan', metric: `${timingAlignmentPct}% aligned` })
-                    markSuppUsed(m.name)
+                // ── 3. Timing & Absorption (based on actual supplements) ──
+                {
+                  const absorptionDB: Record<string, { tip: string; bestTime: string }> = {
+                    'Vitamin D': { tip: 'take with fatty meal for 3x absorption', bestTime: 'afternoon' },
+                    'Omega-3': { tip: 'take with fatty meal, avoid fiber', bestTime: 'with meals' },
+                    'Iron': { tip: 'pair with vitamin C, avoid calcium/coffee', bestTime: 'morning empty stomach' },
+                    'Magnesium': { tip: 'take at bedtime for better sleep', bestTime: 'night' },
+                    'B12': { tip: 'morning on empty stomach for energy', bestTime: 'morning' },
+                    'Zinc': { tip: 'take with food to avoid nausea', bestTime: 'with meals' },
+                    'Calcium': { tip: 'separate from iron by 2 hours', bestTime: 'afternoon' },
+                    'Ashwagandha': { tip: 'cortisol regulation — morning or evening', bestTime: 'morning' },
+                    'CoQ10': { tip: 'take with fatty meal for 4x absorption', bestTime: 'afternoon' },
+                    'Collagen': { tip: 'empty stomach for max absorption', bestTime: 'morning' },
+                    'Probiotics': { tip: '30min before meal for survival', bestTime: 'morning' },
+                    'Curcumin': { tip: 'with black pepper + fat for 20x absorption', bestTime: 'with meals' },
+                    'Lions Mane': { tip: 'morning for cognitive focus', bestTime: 'morning' },
+                    'Creatine': { tip: 'any time, consistency matters most', bestTime: 'post-workout' },
+                    'Whey Protein': { tip: 'within 30min post-workout', bestTime: 'post-workout' },
+                  }
+                  // Find a supplement with an absorption tip
+                  const suppTip = deduped.find(s => Object.keys(absorptionDB).some(k => s.name.toLowerCase().includes(k.toLowerCase())))
+                  if (suppTip) {
+                    const key = Object.keys(absorptionDB).find(k => suppTip.name.toLowerCase().includes(k.toLowerCase()))!
+                    const tip = absorptionDB[key]
+                    const takenAtTime = todayLogs.find(l => l.supplementId === suppTip.id)?.takenAt
+                    const takenDate = takenAtTime ? new Date(takenAtTime) : null
+                    const timeLabel = takenDate ? takenDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 'not yet today'
+                    insights.push({ icon: Sparkles, title: `${suppTip.name}: ${tip.tip}`, detail: `Best time: ${tip.bestTime} — logged at ${timeLabel}`, color: 'cyan', metric: tip.bestTime })
+                  } else {
+                    // Fallback: timing alignment insight
+                    const aligned = realTiming.filter(r => r.isAligned).length
+                    const total = realTiming.length
+                    const pct = total > 0 ? Math.round((aligned / total) * 100) : 0
+                    insights.push({ icon: Clock, title: `Timing alignment: ${pct}% of supplements on schedule`, detail: `${aligned}/${total} matched planned time slots — ${pct >= 80 ? 'excellent rhythm' : 'shift doses closer to schedule'}`, color: pct >= 80 ? 'emerald' : 'cyan', metric: `${pct}%` })
                   }
                 }
 
@@ -1050,101 +1019,61 @@ export function SupplementTracker() {
                     </div>
                   )}
 
-                  {/* ── Supplement Rings (Supply + Adherence merged) ── */}
+                  {/* ── Supplement Dashboard ── */}
                   <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5 relative overflow-hidden">
-                    <div className="absolute -top-16 -left-16 w-32 h-32 bg-emerald-500/[0.03] rounded-full blur-[50px]" />
-                    <div className="absolute -bottom-12 -right-12 w-28 h-28 bg-blue-500/[0.03] rounded-full blur-[40px]" />
+                    <div className="absolute -top-16 -right-16 w-32 h-32 bg-violet-500/[0.03] rounded-full blur-[50px]" />
                     <div className="relative">
-                      {/* Header */}
                       <div className="flex items-center gap-1.5 mb-3">
-                        <Activity className="w-2.5 h-2.5 text-emerald-400" />
-                        <span className="text-[9px] font-bold text-white uppercase tracking-wider">Supplement Rings</span>
+                        <Layers className="w-2.5 h-2.5 text-violet-400" />
+                        <span className="text-[9px] font-bold text-white uppercase tracking-wider">Your Stack</span>
                         <div className="flex-1" />
-                        {suppAdherence.length > 0 && (() => {
-                          const avg7 = Math.round(suppAdherence.reduce((s, a) => s + a.rate7, 0) / suppAdherence.length)
-                          const avg30 = Math.round(suppAdherence.reduce((s, a) => s + a.rate30, 0) / suppAdherence.length)
-                          return (
-                            <div className="flex items-center gap-1.5">
-                              <div className="flex items-center gap-0.5"><div className="w-1 h-1 rounded-full bg-emerald-400" /><span className="text-[6px] text-gray-500 font-bold">7d {avg7}%</span></div>
-                              <div className="flex items-center gap-0.5"><div className="w-1 h-1 rounded-full bg-blue-400" /><span className="text-[6px] text-gray-500 font-bold">30d {avg30}%</span></div>
-                            </div>
-                          )
-                        })()}
+                        <span className="text-[7px] font-bold text-gray-500">{dedupedDone}/{deduped.length} today</span>
                       </div>
-
-                      {/* Stacked urgency bar */}
-                      {refillData.length > 0 && (
-                        <div className="flex h-1.5 rounded-full overflow-hidden bg-white/[0.04] mb-3">
-                          {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).map((r, i) => {
-                            const color = r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981'
-                            return <div key={i} className="h-full transition-all duration-700" style={{ width: `${Math.max(5, Math.round((1 / refillData.length) * 100))}%`, background: `linear-gradient(90deg, ${color}dd, ${color}88)` }} />
-                          })}
-                        </div>
-                      )}
-
-                      {/* Rings grid — each ring shows adherence (outer=30d, inner=7d) + supply pill below */}
-                      {suppAdherence.length > 0 ? (
-                        <div className="flex flex-wrap gap-x-3 gap-y-2 justify-center">
-                          {suppAdherence.slice(0, 8).map((s, i) => {
-                            const colors = ['#10b981', '#6366f1', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#8b5cf6', '#14b8a6']
-                            const c = colors[i % colors.length]
-                            const r = 20
-                            const circ = 2 * Math.PI * r
-                            const offset30 = circ * (1 - s.rate30 / 100)
-                            // Supply data for this supplement
+                      {deduped.length > 0 ? (
+                        <div className="space-y-1.5">
+                          {deduped.map((s, i) => {
+                            const adherence = suppAdherence.find(a => a.name.toLowerCase().includes(s.name.toLowerCase()) || s.name.toLowerCase().includes(a.name.toLowerCase()))
                             const supply = refillData.find(r => r.name.toLowerCase().includes(s.name.toLowerCase()) || s.name.toLowerCase().includes(r.name.toLowerCase()))
-                            const supplyColor = supply ? (supply.urgency === 'critical' ? '#ef4444' : supply.urgency === 'warning' ? '#f59e0b' : '#10b981') : null
+                            const allTaken = s.doses.every(d => d.taken)
+                            const takenCount = s.doses.filter(d => d.taken).length
+                            const totalCount = s.doses.length
+                            const rate7 = adherence?.rate7 ?? 0
+                            const timeSlot = s.times?.[0] || 'Morning'
+                            const timeColor = timeSlot === 'Morning' ? '#f97316' : timeSlot === 'Afternoon' ? '#8b5cf6' : timeSlot === 'Evening' ? '#06b6d4' : '#6366f1'
+                            const barColor = rate7 >= 80 ? '#10b981' : rate7 >= 50 ? '#f59e0b' : '#ef4444'
                             return (
-                              <div key={i} className="flex flex-col items-center gap-0.5">
-                                {/* Ring */}
-                                <div className="relative w-11 h-11">
-                                  <svg width="44" height="44" viewBox="0 0 44 44">
-                                    <defs>
-                                      <filter id={`rg${i}`}><feGaussianBlur stdDeviation="1.5" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                                    </defs>
-                                    {/* 30-day outer ring */}
-                                    <circle cx="22" cy="22" r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2.5" />
-                                    <circle cx="22" cy="22" r={r} fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset30} transform="rotate(-90 22 22)" opacity={0.25} />
-                                    {/* 7-day inner ring */}
-                                    <circle cx="22" cy="22" r={r - 5} fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="2" />
-                                    <circle cx="22" cy="22" r={r - 5} fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeDasharray={2 * Math.PI * (r - 5)} strokeDashoffset={2 * Math.PI * (r - 5) * (1 - s.rate7 / 100)} transform="rotate(-90 22 22)" filter={`url(#rg${i})`} />
-                                    {/* Supply dot indicator */}
-                                    {supply && <circle cx="40" cy="6" r="3" fill={supplyColor || '#666'} stroke="#0b0b12" strokeWidth="1.5" />}
-                                  </svg>
-                                  <div className="absolute inset-0 flex items-center justify-center">
-                                    <span className="text-[7px] font-black text-white">{s.rate7}</span>
+                              <div key={i} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-xl border transition-all ${allTaken ? 'bg-emerald-500/[0.03] border-emerald-500/[0.08]' : 'bg-white/[0.02] border-white/[0.04]'}`}>
+                                {/* Status dot */}
+                                <div className={`w-2 h-2 rounded-full shrink-0 ${allTaken ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.4)]' : 'bg-gray-600'}`} />
+                                {/* Name + dose */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={`text-[10px] font-bold truncate ${allTaken ? 'text-emerald-300' : 'text-white'}`}>{s.name}</span>
+                                    {totalCount > 1 && <span className="text-[7px] text-gray-500 font-bold">{takenCount}/{totalCount}</span>}
+                                  </div>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className="text-[7px] text-gray-500">{s.dosage}</span>
+                                    <span className="text-[6px] px-1 py-0.5 rounded-full font-bold" style={{ color: timeColor, background: `${timeColor}12` }}>{timeSlot}</span>
                                   </div>
                                 </div>
-                                {/* Name */}
-                                <span className="text-[6px] text-gray-500 font-bold text-center leading-none truncate w-11">{s.name.length > 7 ? s.name.slice(0, 7) + '…' : s.name}</span>
-                                {/* Supply pill */}
-                                {supply && (
-                                  <span className="text-[6px] font-bold px-1 py-0.5 rounded-full" style={{ color: supplyColor || '#888', background: `${supplyColor || '#666'}15` }}>{supply.daysUntilRefill}d</span>
-                                )}
+                                {/* Adherence bar */}
+                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[8px] font-black tabular-nums" style={{ color: barColor }}>{rate7}%</span>
+                                    {supply && (
+                                      <span className={`text-[6px] font-bold px-1 py-0.5 rounded-full ${supply.urgency === 'critical' ? 'text-red-400 bg-red-500/10' : supply.urgency === 'warning' ? 'text-amber-400 bg-amber-500/10' : 'text-emerald-400 bg-emerald-500/10'}`}>{supply.daysUntilRefill}d</span>
+                                    )}
+                                  </div>
+                                  <div className="w-16 h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${rate7}%`, background: barColor }} />
+                                  </div>
+                                </div>
                               </div>
                             )
                           })}
                         </div>
-                      ) : suppTrends.length > 0 ? (
-                        <div className="h-28">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={suppTrends.slice(0, 6).map(s => ({
-                              name: s.name.length > 10 ? s.name.slice(0, 10) + '…' : s.name,
-                              delta: s.delta,
-                            }))} barCategoryGap="20%">
-                              <XAxis dataKey="name" tick={{ fontSize: 7, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                              <YAxis tick={false} axisLine={false} tickLine={false} width={0} />
-                              <Tooltip cursor={false} contentStyle={{ background: '#13131f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 9 }} formatter={(v: number) => [`${v > 0 ? '+' : ''}${v}%`, 'Trend']} />
-                              <Bar dataKey="delta" radius={[3, 3, 0, 0]} barSize={14}>
-                                {suppTrends.slice(0, 6).map((s, i) => (
-                                  <Cell key={i} fill={s.trend === 'rising' ? '#10b981' : s.trend === 'dropping' ? '#ef4444' : '#6b7280'} fillOpacity={0.6} />
-                                ))}
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
                       ) : (
-                        <div className="text-center py-4"><span className="text-[9px] text-gray-600 italic">No supplement data yet</span></div>
+                        <div className="text-center py-4"><span className="text-[9px] text-gray-600 italic">No supplements tracked</span></div>
                       )}
                     </div>
                   </div>
