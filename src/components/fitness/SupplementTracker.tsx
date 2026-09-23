@@ -863,10 +863,7 @@ export function SupplementTracker() {
                   return sorted[0].name
                 })()
 
-                // ── AI Insights: Genuinely useful coaching ──
-                const insights: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string }[] = []
-
-                // ── Helper: 7-day adherence ──
+                // ── AI Insights: FULL per-supplement data ──
                 const getSuppRate = (suppId: string, days: number) => {
                   let taken = 0
                   for (let i = 0; i < days; i++) {
@@ -876,7 +873,6 @@ export function SupplementTracker() {
                   return Math.round((taken / days) * 100)
                 }
 
-                // ── Absorption tips ──
                 const absorptionDB: Record<string, string> = {
                   'Vitamin D': 'with fatty meal', 'Omega-3': 'with fatty meal',
                   'Iron': 'empty stomach + vit C', 'Magnesium': 'bedtime',
@@ -890,154 +886,52 @@ export function SupplementTracker() {
                   return match ? match[1] : ''
                 }
 
-                // ── 1. FULL STACK STATUS — every supplement, real data ──
-                {
-                  const lines = deduped.map(s => {
-                    const done = s.doses.every(d => d.taken)
-                    const rate = getSuppRate(s.id, 7)
-                    return `${done ? '✓' : '○'}${s.name}${!done ? ` ${rate}%` : ''}`
-                  }).join(' · ')
+                // ── Build per-supplement detail data ──
+                const suppDetails = deduped.map(s => {
+                  const done = s.doses.every(d => d.taken)
+                  const dosesTaken = s.doses.filter(d => d.taken).length
+                  const dosesTotal = s.doses.length
+                  const rate7 = getSuppRate(s.id, 7)
+                  const rate30 = getSuppRate(s.id, 30)
+                  const times = s.times || []
+                  const tip = getTip(s.name)
+                  const refill = refillData.find(r => r.name === s.name || r.name.includes(s.name.split(' ')[0]))
 
-                  const notTaken = deduped.filter(s => !s.doses.every(d => d.taken))
-                  const dueNow = notTaken.filter(s => s.times?.includes(currentTod))
-                  const takenCount = deduped.length - notTaken.length
-                  let action = ''
-                  if (dueNow.length > 0) {
-                    action = ` → now: ${dueNow[0].name} ${dueNow[0].dosage} ${getTip(dueNow[0].name)}`
-                  } else if (notTaken.length > 0) {
-                    action = ` → next: ${notTaken[0].name} at ${notTaken[0].times?.[0] || 'later'}`
-                  }
-
-                  const metric = `${takenCount}/${deduped.length}`
-                  const color = takenCount === deduped.length ? 'emerald' : complianceRate >= 80 ? 'cyan' : 'amber'
-                  insights.push({ icon: Zap, title: `Stack ${metric}${action}`, detail: lines, color, metric })
-                }
-
-                // ── 2. DATA-DRIVEN ANALYSIS — the most important issue right now ──
-                {
-                  const candidates: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string; priority: number }[] = []
-                  const suppNames = deduped.map(s => s.name.toLowerCase())
-
-                  // A: Interactions — conflicts from YOUR stack
-                  const found = SUPP_INTERACTIONS.filter(x =>
-                    suppNames.some(n => n.includes(x.a.toLowerCase())) &&
-                    suppNames.some(n => n.includes(x.b.toLowerCase()))
+                  // Interactions for this supplement
+                  const suppInt = SUPP_INTERACTIONS.filter(x =>
+                    s.name.toLowerCase().includes(x.a.toLowerCase()) ||
+                    s.name.toLowerCase().includes(x.b.toLowerCase())
                   )
-                  const conflicts = found.filter(x => x.type === 'conflict')
-                  const synergies = found.filter(x => x.type === 'synergy')
-                  if (conflicts.length > 0) {
-                    const lines = conflicts.map(c => `${c.a}+${c.b}: ${c.message}`).join(' · ')
-                    candidates.push({ icon: ShieldAlert, title: `${conflicts.length} conflict${conflicts.length > 1 ? 's' : ''} in your stack`, detail: lines, color: 'rose', metric: 'fix now', priority: 10 })
-                  } else if (synergies.length > 0) {
-                    const lines = synergies.map(s => `${s.a}+${s.b}: ${s.message}`).join(' · ')
-                    candidates.push({ icon: CheckCircle2, title: `${synergies.length} synergy working`, detail: lines, color: 'emerald', metric: 'boosted', priority: 4 })
-                  }
+                  const conflicts = suppInt.filter(x => x.type === 'conflict')
+                  const synergies = suppInt.filter(x => x.type === 'synergy')
 
-                  // B: Weakest supplement — real 7d data with specific fix
-                  const rates = deduped.map(s => ({ name: s.name, id: s.id, dosage: s.dosage, rate: getSuppRate(s.id, 7), times: s.times }))
-                  const worst = rates.filter(r => r.rate < 80 && r.rate > 0).sort((a, b) => a.rate - b.rate)[0]
-                  if (worst) {
-                    const missed = 7 - Math.round(worst.rate / 100 * 7)
-                    candidates.push({ icon: Brain, title: `${worst.name}: ${worst.rate}% this week`, detail: `${missed} doses missed · take ${worst.dosage} ${getTip(worst.name)} · ${worst.times?.[0] || 'morning'} routine`, color: worst.rate < 50 ? 'rose' : 'amber', metric: `${worst.rate}%`, priority: 9 })
-                  }
+                  return { name: s.name, dosage: s.dosage, done, dosesTaken, dosesTotal, rate7, rate30, times, tip, refill, conflicts, synergies }
+                })
 
-                  // C: Missing from your stack — research-backed
-                  const missing: { name: string; reason: string }[] = []
-                  if (!suppNames.some(n => n.includes('vitamin k') || n.includes('k2'))) {
-                    if (suppNames.some(n => n.includes('vitamin d'))) missing.push({ name: 'Vitamin K2', reason: 'D3 without K2 wastes 47% of calcium — K2 directs calcium to bones' })
-                  }
-                  if (!suppNames.some(n => n.includes('magnesium'))) {
-                    missing.push({ name: 'Magnesium', reason: 'required for D3 activation — D3 without Mg = 50% less effective' })
-                  }
-                  if (missing.length > 0) {
-                    candidates.push({ icon: ShieldAlert, title: `Missing: ${missing[0].name}`, detail: missing.map(m => `${m.name}: ${m.reason}`).join(' · '), color: 'amber', metric: 'gap', priority: 8 })
-                  }
+                // ── Action plan ──
+                const notTaken = deduped.filter(s => !s.doses.every(d => d.taken))
+                const dueNow = notTaken.filter(s => s.times?.includes(currentTod))
+                const timeOrder = ['Morning', 'Afternoon', 'Evening', 'Night']
+                const curIdx = timeOrder.indexOf(currentTod)
+                const upcoming = notTaken.filter(s => {
+                  const slot = s.times?.[0] || 'Morning'
+                  return timeOrder.indexOf(slot) > curIdx && !dueNow.includes(s)
+                })
+                const critSupply = refillData.filter(r => r.urgency === 'critical')
+                const sn = deduped.map(s => s.name)
+                const foundInt = SUPP_INTERACTIONS.filter(x =>
+                  sn.some(n => n.toLowerCase().includes(x.a.toLowerCase())) &&
+                  sn.some(n => n.toLowerCase().includes(x.b.toLowerCase()))
+                )
+                const conflictPairs = foundInt.filter(x => x.type === 'conflict')
 
-                  // D: Supply — exact days
-                  const critical = refillData.filter(r => r.urgency === 'critical')
-                  const warnings = refillData.filter(r => r.urgency === 'warning')
-                  if (critical.length > 0) {
-                    candidates.push({ icon: Package, title: `Order now: ${critical.map(r => r.name).join(', ')}`, detail: `${critical.map(r => `${r.name}: ${r.daysUntilRefill}d left`).join(' · ')} — running out breaks your ${longTermStreak}d streak`, color: 'rose', metric: `${critical[0].daysUntilRefill}d`, priority: 10 })
-                  } else if (warnings.length > 0) {
-                    candidates.push({ icon: Package, title: `Reorder soon: ${warnings.map(r => r.name).join(', ')}`, detail: `${warnings.map(r => `${r.name}: ${r.daysUntilRefill}d left`).join(' · ')}`, color: 'amber', metric: `${warnings[0].daysUntilRefill}d`, priority: 7 })
-                  }
-
-                  // E: Per-supplement adherence — ALL below 80%
-                  const lowOnes = rates.filter(r => r.rate < 80).sort((a, b) => a.rate - b.rate)
-                  if (lowOnes.length > 0) {
-                    candidates.push({ icon: Brain, title: `${lowOnes.length} supplement${lowOnes.length > 1 ? 's' : ''} below 80%`, detail: lowOnes.map(r => `${r.name} ${r.rate}%`).join(' · '), color: lowOnes[0].rate < 50 ? 'rose' : 'amber', metric: '7d data', priority: 7 })
-                  }
-
-                  // F: Momentum
-                  const avg7 = Math.round(suppAdherence.reduce((s, a) => s + a.rate7, 0) / suppAdherence.length)
-                  const avg30 = Math.round(suppAdherence.reduce((s, a) => s + a.rate30, 0) / suppAdherence.length)
-                  const delta = avg7 - avg30
-                  if (Math.abs(delta) >= 5) {
-                    candidates.push({ icon: delta > 0 ? TrendingUp : ShieldAlert, title: `${delta > 0 ? 'Momentum ↑' : 'Dropping ↓'} ${Math.abs(delta)}%`, detail: `7d: ${avg7}% · 30d: ${avg30}% — ${delta > 0 ? 'keep going' : 'simplify your stack'}`, color: delta > 0 ? 'emerald' : 'rose', metric: `${delta > 0 ? '+' : ''}${delta}%`, priority: 6 })
-                  }
-
-                  // Fallback
-                  if (candidates.length === 0) {
-                    candidates.push({ icon: CheckCircle2, title: `All ${deduped.length} supplements at 100%`, detail: `${longTermStreak > 0 ? `${longTermStreak}d streak` : 'Start a streak today'} — top tier`, color: 'emerald', metric: '100%', priority: 1 })
-                  }
-
-                  candidates.sort((a, b) => b.priority - a.priority)
-                  for (const c of candidates) {
-                    if (insights.length >= 3) break
-                    if (!insights.some(x => x.title === c.title)) insights.push(c)
-                  }
-                }
-
-                // ── 3. TODAY'S ACTION PLAN — step by step ──
-                {
-                  const actions: string[] = []
-                  const notTaken = deduped.filter(s => !s.doses.every(d => d.taken))
-
-                  // Step 1: What to take NOW
-                  const dueNow = notTaken.filter(s => s.times?.includes(currentTod))
-                  dueNow.forEach(s => {
-                    actions.push(`take ${s.name} ${s.dosage} ${getTip(s.name)}`)
-                  })
-
-                  // Step 2: What's next
-                  const timeOrder = ['Morning', 'Afternoon', 'Evening', 'Night']
-                  const curIdx = timeOrder.indexOf(currentTod)
-                  const upcoming = notTaken.filter(s => {
-                    const slot = s.times?.[0] || 'Morning'
-                    return timeOrder.indexOf(slot) > curIdx && !dueNow.includes(s)
-                  })
-                  if (upcoming.length > 0) {
-                    const next = upcoming[0]
-                    actions.push(`${next.times?.[0]}: ${next.name} ${next.dosage}`)
-                  }
-
-                  // Step 3: Supply
-                  const critSupply = refillData.filter(r => r.urgency === 'critical')
-                  if (critSupply.length > 0) {
-                    actions.push(`order ${critSupply.map(r => r.name).join(', ')} (${critSupply[0].daysUntilRefill}d left)`)
-                  }
-
-                  // Step 4: Timing fix
-                  const sn = deduped.map(s => s.name)
-                  const foundInt = SUPP_INTERACTIONS.filter(x =>
-                    sn.some(n => n.toLowerCase().includes(x.a.toLowerCase())) &&
-                    sn.some(n => n.toLowerCase().includes(x.b.toLowerCase()))
-                  )
-                  const conflictPairs = foundInt.filter(x => x.type === 'conflict')
-                  if (conflictPairs.length > 0) {
-                    actions.push(`separate ${conflictPairs[0].a} & ${conflictPairs[0].b} by 2h`)
-                  }
-
-                  if (actions.length > 0) {
-                    insights.push({ icon: Sparkles, title: `Do this → ${actions.length} steps`, detail: actions.join(' → '), color: 'cyan', metric: 'plan' })
-                  } else if (notTaken.length === 0) {
-                    insights.push({ icon: Sparkles, title: `Stack complete — nothing to do`, detail: `All ${deduped.length} taken · no conflicts · supply good`, color: 'emerald', metric: '✓' })
-                  }
-                }
+                const actions: string[] = []
+                dueNow.forEach(s => actions.push(`take ${s.name} ${s.dosage} ${getTip(s.name)}`))
+                if (upcoming.length > 0) actions.push(`${upcoming[0].times?.[0]}: ${upcoming[0].name} ${upcoming[0].dosage}`)
+                if (critSupply.length > 0) actions.push(`order ${critSupply.map(r => r.name).join(', ')} (${critSupply[0].daysUntilRefill}d left)`)
+                if (conflictPairs.length > 0) actions.push(`separate ${conflictPairs[0].a} & ${conflictPairs[0].b} by 2h`)
 
                 // Final: cap at 3
-                const finalInsights = insights.slice(0, 3)
-
                 return (
                 <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.06) transparent' }}>
 
@@ -1083,40 +977,81 @@ export function SupplementTracker() {
                     </div>
                   </div>
 
-                  {/* ── AI Insights ── */}
-                  {finalInsights.length > 0 && (
+                  {/* ── AI Insights: Per-Supplement Detail ── */}
+                  <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] overflow-hidden">
+                    <div className="px-3.5 py-2 flex items-center gap-1.5 border-b border-white/[0.04]">
+                      <Brain className="w-3 h-3 text-violet-400" />
+                      <span className="text-[9px] font-bold text-violet-300 uppercase tracking-wider">All Supplements</span>
+                      <div className="flex-1" />
+                      <span className="text-[7px] text-gray-500">{suppDetails.length} total</span>
+                    </div>
+                    <div className="divide-y divide-white/[0.03]">
+                      {suppDetails.map((sd, i) => (
+                        <motion.div key={i} initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
+                          className="px-3.5 py-2.5 hover:bg-white/[0.02] transition-colors cursor-default">
+                          {/* Header: name + dosage + status */}
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 ${sd.done ? 'bg-emerald-500/[0.1]' : 'bg-amber-500/[0.1]'}`}>
+                              {sd.done ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Clock className="w-3 h-3 text-amber-400" />}
+                            </div>
+                            <span className="text-[10px] font-bold text-white flex-1">{sd.name}</span>
+                            <span className="text-[8px] text-gray-500">{sd.dosage}</span>
+                            <span className="text-[7px] text-gray-600">{sd.times.join(', ')}</span>
+                          </div>
+                          {/* Data row: doses + 7d + 30d */}
+                          <div className="flex items-center gap-3 ml-7 mb-1.5">
+                            <div className="flex items-center gap-1">
+                              <span className="text-[7px] text-gray-600">doses</span>
+                              <span className={`text-[8px] font-bold ${sd.dosesTaken === sd.dosesTotal ? 'text-emerald-400' : sd.dosesTaken > 0 ? 'text-amber-400' : 'text-gray-500'}`}>{sd.dosesTaken}/{sd.dosesTotal}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-[7px] text-gray-600">7d</span>
+                              <span className={`text-[8px] font-bold ${sd.rate7 >= 80 ? 'text-emerald-400' : sd.rate7 >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>{sd.rate7}%</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-[7px] text-gray-600">30d</span>
+                              <span className={`text-[8px] font-bold ${sd.rate30 >= 80 ? 'text-emerald-400' : sd.rate30 >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>{sd.rate30}%</span>
+                            </div>
+                          </div>
+                          {/* Insight line: tip + interactions + supply */}
+                          <div className="ml-7 flex items-center gap-2 flex-wrap">
+                            {sd.tip && <span className="text-[7px] text-cyan-400/70 bg-cyan-500/[0.06] px-1.5 py-0.5 rounded-full">{sd.tip}</span>}
+                            {sd.conflicts.length > 0 && sd.conflicts.map((c, ci) => (
+                              <span key={ci} className="text-[7px] text-rose-400/70 bg-rose-500/[0.06] px-1.5 py-0.5 rounded-full">conflict: {c.a}+{c.b}</span>
+                            ))}
+                            {sd.synergies.length > 0 && sd.synergies.map((s, si) => (
+                              <span key={si} className="text-[7px] text-emerald-400/70 bg-emerald-500/[0.06] px-1.5 py-0.5 rounded-full">synergy: {s.a}+{s.b}</span>
+                            ))}
+                            {sd.refill && (
+                              <span className={`text-[7px] px-1.5 py-0.5 rounded-full ${sd.refill.urgency === 'critical' ? 'text-rose-400 bg-rose-500/[0.06]' : sd.refill.urgency === 'warning' ? 'text-amber-400 bg-amber-500/[0.06]' : 'text-gray-500 bg-white/[0.03]'}`}>
+                                {sd.refill.daysUntilRefill}d left
+                              </span>
+                            )}
+                            {!sd.done && !sd.tip && sd.conflicts.length === 0 && sd.synergies.length === 0 && !sd.refill && (
+                              <span className="text-[7px] text-gray-600">take {sd.times[0] || 'later'}</span>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ── Today's Action Plan ── */}
+                  {actions.length > 0 && (
                     <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] overflow-hidden">
                       <div className="px-3.5 py-2 flex items-center gap-1.5 border-b border-white/[0.04]">
-                        <Brain className="w-3 h-3 text-violet-400" />
-                        <span className="text-[9px] font-bold text-violet-300 uppercase tracking-wider">AI Insights</span>
+                        <Sparkles className="w-3 h-3 text-cyan-400" />
+                        <span className="text-[9px] font-bold text-cyan-300 uppercase tracking-wider">Today's Plan</span>
+                        <div className="flex-1" />
+                        <span className="text-[7px] text-gray-500">{actions.length} steps</span>
                       </div>
-                      <div className="divide-y divide-white/[0.03]">
-                        {finalInsights.map((ins, i) => {
-                          const Icon = ins.icon
-                          const clrMap: Record<string, string> = {
-                            rose: 'text-rose-400 bg-rose-500/[0.08]',
-                            amber: 'text-amber-400 bg-amber-500/[0.08]',
-                            cyan: 'text-cyan-400 bg-cyan-500/[0.08]',
-                            orange: 'text-orange-400 bg-orange-500/[0.08]',
-                            emerald: 'text-emerald-400 bg-emerald-500/[0.08]',
-                            violet: 'text-violet-400 bg-violet-500/[0.08]',
-                          }
-                          return (
-                            <motion.div key={i} initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                              className="flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-white/[0.02] transition-colors cursor-default">
-                              <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${clrMap[ins.color] || 'text-gray-400 bg-gray-500/[0.06]'}`}>
-                                <Icon className="w-3.5 h-3.5" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] font-bold text-white block flex-1">{ins.title}</span>
-                                  {ins.metric && <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full ${ins.color === 'emerald' ? 'text-emerald-400 bg-emerald-500/10' : ins.color === 'rose' ? 'text-rose-400 bg-rose-500/10' : ins.color === 'amber' ? 'text-amber-400 bg-amber-500/10' : ins.color === 'cyan' ? 'text-cyan-400 bg-cyan-500/10' : 'text-violet-400 bg-violet-500/10'}`}>{ins.metric}</span>}
-                                </div>
-                                <span className="text-[9px] text-gray-500 leading-tight">{ins.detail}</span>
-                              </div>
-                            </motion.div>
-                          )
-                        })}
+                      <div className="px-3.5 py-2 space-y-1">
+                        {actions.map((a, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="text-[8px] font-bold text-cyan-400 w-3">{i + 1}.</span>
+                            <span className="text-[9px] text-gray-300">{a}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -1182,30 +1117,33 @@ export function SupplementTracker() {
                               <span className="text-[8px] font-black" style={{ color: overallScore >= 80 ? '#10b981' : overallScore >= 50 ? '#f59e0b' : '#ef4444' }}>{overallScore}%</span>
                               <span className="text-[6px] text-gray-600">body score</span>
                             </div>
-                            {/* System cards — compact vertical grid */}
-                            <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.06) transparent' }}>
+                            {/* System cards — horizontal carousel with rings */}
+                            <div className="relative">
+                              <div className="flex gap-2.5 overflow-x-auto pb-2 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                               {scored.map(({ name, sys, matched, coverage, adherence, healthScore, matchedDetails }) => {
                                 const Icon = sys.icon
-                                const circumference = 2 * Math.PI * 14
+                                const circumference = 2 * Math.PI * 16
                                 const offset = circumference * (1 - healthScore / 100)
                                 return (
-                                  <div key={name} className="rounded-xl p-3 bg-white/[0.02] border border-white/[0.04]">
-                                    <div className="flex items-center gap-2 mb-2">
+                                  <div key={name} className="snap-start shrink-0 w-[150px] rounded-2xl p-3.5 bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-all duration-200">
+                                    <div className="flex items-center gap-2.5 mb-2.5">
                                       <div className="relative">
-                                        <svg viewBox="0 0 36 36" className="w-8 h-8 -rotate-90">
-                                          <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2.5" />
-                                          <circle cx="18" cy="18" r="14" fill="none" stroke={sys.color} strokeWidth="3" strokeLinecap="round"
-                                            strokeDasharray={circumference} strokeDashoffset={offset} />
+                                        <svg viewBox="0 0 40 40" className="w-10 h-10 -rotate-90">
+                                          <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2.5" />
+                                          <circle cx="20" cy="20" r="16" fill="none" stroke={sys.color} strokeWidth="3" strokeLinecap="round"
+                                            strokeDasharray={circumference} strokeDashoffset={offset} className="transition-all duration-700" />
                                         </svg>
                                         <div className="absolute inset-0 flex items-center justify-center">
-                                          <Icon className="w-3 h-3" style={{ color: sys.color }} />
+                                          <Icon className="w-4 h-4" style={{ color: sys.color }} />
+                                        </div>
+                                        <div className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[7px] font-black" style={{ background: `${sys.color}20`, color: sys.color }}>
+                                          {healthScore}
                                         </div>
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <span className="text-[9px] font-bold text-white block truncate">{name}</span>
-                                        <span className="text-[7px] text-gray-500">{matched.length} supp{matched.length > 1 ? 's' : ''}</span>
+                                        <span className="text-[10px] font-bold text-white block truncate">{name}</span>
+                                        <span className="text-[8px] text-gray-500">{matched.length} supp{matched.length > 1 ? 's' : ''}</span>
                                       </div>
-                                      <span className="text-[10px] font-black" style={{ color: sys.color }}>{healthScore}</span>
                                     </div>
                                     <div className="space-y-1 mb-2">
                                       <div className="flex items-center gap-1">
@@ -1235,6 +1173,12 @@ export function SupplementTracker() {
                                   </div>
                                 )
                               })}
+                              </div>
+                              {scored.length > 3 && (
+                                <div className="absolute right-0 top-0 bottom-2 w-6 bg-gradient-to-l from-[#0b0b12] to-transparent pointer-events-none flex items-center justify-end">
+                                  <ChevronRight className="w-3 h-3 text-gray-600 animate-pulse" />
+                                </div>
+                              )}
                             </div>
                           </div>
                         )
