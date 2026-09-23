@@ -9,7 +9,7 @@ import {
   ChevronLeft, ChevronRight, RotateCcw, Flame,
   TrendingUp, ChevronDown,
 } from 'lucide-react'
-import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
+import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { generateId, cn } from '@/lib/utils'
@@ -265,10 +265,10 @@ export function SupplementTracker() {
             const dayLogs = logs.filter(l => l.date === dateStr)
             const taken = new Set(dayLogs.map(l => l.supplementId)).size
             const total = dailySupps.length
-            const morning = dayLogs.filter(l => { const s = supplements.find(s => s.id === l.supplementId); return s?.times[0] === 'Morning' }).length
-            const afternoon = dayLogs.filter(l => { const s = supplements.find(s => s.id === l.supplementId); return s?.times[0] === 'Afternoon' }).length
-            const evening = dayLogs.filter(l => { const s = supplements.find(s => s.id === l.supplementId); return s?.times[0] === 'Evening' }).length
-            const night = dayLogs.filter(l => { const s = supplements.find(s => s.id === l.supplementId); return s?.times[0] === 'Night' }).length
+            const morning = dayLogs.filter(l => { const s = supplements.find(s => s.id === l.supplementId); return s?.times?.includes('Morning') }).length
+            const afternoon = dayLogs.filter(l => { const s = supplements.find(s => s.id === l.supplementId); return s?.times?.includes('Afternoon') }).length
+            const evening = dayLogs.filter(l => { const s = supplements.find(s => s.id === l.supplementId); return s?.times?.includes('Evening') }).length
+            const night = dayLogs.filter(l => { const s = supplements.find(s => s.id === l.supplementId); return s?.times?.includes('Night') }).length
             return {
               letter: d.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0),
               date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -882,9 +882,10 @@ export function SupplementTracker() {
                   return sorted[0].name
                 })()
 
-                // ── AI Insights: exactly 3, no duplicates ──
+                // ── AI Insights: exactly 3, no duplicate supplements ──
                 const insights: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string }[] = []
                 const usedSupps = new Set<string>()
+                const usedTitles = new Set<string>()
 
                 // 1. Absorption Intelligence — most powerful
                 const absorptionPairs: Record<string, { with: string; boost: string; avoid?: string }[]> = {
@@ -911,6 +912,7 @@ export function SupplementTracker() {
                     if (!isOptimal || !takenAtTime) {
                       insights.push({ icon: Sparkles, title: `${match}: take with ${rule.with}`, detail: `${rule.boost} — ${rule.avoid ? `avoid ${rule.avoid}` : 'optimize timing'}`, color: 'amber', metric: rule.boost })
                       usedSupps.add(name)
+                      usedTitles.add(match.toLowerCase())
                       break
                     }
                   }
@@ -931,9 +933,15 @@ export function SupplementTracker() {
                   }
                 }
 
-                // 3. Stack Optimization — skip if already featured in insight 1
+                // 3. Stack Optimization — skip if already featured
                 if (insights.length < 3) {
-                  const lowAdherence = [...suppAdherence].sort((a, b) => a.rate7 - b.rate7).filter(s => s.rate7 < 80 && s.rate7 > 0 && !usedSupps.has(s.name))
+                  const lowAdherence = [...suppAdherence].sort((a, b) => a.rate7 - b.rate7).filter(s => {
+                    if (s.rate7 >= 80 || s.rate7 <= 0) return false
+                    if (usedSupps.has(s.name)) return false
+                    const nameLower = s.name.toLowerCase()
+                    if ([...usedTitles].some(t => nameLower.includes(t) || t.includes(nameLower))) return false
+                    return true
+                  })
                   if (lowAdherence.length > 0) {
                     const worst = lowAdherence[0]
                     const daysToHabit = Math.ceil((100 - worst.rate7) / 5)
@@ -946,7 +954,7 @@ export function SupplementTracker() {
 
                 // 4. Timing Drift — only if still under 3
                 if (insights.length < 3 && realTiming.length > 0) {
-                  const misaligned = realTiming.filter(r => !r.isAligned && r.actualCategory !== 'Unknown')
+                  const misaligned = realTiming.filter(r => !r.isAligned && r.actualCategory !== 'Unknown' && !usedSupps.has(r.name))
                   if (misaligned.length > 0) {
                     const m = misaligned[0]
                     insights.push({ icon: Clock, title: `${m.name}: ${m.actualCategory} → ${m.plannedCategory}`, detail: `${m.consistency} — shift by ${m.actualCategory === 'Morning' ? '1h earlier' : '1h later'} for optimal results`, color: 'cyan', metric: `${timingAlignmentPct}% aligned` })
@@ -1006,7 +1014,7 @@ export function SupplementTracker() {
                         <span className="text-[9px] font-bold text-violet-300 uppercase tracking-wider">AI Insights</span>
                       </div>
                       <div className="divide-y divide-white/[0.03]">
-                        {insights.slice(0, 3).map((ins, i) => {
+                        {insights.slice(0, 3).filter((ins, i, arr) => arr.findIndex(x => x.title === ins.title) === i).map((ins, i) => {
                           const Icon = ins.icon
                           const clrMap: Record<string, string> = {
                             rose: 'text-rose-400 bg-rose-500/[0.08]',
@@ -1036,13 +1044,12 @@ export function SupplementTracker() {
                     </div>
                   )}
 
-                  {/* ── Supply Health (Individual Radial Arcs) ── */}
+                  {/* ── Supply Health (Stacked Timeline + Pills) ── */}
                   <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5 relative overflow-hidden">
-                    <div className="absolute -bottom-12 -left-12 w-28 h-28 bg-orange-500/[0.03] rounded-full blur-3xl" />
-                    <div className="absolute top-8 right-8 w-20 h-20 bg-emerald-500/[0.03] rounded-full blur-3xl" />
+                    <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-teal-500/[0.04] rounded-full blur-3xl" />
                     <div className="relative">
                       <div className="flex items-center gap-1.5 mb-3">
-                        <Package className="w-2.5 h-2.5 text-orange-400" />
+                        <Package className="w-2.5 h-2.5 text-teal-400" />
                         <span className="text-[9px] font-bold text-white uppercase tracking-wider">Supply Health</span>
                         <div className="flex-1" />
                         {refillData.length > 0 && (() => {
@@ -1054,37 +1061,37 @@ export function SupplementTracker() {
                         })()}
                       </div>
                       {refillData.length > 0 ? (
-                        <div className="grid grid-cols-3 gap-2">
-                          {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 6).map((r, i) => {
-                            const color = r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981'
-                            const pct = Math.min(100, Math.max(0, Math.round((r.daysUntilRefill / r.refillDays) * 100)))
-                            const circumference = 2 * Math.PI * 18
-                            const dashoffset = circumference * (1 - pct / 100)
-                            const isUrgent = r.urgency === 'critical'
-                            return (
-                              <div key={i} className={`flex flex-col items-center bg-[#0f0f18] rounded-xl p-2.5 border border-white/[0.04] transition-all ${isUrgent ? 'animate-pulse border-red-500/20' : ''}`}>
-                                {/* SVG Radial Arc */}
-                                <div className="relative w-10 h-10 mb-1.5">
-                                  <svg width="40" height="40" viewBox="0 0 40 40">
-                                    <defs>
-                                      <linearGradient id={`arcGrad${i}`} x1="0" y1="0" x2="1" y2="1">
-                                        <stop offset="0%" stopColor={color} stopOpacity={0.9} />
-                                        <stop offset="100%" stopColor={color} stopOpacity={0.4} />
-                                      </linearGradient>
-                                    </defs>
-                                    <circle cx="20" cy="20" r="18" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
-                                    <circle cx="20" cy="20" r="18" fill="none" stroke={`url(#arcGrad${i})`} strokeWidth="3" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashoffset} transform="rotate(-90 20 20)" style={{ transition: 'stroke-dashoffset 1s ease' }} />
-                                  </svg>
-                                  <div className="absolute inset-0 flex items-center justify-center">
-                                    <span className="text-[9px] font-black" style={{ color }}>{pct}</span>
+                        <div className="space-y-2">
+                          {/* Stacked bar */}
+                          <div className="flex h-2 rounded-full overflow-hidden bg-white/[0.04]">
+                            {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).map((r, i) => {
+                              const color = r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981'
+                              const pct = Math.max(5, Math.round((1 / refillData.length) * 100))
+                              return <div key={i} className="h-full transition-all duration-700" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${color}dd, ${color}88)` }} />
+                            })}
+                          </div>
+                          {/* Supplement pills */}
+                          <div className="flex flex-wrap gap-1.5">
+                            {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 6).map((r, i) => {
+                              const color = r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981'
+                              const pct = Math.min(100, Math.max(0, Math.round((r.daysUntilRefill / r.refillDays) * 100)))
+                              return (
+                                <div key={i} className="flex items-center gap-1.5 bg-[#0f0f18] rounded-lg px-2 py-1 border border-white/[0.04]">
+                                  <div className="relative w-5 h-5 shrink-0">
+                                    <svg width="20" height="20" viewBox="0 0 20 20">
+                                      <circle cx="10" cy="10" r="8" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="2" />
+                                      <circle cx="10" cy="10" r="8" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeDasharray={2 * Math.PI * 8} strokeDashoffset={2 * Math.PI * 8 * (1 - pct / 100)} transform="rotate(-90 10 10)" />
+                                    </svg>
+                                    <span className="absolute inset-0 flex items-center justify-center text-[5px] font-black" style={{ color }}>{pct}</span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-[7px] text-gray-400 font-bold leading-none truncate max-w-[52px]">{r.name.length > 8 ? r.name.slice(0, 8) + '…' : r.name}</span>
+                                    <span className="text-[8px] font-black leading-none mt-0.5" style={{ color }}>{r.daysUntilRefill}d</span>
                                   </div>
                                 </div>
-                                {/* Info */}
-                                <span className="text-[7px] text-gray-400 font-bold truncate w-full text-center leading-tight">{r.name.length > 8 ? r.name.slice(0, 8) + '…' : r.name}</span>
-                                <span className="text-[7px] mt-0.5" style={{ color: `${color}aa` }}>{r.daysUntilRefill}d left</span>
-                              </div>
-                            )
-                          })}
+                              )
+                            })}
+                          </div>
                         </div>
                       ) : (
                         <div className="text-center py-4"><span className="text-[9px] text-gray-600 italic">No refill data tracked</span></div>
@@ -1092,65 +1099,59 @@ export function SupplementTracker() {
                     </div>
                   </div>
 
-                  {/* ── Adherence Radar (Polar Area / Rose Chart) ── */}
+                  {/* ── Adherence Rings (Individual Concentric Rings) ── */}
                   <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5 relative overflow-hidden">
-                    <div className="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500/[0.03] rounded-full blur-[60px]" />
-                    <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-pink-500/[0.03] rounded-full blur-[50px]" />
+                    <div className="absolute -top-16 -left-16 w-32 h-32 bg-emerald-500/[0.03] rounded-full blur-[50px]" />
+                    <div className="absolute -bottom-12 -right-12 w-28 h-28 bg-blue-500/[0.03] rounded-full blur-[40px]" />
                     <div className="relative">
                       <div className="flex items-center gap-1.5 mb-3">
-                        <Activity className="w-2.5 h-2.5 text-indigo-400" />
-                        <span className="text-[9px] font-bold text-white uppercase tracking-wider">Adherence Radar</span>
+                        <Activity className="w-2.5 h-2.5 text-emerald-400" />
+                        <span className="text-[9px] font-bold text-white uppercase tracking-wider">Adherence Rings</span>
                         <div className="flex-1" />
                         {suppAdherence.length > 0 && (() => {
                           const avg7 = Math.round(suppAdherence.reduce((s, a) => s + a.rate7, 0) / suppAdherence.length)
                           const avg30 = Math.round(suppAdherence.reduce((s, a) => s + a.rate30, 0) / suppAdherence.length)
-                          const delta = avg7 - avg30
                           return (
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_4px_rgba(129,140,248,0.5)]" /><span className="text-[7px] text-gray-400 font-bold">7d {avg7}%</span></div>
-                              <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-pink-400 shadow-[0_0_4px_rgba(244,114,182,0.5)]" /><span className="text-[7px] text-gray-400 font-bold">30d {avg30}%</span></div>
-                              {delta !== 0 && <span className={`text-[7px] font-bold ${delta > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{delta > 0 ? '↑' : '↓'}{Math.abs(delta)}%</span>}
+                            <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-0.5"><div className="w-1 h-1 rounded-full bg-emerald-400" /><span className="text-[6px] text-gray-500 font-bold">7d {avg7}%</span></div>
+                              <div className="flex items-center gap-0.5"><div className="w-1 h-1 rounded-full bg-blue-400" /><span className="text-[6px] text-gray-500 font-bold">30d {avg30}%</span></div>
                             </div>
                           )
                         })()}
                       </div>
                       {suppAdherence.length > 0 ? (
-                        <div className="h-52">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <RadarChart data={suppAdherence.slice(0, 8).map(s => ({
-                              subject: s.name.length > 10 ? s.name.slice(0, 10) + '…' : s.name,
-                              '7-day': s.rate7,
-                              '30-day': s.rate30,
-                              goal: 80,
-                            }))}>
-                              <defs>
-                                <linearGradient id="rGrad7" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor="#818cf8" stopOpacity={0.4} />
-                                  <stop offset="50%" stopColor="#6366f1" stopOpacity={0.2} />
-                                  <stop offset="100%" stopColor="#4338ca" stopOpacity={0.02} />
-                                </linearGradient>
-                                <linearGradient id="rGrad30" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor="#f472b6" stopOpacity={0.25} />
-                                  <stop offset="50%" stopColor="#ec4899" stopOpacity={0.1} />
-                                  <stop offset="100%" stopColor="#be185d" stopOpacity={0.01} />
-                                </linearGradient>
-                                <filter id="glowR">
-                                  <feGaussianBlur stdDeviation="3" result="blur" />
-                                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                                </filter>
-                              </defs>
-                              <PolarGrid stroke="rgba(255,255,255,0.04)" gridType="polygon" />
-                              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 7, fill: '#a1a1aa', fontWeight: 600 }} />
-                              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
-                              <Radar name="30-day" dataKey="30-day" stroke="#f472b6" fill="url(#rGrad30)" strokeWidth={1.5} dot={{ r: 2, fill: '#f472b6', stroke: '#f9a8d4', strokeWidth: 1 }} strokeOpacity={0.6} animationDuration={1200} />
-                              <Radar name="7-day" dataKey="7-day" stroke="#818cf8" fill="url(#rGrad7)" strokeWidth={2.5} dot={{ r: 3, fill: '#818cf8', stroke: '#c7d2fe', strokeWidth: 1.5 }} strokeOpacity={1} filter="url(#glowR)" animationDuration={800} />
-                              <Radar name="goal" dataKey="goal" stroke="rgba(255,255,255,0.1)" fill="none" strokeWidth={1} strokeDasharray="3 3" dot={false} />
-                              <Tooltip contentStyle={{ background: 'rgba(12,12,22,0.95)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, fontSize: 9, backdropFilter: 'blur(12px)' }} />
-                            </RadarChart>
-                          </ResponsiveContainer>
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          {suppAdherence.slice(0, 6).map((s, i) => {
+                            const colors = ['#10b981', '#6366f1', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899']
+                            const c = colors[i % colors.length]
+                            const r = 22
+                            const circ = 2 * Math.PI * r
+                            const offset30 = circ * (1 - s.rate30 / 100)
+                            return (
+                              <div key={i} className="flex flex-col items-center gap-1">
+                                <div className="relative w-12 h-12">
+                                  <svg width="48" height="48" viewBox="0 0 48 48">
+                                    <defs>
+                                      <filter id={`ringGlow${i}`}><feGaussianBlur stdDeviation="1.5" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                                    </defs>
+                                    {/* 30-day ring (outer, faint) */}
+                                    <circle cx="24" cy="24" r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
+                                    <circle cx="24" cy="24" r={r} fill="none" stroke={c} strokeWidth="3" strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset30} transform="rotate(-90 24 24)" opacity={0.25} />
+                                    {/* 7-day ring (inner, bright) */}
+                                    <circle cx="24" cy="24" r={r - 5} fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="2.5" />
+                                    <circle cx="24" cy="24" r={r - 5} fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeDasharray={2 * Math.PI * (r - 5)} strokeDashoffset={2 * Math.PI * (r - 5) * (1 - s.rate7 / 100)} transform="rotate(-90 24 24)" filter={`url(#ringGlow${i})`} />
+                                  </svg>
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-[8px] font-black text-white">{s.rate7}</span>
+                                  </div>
+                                </div>
+                                <span className="text-[6px] text-gray-500 font-bold text-center leading-none truncate w-12">{s.name.length > 7 ? s.name.slice(0, 7) + '…' : s.name}</span>
+                              </div>
+                            )
+                          })}
                         </div>
                       ) : suppTrends.length > 0 ? (
-                        <div className="h-32">
+                        <div className="h-28">
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={suppTrends.slice(0, 6).map(s => ({
                               name: s.name.length > 10 ? s.name.slice(0, 10) + '…' : s.name,
