@@ -863,98 +863,134 @@ export function SupplementTracker() {
                   return sorted[0].name
                 })()
 
-                // ── AI Insights: 3 most helpful, actionable ──
+                // ── AI Insights: 3 data-driven, from actual logs ──
                 const insights: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string }[] = []
 
-                // ── 1. Today's Status (always shows) ──
+                // ── 1. Today's actual status from takenAt data ──
                 {
-                  const takenToday = dedupedDone
-                  const total = deduped.length
-                  const rate = complianceRate
-                  const missed = total - takenToday
                   const currentHour = new Date().getHours()
                   const currentTod = currentHour < 12 ? 'Morning' : currentHour < 17 ? 'Afternoon' : currentHour < 21 ? 'Evening' : 'Night'
+                  const takenToday = dedupedDone
+                  const total = deduped.length
+                  const missed = total - takenToday
+                  const todayTakenAts = todayLogs.filter(l => l.takenAt).map(l => ({ name: deduped.find(s => s.id === l.supplementId)?.name || '', takenAt: new Date(l.takenAt!), time: deduped.find(s => s.id === l.supplementId)?.times?.[0] || '' }))
+                  const avgTakenHour = todayTakenAts.length > 0 ? todayTakenAts.reduce((s, t) => s + t.takenAt.getHours(), 0) / todayTakenAts.length : 0
+                  const avgTimeStr = todayTakenAts.length > 0 ? `${Math.floor(avgTakenHour)}:${String(Math.round((avgTakenHour % 1) * 60)).padStart(2, '0')}` : ''
                   if (missed > 0) {
                     const missedSupps = deduped.filter(s => !s.doses.every(d => d.taken))
                     const nextDue = missedSupps.find(s => s.times?.includes(currentTod)) || missedSupps[0]
-                    const missedNames = missedSupps.map(s => s.name).slice(0, 3)
-                    insights.push({ icon: Zap, title: `${takenToday}/${total} taken — ${nextDue ? `next: ${nextDue.name}` : `${missed} remaining`}`, detail: `Pending: ${missedNames.join(', ')}${missed > 3 ? ` +${missed - 3} more` : ''} — ${rate >= 80 ? 'strong consistency' : 'room to improve'}`, color: rate >= 80 ? 'emerald' : 'amber', metric: `${rate}%` })
+                    const missedInCurrentSlot = missedSupps.filter(s => s.times?.includes(currentTod)).length
+                    insights.push({ icon: Zap, title: `${takenToday}/${total} taken${missedInCurrentSlot > 0 ? ` · ${missedInCurrentSlot} due now` : ''}`, detail: `Next: ${nextDue?.name || '—'}${avgTimeStr ? ` · avg taken at ${avgTimeStr}` : ''} — ${complianceRate >= 80 ? 'strong rhythm' : 'get back on track'}`, color: complianceRate >= 80 ? 'emerald' : 'amber', metric: `${complianceRate}%` })
                   } else {
-                    insights.push({ icon: CheckCircle2, title: `${total}/${total} complete today — perfect`, detail: `${rate}% weekly compliance${longTermStreak > 3 ? ` · ${longTermStreak}d streak` : ''} — you're in the top tier`, color: 'emerald', metric: '100%' })
+                    insights.push({ icon: CheckCircle2, title: `${total}/${total} complete — perfect day`, detail: `${complianceRate}% weekly · ${longTermStreak > 3 ? `${longTermStreak}d streak` : 'start your streak'} — consistency compounds`, color: 'emerald', metric: '100%' })
                   }
                 }
 
-                // ── 2. Smart insight pool (pick best available) ──
+                // ── 2. Deep log-based insights (pick best 2) ──
                 {
                   const candidates: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string; priority: number }[] = []
 
-                  // A: Supply running out (highest urgency)
-                  const critical = refillData.filter(r => r.urgency === 'critical')
-                  if (critical.length > 0) {
-                    const names = critical.map(r => r.name).slice(0, 2)
-                    candidates.push({ icon: Package, title: `${critical[0].name}: ${critical[0].daysUntilRefill}d supply left`, detail: `Order now: ${names.join(', ')}${critical.length > 1 ? ` +${critical.length - 1} more` : ''} — running out breaks your streak`, color: 'rose', metric: `${critical[0].daysUntilRefill}d`, priority: 10 })
-                  }
-                  const warnings = refillData.filter(r => r.urgency === 'warning')
-                  if (warnings.length > 0 && critical.length === 0) {
-                    candidates.push({ icon: Package, title: `${warnings[0].name}: ${warnings[0].daysUntilRefill}d supply remaining`, detail: `${warnings.length} supplement${warnings.length > 1 ? 's' : ''} need reorder soon — plan ahead`, color: 'amber', metric: `${warnings[0].daysUntilRefill}d`, priority: 8 })
-                  }
-
-                  // B: Synergy/conflict (always check)
-                  const suppNames = deduped.map(s => s.name)
-                  const foundInteractions = SUPP_INTERACTIONS.filter(x =>
-                    suppNames.some(n => n.toLowerCase().includes(x.a.toLowerCase())) &&
-                    suppNames.some(n => n.toLowerCase().includes(x.b.toLowerCase()))
-                  )
-                  if (foundInteractions.length > 0) {
-                    const worst = foundInteractions.find(x => x.type === 'conflict') || foundInteractions[0]
-                    candidates.push({ icon: ShieldAlert, title: `${worst.a} + ${worst.b}: ${worst.type}`, detail: `${worst.message} — ${worst.type === 'conflict' ? 'separate by 2 hours' : 'great combo, keep it up'}`, color: worst.type === 'conflict' ? 'rose' : worst.type === 'synergy' ? 'emerald' : 'amber', metric: worst.type, priority: worst.type === 'conflict' ? 9 : 5 })
-                  }
-
-                  // C: Weakest adherence
-                  const sorted = [...suppAdherence].sort((a, b) => a.rate7 - b.rate7)
-                  const worst = sorted.find(s => s.rate7 < 100 && s.rate7 > 0)
-                  if (worst) {
-                    const daysToHabit = Math.ceil((100 - worst.rate7) / 5)
-                    const bestTime = worst.times?.[0] || 'morning'
-                    const advice = worst.rate7 < 50 ? `link to your ${bestTime} routine` : worst.rate7 < 80 ? `set daily alarm for ${bestTime}` : `lock in the habit`
-                    candidates.push({ icon: Brain, title: `${worst.name}: ${worst.rate7}% adherence (${worst.taken7}/${worst.total7} doses)`, detail: `${daysToHabit}d to habit — ${advice}`, color: worst.rate7 < 50 ? 'rose' : worst.rate7 < 80 ? 'amber' : 'emerald', metric: `${worst.rate7}%`, priority: 7 })
+                  // A: Time slot failure analysis — find which slot misses most
+                  {
+                    const timeSlotMisses: Record<string, { total: number; missed: number; supps: string[] }> = { Morning: { total: 0, missed: 0, supps: [] }, Afternoon: { total: 0, missed: 0, supps: [] }, Evening: { total: 0, missed: 0, supps: [] }, Night: { total: 0, missed: 0, supps: [] } }
+                    deduped.forEach(s => {
+                      s.times?.forEach(t => {
+                        if (timeSlotMisses[t]) {
+                          timeSlotMisses[t].total++
+                          if (!s.doses.every(d => d.taken)) {
+                            timeSlotMisses[t].missed++
+                            if (!timeSlotMisses[t].supps.includes(s.name)) timeSlotMisses[t].supps.push(s.name)
+                          }
+                        }
+                      })
+                    })
+                    const worstSlot = Object.entries(timeSlotMisses).filter(([, v]) => v.missed > 0).sort((a, b) => (b[1].missed / b[1].total) - (a[1].missed / a[1].total))[0]
+                    if (worstSlot) {
+                      const [slot, data] = worstSlot
+                      const missRate = Math.round((data.missed / data.total) * 100)
+                      candidates.push({ icon: Clock, title: `${slot} slot: ${data.missed}/${data.total} missed (${missRate}%)`, detail: `${data.supps.slice(0, 2).join(', ')} — set a ${slot.toLowerCase()} alarm to fix this pattern`, color: missRate > 50 ? 'rose' : 'amber', metric: `${missRate}%`, priority: 9 })
+                    }
                   }
 
-                  // D: Weekly comparison
-                  if (suppAdherence.length > 0) {
+                  // B: Supply with days until refill — precise cost-per-day
+                  {
+                    const critical = refillData.filter(r => r.urgency === 'critical')
+                    if (critical.length > 0) {
+                      candidates.push({ icon: Package, title: `${critical[0].name}: ${critical[0].daysUntilRefill}d left — order today`, detail: `${critical.length > 1 ? `${critical.length} supplements` : '1 supplement'} critically low — running out breaks your streak`, color: 'rose', metric: `${critical[0].daysUntilRefill}d`, priority: 10 })
+                    }
+                    const warnings = refillData.filter(r => r.urgency === 'warning')
+                    if (warnings.length > 0 && critical.length === 0) {
+                      candidates.push({ icon: Package, title: `${warnings[0].name}: ${warnings[0].daysUntilRefill}d supply`, detail: `${warnings.length} supplement${warnings.length > 1 ? 's' : ''} need reorder within 2 weeks`, color: 'amber', metric: `${warnings[0].daysUntilRefill}d`, priority: 8 })
+                    }
+                  }
+
+                  // C: Synergy/conflict from actual stack
+                  {
+                    const suppNames = deduped.map(s => s.name)
+                    const foundInteractions = SUPP_INTERACTIONS.filter(x =>
+                      suppNames.some(n => n.toLowerCase().includes(x.a.toLowerCase())) &&
+                      suppNames.some(n => n.toLowerCase().includes(x.b.toLowerCase()))
+                    )
+                    if (foundInteractions.length > 0) {
+                      const conflicts = foundInteractions.filter(x => x.type === 'conflict')
+                      const synergies = foundInteractions.filter(x => x.type === 'synergy')
+                      if (conflicts.length > 0) {
+                        const c = conflicts[0]
+                        candidates.push({ icon: ShieldAlert, title: `Conflict: ${c.a} + ${c.b}`, detail: `${c.message} — separate by 2 hours for full absorption`, color: 'rose', metric: 'conflict', priority: 9 })
+                      } else if (synergies.length > 0) {
+                        const s = synergies[0]
+                        candidates.push({ icon: CheckCircle2, title: `Synergy: ${s.a} + ${s.b}`, detail: `${s.message} — great combo, keep taking together`, color: 'emerald', metric: 'synergy', priority: 4 })
+                      }
+                    }
+                  }
+
+                  // D: Per-supplement — find the one with biggest improvement potential
+                  {
+                    const sorted = [...suppAdherence].sort((a, b) => a.rate7 - b.rate7)
+                    const worst = sorted.find(s => s.rate7 < 100 && s.rate7 > 0)
+                    if (worst) {
+                      const dosesMissed = worst.total7 - worst.taken7
+                      const daysToHabit = Math.ceil((100 - worst.rate7) / 5)
+                      const bestTime = worst.times?.[0] || 'morning'
+                      const advice = worst.rate7 < 50 ? `critical — link to your ${bestTime} routine` : worst.rate7 < 80 ? `set alarm for ${bestTime}` : `almost there — lock it in`
+                      candidates.push({ icon: Brain, title: `${worst.name}: ${worst.rate7}% (${worst.taken7}/${worst.total7}) — ${dosesMissed} doses missed`, detail: `${daysToHabit}d to habit · ${advice}`, color: worst.rate7 < 50 ? 'rose' : worst.rate7 < 80 ? 'amber' : 'emerald', metric: `${worst.rate7}%`, priority: 7 })
+                    }
+                  }
+
+                  // E: Weekly trend — compare 7d vs 30d
+                  {
                     const avg7 = Math.round(suppAdherence.reduce((s, a) => s + a.rate7, 0) / suppAdherence.length)
                     const avg30 = Math.round(suppAdherence.reduce((s, a) => s + a.rate30, 0) / suppAdherence.length)
                     const delta = avg7 - avg30
                     if (Math.abs(delta) >= 5) {
-                      candidates.push({ icon: delta > 0 ? TrendingUp : ShieldAlert, title: `This week ${delta > 0 ? '+' : ''}${delta}% vs last 30 days`, detail: `7d avg: ${avg7}% · 30d avg: ${avg30}% — ${delta > 0 ? 'trending up, keep momentum' : 'declining, simplify your routine'}`, color: delta > 0 ? 'emerald' : 'rose', metric: `${delta > 0 ? '+' : ''}${delta}%`, priority: 6 })
+                      candidates.push({ icon: delta > 0 ? TrendingUp : ShieldAlert, title: `Week ${delta > 0 ? '+' : ''}${delta}% vs 30d avg`, detail: `7d: ${avg7}% · 30d: ${avg30}% — ${delta > 0 ? 'momentum building, keep going' : 'declining, simplify your stack'}`, color: delta > 0 ? 'emerald' : 'rose', metric: `${delta > 0 ? '+' : ''}${delta}%`, priority: 6 })
                     }
                   }
 
-                  // E: Streak motivation
-                  const target = 21
-                  const remaining = target - longTermStreak
-                  if (longTermStreak > 0 && longTermStreak < target) {
-                    candidates.push({ icon: Flame, title: `${longTermStreak}d streak — ${remaining}d to permanent habit`, detail: `21 days = automatic behavior. You're ${Math.round((longTermStreak / target) * 100)}% there — don't stop now`, color: 'amber', metric: `${longTermStreak}/${target}`, priority: 4 })
-                  } else if (longTermStreak >= target) {
-                    candidates.push({ icon: Flame, title: `${longTermStreak}d streak — habit locked in`, detail: `Past the 21-day threshold — this is now automatic. Keep the momentum`, color: 'emerald', metric: `${longTermStreak}d`, priority: 3 })
+                  // F: Streak milestone
+                  {
+                    const target = 21
+                    const remaining = target - longTermStreak
+                    if (longTermStreak > 0 && longTermStreak < target) {
+                      candidates.push({ icon: Flame, title: `${longTermStreak}d streak — ${remaining}d to habit`, detail: `${Math.round((longTermStreak / target) * 100)}% to 21-day threshold — don't stop now`, color: 'amber', metric: `${longTermStreak}/${target}`, priority: 3 })
+                    } else if (longTermStreak >= target) {
+                      candidates.push({ icon: Flame, title: `${longTermStreak}d streak — habit locked`, detail: `Past 21-day threshold — this is automatic. Maintain momentum`, color: 'emerald', metric: `${longTermStreak}d`, priority: 2 })
+                    }
                   }
 
-                  // F: All perfect fallback
+                  // G: Fallback — all perfect
                   if (candidates.length === 0) {
-                    candidates.push({ icon: CheckCircle2, title: `All ${deduped.length} supplements at 100%`, detail: `${longTermStreak > 0 ? `${longTermStreak}d streak` : 'Start a streak today'} — consistency compounds over time`, color: 'emerald', metric: '100%', priority: 1 })
+                    candidates.push({ icon: CheckCircle2, title: `All ${deduped.length} supplements at 100%`, detail: `${longTermStreak > 0 ? `${longTermStreak}d streak` : 'Start a streak today'} — you're in the top tier`, color: 'emerald', metric: '100%', priority: 1 })
                   }
 
-                  // Pick top 2 by priority (insight 1 already filled)
                   candidates.sort((a, b) => b.priority - a.priority)
                   for (const c of candidates) {
                     if (insights.length >= 3) break
-                    if (!insights.some(x => x.title === c.title)) {
-                      insights.push(c)
-                    }
+                    if (!insights.some(x => x.title === c.title)) insights.push(c)
                   }
                 }
 
-                // ── 3. Timing & Absorption (fills slot 3 if needed) ──
+                // ── 3. Absorption tip from DB (fills slot 3 if needed) ──
                 {
                   const absorptionDB: Record<string, { tip: string; bestTime: string }> = {
                     'Vitamin D': { tip: 'take with fatty meal for 3x absorption', bestTime: 'afternoon' },
@@ -982,11 +1018,6 @@ export function SupplementTracker() {
                       const takenDate = takenAtTime ? new Date(takenAtTime) : null
                       const timeLabel = takenDate ? takenDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 'not yet today'
                       insights.push({ icon: Sparkles, title: `${suppTip.name}: ${tip.tip}`, detail: `Best time: ${tip.bestTime} — logged at ${timeLabel}`, color: 'cyan', metric: tip.bestTime })
-                    } else {
-                      const aligned = realTiming.filter(r => r.isAligned).length
-                      const total = realTiming.length
-                      const pct = total > 0 ? Math.round((aligned / total) * 100) : 0
-                      insights.push({ icon: Clock, title: `Timing alignment: ${pct}% on schedule`, detail: `${aligned}/${total} matched planned slots — ${pct >= 80 ? 'excellent rhythm' : 'shift closer to schedule'}`, color: pct >= 80 ? 'emerald' : 'cyan', metric: `${pct}%` })
                     }
                   }
                 }
@@ -1077,69 +1108,60 @@ export function SupplementTracker() {
                     </div>
                   )}
 
-                  {/* ── Smart Schedule (Interactive Today Plan) ── */}
+                  {/* ── Body System Impact (Interactive) ── */}
                   <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5 relative overflow-hidden">
-                    <div className="absolute -top-16 -right-16 w-32 h-32 bg-cyan-500/[0.03] rounded-full blur-[50px]" />
+                    <div className="absolute -top-16 -right-16 w-32 h-32 bg-violet-500/[0.03] rounded-full blur-[50px]" />
                     <div className="relative">
                       <div className="flex items-center gap-1.5 mb-3">
-                        <Clock className="w-2.5 h-2.5 text-cyan-400" />
-                        <span className="text-[9px] font-bold text-white uppercase tracking-wider">Today's Plan</span>
+                        <Activity className="w-2.5 h-2.5 text-violet-400" />
+                        <span className="text-[9px] font-bold text-white uppercase tracking-wider">Body Systems</span>
                         <div className="flex-1" />
-                        <span className="text-[7px] font-bold text-gray-500">{dedupedDone}/{deduped.length} done</span>
+                        <span className="text-[7px] text-gray-500">{deduped.length} supps</span>
                       </div>
                       {(() => {
-                        const currentHour = new Date().getHours()
-                        const currentTod = currentHour < 12 ? 'Morning' : currentHour < 17 ? 'Afternoon' : currentHour < 21 ? 'Evening' : 'Night'
-                        const timeOrder = ['Morning', 'Afternoon', 'Evening', 'Night']
-                        const timeIcons: Record<string, typeof Sun> = { Morning: Sun, Afternoon: Sunrise, Evening: Sunset, Night: Moon }
-                        const timeColors: Record<string, string> = { Morning: '#f97316', Afternoon: '#8b5cf6', Evening: '#06b6d4', Night: '#6366f1' }
-                        const grouped = timeOrder.map(tod => ({
-                          time: tod,
-                          icon: timeIcons[tod],
-                          color: timeColors[tod],
-                          supps: deduped.filter(s => s.times?.includes(tod)),
-                          isCurrent: tod === currentTod,
-                          isPast: timeOrder.indexOf(tod) < timeOrder.indexOf(currentTod),
-                        })).filter(g => g.supps.length > 0)
+                        const systemMap: Record<string, { icon: typeof Zap; color: string; supps: string[]; benefits: string[] }> = {}
+                        const addSystem = (name: string, icon: typeof Zap, color: string, suppName: string, benefit: string) => {
+                          if (!systemMap[name]) systemMap[name] = { icon, color, supps: [], benefits: [] }
+                          if (!systemMap[name].supps.includes(suppName)) systemMap[name].supps.push(suppName)
+                          if (!systemMap[name].benefits.includes(benefit)) systemMap[name].benefits.push(benefit)
+                        }
+                        deduped.forEach(s => {
+                          const n = s.name.toLowerCase()
+                          if (n.includes('vitamin d') || n.includes('calcium') || n.includes('collagen')) addSystem('Bone & Joints', ShieldAlert, '#f97316', s.name, n.includes('vitamin d') ? 'calcium absorption' : n.includes('calcium') ? 'bone density' : 'joint repair')
+                          if (n.includes('omega') || n.includes('coq10') || n.includes(' magnesium')) addSystem('Heart & Cardio', Activity, '#ef4444', s.name, n.includes('omega') ? 'cholesterol' : n.includes('coq10') ? 'energy production' : 'blood pressure')
+                          if (n.includes('iron') || n.includes('b12') || n.includes('multivitamin')) addSystem('Energy & Blood', Zap, '#eab308', s.name, n.includes('iron') ? 'oxygen transport' : n.includes('b12') ? 'red blood cells' : 'daily fuel')
+                          if (n.includes('vitamin c') || n.includes('zinc') || n.includes('probiotics') || n.includes('elderberry')) addSystem('Immune Defense', ShieldAlert, '#10b981', s.name, n.includes('vitamin c') ? 'antioxidant' : n.includes('zinc') ? 'immune cells' : n.includes('probiotics') ? 'gut immunity' : 'antiviral')
+                          if (n.includes('magnesium') || n.includes('ashwagandha') || n.includes('melatonin')) addSystem('Sleep & Recovery', Moon, '#6366f1', s.name, n.includes('magnesium') ? 'muscle relaxation' : n.includes('ashwagandha') ? 'cortisol control' : 'sleep onset')
+                          if (n.includes('lion') || n.includes('creatine') || n.includes('pre-workout')) addSystem('Brain & Performance', Brain, '#06b6d4', s.name, n.includes('lion') ? 'neurogenesis' : n.includes('creatine') ? 'ATP production' : 'focus & drive')
+                          if (n.includes('collagen') || n.includes('whey') || n.includes('creatine')) addSystem('Muscle & Skin', Layers, '#8b5cf6', s.name, n.includes('collagen') ? 'skin elasticity' : n.includes('whey') ? 'muscle repair' : 'strength')
+                          if (n.includes('curcumin') || n.includes('ashwagandha')) addSystem('Inflammation', Flame, '#f97316', s.name, n.includes('curcumin') ? 'anti-inflammatory' : 'stress response')
+                        })
+                        const systems = Object.entries(systemMap).sort((a, b) => b[1].supps.length - a[1].supps.length).slice(0, 6)
                         return (
-                          <div className="space-y-2">
-                            {grouped.map((group, gi) => {
-                              const Icon = group.icon
-                              const allDone = group.supps.every(s => s.doses.every(d => d.taken))
-                              const doneCount = group.supps.filter(s => s.doses.every(d => d.taken)).length
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {systems.map(([name, data]) => {
+                              const Icon = data.icon
+                              const pct = Math.round((data.supps.length / deduped.length) * 100)
                               return (
-                                <div key={gi} className={`relative pl-4 ${group.isPast && !allDone ? 'opacity-60' : ''}`}>
-                                  {/* Timeline line */}
-                                  {gi < grouped.length - 1 && <div className="absolute left-[7px] top-5 bottom-[-8px] w-[1px]" style={{ background: `${group.color}20` }} />}
-                                  {/* Timeline dot */}
-                                  <div className={`absolute left-0 top-1 w-[15px] h-[15px] rounded-full flex items-center justify-center`} style={{ background: `${group.color}20`, boxShadow: group.isCurrent ? `0 0 0 2px ${group.color}40` : undefined }}>
-                                    <Icon className="w-2 h-2" style={{ color: group.color }} />
+                                <div key={name}
+                                  className="rounded-xl p-2 text-left transition-all duration-200 bg-white/[0.02] border border-transparent hover:bg-white/[0.04]">
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <Icon className="w-2.5 h-2.5" style={{ color: data.color }} />
+                                    <span className="text-[7px] font-bold text-white truncate">{name}</span>
                                   </div>
-                                  {/* Time label */}
-                                  <div className="flex items-center gap-1.5 mb-1">
-                                    <span className="text-[8px] font-bold" style={{ color: group.color }}>{group.time}</span>
-                                    {group.isCurrent && <span className="text-[5px] font-bold px-1 py-0.5 rounded-full bg-white/[0.06] text-white">now</span>}
-                                    <span className="text-[6px] text-gray-600">{doneCount}/{group.supps.length}</span>
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <div className="flex-1 h-1 rounded-full bg-white/[0.06] overflow-hidden">
+                                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: data.color }} />
+                                    </div>
+                                    <span className="text-[6px] font-bold" style={{ color: data.color }}>{data.supps.length}</span>
                                   </div>
-                                  {/* Supplements */}
                                   <div className="space-y-0.5">
-                                    {group.supps.map((s, si) => {
-                                      const taken = s.doses.every(d => d.taken)
-                                      return (
-                                        <div key={si} className="flex items-center gap-1.5">
-                                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${taken ? 'bg-emerald-400' : 'bg-gray-600'}`} />
-                                          <span className={`text-[8px] font-bold ${taken ? 'text-emerald-300 line-through opacity-60' : 'text-white'}`}>{s.name}</span>
-                                          <span className="text-[6px] text-gray-600">{s.dosage}</span>
-                                        </div>
-                                      )
-                                    })}
+                                    {data.supps.slice(0, 2).map((sn, i) => <div key={i} className="text-[6px] text-gray-400">{sn}</div>)}
+                                    {data.supps.length > 2 && <div className="text-[6px] text-gray-600">+{data.supps.length - 2} more</div>}
                                   </div>
                                 </div>
                               )
                             })}
-                            {grouped.length === 0 && (
-                              <div className="text-center py-4"><span className="text-[9px] text-gray-600 italic">No supplements scheduled</span></div>
-                            )}
                           </div>
                         )
                       })()}
