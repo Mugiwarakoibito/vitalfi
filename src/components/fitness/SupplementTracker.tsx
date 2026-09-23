@@ -863,10 +863,10 @@ export function SupplementTracker() {
                   return sorted[0].name
                 })()
 
-                // ── AI Insights: exactly 3, data-driven from logged supplements ──
+                // ── AI Insights: 3 most helpful, data-driven ──
                 const insights: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string }[] = []
 
-                // ── 1. Stack Health Summary (always shows) ──
+                // ── 1. Today's Status (always shows) ──
                 {
                   const takenToday = dedupedDone
                   const total = deduped.length
@@ -880,23 +880,56 @@ export function SupplementTracker() {
                   }
                 }
 
-                // ── 2. Weakest Supplement (lowest 7d adherence) ──
+                // ── 2. Smart insight: Supply urgency > Weakest supplement > Synergy > Streak ──
                 {
-                  const sorted = [...suppAdherence].sort((a, b) => a.rate7 - b.rate7)
-                  const worst = sorted.find(s => s.rate7 < 100 && s.rate7 > 0)
-                  if (worst) {
-                    const daysToHabit = Math.ceil((100 - worst.rate7) / 5)
-                    const dosesTaken = worst.taken7
-                    const dosesTotal = worst.total7
-                    const bestTime = worst.times?.[0] || 'morning'
-                    const advice = worst.rate7 < 50 ? `Critical: link to your ${bestTime} routine` : worst.rate7 < 80 ? `Set daily alarm for ${bestTime}` : `Almost perfect — lock in the habit`
-                    insights.push({ icon: Brain, title: `${worst.name}: ${worst.rate7}% this week (${dosesTaken}/${dosesTotal} doses)`, detail: `${daysToHabit}d to habit — ${advice}`, color: worst.rate7 < 50 ? 'rose' : worst.rate7 < 80 ? 'amber' : 'emerald', metric: `${worst.rate7}%` })
-                  } else {
-                    insights.push({ icon: CheckCircle2, title: `All ${deduped.length} supplements at 100% this week`, detail: `${longTermStreak > 0 ? `${longTermStreak}d streak running` : 'Start a streak today'} — consistency compounds`, color: 'emerald', metric: '100%' })
+                  // Priority A: Supply running out
+                  const critical = refillData.filter(r => r.urgency === 'critical')
+                  if (critical.length > 0 && insights.length < 3) {
+                    const names = critical.map(r => r.name).slice(0, 2)
+                    insights.push({ icon: Package, title: `${critical.length} supplement${critical.length > 1 ? 's' : ''} running out — ${critical[0].daysUntilRefill}d left`, detail: `Order now: ${names.join(', ')}${critical.length > 2 ? ` +${critical.length - 2} more` : ''} — don't break your streak`, color: 'rose', metric: `${critical[0].daysUntilRefill}d` })
+                  }
+
+                  // Priority B: Weakest adherence
+                  if (insights.length < 3) {
+                    const sorted = [...suppAdherence].sort((a, b) => a.rate7 - b.rate7)
+                    const worst = sorted.find(s => s.rate7 < 100 && s.rate7 > 0)
+                    if (worst) {
+                      const daysToHabit = Math.ceil((100 - worst.rate7) / 5)
+                      const dosesTaken = worst.taken7
+                      const dosesTotal = worst.total7
+                      const bestTime = worst.times?.[0] || 'morning'
+                      const advice = worst.rate7 < 50 ? `Critical: link to your ${bestTime} routine` : worst.rate7 < 80 ? `Set daily alarm for ${bestTime}` : `Almost perfect — lock in the habit`
+                      insights.push({ icon: Brain, title: `${worst.name}: ${worst.rate7}% this week (${dosesTaken}/${dosesTotal} doses)`, detail: `${daysToHabit}d to habit — ${advice}`, color: worst.rate7 < 50 ? 'rose' : worst.rate7 < 80 ? 'amber' : 'emerald', metric: `${worst.rate7}%` })
+                    } else {
+                      insights.push({ icon: CheckCircle2, title: `All ${deduped.length} supplements at 100% this week`, detail: `${longTermStreak > 0 ? `${longTermStreak}d streak running` : 'Start a streak today'} — consistency compounds`, color: 'emerald', metric: '100%' })
+                    }
+                  }
+
+                  // Priority C: Synergy/conflict warning
+                  if (insights.length < 3) {
+                    const suppNames = deduped.map(s => s.name)
+                    const conflict = SUPP_INTERACTIONS.find(x =>
+                      suppNames.some(n => n.toLowerCase().includes(x.a.toLowerCase())) &&
+                      suppNames.some(n => n.toLowerCase().includes(x.b.toLowerCase()))
+                    )
+                    if (conflict) {
+                      insights.push({ icon: ShieldAlert, title: `${conflict.a} + ${conflict.b}: ${conflict.type}`, detail: `${conflict.message} — ${conflict.type === 'conflict' ? 'separate by 2 hours' : 'great combo'}`, color: conflict.type === 'conflict' ? 'rose' : conflict.type === 'synergy' ? 'emerald' : 'amber', metric: conflict.type })
+                    }
+                  }
+
+                  // Priority D: Streak motivation
+                  if (insights.length < 3) {
+                    const target = 21
+                    const remaining = target - longTermStreak
+                    if (longTermStreak > 0 && longTermStreak < target) {
+                      insights.push({ icon: Flame, title: `${longTermStreak}d streak — ${remaining}d to permanent habit`, detail: `21 days = automatic behavior. You're ${Math.round((longTermStreak / target) * 100)}% there — don't stop now`, color: 'amber', metric: `${longTermStreak}/${target}` })
+                    } else if (longTermStreak >= target) {
+                      insights.push({ icon: Flame, title: `${longTermStreak}d streak — habit locked in`, detail: `Past the 21-day threshold — this is now automatic. Keep the momentum`, color: 'emerald', metric: `${longTermStreak}d` })
+                    }
                   }
                 }
 
-                // ── 3. Timing & Absorption (based on actual supplements) ──
+                // ── 3. Timing & Absorption tip ──
                 {
                   const absorptionDB: Record<string, { tip: string; bestTime: string }> = {
                     'Vitamin D': { tip: 'take with fatty meal for 3x absorption', bestTime: 'afternoon' },
@@ -915,21 +948,21 @@ export function SupplementTracker() {
                     'Creatine': { tip: 'any time, consistency matters most', bestTime: 'post-workout' },
                     'Whey Protein': { tip: 'within 30min post-workout', bestTime: 'post-workout' },
                   }
-                  // Find a supplement with an absorption tip
-                  const suppTip = deduped.find(s => Object.keys(absorptionDB).some(k => s.name.toLowerCase().includes(k.toLowerCase())))
-                  if (suppTip) {
-                    const key = Object.keys(absorptionDB).find(k => suppTip.name.toLowerCase().includes(k.toLowerCase()))!
-                    const tip = absorptionDB[key]
-                    const takenAtTime = todayLogs.find(l => l.supplementId === suppTip.id)?.takenAt
-                    const takenDate = takenAtTime ? new Date(takenAtTime) : null
-                    const timeLabel = takenDate ? takenDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 'not yet today'
-                    insights.push({ icon: Sparkles, title: `${suppTip.name}: ${tip.tip}`, detail: `Best time: ${tip.bestTime} — logged at ${timeLabel}`, color: 'cyan', metric: tip.bestTime })
-                  } else {
-                    // Fallback: timing alignment insight
-                    const aligned = realTiming.filter(r => r.isAligned).length
-                    const total = realTiming.length
-                    const pct = total > 0 ? Math.round((aligned / total) * 100) : 0
-                    insights.push({ icon: Clock, title: `Timing alignment: ${pct}% of supplements on schedule`, detail: `${aligned}/${total} matched planned time slots — ${pct >= 80 ? 'excellent rhythm' : 'shift doses closer to schedule'}`, color: pct >= 80 ? 'emerald' : 'cyan', metric: `${pct}%` })
+                  if (insights.length < 3) {
+                    const suppTip = deduped.find(s => Object.keys(absorptionDB).some(k => s.name.toLowerCase().includes(k.toLowerCase())))
+                    if (suppTip) {
+                      const key = Object.keys(absorptionDB).find(k => suppTip.name.toLowerCase().includes(k.toLowerCase()))!
+                      const tip = absorptionDB[key]
+                      const takenAtTime = todayLogs.find(l => l.supplementId === suppTip.id)?.takenAt
+                      const takenDate = takenAtTime ? new Date(takenAtTime) : null
+                      const timeLabel = takenDate ? takenDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 'not yet today'
+                      insights.push({ icon: Sparkles, title: `${suppTip.name}: ${tip.tip}`, detail: `Best time: ${tip.bestTime} — logged at ${timeLabel}`, color: 'cyan', metric: tip.bestTime })
+                    } else {
+                      const aligned = realTiming.filter(r => r.isAligned).length
+                      const total = realTiming.length
+                      const pct = total > 0 ? Math.round((aligned / total) * 100) : 0
+                      insights.push({ icon: Clock, title: `Timing alignment: ${pct}% on schedule`, detail: `${aligned}/${total} matched planned slots — ${pct >= 80 ? 'excellent rhythm' : 'shift closer to schedule'}`, color: pct >= 80 ? 'emerald' : 'cyan', metric: `${pct}%` })
+                    }
                   }
                 }
 
@@ -1019,62 +1052,62 @@ export function SupplementTracker() {
                     </div>
                   )}
 
-                  {/* ── Supplement Dashboard ── */}
+                  {/* ── Streak Calendar ── */}
                   <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5 relative overflow-hidden">
-                    <div className="absolute -top-16 -right-16 w-32 h-32 bg-violet-500/[0.03] rounded-full blur-[50px]" />
+                    <div className="absolute -top-16 -right-16 w-32 h-32 bg-amber-500/[0.03] rounded-full blur-[50px]" />
                     <div className="relative">
                       <div className="flex items-center gap-1.5 mb-3">
-                        <Layers className="w-2.5 h-2.5 text-violet-400" />
-                        <span className="text-[9px] font-bold text-white uppercase tracking-wider">Your Stack</span>
+                        <CalendarCheck className="w-2.5 h-2.5 text-amber-400" />
+                        <span className="text-[9px] font-bold text-white uppercase tracking-wider">Streak</span>
                         <div className="flex-1" />
-                        <span className="text-[7px] font-bold text-gray-500">{dedupedDone}/{deduped.length} today</span>
+                        <span className="text-[8px] font-black text-amber-400">{longTermStreak}d</span>
+                        <span className="text-[6px] text-gray-500">best {bestStreak}d</span>
                       </div>
-                      {deduped.length > 0 ? (
-                        <div className="space-y-1.5">
-                          {deduped.map((s, i) => {
-                            const adherence = suppAdherence.find(a => a.name.toLowerCase().includes(s.name.toLowerCase()) || s.name.toLowerCase().includes(a.name.toLowerCase()))
-                            const supply = refillData.find(r => r.name.toLowerCase().includes(s.name.toLowerCase()) || s.name.toLowerCase().includes(r.name.toLowerCase()))
-                            const allTaken = s.doses.every(d => d.taken)
-                            const takenCount = s.doses.filter(d => d.taken).length
-                            const totalCount = s.doses.length
-                            const rate7 = adherence?.rate7 ?? 0
-                            const timeSlot = s.times?.[0] || 'Morning'
-                            const timeColor = timeSlot === 'Morning' ? '#f97316' : timeSlot === 'Afternoon' ? '#8b5cf6' : timeSlot === 'Evening' ? '#06b6d4' : '#6366f1'
-                            const barColor = rate7 >= 80 ? '#10b981' : rate7 >= 50 ? '#f59e0b' : '#ef4444'
-                            return (
-                              <div key={i} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-xl border transition-all ${allTaken ? 'bg-emerald-500/[0.03] border-emerald-500/[0.08]' : 'bg-white/[0.02] border-white/[0.04]'}`}>
-                                {/* Status dot */}
-                                <div className={`w-2 h-2 rounded-full shrink-0 ${allTaken ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.4)]' : 'bg-gray-600'}`} />
-                                {/* Name + dose */}
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className={`text-[10px] font-bold truncate ${allTaken ? 'text-emerald-300' : 'text-white'}`}>{s.name}</span>
-                                    {totalCount > 1 && <span className="text-[7px] text-gray-500 font-bold">{takenCount}/{totalCount}</span>}
-                                  </div>
-                                  <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="text-[7px] text-gray-500">{s.dosage}</span>
-                                    <span className="text-[6px] px-1 py-0.5 rounded-full font-bold" style={{ color: timeColor, background: `${timeColor}12` }}>{timeSlot}</span>
-                                  </div>
-                                </div>
-                                {/* Adherence bar */}
-                                <div className="flex flex-col items-end gap-1 shrink-0">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-[8px] font-black tabular-nums" style={{ color: barColor }}>{rate7}%</span>
-                                    {supply && (
-                                      <span className={`text-[6px] font-bold px-1 py-0.5 rounded-full ${supply.urgency === 'critical' ? 'text-red-400 bg-red-500/10' : supply.urgency === 'warning' ? 'text-amber-400 bg-amber-500/10' : 'text-emerald-400 bg-emerald-500/10'}`}>{supply.daysUntilRefill}d</span>
-                                    )}
-                                  </div>
-                                  <div className="w-16 h-1 rounded-full bg-white/[0.04] overflow-hidden">
-                                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${rate7}%`, background: barColor }} />
-                                  </div>
-                                </div>
+                      {/* 14-day grid */}
+                      <div className="grid grid-cols-7 gap-1.5">
+                        {Array.from({ length: 14 }, (_, i) => {
+                          const d = new Date(); d.setDate(d.getDate() - (13 - i))
+                          const dateStr = toLocalDate(d)
+                          const dayLogs = logs.filter(l => l.date === dateStr)
+                          const daySupps = new Set(dayLogs.map(l => l.supplementId)).size
+                          const total = dailySupps.length
+                          const pct = total > 0 ? Math.round((daySupps / total) * 100) : 0
+                          const isToday = i === 13
+                          const isEmpty = daySupps === 0
+                          const color = isEmpty ? 'rgba(255,255,255,0.03)' : pct >= 100 ? 'rgba(16,185,129,0.5)' : pct >= 50 ? 'rgba(245,158,11,0.4)' : 'rgba(239,68,68,0.4)'
+                          const border = isToday ? 'border-amber-400/40' : 'border-transparent'
+                          return (
+                            <div key={i} className={`flex flex-col items-center gap-0.5 p-1 rounded-lg border ${border}`}>
+                              <span className="text-[5px] text-gray-600 font-bold">{d.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0)}</span>
+                              <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: color }}>
+                                {isEmpty ? <span className="text-[5px] text-gray-700">—</span> : <span className="text-[6px] font-black text-white">{pct}</span>}
                               </div>
-                            )
-                          })}
-                        </div>
-                      ) : (
-                        <div className="text-center py-4"><span className="text-[9px] text-gray-600 italic">No supplements tracked</span></div>
-                      )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                      {/* Bar chart mini */}
+                      <div className="flex items-end gap-[3px] h-8 mt-2">
+                        {Array.from({ length: 14 }, (_, i) => {
+                          const d = new Date(); d.setDate(d.getDate() - (13 - i))
+                          const dateStr = toLocalDate(d)
+                          const dayLogs = logs.filter(l => l.date === dateStr)
+                          const daySupps = new Set(dayLogs.map(l => l.supplementId)).size
+                          const total = dailySupps.length
+                          const pct = total > 0 ? Math.round((daySupps / total) * 100) : 0
+                          const isToday = i === 13
+                          return (
+                            <div key={i} className="flex-1 flex flex-col items-center gap-0.5 h-full justify-end">
+                              <div className="w-full rounded-t transition-all duration-500" style={{
+                                height: `${Math.max(pct, 4)}%`,
+                                backgroundColor: pct >= 100 ? 'rgba(16,185,129,0.6)' : pct >= 50 ? 'rgba(245,158,11,0.5)' : pct > 0 ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.04)',
+                                outline: isToday ? '1px solid rgba(245,158,11,0.4)' : 'none',
+                                outlineOffset: '-1px',
+                              }} />
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
                   </div>
 
