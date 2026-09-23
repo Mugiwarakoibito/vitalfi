@@ -863,7 +863,7 @@ export function SupplementTracker() {
                   return sorted[0].name
                 })()
 
-                // ── AI Insights: 3 most helpful, data-driven ──
+                // ── AI Insights: 3 most helpful, actionable ──
                 const insights: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string }[] = []
 
                 // ── 1. Today's Status (always shows) ──
@@ -872,64 +872,89 @@ export function SupplementTracker() {
                   const total = deduped.length
                   const rate = complianceRate
                   const missed = total - takenToday
+                  const currentHour = new Date().getHours()
+                  const currentTod = currentHour < 12 ? 'Morning' : currentHour < 17 ? 'Afternoon' : currentHour < 21 ? 'Evening' : 'Night'
                   if (missed > 0) {
-                    const missedSupps = deduped.filter(s => !s.doses.every(d => d.taken)).map(s => s.name).slice(0, 3)
-                    insights.push({ icon: Zap, title: `${takenToday}/${total} taken today — ${missed} remaining`, detail: `Pending: ${missedSupps.join(', ')}${missed > 3 ? ` +${missed - 3} more` : ''} — ${rate >= 80 ? 'strong consistency' : 'room to improve'}`, color: rate >= 80 ? 'emerald' : 'amber', metric: `${rate}%` })
+                    const missedSupps = deduped.filter(s => !s.doses.every(d => d.taken))
+                    const nextDue = missedSupps.find(s => s.times?.includes(currentTod)) || missedSupps[0]
+                    const missedNames = missedSupps.map(s => s.name).slice(0, 3)
+                    insights.push({ icon: Zap, title: `${takenToday}/${total} taken — ${nextDue ? `next: ${nextDue.name}` : `${missed} remaining`}`, detail: `Pending: ${missedNames.join(', ')}${missed > 3 ? ` +${missed - 3} more` : ''} — ${rate >= 80 ? 'strong consistency' : 'room to improve'}`, color: rate >= 80 ? 'emerald' : 'amber', metric: `${rate}%` })
                   } else {
-                    insights.push({ icon: CheckCircle2, title: `${total}/${total} complete today — perfect score`, detail: `${rate}% weekly compliance${longTermStreak > 7 ? ` · ${longTermStreak}d streak` : ''} — you're in the top tier`, color: 'emerald', metric: '100%' })
+                    insights.push({ icon: CheckCircle2, title: `${total}/${total} complete today — perfect`, detail: `${rate}% weekly compliance${longTermStreak > 3 ? ` · ${longTermStreak}d streak` : ''} — you're in the top tier`, color: 'emerald', metric: '100%' })
                   }
                 }
 
-                // ── 2. Smart insight: Supply urgency > Weakest supplement > Synergy > Streak ──
+                // ── 2. Smart insight pool (pick best available) ──
                 {
-                  // Priority A: Supply running out
+                  const candidates: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string; priority: number }[] = []
+
+                  // A: Supply running out (highest urgency)
                   const critical = refillData.filter(r => r.urgency === 'critical')
-                  if (critical.length > 0 && insights.length < 3) {
+                  if (critical.length > 0) {
                     const names = critical.map(r => r.name).slice(0, 2)
-                    insights.push({ icon: Package, title: `${critical.length} supplement${critical.length > 1 ? 's' : ''} running out — ${critical[0].daysUntilRefill}d left`, detail: `Order now: ${names.join(', ')}${critical.length > 2 ? ` +${critical.length - 2} more` : ''} — don't break your streak`, color: 'rose', metric: `${critical[0].daysUntilRefill}d` })
+                    candidates.push({ icon: Package, title: `${critical[0].name}: ${critical[0].daysUntilRefill}d supply left`, detail: `Order now: ${names.join(', ')}${critical.length > 1 ? ` +${critical.length - 1} more` : ''} — running out breaks your streak`, color: 'rose', metric: `${critical[0].daysUntilRefill}d`, priority: 10 })
+                  }
+                  const warnings = refillData.filter(r => r.urgency === 'warning')
+                  if (warnings.length > 0 && critical.length === 0) {
+                    candidates.push({ icon: Package, title: `${warnings[0].name}: ${warnings[0].daysUntilRefill}d supply remaining`, detail: `${warnings.length} supplement${warnings.length > 1 ? 's' : ''} need reorder soon — plan ahead`, color: 'amber', metric: `${warnings[0].daysUntilRefill}d`, priority: 8 })
                   }
 
-                  // Priority B: Weakest adherence
-                  if (insights.length < 3) {
-                    const sorted = [...suppAdherence].sort((a, b) => a.rate7 - b.rate7)
-                    const worst = sorted.find(s => s.rate7 < 100 && s.rate7 > 0)
-                    if (worst) {
-                      const daysToHabit = Math.ceil((100 - worst.rate7) / 5)
-                      const dosesTaken = worst.taken7
-                      const dosesTotal = worst.total7
-                      const bestTime = worst.times?.[0] || 'morning'
-                      const advice = worst.rate7 < 50 ? `Critical: link to your ${bestTime} routine` : worst.rate7 < 80 ? `Set daily alarm for ${bestTime}` : `Almost perfect — lock in the habit`
-                      insights.push({ icon: Brain, title: `${worst.name}: ${worst.rate7}% this week (${dosesTaken}/${dosesTotal} doses)`, detail: `${daysToHabit}d to habit — ${advice}`, color: worst.rate7 < 50 ? 'rose' : worst.rate7 < 80 ? 'amber' : 'emerald', metric: `${worst.rate7}%` })
-                    } else {
-                      insights.push({ icon: CheckCircle2, title: `All ${deduped.length} supplements at 100% this week`, detail: `${longTermStreak > 0 ? `${longTermStreak}d streak running` : 'Start a streak today'} — consistency compounds`, color: 'emerald', metric: '100%' })
+                  // B: Synergy/conflict (always check)
+                  const suppNames = deduped.map(s => s.name)
+                  const foundInteractions = SUPP_INTERACTIONS.filter(x =>
+                    suppNames.some(n => n.toLowerCase().includes(x.a.toLowerCase())) &&
+                    suppNames.some(n => n.toLowerCase().includes(x.b.toLowerCase()))
+                  )
+                  if (foundInteractions.length > 0) {
+                    const worst = foundInteractions.find(x => x.type === 'conflict') || foundInteractions[0]
+                    candidates.push({ icon: ShieldAlert, title: `${worst.a} + ${worst.b}: ${worst.type}`, detail: `${worst.message} — ${worst.type === 'conflict' ? 'separate by 2 hours' : 'great combo, keep it up'}`, color: worst.type === 'conflict' ? 'rose' : worst.type === 'synergy' ? 'emerald' : 'amber', metric: worst.type, priority: worst.type === 'conflict' ? 9 : 5 })
+                  }
+
+                  // C: Weakest adherence
+                  const sorted = [...suppAdherence].sort((a, b) => a.rate7 - b.rate7)
+                  const worst = sorted.find(s => s.rate7 < 100 && s.rate7 > 0)
+                  if (worst) {
+                    const daysToHabit = Math.ceil((100 - worst.rate7) / 5)
+                    const bestTime = worst.times?.[0] || 'morning'
+                    const advice = worst.rate7 < 50 ? `link to your ${bestTime} routine` : worst.rate7 < 80 ? `set daily alarm for ${bestTime}` : `lock in the habit`
+                    candidates.push({ icon: Brain, title: `${worst.name}: ${worst.rate7}% adherence (${worst.taken7}/${worst.total7} doses)`, detail: `${daysToHabit}d to habit — ${advice}`, color: worst.rate7 < 50 ? 'rose' : worst.rate7 < 80 ? 'amber' : 'emerald', metric: `${worst.rate7}%`, priority: 7 })
+                  }
+
+                  // D: Weekly comparison
+                  if (suppAdherence.length > 0) {
+                    const avg7 = Math.round(suppAdherence.reduce((s, a) => s + a.rate7, 0) / suppAdherence.length)
+                    const avg30 = Math.round(suppAdherence.reduce((s, a) => s + a.rate30, 0) / suppAdherence.length)
+                    const delta = avg7 - avg30
+                    if (Math.abs(delta) >= 5) {
+                      candidates.push({ icon: delta > 0 ? TrendingUp : ShieldAlert, title: `This week ${delta > 0 ? '+' : ''}${delta}% vs last 30 days`, detail: `7d avg: ${avg7}% · 30d avg: ${avg30}% — ${delta > 0 ? 'trending up, keep momentum' : 'declining, simplify your routine'}`, color: delta > 0 ? 'emerald' : 'rose', metric: `${delta > 0 ? '+' : ''}${delta}%`, priority: 6 })
                     }
                   }
 
-                  // Priority C: Synergy/conflict warning
-                  if (insights.length < 3) {
-                    const suppNames = deduped.map(s => s.name)
-                    const conflict = SUPP_INTERACTIONS.find(x =>
-                      suppNames.some(n => n.toLowerCase().includes(x.a.toLowerCase())) &&
-                      suppNames.some(n => n.toLowerCase().includes(x.b.toLowerCase()))
-                    )
-                    if (conflict) {
-                      insights.push({ icon: ShieldAlert, title: `${conflict.a} + ${conflict.b}: ${conflict.type}`, detail: `${conflict.message} — ${conflict.type === 'conflict' ? 'separate by 2 hours' : 'great combo'}`, color: conflict.type === 'conflict' ? 'rose' : conflict.type === 'synergy' ? 'emerald' : 'amber', metric: conflict.type })
-                    }
+                  // E: Streak motivation
+                  const target = 21
+                  const remaining = target - longTermStreak
+                  if (longTermStreak > 0 && longTermStreak < target) {
+                    candidates.push({ icon: Flame, title: `${longTermStreak}d streak — ${remaining}d to permanent habit`, detail: `21 days = automatic behavior. You're ${Math.round((longTermStreak / target) * 100)}% there — don't stop now`, color: 'amber', metric: `${longTermStreak}/${target}`, priority: 4 })
+                  } else if (longTermStreak >= target) {
+                    candidates.push({ icon: Flame, title: `${longTermStreak}d streak — habit locked in`, detail: `Past the 21-day threshold — this is now automatic. Keep the momentum`, color: 'emerald', metric: `${longTermStreak}d`, priority: 3 })
                   }
 
-                  // Priority D: Streak motivation
-                  if (insights.length < 3) {
-                    const target = 21
-                    const remaining = target - longTermStreak
-                    if (longTermStreak > 0 && longTermStreak < target) {
-                      insights.push({ icon: Flame, title: `${longTermStreak}d streak — ${remaining}d to permanent habit`, detail: `21 days = automatic behavior. You're ${Math.round((longTermStreak / target) * 100)}% there — don't stop now`, color: 'amber', metric: `${longTermStreak}/${target}` })
-                    } else if (longTermStreak >= target) {
-                      insights.push({ icon: Flame, title: `${longTermStreak}d streak — habit locked in`, detail: `Past the 21-day threshold — this is now automatic. Keep the momentum`, color: 'emerald', metric: `${longTermStreak}d` })
+                  // F: All perfect fallback
+                  if (candidates.length === 0) {
+                    candidates.push({ icon: CheckCircle2, title: `All ${deduped.length} supplements at 100%`, detail: `${longTermStreak > 0 ? `${longTermStreak}d streak` : 'Start a streak today'} — consistency compounds over time`, color: 'emerald', metric: '100%', priority: 1 })
+                  }
+
+                  // Pick top 2 by priority (insight 1 already filled)
+                  candidates.sort((a, b) => b.priority - a.priority)
+                  for (const c of candidates) {
+                    if (insights.length >= 3) break
+                    if (!insights.some(x => x.title === c.title)) {
+                      insights.push(c)
                     }
                   }
                 }
 
-                // ── 3. Timing & Absorption tip ──
+                // ── 3. Timing & Absorption (fills slot 3 if needed) ──
                 {
                   const absorptionDB: Record<string, { tip: string; bestTime: string }> = {
                     'Vitamin D': { tip: 'take with fatty meal for 3x absorption', bestTime: 'afternoon' },
@@ -1052,62 +1077,72 @@ export function SupplementTracker() {
                     </div>
                   )}
 
-                  {/* ── Streak Calendar ── */}
+                  {/* ── Smart Schedule (Interactive Today Plan) ── */}
                   <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5 relative overflow-hidden">
-                    <div className="absolute -top-16 -right-16 w-32 h-32 bg-amber-500/[0.03] rounded-full blur-[50px]" />
+                    <div className="absolute -top-16 -right-16 w-32 h-32 bg-cyan-500/[0.03] rounded-full blur-[50px]" />
                     <div className="relative">
                       <div className="flex items-center gap-1.5 mb-3">
-                        <CalendarCheck className="w-2.5 h-2.5 text-amber-400" />
-                        <span className="text-[9px] font-bold text-white uppercase tracking-wider">Streak</span>
+                        <Clock className="w-2.5 h-2.5 text-cyan-400" />
+                        <span className="text-[9px] font-bold text-white uppercase tracking-wider">Today's Plan</span>
                         <div className="flex-1" />
-                        <span className="text-[8px] font-black text-amber-400">{longTermStreak}d</span>
-                        <span className="text-[6px] text-gray-500">best {bestStreak}d</span>
+                        <span className="text-[7px] font-bold text-gray-500">{dedupedDone}/{deduped.length} done</span>
                       </div>
-                      {/* 14-day grid */}
-                      <div className="grid grid-cols-7 gap-1.5">
-                        {Array.from({ length: 14 }, (_, i) => {
-                          const d = new Date(); d.setDate(d.getDate() - (13 - i))
-                          const dateStr = toLocalDate(d)
-                          const dayLogs = logs.filter(l => l.date === dateStr)
-                          const daySupps = new Set(dayLogs.map(l => l.supplementId)).size
-                          const total = dailySupps.length
-                          const pct = total > 0 ? Math.round((daySupps / total) * 100) : 0
-                          const isToday = i === 13
-                          const isEmpty = daySupps === 0
-                          const color = isEmpty ? 'rgba(255,255,255,0.03)' : pct >= 100 ? 'rgba(16,185,129,0.5)' : pct >= 50 ? 'rgba(245,158,11,0.4)' : 'rgba(239,68,68,0.4)'
-                          const border = isToday ? 'border-amber-400/40' : 'border-transparent'
-                          return (
-                            <div key={i} className={`flex flex-col items-center gap-0.5 p-1 rounded-lg border ${border}`}>
-                              <span className="text-[5px] text-gray-600 font-bold">{d.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0)}</span>
-                              <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: color }}>
-                                {isEmpty ? <span className="text-[5px] text-gray-700">—</span> : <span className="text-[6px] font-black text-white">{pct}</span>}
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                      {/* Bar chart mini */}
-                      <div className="flex items-end gap-[3px] h-8 mt-2">
-                        {Array.from({ length: 14 }, (_, i) => {
-                          const d = new Date(); d.setDate(d.getDate() - (13 - i))
-                          const dateStr = toLocalDate(d)
-                          const dayLogs = logs.filter(l => l.date === dateStr)
-                          const daySupps = new Set(dayLogs.map(l => l.supplementId)).size
-                          const total = dailySupps.length
-                          const pct = total > 0 ? Math.round((daySupps / total) * 100) : 0
-                          const isToday = i === 13
-                          return (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-0.5 h-full justify-end">
-                              <div className="w-full rounded-t transition-all duration-500" style={{
-                                height: `${Math.max(pct, 4)}%`,
-                                backgroundColor: pct >= 100 ? 'rgba(16,185,129,0.6)' : pct >= 50 ? 'rgba(245,158,11,0.5)' : pct > 0 ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.04)',
-                                outline: isToday ? '1px solid rgba(245,158,11,0.4)' : 'none',
-                                outlineOffset: '-1px',
-                              }} />
-                            </div>
-                          )
-                        })}
-                      </div>
+                      {(() => {
+                        const currentHour = new Date().getHours()
+                        const currentTod = currentHour < 12 ? 'Morning' : currentHour < 17 ? 'Afternoon' : currentHour < 21 ? 'Evening' : 'Night'
+                        const timeOrder = ['Morning', 'Afternoon', 'Evening', 'Night']
+                        const timeIcons: Record<string, typeof Sun> = { Morning: Sun, Afternoon: Sunrise, Evening: Sunset, Night: Moon }
+                        const timeColors: Record<string, string> = { Morning: '#f97316', Afternoon: '#8b5cf6', Evening: '#06b6d4', Night: '#6366f1' }
+                        const grouped = timeOrder.map(tod => ({
+                          time: tod,
+                          icon: timeIcons[tod],
+                          color: timeColors[tod],
+                          supps: deduped.filter(s => s.times?.includes(tod)),
+                          isCurrent: tod === currentTod,
+                          isPast: timeOrder.indexOf(tod) < timeOrder.indexOf(currentTod),
+                        })).filter(g => g.supps.length > 0)
+                        return (
+                          <div className="space-y-2">
+                            {grouped.map((group, gi) => {
+                              const Icon = group.icon
+                              const allDone = group.supps.every(s => s.doses.every(d => d.taken))
+                              const doneCount = group.supps.filter(s => s.doses.every(d => d.taken)).length
+                              return (
+                                <div key={gi} className={`relative pl-4 ${group.isPast && !allDone ? 'opacity-60' : ''}`}>
+                                  {/* Timeline line */}
+                                  {gi < grouped.length - 1 && <div className="absolute left-[7px] top-5 bottom-[-8px] w-[1px]" style={{ background: `${group.color}20` }} />}
+                                  {/* Timeline dot */}
+                                  <div className={`absolute left-0 top-1 w-[15px] h-[15px] rounded-full flex items-center justify-center`} style={{ background: `${group.color}20`, boxShadow: group.isCurrent ? `0 0 0 2px ${group.color}40` : undefined }}>
+                                    <Icon className="w-2 h-2" style={{ color: group.color }} />
+                                  </div>
+                                  {/* Time label */}
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <span className="text-[8px] font-bold" style={{ color: group.color }}>{group.time}</span>
+                                    {group.isCurrent && <span className="text-[5px] font-bold px-1 py-0.5 rounded-full bg-white/[0.06] text-white">now</span>}
+                                    <span className="text-[6px] text-gray-600">{doneCount}/{group.supps.length}</span>
+                                  </div>
+                                  {/* Supplements */}
+                                  <div className="space-y-0.5">
+                                    {group.supps.map((s, si) => {
+                                      const taken = s.doses.every(d => d.taken)
+                                      return (
+                                        <div key={si} className="flex items-center gap-1.5">
+                                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${taken ? 'bg-emerald-400' : 'bg-gray-600'}`} />
+                                          <span className={`text-[8px] font-bold ${taken ? 'text-emerald-300 line-through opacity-60' : 'text-white'}`}>{s.name}</span>
+                                          <span className="text-[6px] text-gray-600">{s.dosage}</span>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                            {grouped.length === 0 && (
+                              <div className="text-center py-4"><span className="text-[9px] text-gray-600 italic">No supplements scheduled</span></div>
+                            )}
+                          </div>
+                        )
+                      })()}
                     </div>
                   </div>
 
