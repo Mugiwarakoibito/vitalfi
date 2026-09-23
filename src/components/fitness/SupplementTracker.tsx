@@ -863,10 +863,10 @@ export function SupplementTracker() {
                   return sorted[0].name
                 })()
 
-                // ── AI Insights: Actionable coaching, not raw data ──
+                // ── AI Insights: Show ALL data, be actually useful ──
                 const insights: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string }[] = []
 
-                // ── Helper: real adherence from logs ──
+                // ── Helpers ──
                 const getSuppRate = (suppId: string, days: number) => {
                   let taken = 0
                   for (let i = 0; i < days; i++) {
@@ -876,161 +876,137 @@ export function SupplementTracker() {
                   return Math.round((taken / days) * 100)
                 }
 
-                // ── Helper: how many hours since last dose of this supplement ──
-                const hoursSinceLastDose = (suppId: string) => {
-                  const lastLog = logs.filter(l => l.supplementId === suppId && l.takenAt).sort((a, b) => new Date(b.takenAt!).getTime() - new Date(a.takenAt!).getTime())[0]
-                  if (!lastLog?.takenAt) return null
-                  return Math.round((Date.now() - new Date(lastLog.takenAt).getTime()) / 3600000)
-                }
-
-                // ── 1. ACTIONABLE: What to do RIGHT NOW ──
+                // ── 1. FULL STACK — show every supplement's status at a glance ──
                 {
+                  const allStatus = deduped.map(s => {
+                    const taken = s.doses.every(d => d.taken)
+                    const icon = taken ? '✓' : '○'
+                    return `${icon} ${s.name} ${taken ? '' : `(${s.dosage})`}`
+                  })
+                  const takenCount = deduped.filter(s => s.doses.every(d => d.taken)).length
                   const notTaken = deduped.filter(s => !s.doses.every(d => d.taken))
                   const dueNow = notTaken.filter(s => s.times?.includes(currentTod))
-                  const taken = deduped.filter(s => s.doses.every(d => d.taken))
 
-                  if (dueNow.length > 0) {
-                    const pick = dueNow[0]
-                    const hoursAgo = hoursSinceLastDose(pick.id)
-                    const absorptionDB: Record<string, string> = {
-                      'Vitamin D': 'take with fatty meal for 3x absorption',
-                      'Omega-3': 'take with fatty meal for 2x absorption',
-                      'Iron': 'take on empty stomach with vitamin C for 6x absorption',
-                      'Magnesium': 'take at bedtime for better sleep',
-                      'B12': 'take morning empty stomach for 2x energy',
-                      'Zinc': 'take with food to avoid nausea',
-                      'Creatine': 'take any time — consistency matters most',
-                      'Whey Protein': 'take within 30min post-workout for MPS peak',
-                      'Probiotics': 'take 30min before meal for 5x survival',
-                      'Collagen': 'take empty stomach for 1.5x synthesis',
-                      'CoQ10': 'take with fatty meal for 4x absorption',
-                      'Curcumin': 'take with black pepper + fat for 20x absorption',
-                    }
-                    const tip = Object.entries(absorptionDB).find(([k]) => pick.name.toLowerCase().includes(k.toLowerCase()))
-                    const advice = tip ? tip[1] : `take ${pick.dosage} now`
-                    const urgency = hoursAgo !== null && hoursAgo > 8 ? ` — ${hoursAgo}h since last dose` : ''
-                    insights.push({ icon: Zap, title: `Take ${pick.name} now`, detail: `${advice}${urgency} · ${dueNow.length > 1 ? `${dueNow.length - 1} more due ${currentTod}` : 'you got this'}`, color: 'cyan', metric: pick.dosage })
-                  } else if (notTaken.length > 0) {
-                    const next = notTaken[0]
-                    insights.push({ icon: Clock, title: `Up next: ${next.name} (${next.dosage})`, detail: `Scheduled for ${next.times?.[0] || 'later'} · ${taken.length} done today, ${notTaken.length} remaining`, color: 'amber', metric: next.times?.[0] || 'later' })
+                  if (notTaken.length > 0) {
+                    insights.push({ icon: Zap, title: `${takenCount}/${deduped.length} done — ${dueNow.length} due ${currentTod}`, detail: allStatus.join(' · '), color: complianceRate >= 80 ? 'emerald' : 'amber', metric: `${complianceRate}%` })
                   } else {
-                    insights.push({ icon: CheckCircle2, title: `All ${deduped.length} done today — stack complete`, detail: `${complianceRate}% weekly · ${longTermStreak}d streak · every supplement taken`, color: 'emerald', metric: '100%' })
+                    insights.push({ icon: CheckCircle2, title: `All ${deduped.length} taken today`, detail: allStatus.join(' · '), color: 'emerald', metric: '100%' })
                   }
                 }
 
-                // ── 2. IMPACTFUL: What happens if you don't act ──
+                // ── 2. SMART SUMMARY — weakest, supply, interactions, patterns ──
                 {
-                  const candidates: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string; priority: number }[] = []
+                  const parts: string[] = []
 
-                  // A: Streak at risk — "Skip Omega-3 today and your 7d drops to 71%"
-                  {
-                    const atRisk = deduped.filter(s => !s.doses.every(d => d.taken))
-                    if (atRisk.length > 0) {
-                      const supp = atRisk[0]
-                      const currentRate = getSuppRate(supp.id, 7)
-                      const afterSkip = Math.round(((currentRate / 100 * 6) / 7) * 100)
-                      if (currentRate > afterSkip && currentRate - afterSkip >= 5) {
-                        candidates.push({ icon: ShieldAlert, title: `Skip ${supp.name} → ${afterSkip}% adherence`, detail: `Currently ${currentRate}% this week — taking ${supp.dosage} now keeps you on track`, color: 'rose', metric: `-${currentRate - afterSkip}%`, priority: 10 })
-                      }
-                    }
+                  // Weakest supplement
+                  const rates = deduped.map(s => ({ name: s.name, id: s.id, dosage: s.dosage, rate: getSuppRate(s.id, 7), times: s.times }))
+                  const worst = rates.filter(r => r.rate < 100 && r.rate > 0).sort((a, b) => a.rate - b.rate)[0]
+                  if (worst) {
+                    parts.push(`weakest: ${worst.name} ${worst.rate}%`)
                   }
 
-                  // B: Weakest link — which supplement hurts your streak most
-                  {
-                    const rates = deduped.map(s => ({ name: s.name, id: s.id, dosage: s.dosage, rate: getSuppRate(s.id, 7), times: s.times }))
-                    const worst = rates.filter(r => r.rate < 80 && r.rate > 0).sort((a, b) => a.rate - b.rate)[0]
-                    if (worst) {
-                      const missed = 7 - Math.round(worst.rate / 100 * 7)
-                      candidates.push({ icon: Brain, title: `${worst.name} is your weak link`, detail: `${worst.rate}% adherence · ${missed} doses missed this week · take ${worst.dosage} with ${worst.times?.[0] || 'morning'} routine`, color: 'amber', metric: `${worst.rate}%`, priority: 8 })
-                    }
+                  // Supply
+                  const critical = refillData.filter(r => r.urgency === 'critical')
+                  const warnings = refillData.filter(r => r.urgency === 'warning')
+                  if (critical.length > 0) {
+                    parts.push(`order: ${critical.map(r => `${r.name}(${r.daysUntilRefill}d)`).join(', ')}`)
+                  } else if (warnings.length > 0) {
+                    parts.push(`low: ${warnings.map(r => `${r.name}(${r.daysUntilRefill}d)`).join(', ')}`)
                   }
 
-                  // C: Supply running out — exact days and what to do
-                  {
-                    const critical = refillData.filter(r => r.urgency === 'critical')
-                    if (critical.length > 0) {
-                      const list = critical.map(r => `${r.name} (${r.daysUntilRefill}d)`).join(', ')
-                      candidates.push({ icon: Package, title: `Order ${critical[0].name} today`, detail: `${list} left — running out breaks your ${longTermStreak}d streak`, color: 'rose', metric: `${critical[0].daysUntilRefill}d`, priority: 9 })
-                    }
+                  // Interactions
+                  const suppNames = deduped.map(s => s.name)
+                  const found = SUPP_INTERACTIONS.filter(x =>
+                    suppNames.some(n => n.toLowerCase().includes(x.a.toLowerCase())) &&
+                    suppNames.some(n => n.toLowerCase().includes(x.b.toLowerCase()))
+                  )
+                  const conflicts = found.filter(x => x.type === 'conflict')
+                  if (conflicts.length > 0) {
+                    parts.push(`conflict: ${conflicts.map(c => `${c.a}+${c.b}`).join(', ')}`)
                   }
 
-                  // D: Interaction warning — what to separate
-                  {
-                    const suppNames = deduped.map(s => s.name)
-                    const found = SUPP_INTERACTIONS.filter(x =>
-                      suppNames.some(n => n.toLowerCase().includes(x.a.toLowerCase())) &&
-                      suppNames.some(n => n.toLowerCase().includes(x.b.toLowerCase()))
-                    )
-                    const conflicts = found.filter(x => x.type === 'conflict')
-                    if (conflicts.length > 0) {
-                      const c = conflicts[0]
-                      candidates.push({ icon: ShieldAlert, title: `Separate ${c.a} and ${c.b}`, detail: `${c.message} — take 2 hours apart for full absorption`, color: 'rose', metric: '2h gap', priority: 9 })
-                    }
-                    const synergies = found.filter(x => x.type === 'synergy')
-                    if (synergies.length > 0 && conflicts.length === 0) {
-                      const s = synergies[0]
-                      candidates.push({ icon: CheckCircle2, title: `${s.a} + ${s.b} boosting each other`, detail: `${s.message} — ${synergies.length} synerg${synergies.length > 1 ? 'ies' : 'y'} working in your stack`, color: 'emerald', metric: 'synergy', priority: 4 })
-                    }
+                  // Streak
+                  if (longTermStreak > 0) {
+                    parts.push(`${longTermStreak}d streak`)
                   }
 
-                  // E: Timing gap — "You haven't taken evening supplements in 3 days"
-                  {
-                    const timeGaps: Record<string, { missedDays: number; supps: string[] }> = { Morning: { missedDays: 0, supps: [] }, Afternoon: { missedDays: 0, supps: [] }, Evening: { missedDays: 0, supps: [] }, Night: { missedDays: 0, supps: [] } }
-                    const timeSupps: Record<string, string[]> = { Morning: [], Afternoon: [], Evening: [], Night: [] }
-                    deduped.forEach(s => { s.times?.forEach(t => { if (!timeSupps[t]?.includes(s.name)) timeSupps[t]?.push(s.name) }) })
-                    for (let i = 1; i <= 3; i++) {
-                      const d = new Date(); d.setDate(d.getDate() - i)
-                      const ds = toLocalDate(d)
-                      const dayLogs = logs.filter(l => l.date === ds)
-                      Object.entries(timeSupps).forEach(([slot, supps]) => {
-                        supps.forEach(name => {
-                          const s = deduped.find(dd => dd.name === name)
-                          if (s && !dayLogs.some(l => l.supplementId === s.id)) {
-                            timeGaps[slot].missedDays++
-                            if (!timeGaps[slot].supps.includes(name)) timeGaps[slot].supps.push(name)
-                          }
-                        })
-                      })
-                    }
-                    const worstGap = Object.entries(timeGaps).filter(([, v]) => v.missedDays >= 2 && v.supps.length > 0).sort((a, b) => b[1].missedDays - a[1].missedDays)[0]
-                    if (worstGap) {
-                      const [slot, data] = worstGap
-                      candidates.push({ icon: Clock, title: `Skipping ${slot.toLowerCase()} doses`, detail: `${data.supps.join(', ')} missed ${slot.toLowerCase()} ${data.missedDays} of last 3 days — set a ${slot.toLowerCase()} alarm`, color: 'amber', metric: `${data.missedDays}d gap`, priority: 7 })
-                    }
+                  // Weekly trend
+                  const avg7 = Math.round(suppAdherence.reduce((s, a) => s + a.rate7, 0) / suppAdherence.length)
+                  const avg30 = Math.round(suppAdherence.reduce((s, a) => s + a.rate30, 0) / suppAdherence.length)
+                  const delta = avg7 - avg30
+                  if (Math.abs(delta) >= 5) {
+                    parts.push(`trend: ${delta > 0 ? '+' : ''}${delta}% vs 30d`)
                   }
 
-                  // F: Weekly trend
-                  {
-                    const avg7 = Math.round(suppAdherence.reduce((s, a) => s + a.rate7, 0) / suppAdherence.length)
-                    const avg30 = Math.round(suppAdherence.reduce((s, a) => s + a.rate30, 0) / suppAdherence.length)
-                    const delta = avg7 - avg30
-                    if (Math.abs(delta) >= 5) {
-                      candidates.push({ icon: delta > 0 ? TrendingUp : ShieldAlert, title: `${delta > 0 ? 'Improving' : 'Dropping'}: ${Math.abs(delta)}% this week`, detail: `7d: ${avg7}% · 30d: ${avg30}% — ${delta > 0 ? 'keep the momentum' : 'simplify your stack'}`, color: delta > 0 ? 'emerald' : 'rose', metric: `${delta > 0 ? '+' : ''}${delta}%`, priority: 6 })
-                    }
-                  }
-
-                  // G: Streak milestone
-                  {
-                    const target = 21
-                    const remaining = target - longTermStreak
-                    if (longTermStreak > 0 && longTermStreak < target) {
-                      candidates.push({ icon: Flame, title: `${longTermStreak}d streak — ${remaining}d to permanent habit`, detail: `${Math.round((longTermStreak / target) * 100)}% to 21-day threshold — neuroscience says don't stop`, color: 'amber', metric: `${longTermStreak}/${target}`, priority: 3 })
-                    }
-                  }
-
-                  // H: Fallback
-                  if (candidates.length === 0) {
-                    candidates.push({ icon: CheckCircle2, title: `All ${deduped.length} supplements at 100%`, detail: `${longTermStreak > 0 ? `${longTermStreak}d streak` : 'Start a streak today'} — you're in the top tier`, color: 'emerald', metric: '100%', priority: 1 })
-                  }
-
-                  candidates.sort((a, b) => b.priority - a.priority)
-                  for (const c of candidates) {
-                    if (insights.length >= 3) break
-                    if (!insights.some(x => x.title === c.title)) insights.push(c)
+                  if (parts.length > 0) {
+                    const color = critical.length > 0 ? 'rose' : conflicts.length > 0 ? 'amber' : delta < -5 ? 'rose' : 'emerald'
+                    insights.push({ icon: Brain, title: `Stack summary`, detail: parts.join(' · '), color, metric: `${deduped.length} supps` })
                   }
                 }
 
-                // Final guard: dedup by title and cap at 3
+                // ── 3. ACTION ITEMS — specific things to do today ──
+                {
+                  const actions: string[] = []
+                  const notTaken = deduped.filter(s => !s.doses.every(d => d.taken))
+                  const absorptionDB: Record<string, string> = {
+                    'Vitamin D': 'with fatty meal (3x abs)',
+                    'Omega-3': 'with fatty meal (2x abs)',
+                    'Iron': 'empty stomach + vit C (6x abs)',
+                    'Magnesium': 'bedtime (better sleep)',
+                    'B12': 'morning empty stomach (2x energy)',
+                    'Zinc': 'with food (avoid nausea)',
+                    'Creatine': 'any time (consistency)',
+                    'Whey Protein': 'post-workout 30min (MPS)',
+                    'Probiotics': '30min pre-meal (5x survival)',
+                    'Collagen': 'empty stomach (1.5x synthesis)',
+                    'CoQ10': 'with fatty meal (4x abs)',
+                    'Curcumin': 'with pepper + fat (20x abs)',
+                  }
+
+                  // What to take now
+                  const dueNow = notTaken.filter(s => s.times?.includes(currentTod))
+                  dueNow.forEach(s => {
+                    const key = Object.entries(absorptionDB).find(([k]) => s.name.toLowerCase().includes(k.toLowerCase()))
+                    actions.push(`take ${s.name} ${key ? key[1] : s.dosage}`)
+                  })
+
+                  // What's coming up
+                  const timeOrder = ['Morning', 'Afternoon', 'Evening', 'Night']
+                  const curIdx = timeOrder.indexOf(currentTod)
+                  const upcoming = notTaken.filter(s => {
+                    const slot = s.times?.[0] || 'Morning'
+                    return timeOrder.indexOf(slot) > curIdx
+                  })
+                  if (upcoming.length > 0 && actions.length < 3) {
+                    const next = upcoming[0]
+                    actions.push(`${next.times?.[0] || 'later'}: ${next.name} ${next.dosage}`)
+                  }
+
+                  // Supply action
+                  const critSupply = refillData.filter(r => r.urgency === 'critical')
+                  if (critSupply.length > 0) {
+                    actions.push(`order ${critSupply[0].name} (${critSupply[0].daysUntilRefill}d left)`)
+                  }
+
+                  // Timing action
+                  const suppNames = deduped.map(s => s.name)
+                  const foundInteractions = SUPP_INTERACTIONS.filter(x =>
+                    suppNames.some(n => n.toLowerCase().includes(x.a.toLowerCase())) &&
+                    suppNames.some(n => n.toLowerCase().includes(x.b.toLowerCase()))
+                  )
+                  const conflictPairs = foundInteractions.filter(x => x.type === 'conflict')
+                  if (conflictPairs.length > 0) {
+                    actions.push(`separate ${conflictPairs[0].a} & ${conflictPairs[0].b} by 2h`)
+                  }
+
+                  if (actions.length > 0) {
+                    insights.push({ icon: Sparkles, title: `Today's action plan`, detail: actions.slice(0, 4).join(' → '), color: 'cyan', metric: `${actions.length} actions` })
+                  } else {
+                    insights.push({ icon: Sparkles, title: `Stack optimized`, detail: `All taken · no conflicts · supply good — keep it up`, color: 'emerald', metric: '✓' })
+                  }
+                }
+
+                // Final: dedup and cap at 3
                 const finalInsights = insights.filter((ins, i, arr) => arr.findIndex(x => x.title === ins.title) === i).slice(0, 3)
 
                 return (
@@ -1177,8 +1153,9 @@ export function SupplementTracker() {
                               <span className="text-[8px] font-black" style={{ color: overallScore >= 80 ? '#10b981' : overallScore >= 50 ? '#f59e0b' : '#ef4444' }}>{overallScore}%</span>
                               <span className="text-[6px] text-gray-600">body score</span>
                             </div>
-                            {/* System cards — vertical scroll, bigger */}
-                            <div className="max-h-[340px] overflow-y-auto pr-1 space-y-2" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.06) transparent' }}>
+                            {/* System cards — smooth vertical scroll with fade */}
+                            <div className="relative">
+                              <div className="max-h-[320px] overflow-y-auto pr-1 space-y-2 scroll-smooth" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.08) transparent' }}>
                               {scored.map(({ name, sys, matched, coverage, adherence, healthScore, matchedDetails }) => {
                                 const Icon = sys.icon
                                 return (
@@ -1223,6 +1200,9 @@ export function SupplementTracker() {
                                   </div>
                                 )
                               })}
+                              </div>
+                              {/* Fade gradient at bottom */}
+                              <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-[#0b0b12] to-transparent pointer-events-none" />
                             </div>
                           </div>
                         )
