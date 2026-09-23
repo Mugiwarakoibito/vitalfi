@@ -863,7 +863,7 @@ export function SupplementTracker() {
                   return sorted[0].name
                 })()
 
-                // ── AI Insights: Show ALL data, be actually useful ──
+                // ── AI Insights: Genuinely useful coaching ──
                 const insights: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string }[] = []
 
                 // ── Helpers ──
@@ -876,133 +876,206 @@ export function SupplementTracker() {
                   return Math.round((taken / days) * 100)
                 }
 
-                // ── 1. FULL STACK — show every supplement's status at a glance ──
+                // ── 1. STACK STATUS + IMMEDIATE ACTION ──
                 {
-                  const allStatus = deduped.map(s => {
-                    const taken = s.doses.every(d => d.taken)
-                    const icon = taken ? '✓' : '○'
-                    return `${icon} ${s.name} ${taken ? '' : `(${s.dosage})`}`
-                  })
-                  const takenCount = deduped.filter(s => s.doses.every(d => d.taken)).length
+                  const taken = deduped.filter(s => s.doses.every(d => d.taken))
                   const notTaken = deduped.filter(s => !s.doses.every(d => d.taken))
                   const dueNow = notTaken.filter(s => s.times?.includes(currentTod))
 
-                  if (notTaken.length > 0) {
-                    insights.push({ icon: Zap, title: `${takenCount}/${deduped.length} done — ${dueNow.length} due ${currentTod}`, detail: allStatus.join(' · '), color: complianceRate >= 80 ? 'emerald' : 'amber', metric: `${complianceRate}%` })
-                  } else {
-                    insights.push({ icon: CheckCircle2, title: `All ${deduped.length} taken today`, detail: allStatus.join(' · '), color: 'emerald', metric: '100%' })
+                  // Build per-supplement status with adherence
+                  const statusLine = deduped.map(s => {
+                    const done = s.doses.every(d => d.taken)
+                    const rate = getSuppRate(s.id, 7)
+                    return `${done ? '✓' : '○'}${s.name}${!done ? ` ${rate}%` : ''}`
+                  }).join(' · ')
+
+                  // Immediate action with absorption tip
+                  const absorptionDB: Record<string, string> = {
+                    'Vitamin D': 'with fatty meal (3x)', 'Omega-3': 'with fatty meal (2x)',
+                    'Iron': 'empty stomach + vit C (6x)', 'Magnesium': 'bedtime (sleep)',
+                    'B12': 'morning empty (2x energy)', 'Zinc': 'with food (no nausea)',
+                    'Creatine': 'any time', 'Whey Protein': 'post-workout 30min',
+                    'Probiotics': '30min pre-meal (5x)', 'Collagen': 'empty stomach (1.5x)',
+                    'CoQ10': 'with fatty meal (4x)', 'Curcumin': 'pepper + fat (20x)',
                   }
+                  let action = ''
+                  if (dueNow.length > 0) {
+                    const pick = dueNow[0]
+                    const tip = Object.entries(absorptionDB).find(([k]) => pick.name.toLowerCase().includes(k.toLowerCase()))
+                    action = ` → now: ${pick.name} ${pick.dosage}${tip ? ` ${tip[1]}` : ''}`
+                  } else if (notTaken.length > 0) {
+                    const next = notTaken[0]
+                    action = ` → next: ${next.name} at ${next.times?.[0] || 'later'}`
+                  }
+
+                  const metric = `${taken.length}/${deduped.length}`
+                  const color = taken.length === deduped.length ? 'emerald' : complianceRate >= 80 ? 'cyan' : 'amber'
+                  insights.push({ icon: Zap, title: `Stack ${metric}${action}`, detail: statusLine, color, metric })
                 }
 
-                // ── 2. SMART SUMMARY — weakest, supply, interactions, patterns ──
+                // ── 2. SMART ANALYSIS — what matters most right now ──
                 {
-                  const parts: string[] = []
+                  const candidates: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string; priority: number }[] = []
 
-                  // Weakest supplement
-                  const rates = deduped.map(s => ({ name: s.name, id: s.id, dosage: s.dosage, rate: getSuppRate(s.id, 7), times: s.times }))
-                  const worst = rates.filter(r => r.rate < 100 && r.rate > 0).sort((a, b) => a.rate - b.rate)[0]
-                  if (worst) {
-                    parts.push(`weakest: ${worst.name} ${worst.rate}%`)
+                  // A: Missing from your stack — research-backed suggestions
+                  {
+                    const suppNames = deduped.map(s => s.name.toLowerCase())
+                    const missing: { name: string; reason: string; pairs: string }[] = []
+                    if (!suppNames.some(n => n.includes('vitamin k') || n.includes('k2'))) {
+                      const hasD = suppNames.some(n => n.includes('vitamin d'))
+                      if (hasD) missing.push({ name: 'Vitamin K2', reason: 'directs calcium to bones (D3 alone wastes 47% of calcium)', pairs: 'pairs with Vitamin D3' })
+                    }
+                    if (!suppNames.some(n => n.includes('magnesium'))) {
+                      missing.push({ name: 'Magnesium', reason: 'required for Vitamin D activation — D3 without Mg = 50% less effective', pairs: 'required for Vitamin D3' })
+                    }
+                    if (!suppNames.some(n => n.includes('omega') || n.includes('fish oil'))) {
+                      missing.push({ name: 'Omega-3', reason: 'anti-inflammatory, brain health, heart protection', pairs: 'foundational' })
+                    }
+                    if (missing.length > 0) {
+                      const m = missing[0]
+                      candidates.push({ icon: ShieldAlert, title: `Missing: ${m.name}`, detail: `${m.reason} — ${m.pairs}${missing.length > 1 ? ` · +${missing.length - 1} more gaps` : ''}`, color: 'amber', metric: 'gap', priority: 9 })
+                    }
                   }
 
-                  // Supply
-                  const critical = refillData.filter(r => r.urgency === 'critical')
-                  const warnings = refillData.filter(r => r.urgency === 'warning')
-                  if (critical.length > 0) {
-                    parts.push(`order: ${critical.map(r => `${r.name}(${r.daysUntilRefill}d)`).join(', ')}`)
-                  } else if (warnings.length > 0) {
-                    parts.push(`low: ${warnings.map(r => `${r.name}(${r.daysUntilRefill}d)`).join(', ')}`)
+                  // B: Interactions — ALL conflicts and synergies from YOUR stack
+                  {
+                    const sn = deduped.map(s => s.name)
+                    const found = SUPP_INTERACTIONS.filter(x =>
+                      sn.some(n => n.toLowerCase().includes(x.a.toLowerCase())) &&
+                      sn.some(n => n.toLowerCase().includes(x.b.toLowerCase()))
+                    )
+                    const conflicts = found.filter(x => x.type === 'conflict')
+                    const synergies = found.filter(x => x.type === 'synergy')
+                    const timings = found.filter(x => x.type === 'timing')
+                    if (conflicts.length > 0) {
+                      const all = conflicts.map(c => `${c.a}+${c.b}`).join(' · ')
+                      candidates.push({ icon: ShieldAlert, title: `${conflicts.length} conflict${conflicts.length > 1 ? 's' : ''} detected`, detail: `${all} — ${conflicts[0].message}`, color: 'rose', metric: 'separate 2h', priority: 10 })
+                    } else if (synergies.length > 0) {
+                      const all = synergies.map(s => `${s.a}+${s.b}`).join(' · ')
+                      candidates.push({ icon: CheckCircle2, title: `${synergies.length} synergy${synergies.length > 1 ? 'ies' : ''} working`, detail: `${all} — ${synergies[0].message}`, color: 'emerald', metric: 'boosted', priority: 4 })
+                    } else if (timings.length > 0) {
+                      candidates.push({ icon: Clock, title: `Timing note: ${timings[0].a} + ${timings[0].b}`, detail: `${timings[0].message}`, color: 'amber', metric: 'timing', priority: 5 })
+                    }
                   }
 
-                  // Interactions
-                  const suppNames = deduped.map(s => s.name)
-                  const found = SUPP_INTERACTIONS.filter(x =>
-                    suppNames.some(n => n.toLowerCase().includes(x.a.toLowerCase())) &&
-                    suppNames.some(n => n.toLowerCase().includes(x.b.toLowerCase()))
-                  )
-                  const conflicts = found.filter(x => x.type === 'conflict')
-                  if (conflicts.length > 0) {
-                    parts.push(`conflict: ${conflicts.map(c => `${c.a}+${c.b}`).join(', ')}`)
+                  // C: Weakest supplement — real 7d data with specific fix
+                  {
+                    const rates = deduped.map(s => ({ name: s.name, id: s.id, dosage: s.dosage, rate: getSuppRate(s.id, 7), times: s.times }))
+                    const worst = rates.filter(r => r.rate < 80 && r.rate > 0).sort((a, b) => a.rate - b.rate)[0]
+                    if (worst) {
+                      const missed = 7 - Math.round(worst.rate / 100 * 7)
+                      candidates.push({ icon: Brain, title: `${worst.name}: ${worst.rate}% this week`, detail: `${missed} doses missed · take ${worst.dosage} with ${worst.times?.[0] || 'morning'} routine`, color: worst.rate < 50 ? 'rose' : 'amber', metric: `${worst.rate}%`, priority: 8 })
+                    }
                   }
 
-                  // Streak
-                  if (longTermStreak > 0) {
-                    parts.push(`${longTermStreak}d streak`)
+                  // D: Supply — exact days and what to order
+                  {
+                    const critical = refillData.filter(r => r.urgency === 'critical')
+                    const warnings = refillData.filter(r => r.urgency === 'warning')
+                    if (critical.length > 0) {
+                      const list = critical.map(r => `${r.name}(${r.daysUntilRefill}d)`).join(' · ')
+                      candidates.push({ icon: Package, title: `Order now: ${critical.map(r => r.name).join(', ')}`, detail: `${list} — running out breaks your ${longTermStreak}d streak`, color: 'rose', metric: `${critical[0].daysUntilRefill}d left`, priority: 10 })
+                    } else if (warnings.length > 0) {
+                      const list = warnings.map(r => `${r.name}(${r.daysUntilRefill}d)`).join(' · ')
+                      candidates.push({ icon: Package, title: `Reorder soon: ${warnings.map(r => r.name).join(', ')}`, detail: `${list} — order within 2 weeks`, color: 'amber', metric: `${warnings[0].daysUntilRefill}d`, priority: 7 })
+                    }
                   }
 
-                  // Weekly trend
-                  const avg7 = Math.round(suppAdherence.reduce((s, a) => s + a.rate7, 0) / suppAdherence.length)
-                  const avg30 = Math.round(suppAdherence.reduce((s, a) => s + a.rate30, 0) / suppAdherence.length)
-                  const delta = avg7 - avg30
-                  if (Math.abs(delta) >= 5) {
-                    parts.push(`trend: ${delta > 0 ? '+' : ''}${delta}% vs 30d`)
+                  // E: Weekly trend — momentum check
+                  {
+                    const avg7 = Math.round(suppAdherence.reduce((s, a) => s + a.rate7, 0) / suppAdherence.length)
+                    const avg30 = Math.round(suppAdherence.reduce((s, a) => s + a.rate30, 0) / suppAdherence.length)
+                    const delta = avg7 - avg30
+                    if (Math.abs(delta) >= 5) {
+                      candidates.push({ icon: delta > 0 ? TrendingUp : ShieldAlert, title: `${delta > 0 ? 'Momentum ↑' : 'Dropping ↓'} ${Math.abs(delta)}%`, detail: `7d: ${avg7}% · 30d: ${avg30}% — ${delta > 0 ? 'keep going' : 'simplify your stack'}`, color: delta > 0 ? 'emerald' : 'rose', metric: `${delta > 0 ? '+' : ''}${delta}%`, priority: 6 })
+                    }
                   }
 
-                  if (parts.length > 0) {
-                    const color = critical.length > 0 ? 'rose' : conflicts.length > 0 ? 'amber' : delta < -5 ? 'rose' : 'emerald'
-                    insights.push({ icon: Brain, title: `Stack summary`, detail: parts.join(' · '), color, metric: `${deduped.length} supps` })
+                  // F: Streak
+                  {
+                    const target = 21
+                    if (longTermStreak > 0 && longTermStreak < target) {
+                      candidates.push({ icon: Flame, title: `${longTermStreak}d streak — ${target - longTermStreak}d to habit`, detail: `${Math.round((longTermStreak / target) * 100)}% to 21-day threshold — don't stop`, color: 'amber', metric: `${longTermStreak}/${target}`, priority: 3 })
+                    } else if (longTermStreak >= target) {
+                      candidates.push({ icon: Flame, title: `${longTermStreak}d streak — habit locked`, detail: `Automatic behavior — maintain momentum`, color: 'emerald', metric: `${longTermStreak}d`, priority: 2 })
+                    }
+                  }
+
+                  // G: Per-supplement adherence — show ALL at once
+                  {
+                    const allRates = deduped.map(s => ({ name: s.name, rate: getSuppRate(s.id, 7) }))
+                    const lowOnes = allRates.filter(r => r.rate < 80).sort((a, b) => a.rate - b.rate)
+                    if (lowOnes.length > 0) {
+                      const lines = lowOnes.map(r => `${r.name} ${r.rate}%`).join(' · ')
+                      candidates.push({ icon: Brain, title: `${lowOnes.length} supplement${lowOnes.length > 1 ? 's' : ''} below 80%`, detail: lines, color: lowOnes[0].rate < 50 ? 'rose' : 'amber', metric: `7d data`, priority: 7 })
+                    }
+                  }
+
+                  // H: Fallback — all perfect
+                  if (candidates.length === 0) {
+                    candidates.push({ icon: CheckCircle2, title: `All ${deduped.length} supplements at 100%`, detail: `${longTermStreak > 0 ? `${longTermStreak}d streak` : 'Start a streak today'} — top tier`, color: 'emerald', metric: '100%', priority: 1 })
+                  }
+
+                  candidates.sort((a, b) => b.priority - a.priority)
+                  for (const c of candidates) {
+                    if (insights.length >= 3) break
+                    if (!insights.some(x => x.title === c.title)) insights.push(c)
                   }
                 }
 
-                // ── 3. ACTION ITEMS — specific things to do today ──
+                // ── 3. DAILY ACTION PLAN — step by step ──
                 {
                   const actions: string[] = []
                   const notTaken = deduped.filter(s => !s.doses.every(d => d.taken))
                   const absorptionDB: Record<string, string> = {
-                    'Vitamin D': 'with fatty meal (3x abs)',
-                    'Omega-3': 'with fatty meal (2x abs)',
-                    'Iron': 'empty stomach + vit C (6x abs)',
-                    'Magnesium': 'bedtime (better sleep)',
-                    'B12': 'morning empty stomach (2x energy)',
-                    'Zinc': 'with food (avoid nausea)',
-                    'Creatine': 'any time (consistency)',
-                    'Whey Protein': 'post-workout 30min (MPS)',
-                    'Probiotics': '30min pre-meal (5x survival)',
-                    'Collagen': 'empty stomach (1.5x synthesis)',
-                    'CoQ10': 'with fatty meal (4x abs)',
-                    'Curcumin': 'with pepper + fat (20x abs)',
+                    'Vitamin D': 'with fatty meal', 'Omega-3': 'with fatty meal',
+                    'Iron': 'empty stomach + vit C', 'Magnesium': 'bedtime',
+                    'B12': 'morning empty stomach', 'Zinc': 'with food',
+                    'Creatine': 'any time', 'Whey Protein': 'post-workout',
+                    'Probiotics': '30min pre-meal', 'Collagen': 'empty stomach',
+                    'CoQ10': 'with fatty meal', 'Curcumin': 'with pepper + fat',
                   }
 
-                  // What to take now
+                  // Step 1: What to take NOW
                   const dueNow = notTaken.filter(s => s.times?.includes(currentTod))
                   dueNow.forEach(s => {
-                    const key = Object.entries(absorptionDB).find(([k]) => s.name.toLowerCase().includes(k.toLowerCase()))
-                    actions.push(`take ${s.name} ${key ? key[1] : s.dosage}`)
+                    const tip = Object.entries(absorptionDB).find(([k]) => s.name.toLowerCase().includes(k.toLowerCase()))
+                    actions.push(`take ${s.name} ${s.dosage}${tip ? ` ${tip[1]}` : ''}`)
                   })
 
-                  // What's coming up
+                  // Step 2: What's next
                   const timeOrder = ['Morning', 'Afternoon', 'Evening', 'Night']
                   const curIdx = timeOrder.indexOf(currentTod)
                   const upcoming = notTaken.filter(s => {
                     const slot = s.times?.[0] || 'Morning'
-                    return timeOrder.indexOf(slot) > curIdx
+                    return timeOrder.indexOf(slot) > curIdx && !dueNow.includes(s)
                   })
-                  if (upcoming.length > 0 && actions.length < 3) {
+                  if (upcoming.length > 0) {
                     const next = upcoming[0]
-                    actions.push(`${next.times?.[0] || 'later'}: ${next.name} ${next.dosage}`)
+                    actions.push(`${next.times?.[0]}: ${next.name} ${next.dosage}`)
                   }
 
-                  // Supply action
+                  // Step 3: Supply action
                   const critSupply = refillData.filter(r => r.urgency === 'critical')
                   if (critSupply.length > 0) {
-                    actions.push(`order ${critSupply[0].name} (${critSupply[0].daysUntilRefill}d left)`)
+                    actions.push(`order ${critSupply.map(r => r.name).join(', ')} (${critSupply[0].daysUntilRefill}d left)`)
                   }
 
-                  // Timing action
-                  const suppNames = deduped.map(s => s.name)
-                  const foundInteractions = SUPP_INTERACTIONS.filter(x =>
-                    suppNames.some(n => n.toLowerCase().includes(x.a.toLowerCase())) &&
-                    suppNames.some(n => n.toLowerCase().includes(x.b.toLowerCase()))
+                  // Step 4: Timing fix
+                  const sn = deduped.map(s => s.name)
+                  const foundInt = SUPP_INTERACTIONS.filter(x =>
+                    sn.some(n => n.toLowerCase().includes(x.a.toLowerCase())) &&
+                    sn.some(n => n.toLowerCase().includes(x.b.toLowerCase()))
                   )
-                  const conflictPairs = foundInteractions.filter(x => x.type === 'conflict')
+                  const conflictPairs = foundInt.filter(x => x.type === 'conflict')
                   if (conflictPairs.length > 0) {
                     actions.push(`separate ${conflictPairs[0].a} & ${conflictPairs[0].b} by 2h`)
                   }
 
                   if (actions.length > 0) {
-                    insights.push({ icon: Sparkles, title: `Today's action plan`, detail: actions.slice(0, 4).join(' → '), color: 'cyan', metric: `${actions.length} actions` })
-                  } else {
-                    insights.push({ icon: Sparkles, title: `Stack optimized`, detail: `All taken · no conflicts · supply good — keep it up`, color: 'emerald', metric: '✓' })
+                    insights.push({ icon: Sparkles, title: `Do this → ${actions.length} steps`, detail: actions.join(' → '), color: 'cyan', metric: 'plan' })
+                  } else if (notTaken.length === 0) {
+                    insights.push({ icon: Sparkles, title: `Stack complete — nothing to do`, detail: `All ${deduped.length} taken · no conflicts · supply good`, color: 'emerald', metric: '✓' })
                   }
                 }
 
@@ -1153,47 +1226,58 @@ export function SupplementTracker() {
                               <span className="text-[8px] font-black" style={{ color: overallScore >= 80 ? '#10b981' : overallScore >= 50 ? '#f59e0b' : '#ef4444' }}>{overallScore}%</span>
                               <span className="text-[6px] text-gray-600">body score</span>
                             </div>
-                            {/* System cards — smooth vertical scroll with fade */}
+                            {/* System cards — horizontal carousel with rings */}
                             <div className="relative">
-                              <div className="max-h-[320px] overflow-y-auto pr-1 space-y-2 scroll-smooth" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.08) transparent' }}>
+                              <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                               {scored.map(({ name, sys, matched, coverage, adherence, healthScore, matchedDetails }) => {
                                 const Icon = sys.icon
+                                const circumference = 2 * Math.PI * 18
+                                const offset = circumference * (1 - healthScore / 100)
                                 return (
-                                  <div key={name} className="rounded-2xl p-4 bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-all duration-200">
-                                    <div className="flex items-center gap-3 mb-3">
-                                      <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${sys.color}18` }}>
+                                  <div key={name} className="snap-start shrink-0 w-[160px] rounded-2xl p-4 bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-all duration-200">
+                                    {/* Ring + Icon */}
+                                    <div className="flex items-center justify-center mb-3 relative">
+                                      <svg viewBox="0 0 44 44" className="w-11 h-11 -rotate-90">
+                                        <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
+                                        <circle cx="22" cy="22" r="18" fill="none" stroke={sys.color} strokeWidth="3.5" strokeLinecap="round"
+                                          strokeDasharray={circumference} strokeDashoffset={offset} className="transition-all duration-700" />
+                                      </svg>
+                                      <div className="absolute inset-0 flex items-center justify-center">
                                         <Icon className="w-4 h-4" style={{ color: sys.color }} />
                                       </div>
-                                      <div className="flex-1 min-w-0">
-                                        <span className="text-[11px] font-bold text-white block">{name}</span>
-                                        <span className="text-[9px] text-gray-500">{matched.length} supplement{matched.length > 1 ? 's' : ''}</span>
+                                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black" style={{ background: `${sys.color}20`, color: sys.color }}>
+                                        {healthScore}
                                       </div>
-                                      <span className="text-[14px] font-black" style={{ color: sys.color }}>{healthScore}</span>
                                     </div>
-                                    {/* Progress bars */}
-                                    <div className="space-y-1.5 mb-3">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-[9px] text-gray-500 w-10">cover</span>
-                                        <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                                    {/* Name */}
+                                    <div className="text-center mb-2">
+                                      <span className="text-[10px] font-bold text-white block">{name}</span>
+                                      <span className="text-[8px] text-gray-500">{matched.length} supp{matched.length > 1 ? 's' : ''}</span>
+                                    </div>
+                                    {/* Mini bars */}
+                                    <div className="space-y-1 mb-2">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-[7px] text-gray-600 w-7">cover</span>
+                                        <div className="flex-1 h-1 rounded-full bg-white/[0.04] overflow-hidden">
                                           <div className="h-full rounded-full" style={{ width: `${coverage}%`, background: sys.color }} />
                                         </div>
-                                        <span className="text-[9px] font-bold" style={{ color: sys.color }}>{coverage}%</span>
+                                        <span className="text-[7px] font-bold" style={{ color: sys.color }}>{coverage}%</span>
                                       </div>
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-[9px] text-gray-500 w-10">taken</span>
-                                        <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-[7px] text-gray-600 w-7">taken</span>
+                                        <div className="flex-1 h-1 rounded-full bg-white/[0.04] overflow-hidden">
                                           <div className="h-full rounded-full" style={{ width: `${adherence}%`, background: `${sys.color}aa` }} />
                                         </div>
-                                        <span className="text-[9px] font-bold" style={{ color: sys.color }}>{adherence}%</span>
+                                        <span className="text-[7px] font-bold" style={{ color: sys.color }}>{adherence}%</span>
                                       </div>
                                     </div>
-                                    {/* Supplement list */}
-                                    <div className="space-y-1">
+                                    {/* Supplements */}
+                                    <div className="space-y-0.5">
                                       {matchedDetails.map((md, i) => (
-                                        <div key={i} className="flex items-center gap-2">
-                                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${md.taken === md.total ? 'bg-emerald-400' : md.taken > 0 ? 'bg-amber-400' : 'bg-gray-600'}`} />
-                                          <span className="text-[10px] text-gray-300 flex-1">{md.name}</span>
-                                          <span className="text-[9px] text-gray-500">{md.taken}/{md.total}</span>
+                                        <div key={i} className="flex items-center gap-1.5">
+                                          <div className={`w-1 h-1 rounded-full shrink-0 ${md.taken === md.total ? 'bg-emerald-400' : md.taken > 0 ? 'bg-amber-400' : 'bg-gray-600'}`} />
+                                          <span className="text-[8px] text-gray-400 flex-1 truncate">{md.name}</span>
+                                          <span className="text-[7px] text-gray-600">{md.taken}/{md.total}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -1201,8 +1285,12 @@ export function SupplementTracker() {
                                 )
                               })}
                               </div>
-                              {/* Fade gradient at bottom */}
-                              <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-[#0b0b12] to-transparent pointer-events-none" />
+                              {/* Scroll hint */}
+                              {scored.length > 2 && (
+                                <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-[#0b0b12] to-transparent pointer-events-none flex items-center justify-end pr-1">
+                                  <ChevronRight className="w-3 h-3 text-gray-600 animate-pulse" />
+                                </div>
+                              )}
                             </div>
                           </div>
                         )
