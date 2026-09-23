@@ -470,26 +470,26 @@ export function SupplementTracker() {
                       <Clock className="w-3.5 h-3.5 text-violet-400" />
                       <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.15em]">Time split</span>
                     </div>
-                    <div className="flex-1 flex flex-col justify-between py-1">
+                    <div className="flex-1 flex flex-col justify-between py-0.5 gap-0.5">
                       {[
-                        { label: 'Morning', count: totalMorning, color: '#f97316', icon: Sun },
-                        { label: 'Afternoon', count: totalAfternoon, color: '#8b5cf6', icon: Sparkles },
-                        { label: 'Evening', count: totalEvening, color: '#06b6d4', icon: Sunset },
+                        { label: 'Morn', count: totalMorning, color: '#f97316', icon: Sun },
+                        { label: 'Aft', count: totalAfternoon, color: '#8b5cf6', icon: Sparkles },
+                        { label: 'Eve', count: totalEvening, color: '#06b6d4', icon: Sunset },
                         { label: 'Night', count: totalNight, color: '#6366f1', icon: Moon },
                       ].map(t => {
                         const maxCount = Math.max(totalMorning, totalAfternoon, totalEvening, totalNight, 1)
                         const pct = Math.round((t.count / maxCount) * 100)
                         const Icon = t.icon
                         return (
-                          <div key={t.label} className="flex items-center gap-2">
-                            <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: t.color }} />
-                            <span className="text-[8px] font-bold text-gray-500 w-10 shrink-0">{t.label}</span>
-                            <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                          <div key={t.label} className="flex items-center gap-1.5">
+                            <Icon className="w-2.5 h-2.5 shrink-0" style={{ color: t.color }} />
+                            <span className="text-[7px] font-bold text-gray-500 w-6 shrink-0">{t.label}</span>
+                            <div className="flex-1 h-1 rounded-full bg-white/[0.04] overflow-hidden">
                               <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
                                 transition={{ duration: 0.8, ease: 'easeOut' }}
                                 className="h-full rounded-full" style={{ backgroundColor: t.color + '99' }} />
                             </div>
-                            <span className="text-[9px] font-black tabular-nums w-3 text-right" style={{ color: t.color }}>{t.count}</span>
+                            <span className="text-[8px] font-black tabular-nums w-2 text-right" style={{ color: t.color }}>{t.count}</span>
                           </div>
                         )
                       })}
@@ -882,8 +882,9 @@ export function SupplementTracker() {
                   return sorted[0].name
                 })()
 
-                // ── AI Insights: 3 most powerful lines ──
+                // ── AI Insights: exactly 3, no duplicates ──
                 const insights: { icon: typeof Zap; title: string; detail: string; color: string; metric?: string }[] = []
+                const usedSupps = new Set<string>()
 
                 // 1. Absorption Intelligence — most powerful
                 const absorptionPairs: Record<string, { with: string; boost: string; avoid?: string }[]> = {
@@ -897,8 +898,7 @@ export function SupplementTracker() {
                   'Ashwagandha': [{ with: 'morning or evening', boost: 'cortisol regulation', avoid: 'taking with stimulants' }],
                   'CoQ10': [{ with: 'fatty meal', boost: '4x absorption', avoid: 'taking with statins timing' }],
                 }
-                const suppNames = deduped.map(s => s.name)
-                for (const name of suppNames) {
+                for (const name of deduped.map(s => s.name)) {
                   const match = Object.keys(absorptionPairs).find(k => name.toLowerCase().includes(k.toLowerCase()))
                   if (match && insights.length < 3) {
                     const rule = absorptionPairs[match][0]
@@ -910,6 +910,7 @@ export function SupplementTracker() {
                       match === 'CoQ10' ? (hour !== null && hour >= 12) : true
                     if (!isOptimal || !takenAtTime) {
                       insights.push({ icon: Sparkles, title: `${match}: take with ${rule.with}`, detail: `${rule.boost} — ${rule.avoid ? `avoid ${rule.avoid}` : 'optimize timing'}`, color: 'amber', metric: rule.boost })
+                      usedSupps.add(name)
                       break
                     }
                   }
@@ -930,20 +931,20 @@ export function SupplementTracker() {
                   }
                 }
 
-                // 3. Stack Optimization — most actionable
+                // 3. Stack Optimization — skip if already featured in insight 1
                 if (insights.length < 3) {
-                  const lowAdherence = [...suppAdherence].sort((a, b) => a.rate7 - b.rate7).filter(s => s.rate7 < 80 && s.rate7 > 0)
+                  const lowAdherence = [...suppAdherence].sort((a, b) => a.rate7 - b.rate7).filter(s => s.rate7 < 80 && s.rate7 > 0 && !usedSupps.has(s.name))
                   if (lowAdherence.length > 0) {
                     const worst = lowAdherence[0]
                     const daysToHabit = Math.ceil((100 - worst.rate7) / 5)
                     const bestTime = worst.times?.[0] || 'morning'
                     insights.push({ icon: Brain, title: `${worst.name}: ${worst.rate7}% adherence — ${daysToHabit}d to habit`, detail: worst.rate7 < 50 ? `Critical: link to ${bestTime} routine (coffee, meals, or bedtime)` : `Set alarm for ${bestTime} — consistent timing boosts adherence 40%`, color: 'violet', metric: `${worst.rate7}%` })
-                  } else if (dedupedDone === deduped.length && deduped.length >= 3) {
+                  } else if (dedupedDone === deduped.length && deduped.length >= 3 && insights.length < 3) {
                     insights.push({ icon: CheckCircle2, title: `${deduped.length}/${deduped.length} perfect — top 5% globally`, detail: `Maintain ${complianceRate}% for ${21 - longTermStreak > 0 ? 21 - longTermStreak : 0} more days to form a permanent habit`, color: 'emerald', metric: '100%' })
                   }
                 }
 
-                // 4. Timing Drift — if slots open
+                // 4. Timing Drift — only if still under 3
                 if (insights.length < 3 && realTiming.length > 0) {
                   const misaligned = realTiming.filter(r => !r.isAligned && r.actualCategory !== 'Unknown')
                   if (misaligned.length > 0) {
@@ -1035,12 +1036,13 @@ export function SupplementTracker() {
                     </div>
                   )}
 
-                  {/* ── Supply Health (Radial Gauges + Donut) ── */}
+                  {/* ── Supply Health (Individual Radial Arcs) ── */}
                   <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5 relative overflow-hidden">
-                    <div className="absolute -bottom-12 -left-12 w-28 h-28 bg-rose-500/[0.03] rounded-full blur-3xl" />
+                    <div className="absolute -bottom-12 -left-12 w-28 h-28 bg-orange-500/[0.03] rounded-full blur-3xl" />
+                    <div className="absolute top-8 right-8 w-20 h-20 bg-emerald-500/[0.03] rounded-full blur-3xl" />
                     <div className="relative">
                       <div className="flex items-center gap-1.5 mb-3">
-                        <Package className="w-2.5 h-2.5 text-rose-400" />
+                        <Package className="w-2.5 h-2.5 text-orange-400" />
                         <span className="text-[9px] font-bold text-white uppercase tracking-wider">Supply Health</span>
                         <div className="flex-1" />
                         {refillData.length > 0 && (() => {
@@ -1052,70 +1054,37 @@ export function SupplementTracker() {
                         })()}
                       </div>
                       {refillData.length > 0 ? (
-                        <div className="flex items-center gap-3">
-                          {/* Donut Summary */}
-                          <div className="relative w-[72px] h-[72px] shrink-0">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <PieChart>
-                                <defs>
-                                  <linearGradient id="sGradOk" x1="0" y1="0" x2="1" y2="1">
-                                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.9} />
-                                    <stop offset="100%" stopColor="#059669" stopOpacity={0.6} />
-                                  </linearGradient>
-                                  <linearGradient id="sGradWarn" x1="0" y1="0" x2="1" y2="1">
-                                    <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.9} />
-                                    <stop offset="100%" stopColor="#d97706" stopOpacity={0.6} />
-                                  </linearGradient>
-                                  <linearGradient id="sGradCrit" x1="0" y1="0" x2="1" y2="1">
-                                    <stop offset="0%" stopColor="#ef4444" stopOpacity={0.9} />
-                                    <stop offset="100%" stopColor="#dc2626" stopOpacity={0.6} />
-                                  </linearGradient>
-                                </defs>
-                                <Pie data={[
-                                  { name: 'Critical', value: refillData.filter(r => r.urgency === 'critical').length, fill: 'url(#sGradCrit)' },
-                                  { name: 'Warning', value: refillData.filter(r => r.urgency === 'warning').length, fill: 'url(#sGradWarn)' },
-                                  { name: 'OK', value: refillData.filter(r => r.urgency === 'ok').length, fill: 'url(#sGradOk)' },
-                                ].filter(d => d.value > 0)} cx="50%" cy="50%" innerRadius="55%" outerRadius="85%" paddingAngle={4} dataKey="value" strokeWidth={0} startAngle={90} endAngle={-270}>
-                                  {[
-                                    { count: refillData.filter(r => r.urgency === 'critical').length, fill: 'url(#sGradCrit)' },
-                                    { count: refillData.filter(r => r.urgency === 'warning').length, fill: 'url(#sGradWarn)' },
-                                    { count: refillData.filter(r => r.urgency === 'ok').length, fill: 'url(#sGradOk)' },
-                                  ].filter(d => d.count > 0).map((d, i) => (
-                                    <Cell key={i} fill={d.fill} stroke="none" />
-                                  ))}
-                                </Pie>
-                              </PieChart>
-                            </ResponsiveContainer>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                              <span className="text-[13px] font-black text-white leading-none">{refillData.length}</span>
-                              <span className="text-[5px] text-gray-500 font-bold uppercase tracking-wider">supps</span>
-                            </div>
-                          </div>
-                          {/* Per-Supplement Gauges */}
-                          <div className="flex-1 grid grid-cols-2 gap-1.5">
-                            {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 4).map((r, i) => {
-                              const color = r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981'
-                              const bg = r.urgency === 'critical' ? 'bg-red-500/[0.06] border-red-500/[0.12]' : r.urgency === 'warning' ? 'bg-amber-500/[0.06] border-amber-500/[0.12]' : 'bg-emerald-500/[0.06] border-emerald-500/[0.12]'
-                              const pct = Math.min(100, Math.max(0, Math.round((r.daysUntilRefill / r.refillDays) * 100)))
-                              const isUrgent = r.urgency === 'critical'
-                              return (
-                                <div key={i} className={`${bg} rounded-xl p-2 border transition-all ${isUrgent ? 'animate-pulse' : ''}`}>
-                                  <div className="flex items-center justify-between mb-1.5">
-                                    <span className="text-[7px] text-gray-400 font-bold truncate max-w-[70%]">{r.name.length > 10 ? r.name.slice(0, 10) + '…' : r.name}</span>
-                                    <span className="text-[7px] font-bold" style={{ color }}>{pct}%</span>
-                                  </div>
-                                  {/* Progress Bar */}
-                                  <div className="h-1 rounded-full bg-white/[0.06] mb-1.5 overflow-hidden">
-                                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${color}cc, ${color}80)` }} />
-                                  </div>
-                                  <div className="flex items-baseline gap-0.5">
-                                    <span className="text-[13px] font-black leading-none" style={{ color }}>{r.daysUntilRefill}</span>
-                                    <span className="text-[6px] text-gray-500 font-bold">days left</span>
+                        <div className="grid grid-cols-3 gap-2">
+                          {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 6).map((r, i) => {
+                            const color = r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981'
+                            const pct = Math.min(100, Math.max(0, Math.round((r.daysUntilRefill / r.refillDays) * 100)))
+                            const circumference = 2 * Math.PI * 18
+                            const dashoffset = circumference * (1 - pct / 100)
+                            const isUrgent = r.urgency === 'critical'
+                            return (
+                              <div key={i} className={`flex flex-col items-center bg-[#0f0f18] rounded-xl p-2.5 border border-white/[0.04] transition-all ${isUrgent ? 'animate-pulse border-red-500/20' : ''}`}>
+                                {/* SVG Radial Arc */}
+                                <div className="relative w-10 h-10 mb-1.5">
+                                  <svg width="40" height="40" viewBox="0 0 40 40">
+                                    <defs>
+                                      <linearGradient id={`arcGrad${i}`} x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stopColor={color} stopOpacity={0.9} />
+                                        <stop offset="100%" stopColor={color} stopOpacity={0.4} />
+                                      </linearGradient>
+                                    </defs>
+                                    <circle cx="20" cy="20" r="18" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
+                                    <circle cx="20" cy="20" r="18" fill="none" stroke={`url(#arcGrad${i})`} strokeWidth="3" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashoffset} transform="rotate(-90 20 20)" style={{ transition: 'stroke-dashoffset 1s ease' }} />
+                                  </svg>
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-[9px] font-black" style={{ color }}>{pct}</span>
                                   </div>
                                 </div>
-                              )
-                            })}
-                          </div>
+                                {/* Info */}
+                                <span className="text-[7px] text-gray-400 font-bold truncate w-full text-center leading-tight">{r.name.length > 8 ? r.name.slice(0, 8) + '…' : r.name}</span>
+                                <span className="text-[7px] mt-0.5" style={{ color: `${color}aa` }}>{r.daysUntilRefill}d left</span>
+                              </div>
+                            )
+                          })}
                         </div>
                       ) : (
                         <div className="text-center py-4"><span className="text-[9px] text-gray-600 italic">No refill data tracked</span></div>
@@ -1123,13 +1092,13 @@ export function SupplementTracker() {
                     </div>
                   </div>
 
-                  {/* ── Adherence Radar (Premium Dual-Layer) ── */}
+                  {/* ── Adherence Radar (Polar Area / Rose Chart) ── */}
                   <div className="rounded-2xl bg-[#0b0b12] border border-white/[0.05] p-3.5 relative overflow-hidden">
-                    <div className="absolute -top-20 -right-20 w-40 h-40 bg-violet-500/[0.03] rounded-full blur-[60px]" />
-                    <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-cyan-500/[0.03] rounded-full blur-[50px]" />
+                    <div className="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500/[0.03] rounded-full blur-[60px]" />
+                    <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-pink-500/[0.03] rounded-full blur-[50px]" />
                     <div className="relative">
                       <div className="flex items-center gap-1.5 mb-3">
-                        <Activity className="w-2.5 h-2.5 text-violet-400" />
+                        <Activity className="w-2.5 h-2.5 text-indigo-400" />
                         <span className="text-[9px] font-bold text-white uppercase tracking-wider">Adherence Radar</span>
                         <div className="flex-1" />
                         {suppAdherence.length > 0 && (() => {
@@ -1138,8 +1107,8 @@ export function SupplementTracker() {
                           const delta = avg7 - avg30
                           return (
                             <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-violet-400 shadow-[0_0_4px_rgba(129,140,248,0.5)]" /><span className="text-[7px] text-gray-400 font-bold">7d {avg7}%</span></div>
-                              <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_4px_rgba(34,211,238,0.5)]" /><span className="text-[7px] text-gray-400 font-bold">30d {avg30}%</span></div>
+                              <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_4px_rgba(129,140,248,0.5)]" /><span className="text-[7px] text-gray-400 font-bold">7d {avg7}%</span></div>
+                              <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-pink-400 shadow-[0_0_4px_rgba(244,114,182,0.5)]" /><span className="text-[7px] text-gray-400 font-bold">30d {avg30}%</span></div>
                               {delta !== 0 && <span className={`text-[7px] font-bold ${delta > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{delta > 0 ? '↑' : '↓'}{Math.abs(delta)}%</span>}
                             </div>
                           )
@@ -1156,27 +1125,27 @@ export function SupplementTracker() {
                             }))}>
                               <defs>
                                 <linearGradient id="rGrad7" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor="#a78bfa" stopOpacity={0.35} />
-                                  <stop offset="50%" stopColor="#7c3aed" stopOpacity={0.15} />
-                                  <stop offset="100%" stopColor="#4c1d95" stopOpacity={0.02} />
+                                  <stop offset="0%" stopColor="#818cf8" stopOpacity={0.4} />
+                                  <stop offset="50%" stopColor="#6366f1" stopOpacity={0.2} />
+                                  <stop offset="100%" stopColor="#4338ca" stopOpacity={0.02} />
                                 </linearGradient>
                                 <linearGradient id="rGrad30" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.2} />
-                                  <stop offset="50%" stopColor="#0891b2" stopOpacity={0.08} />
-                                  <stop offset="100%" stopColor="#164e63" stopOpacity={0.01} />
+                                  <stop offset="0%" stopColor="#f472b6" stopOpacity={0.25} />
+                                  <stop offset="50%" stopColor="#ec4899" stopOpacity={0.1} />
+                                  <stop offset="100%" stopColor="#be185d" stopOpacity={0.01} />
                                 </linearGradient>
-                                <filter id="glowV">
-                                  <feGaussianBlur stdDeviation="2" result="blur" />
+                                <filter id="glowR">
+                                  <feGaussianBlur stdDeviation="3" result="blur" />
                                   <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                                 </filter>
                               </defs>
-                              <PolarGrid stroke="rgba(255,255,255,0.05)" gridType="polygon" />
-                              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 7, fill: '#9ca3af', fontWeight: 600 }} />
+                              <PolarGrid stroke="rgba(255,255,255,0.04)" gridType="polygon" />
+                              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 7, fill: '#a1a1aa', fontWeight: 600 }} />
                               <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
-                              <Radar name="30-day" dataKey="30-day" stroke="#22d3ee" fill="url(#rGrad30)" strokeWidth={1.5} dot={{ r: 1.5, fill: '#22d3ee', stroke: '#22d3ee', strokeWidth: 1 }} strokeOpacity={0.5} animationDuration={1200} />
-                              <Radar name="7-day" dataKey="7-day" stroke="#a78bfa" fill="url(#rGrad7)" strokeWidth={2.5} dot={{ r: 2.5, fill: '#a78bfa', stroke: '#c4b5fd', strokeWidth: 1.5 }} strokeOpacity={0.9} filter="url(#glowV)" animationDuration={800} />
-                              <Radar name="goal" dataKey="goal" stroke="rgba(255,255,255,0.12)" fill="none" strokeWidth={1} strokeDasharray="3 3" dot={false} />
-                              <Tooltip contentStyle={{ background: 'rgba(15,15,25,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 9, backdropFilter: 'blur(8px)' }} />
+                              <Radar name="30-day" dataKey="30-day" stroke="#f472b6" fill="url(#rGrad30)" strokeWidth={1.5} dot={{ r: 2, fill: '#f472b6', stroke: '#f9a8d4', strokeWidth: 1 }} strokeOpacity={0.6} animationDuration={1200} />
+                              <Radar name="7-day" dataKey="7-day" stroke="#818cf8" fill="url(#rGrad7)" strokeWidth={2.5} dot={{ r: 3, fill: '#818cf8', stroke: '#c7d2fe', strokeWidth: 1.5 }} strokeOpacity={1} filter="url(#glowR)" animationDuration={800} />
+                              <Radar name="goal" dataKey="goal" stroke="rgba(255,255,255,0.1)" fill="none" strokeWidth={1} strokeDasharray="3 3" dot={false} />
+                              <Tooltip contentStyle={{ background: 'rgba(12,12,22,0.95)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, fontSize: 9, backdropFilter: 'blur(12px)' }} />
                             </RadarChart>
                           </ResponsiveContainer>
                         </div>
