@@ -1057,22 +1057,24 @@ export function SupplementTracker() {
                             emerald: 'text-emerald-400',
                           }
                           return (
-                            <motion.div key={i} initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                              className="px-3.5 py-2.5 hover:bg-white/[0.02] transition-colors cursor-default">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${clrMap[ins.color] || 'text-gray-400 bg-gray-500/[0.06]'}`}>
-                                  <Icon className="w-3 h-3" />
-                                </div>
-                                <span className="text-[10px] font-bold text-white flex-1">{ins.title}</span>
-                                {ins.metric && <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full ${ins.color === 'emerald' ? 'text-emerald-400 bg-emerald-500/10' : ins.color === 'rose' ? 'text-rose-400 bg-rose-500/10' : ins.color === 'amber' ? 'text-amber-400 bg-amber-500/10' : ins.color === 'cyan' ? 'text-cyan-400 bg-cyan-500/10' : 'text-violet-400 bg-violet-500/10'}`}>{ins.metric}</span>}
-                              </div>
-                              <div className="ml-8 space-y-1">
-                                {ins.items.map((item, j) => (
-                                  <div key={j} className={`text-[9px] leading-relaxed ${item.color ? txtClr[item.color] || 'text-gray-400' : 'text-gray-400'}`}>
-                                    {item.text}
+                            <motion.div key={i} initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
+                              <details className="group" open={i === 0}>
+                                <summary className="px-3.5 py-2.5 hover:bg-white/[0.02] transition-colors cursor-pointer list-none flex items-center gap-2">
+                                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${clrMap[ins.color] || 'text-gray-400 bg-gray-500/[0.06]'}`}>
+                                    <Icon className="w-3 h-3" />
                                   </div>
-                                ))}
-                              </div>
+                                  <span className="text-[10px] font-bold text-white flex-1">{ins.title}</span>
+                                  {ins.metric && <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full ${ins.color === 'emerald' ? 'text-emerald-400 bg-emerald-500/10' : ins.color === 'rose' ? 'text-rose-400 bg-rose-500/10' : ins.color === 'amber' ? 'text-amber-400 bg-amber-500/10' : ins.color === 'cyan' ? 'text-cyan-400 bg-cyan-500/10' : 'text-violet-400 bg-violet-500/10'}`}>{ins.metric}</span>}
+                                  <ChevronRight className="w-3 h-3 text-gray-500 group-open:rotate-90 transition-transform duration-200" />
+                                </summary>
+                                <div className="px-3.5 pb-3 ml-8 space-y-1">
+                                  {ins.items.map((item, j) => (
+                                    <div key={j} className={`text-[9px] leading-relaxed ${item.color ? txtClr[item.color] || 'text-gray-400' : 'text-gray-400'}`}>
+                                      {item.text}
+                                    </div>
+                                  ))}
+                                </div>
+                              </details>
                             </motion.div>
                           )
                         })}
@@ -1149,50 +1151,50 @@ export function SupplementTracker() {
                                 const circumference = 2 * Math.PI * 16
                                 const offset = circumference * (1 - healthScore / 100)
                                 return (
-                                  <div key={name} className="snap-start shrink-0 w-[135px] rounded-2xl p-3 bg-white/[0.02] border border-white/[0.04]">
-                                    <div className="flex items-center gap-2.5 mb-2.5">
+                                  <div key={name} className="snap-start shrink-0 w-[160px] rounded-2xl p-3.5 bg-white/[0.02] border border-white/[0.04]">
+                                    <div className="flex items-center gap-2.5 mb-3">
                                       <div className="relative">
-                                        <svg viewBox="0 0 40 40" className="w-10 h-10 -rotate-90">
+                                        <svg viewBox="0 0 40 40" className="w-11 h-11 -rotate-90">
                                           <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2.5" />
                                           <circle cx="20" cy="20" r="16" fill="none" stroke={sys.color} strokeWidth="3" strokeLinecap="round"
                                             strokeDasharray={circumference} strokeDashoffset={offset} className="transition-all duration-700" />
                                         </svg>
                                         <div className="absolute inset-0 flex items-center justify-center">
-                                          <Icon className="w-4 h-4" style={{ color: sys.color }} />
+                                          <Icon className="w-4.5 h-4.5" style={{ color: sys.color }} />
                                         </div>
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <div className="text-[10px] font-bold text-white truncate">{name}</div>
-                                        <div className="text-[7px] text-gray-500">{matched.length} supp{matched.length > 1 ? 's' : ''}</div>
+                                        <div className="text-[11px] font-bold text-white truncate">{name}</div>
+                                        <div className="text-[8px] text-gray-500">{matched.length} supp{matched.length > 1 ? 's' : ''}</div>
                                       </div>
-                                      <span className="text-[12px] font-black" style={{ color: sys.color }}>{healthScore}</span>
+                                      <span className="text-[14px] font-black" style={{ color: sys.color }}>{healthScore}</span>
                                     </div>
-                                    <div className="space-y-1 mb-2">
+                                    <div className="space-y-1.5 mb-2.5">
                                       <div>
                                         <div className="flex justify-between mb-0.5">
-                                          <span className="text-[7px] text-gray-600">coverage</span>
-                                          <span className="text-[7px] font-bold" style={{ color: sys.color }}>{coverage}%</span>
+                                          <span className="text-[8px] text-gray-600">coverage</span>
+                                          <span className="text-[8px] font-bold" style={{ color: sys.color }}>{coverage}%</span>
                                         </div>
-                                        <div className="h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                                        <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
                                           <div className="h-full rounded-full" style={{ width: `${coverage}%`, background: sys.color }} />
                                         </div>
                                       </div>
                                       <div>
                                         <div className="flex justify-between mb-0.5">
-                                          <span className="text-[7px] text-gray-600">adherence</span>
-                                          <span className="text-[7px] font-bold" style={{ color: sys.color }}>{adherence}%</span>
+                                          <span className="text-[8px] text-gray-600">adherence</span>
+                                          <span className="text-[8px] font-bold" style={{ color: sys.color }}>{adherence}%</span>
                                         </div>
-                                        <div className="h-1 rounded-full bg-white/[0.04] overflow-hidden">
-                                          <div className="h-full rounded-full" style={{ width: `${adherence}%`, background: `${sys.color}aa` }} />
+                                        <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                                          <div className="h-full rounded-full" style={{ width: `${Math.min(adherence, 100)}%`, background: `${sys.color}aa` }} />
                                         </div>
                                       </div>
                                     </div>
-                                    <div className="space-y-0.5">
+                                    <div className="space-y-1">
                                       {matchedDetails.slice(0, 3).map((md, i) => (
                                         <div key={i} className="flex items-center gap-1.5">
                                           <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${md.taken === md.total ? 'bg-emerald-400' : md.taken > 0 ? 'bg-amber-400' : 'bg-gray-600'}`} />
                                           <span className="text-[8px] text-gray-400 flex-1 truncate">{md.name}</span>
-                                          <span className="text-[7px] font-bold text-gray-500">{md.taken}/{md.total}</span>
+                                          <span className="text-[8px] font-bold text-gray-500">{md.taken}/{md.total}</span>
                                         </div>
                                       ))}
                                     </div>
