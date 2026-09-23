@@ -863,7 +863,7 @@ export function SupplementTracker() {
                   return sorted[0].name
                 })()
 
-                // ── AI Insights: Clean, readable data ──
+                // ── AI Insights: Advice, ideas, companions ──
                 const getSuppRate = (suppId: string, days: number) => {
                   let taken = 0
                   for (let i = 0; i < days; i++) {
@@ -873,17 +873,24 @@ export function SupplementTracker() {
                   return Math.round((taken / days) * 100)
                 }
 
-                const absorptionDB: Record<string, string> = {
-                  'Vitamin D': 'with fatty meal', 'Omega-3': 'with fatty meal',
-                  'Iron': 'empty stomach + vit C', 'Magnesium': 'bedtime',
-                  'B12': 'morning empty stomach', 'Zinc': 'with food',
-                  'Creatine': 'any time', 'Whey Protein': 'post-workout',
-                  'Probiotics': '30min pre-meal', 'Collagen': 'empty stomach',
-                  'CoQ10': 'with fatty meal', 'Curcumin': 'with pepper + fat',
+                // Detailed advice database
+                const adviceDB = {
+                  'Vitamin D': { when: 'Morning with breakfast', how: 'Take with healthy fat for 3x absorption', tip: '3x more absorbable with K2', pairs: ['Vitamin K2', 'Magnesium', 'Omega-3'], avoid: ['Iron', 'Calcium'], ideas: ['Stack with K2 to direct calcium to bones', 'Take with magnesium for D3 activation', 'Combine with omega-3 for immune synergy'] },
+                  'Omega-3': { when: 'With largest meal', how: 'Take with fatty meal for 2x absorption', tip: 'Freeze capsules to reduce fish burps', pairs: ['Vitamin D', 'CoQ10', 'Vitamin E'], avoid: [], ideas: ['Take with vitamin D for heart + immune combo', 'Pair with CoQ10 for mitochondrial energy', 'Use before bed for anti-inflammatory recovery'] },
+                  'Iron': { when: 'Empty stomach, morning', how: 'Take with vitamin C for 6x absorption', tip: 'Avoid coffee/tea within 1h', pairs: ['Vitamin C'], avoid: ['Calcium', 'Zinc', 'Coffee', 'Tea'], ideas: ['Pair with vitamin C for maximum absorption', 'Take on alternate days if stomach sensitive', 'Combine with B12 for energy boost'] },
+                  'Magnesium': { when: 'Bedtime', how: 'Take 30min before sleep for relaxation', tip: 'Glycinate for sleep, Threonate for brain', pairs: ['Vitamin D', 'Zinc', 'B6'], avoid: ['Calcium'], ideas: ['Take with zinc for better sleep quality', 'Pair with vitamin D for activation', 'Use glycinate form for muscle recovery'] },
+                  'Zinc': { when: 'With food, evening', how: 'Take with dinner to avoid nausea', tip: 'Pair with copper if taking long-term', pairs: ['Copper', 'Vitamin C'], avoid: ['Iron', 'Calcium'], ideas: ['Take with food to avoid stomach upset', 'Pair with vitamin C for immune boost', 'Combine with magnesium for sleep support'] },
+                  'Creatine': { when: 'Any time, daily', how: 'Take consistently, timing does not matter', tip: '3 to 5g daily is optimal', pairs: ['Whey Protein', 'Beta-Alanine'], avoid: [], ideas: ['Mix with protein shake post-workout', 'Take with carbs for better uptake', 'Combine with beta-alanine for performance'] },
+                  'B12': { when: 'Morning, empty stomach', how: 'Sublingual for 2x absorption', tip: 'Methylcobalamin form is best', pairs: ['Folate', 'Iron', 'B6'], avoid: [], ideas: ['Take sublingual for faster absorption', 'Pair with folate for energy production', 'Combine with iron for blood health'] },
+                  'Collagen': { when: 'Empty stomach, morning', how: 'Take 30min before food', tip: 'Add vitamin C to boost synthesis 8x', pairs: ['Vitamin C', 'Hyaluronic Acid'], avoid: [], ideas: ['Take with vitamin C for skin elasticity', 'Pair with hyaluronic acid for joint health', 'Add to coffee for convenient daily dose'] },
+                  'Probiotics': { when: '30min before meal', how: 'Take before breakfast', tip: 'Refrigerate for potency', pairs: ['Prebiotics', 'Fiber'], avoid: [], ideas: ['Take before breakfast for colonization', 'Pair with prebiotic fiber for survival', 'Rotate strains monthly for diversity'] },
+                  'CoQ10': { when: 'With fatty meal', how: 'Take with lunch or dinner', tip: 'Ubiquinol form is 3x more absorbable', pairs: ['Omega-3', 'Vitamin E'], avoid: [], ideas: ['Pair with omega-3 for heart synergy', 'Take with fat for absorption', 'Use ubiquinol form for results'] },
+                  'Curcumin': { when: 'With fat + pepper', how: 'Take with black pepper for 20x absorption', tip: 'Always take with fat', pairs: ['Black Pepper', 'Omega-3'], avoid: [], ideas: ['Add black pepper for 20x absorption', 'Take with omega-3 for anti-inflammatory stack', 'Combine with bromelain for pain relief'] },
                 }
-                const getTip = (name: string) => {
-                  const match = Object.entries(absorptionDB).find(([k]) => name.toLowerCase().includes(k.toLowerCase()))
-                  return match ? match[1] : ''
+
+                const getAdvice = (name: string) => {
+                  const match = Object.entries(adviceDB).find(([k]) => name.toLowerCase().includes(k.toLowerCase()))
+                  return match ? match[1] : null
                 }
 
                 const allSuppData = deduped.map(s => {
@@ -893,7 +900,7 @@ export function SupplementTracker() {
                   const rate7 = getSuppRate(s.id, 7)
                   const rate30 = getSuppRate(s.id, 30)
                   const times = s.times || []
-                  const tip = getTip(s.name)
+                  const advice = getAdvice(s.name)
                   const refill = refillData.find(r => r.name === s.name || r.name.includes(s.name.split(' ')[0]))
                   const suppInt = SUPP_INTERACTIONS.filter(x =>
                     s.name.toLowerCase().includes(x.a.toLowerCase()) ||
@@ -902,102 +909,81 @@ export function SupplementTracker() {
                   const conflicts = suppInt.filter(x => x.type === 'conflict')
                   const synergies = suppInt.filter(x => x.type === 'synergy')
                   const trend = rate7 - rate30
-                  return { name: s.name, dosage: s.dosage, done, dosesTaken, dosesTotal, rate7, rate30, times, tip, refill, conflicts, synergies, trend }
+                  return { name: s.name, dosage: s.dosage, done, dosesTaken, dosesTotal, rate7, rate30, times, advice, refill, conflicts, synergies, trend }
                 })
 
-                // ── 3 Clean Insights ──
+                // ── 3 Insights: Advice, Companions, Ideas ──
                 const insights: { icon: typeof Zap; title: string; items: { text: string; color?: string }[]; color: string; metric?: string }[] = []
+                const suppNames = deduped.map((s: { name: string }) => s.name.toLowerCase())
 
-                // INSIGHT 1: YOUR STACK — every supplement with status
+                // INSIGHT 1: HOW TO TAKE — timing, absorption, tips for each supplement
                 {
-                  const notTaken = allSuppData.filter(s => !s.done)
-                  const dueNow = notTaken.filter(s => s.times.includes(currentTod))
-                  const takenCount = allSuppData.length - notTaken.length
-
-                  const stackItems = allSuppData.map(sd => {
-                    const icon = sd.done ? '✓' : '○'
-                    const arrow = sd.trend > 5 ? ' ↑' : sd.trend < -5 ? ' ↓' : ''
-                    const tipText = !sd.done && sd.tip ? ` — ${sd.tip}` : ''
-                    return { text: `${icon} ${sd.name} ${sd.dosage}  ${sd.rate7}%${arrow}${tipText}`, color: sd.done ? 'emerald' : 'amber' }
+                  const items: { text: string; color?: string }[] = []
+                  allSuppData.forEach(sd => {
+                    if (sd.advice) {
+                      items.push({ text: `${sd.name}: ${sd.advice.when} — ${sd.advice.how}`, color: 'cyan' })
+                      if (sd.advice.tip) items.push({ text: `  tip: ${sd.advice.tip}` })
+                    } else {
+                      items.push({ text: `${sd.name}: Take at ${sd.times[0] || 'any time'} — ${sd.dosage}` })
+                    }
                   })
-
-                  if (dueNow.length > 0) stackItems.push({ text: `→ take ${dueNow[0].name} ${dueNow[0].dosage} now`, color: 'cyan' })
-                  else if (notTaken.length > 0) stackItems.push({ text: `→ next: ${notTaken[0].name} at ${notTaken[0].times[0] || 'later'}`, color: 'cyan' })
-
-                  const metric = `${takenCount}/${allSuppData.length}`
-                  const color = takenCount === allSuppData.length ? 'emerald' : complianceRate >= 80 ? 'cyan' : 'amber'
-                  insights.push({ icon: Zap, title: 'Your Stack', items: stackItems, color, metric })
+                  const color = items.length > 0 ? 'cyan' : 'emerald'
+                  insights.push({ icon: Clock, title: 'How to Take', items, color, metric: `${allSuppData.length} supplements` })
                 }
 
-                // INSIGHT 2: SMART ANALYSIS — issues from ALL data
+                // INSIGHT 2: COMPANION STACK — what pairs well, what's missing
                 {
                   const items: { text: string; color?: string }[] = []
 
-                  const allConflicts = allSuppData.flatMap(s => s.conflicts.map(c => ({ text: `${c.a} + ${c.b} — ${c.message}`, color: 'rose' as const })))
-                  items.push(...allConflicts)
+                  // What pairs well from YOUR stack
+                  allSuppData.forEach(sd => {
+                    if (sd.advice && sd.advice.pairs.length > 0) {
+                      const hasPairs = sd.advice.pairs.filter(p => suppNames.some(n => n.includes(p.toLowerCase())))
+                      if (hasPairs.length > 0) items.push({ text: `${sd.name} + ${hasPairs.join(', ')} — ${sd.advice.pairs.filter(p => hasPairs.includes(p)).map(p => getAdvice(p)?.tip || '').filter(Boolean).join('; ') || 'great synergy'}`, color: 'emerald' })
+                    }
+                  })
 
-                  const weakest = allSuppData.filter(s => s.rate7 < 80 && s.dosesTaken > 0).sort((a, b) => a.rate7 - b.rate7)[0]
-                  if (weakest) {
-                    const missed = 7 - Math.round(weakest.rate7 / 100 * 7)
-                    items.push({ text: `${weakest.name} at ${weakest.rate7}% — ${missed} doses missed this week`, color: 'amber' })
-                  }
+                  // What's missing from your stack
+                  const allPairs = allSuppData.flatMap(sd => sd.advice?.pairs || [])
+                  const uniquePairs = [...new Set(allPairs)]
+                  const missing = uniquePairs.filter(p => !suppNames.some(n => n.includes(p.toLowerCase())))
+                  if (missing.length > 0) items.push({ text: `Consider adding: ${missing.slice(0, 3).join(', ')} — pairs with your current stack`, color: 'amber' })
 
-                  const suppNames = deduped.map(s => s.name.toLowerCase())
-                  if (!suppNames.some(n => n.includes('vitamin k') || n.includes('k2')) && suppNames.some(n => n.includes('vitamin d'))) {
-                    items.push({ text: 'Add K2 — D3 without K2 wastes 47% of calcium', color: 'amber' })
-                  }
-                  if (!suppNames.some(n => n.includes('magnesium'))) {
-                    items.push({ text: 'Add Magnesium — required for D3 activation', color: 'amber' })
-                  }
+                  // Conflicts to watch
+                  allSuppData.forEach(sd => {
+                    if (sd.advice && sd.advice.avoid.length > 0) {
+                      const hasAvoid = sd.advice.avoid.filter(a => suppNames.some(n => n.includes(a.toLowerCase())))
+                      if (hasAvoid.length > 0) items.push({ text: `⚠ ${sd.name} — avoid ${hasAvoid.join(', ')} (separate by 2h)`, color: 'rose' })
+                    }
+                  })
 
-                  const critical = allSuppData.filter(s => s.refill && s.refill.urgency === 'critical')
-                  const warnings = allSuppData.filter(s => s.refill && s.refill.urgency === 'warning')
-                  if (critical.length > 0) items.push({ text: `Order now: ${critical.map(s => `${s.name} (${s.refill!.daysUntilRefill}d left)`).join(', ')}`, color: 'rose' })
-                  else if (warnings.length > 0) items.push({ text: `Reorder soon: ${warnings.map(s => `${s.name} (${s.refill!.daysUntilRefill}d left)`).join(', ')}`, color: 'amber' })
+                  if (items.length === 0) items.push({ text: 'No conflicts detected — stack is well balanced', color: 'emerald' })
 
-                  const avg7 = Math.round(suppAdherence.reduce((s, a) => s + a.rate7, 0) / suppAdherence.length)
-                  const avg30 = Math.round(suppAdherence.reduce((s, a) => s + a.rate30, 0) / suppAdherence.length)
-                  const delta = avg7 - avg30
-                  if (Math.abs(delta) >= 5) items.push({ text: `${delta > 0 ? 'Momentum ↑' : 'Dropping ↓'} ${Math.abs(delta)}% — 7d: ${avg7}% vs 30d: ${avg30}%`, color: delta > 0 ? 'emerald' : 'rose' })
-
-                  if (items.length === 0) items.push({ text: 'All supplements performing well', color: 'emerald' })
-
-                  const color = allConflicts.length > 0 ? 'rose' : critical.length > 0 ? 'rose' : weakest ? 'amber' : 'emerald'
-                  insights.push({ icon: Brain, title: 'Smart Analysis', items, color, metric: 'insights' })
+                  const color = items.some(i => i.color === 'rose') ? 'rose' : items.some(i => i.color === 'amber') ? 'amber' : 'emerald'
+                  insights.push({ icon: Layers, title: 'Companion Stack', items, color, metric: 'synergy' })
                 }
 
-                // INSIGHT 3: TODAY'S PLAN — step by step
+                // INSIGHT 3: IDEAS & HACKS — creative ways to use your supplements
                 {
                   const items: { text: string; color?: string }[] = []
-                  const notTaken = allSuppData.filter(s => !s.done)
-                  const timeOrder = ['Morning', 'Afternoon', 'Evening', 'Night']
-                  const curIdx = timeOrder.indexOf(currentTod)
-
-                  const dueNow = notTaken.filter(s => s.times.includes(currentTod))
-                  dueNow.forEach(s => items.push({ text: `${s.name} ${s.dosage} ${s.tip}`, color: 'cyan' }))
-
-                  const upcoming = notTaken.filter(s => {
-                    const slot = s.times[0] || 'Morning'
-                    return timeOrder.indexOf(slot) > curIdx && !dueNow.includes(s)
+                  allSuppData.forEach(sd => {
+                    if (sd.advice && sd.advice.ideas.length > 0) {
+                      sd.advice.ideas.forEach(idea => items.push({ text: `${sd.name}: ${idea}` }))
+                    }
                   })
-                  upcoming.forEach(s => items.push({ text: `${s.times[0]}: ${s.name} ${s.dosage}` }))
 
-                  const critSupply = refillData.filter(r => r.urgency === 'critical')
-                  if (critSupply.length > 0) items.push({ text: `Order: ${critSupply.map(r => r.name).join(', ')} (${critSupply[0].daysUntilRefill}d left)`, color: 'rose' })
-
-                  const sn = deduped.map(s => s.name)
-                  const foundInt = SUPP_INTERACTIONS.filter(x =>
-                    sn.some(n => n.toLowerCase().includes(x.a.toLowerCase())) &&
-                    sn.some(n => n.toLowerCase().includes(x.b.toLowerCase()))
-                  )
-                  const conflictPairs = foundInt.filter(x => x.type === 'conflict')
-                  if (conflictPairs.length > 0) items.push({ text: `Separate ${conflictPairs[0].a} & ${conflictPairs[0].b} by 2h`, color: 'amber' })
-
-                  if (items.length === 0 && notTaken.length === 0) items.push({ text: 'Stack complete — nothing to do', color: 'emerald' })
-
-                  if (items.length > 0) {
-                    insights.push({ icon: Sparkles, title: "Today's Plan", items, color: 'cyan', metric: `${items.length} steps` })
+                  // Stack combos
+                  if (allSuppData.length >= 2) {
+                    const combos: string[] = []
+                    if (suppNames.some(n => n.includes('creatine')) && suppNames.some(n => n.includes('whey'))) combos.push('Creatine + Whey post-workout — muscle synthesis')
+                    if (suppNames.some(n => n.includes('omega')) && suppNames.some(n => n.includes('vitamin d'))) combos.push('Omega-3 + D3 — heart + immune powerhouse')
+                    if (suppNames.some(n => n.includes('magnesium')) && suppNames.some(n => n.includes('zinc'))) combos.push('Mg + Zn at bedtime — deep sleep stack')
+                    combos.forEach(c => items.push({ text: c, color: 'violet' }))
                   }
+
+                  if (items.length === 0) items.push({ text: 'Take supplements consistently for best results', color: 'emerald' })
+
+                  insights.push({ icon: Sparkles, title: 'Ideas & Hacks', items, color: 'violet', metric: 'tips' })
                 }
 
                 const finalInsights = insights.slice(0, 3)
@@ -1155,61 +1141,58 @@ export function SupplementTracker() {
                               <span className="text-[8px] font-black" style={{ color: overallScore >= 80 ? '#10b981' : overallScore >= 50 ? '#f59e0b' : '#ef4444' }}>{overallScore}%</span>
                               <span className="text-[6px] text-gray-600">body score</span>
                             </div>
-                            {/* System cards — clean horizontal scroll */}
+                            {/* System cards — fit box, horizontal scroll */}
                             <div className="relative">
-                              <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                              <div className="flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                               {scored.map(({ name, sys, matched, coverage, adherence, healthScore, matchedDetails }) => {
                                 const Icon = sys.icon
-                                const circumference = 2 * Math.PI * 20
+                                const circumference = 2 * Math.PI * 16
                                 const offset = circumference * (1 - healthScore / 100)
                                 return (
-                                  <div key={name} className="snap-start shrink-0 w-[155px] rounded-2xl p-3.5 bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-all">
-                                    {/* Header: ring + name */}
-                                    <div className="flex items-center gap-3 mb-3">
+                                  <div key={name} className="snap-start shrink-0 w-[135px] rounded-2xl p-3 bg-white/[0.02] border border-white/[0.04]">
+                                    <div className="flex items-center gap-2.5 mb-2.5">
                                       <div className="relative">
-                                        <svg viewBox="0 0 48 48" className="w-12 h-12 -rotate-90">
-                                          <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
-                                          <circle cx="24" cy="24" r="20" fill="none" stroke={sys.color} strokeWidth="3.5" strokeLinecap="round"
+                                        <svg viewBox="0 0 40 40" className="w-10 h-10 -rotate-90">
+                                          <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2.5" />
+                                          <circle cx="20" cy="20" r="16" fill="none" stroke={sys.color} strokeWidth="3" strokeLinecap="round"
                                             strokeDasharray={circumference} strokeDashoffset={offset} className="transition-all duration-700" />
                                         </svg>
                                         <div className="absolute inset-0 flex items-center justify-center">
-                                          <Icon className="w-5 h-5" style={{ color: sys.color }} />
+                                          <Icon className="w-4 h-4" style={{ color: sys.color }} />
                                         </div>
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <div className="text-[11px] font-bold text-white truncate">{name}</div>
-                                        <div className="text-[8px] text-gray-500">{matched.length} supp{matched.length > 1 ? 's' : ''}</div>
-                                        <div className="text-[14px] font-black mt-0.5" style={{ color: sys.color }}>{healthScore}</div>
+                                        <div className="text-[10px] font-bold text-white truncate">{name}</div>
+                                        <div className="text-[7px] text-gray-500">{matched.length} supp{matched.length > 1 ? 's' : ''}</div>
                                       </div>
+                                      <span className="text-[12px] font-black" style={{ color: sys.color }}>{healthScore}</span>
                                     </div>
-                                    {/* Bars */}
-                                    <div className="space-y-1.5 mb-2.5">
+                                    <div className="space-y-1 mb-2">
                                       <div>
                                         <div className="flex justify-between mb-0.5">
-                                          <span className="text-[8px] text-gray-500">coverage</span>
-                                          <span className="text-[8px] font-bold" style={{ color: sys.color }}>{coverage}%</span>
+                                          <span className="text-[7px] text-gray-600">coverage</span>
+                                          <span className="text-[7px] font-bold" style={{ color: sys.color }}>{coverage}%</span>
                                         </div>
-                                        <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                                        <div className="h-1 rounded-full bg-white/[0.04] overflow-hidden">
                                           <div className="h-full rounded-full" style={{ width: `${coverage}%`, background: sys.color }} />
                                         </div>
                                       </div>
                                       <div>
                                         <div className="flex justify-between mb-0.5">
-                                          <span className="text-[8px] text-gray-500">adherence</span>
-                                          <span className="text-[8px] font-bold" style={{ color: sys.color }}>{adherence}%</span>
+                                          <span className="text-[7px] text-gray-600">adherence</span>
+                                          <span className="text-[7px] font-bold" style={{ color: sys.color }}>{adherence}%</span>
                                         </div>
-                                        <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                                        <div className="h-1 rounded-full bg-white/[0.04] overflow-hidden">
                                           <div className="h-full rounded-full" style={{ width: `${adherence}%`, background: `${sys.color}aa` }} />
                                         </div>
                                       </div>
                                     </div>
-                                    {/* Supplements */}
-                                    <div className="space-y-1">
+                                    <div className="space-y-0.5">
                                       {matchedDetails.slice(0, 3).map((md, i) => (
-                                        <div key={i} className="flex items-center gap-2">
-                                          <div className={`w-2 h-2 rounded-full shrink-0 ${md.taken === md.total ? 'bg-emerald-400' : md.taken > 0 ? 'bg-amber-400' : 'bg-gray-600'}`} />
-                                          <span className="text-[9px] text-gray-400 flex-1 truncate">{md.name}</span>
-                                          <span className="text-[8px] font-bold text-gray-500">{md.taken}/{md.total}</span>
+                                        <div key={i} className="flex items-center gap-1.5">
+                                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${md.taken === md.total ? 'bg-emerald-400' : md.taken > 0 ? 'bg-amber-400' : 'bg-gray-600'}`} />
+                                          <span className="text-[8px] text-gray-400 flex-1 truncate">{md.name}</span>
+                                          <span className="text-[7px] font-bold text-gray-500">{md.taken}/{md.total}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -1218,8 +1201,8 @@ export function SupplementTracker() {
                               })}
                               </div>
                               {scored.length > 2 && (
-                                <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-[#0b0b12] to-transparent pointer-events-none flex items-center justify-end pr-1">
-                                  <ChevronRight className="w-3 h-3 text-gray-500 animate-pulse" />
+                                <div className="absolute right-0 top-0 bottom-1 w-6 bg-gradient-to-l from-[#0b0b12] to-transparent pointer-events-none flex items-center justify-end">
+                                  <ChevronRight className="w-2.5 h-2.5 text-gray-500 animate-pulse" />
                                 </div>
                               )}
                             </div>
