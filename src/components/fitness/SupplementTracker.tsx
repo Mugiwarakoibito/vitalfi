@@ -932,56 +932,97 @@ export function SupplementTracker() {
                   insights.push({ icon: Clock, title: 'How to Take', items, color, metric: `${allSuppData.length} supplements` })
                 }
 
-                // INSIGHT 2: OPTIMAL TIMING — when to take what for best results
+                // INSIGHT 2: OPTIMAL TIMING — smart schedule + spacing + next dose
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
+                  const now = new Date()
+                  const currentHour = now.getHours()
 
-                  // Group by optimal time
-                  const morning: string[] = []
-                  const afternoon: string[] = []
-                  const evening: string[] = []
-                  const anytime: string[] = []
+                  // Current time context
+                  const timeOfDay = currentHour < 10 ? 'morning' : currentHour < 15 ? 'afternoon' : currentHour < 20 ? 'evening' : 'night'
+
+                  // Group by optimal time with reasons
+                  const morning: { name: string; reason: string }[] = []
+                  const afternoon: { name: string; reason: string }[] = []
+                  const evening: { name: string; reason: string }[] = []
 
                   allSuppData.forEach(sd => {
-                    const name = sd.name.split(' ')[0]
+                    const short = sd.name.split(' ')[0]
                     const when = sd.advice?.when?.toLowerCase() || ''
                     const how = sd.advice?.how?.toLowerCase() || ''
 
                     if (when.includes('morning') || when.includes('empty stomach') || how.includes('morning') || how.includes('breakfast')) {
-                      morning.push(name)
+                      morning.push({ name: short, reason: how.includes('fat') ? 'with fat' : when.includes('empty') ? 'empty stomach' : 'with breakfast' })
                     } else if (when.includes('bedtime') || when.includes('evening') || when.includes('night') || how.includes('sleep')) {
-                      evening.push(name)
-                    } else if (when.includes('lunch') || when.includes('afternoon')) {
-                      afternoon.push(name)
+                      evening.push({ name: short, reason: how.includes('sleep') ? 'promotes sleep' : 'with dinner' })
+                    } else if (when.includes('lunch') || when.includes('afternoon') || when.includes('fatty meal')) {
+                      afternoon.push({ name: short, reason: 'with lunch' })
                     } else {
-                      anytime.push(name)
+                      // Anytime — suggest based on current time
+                      if (timeOfDay === 'morning') morning.push({ name: short, reason: 'anytime' })
+                      else evening.push({ name: short, reason: 'anytime' })
                     }
                   })
 
-                  // Build schedule
-                  if (morning.length > 0) items.push({ text: `Morning: ${morning.join(', ')}`, color: 'cyan', badge: '🌅' })
-                  if (afternoon.length > 0) items.push({ text: `Afternoon: ${afternoon.join(', ')}`, color: 'amber', badge: '☀️' })
-                  if (evening.length > 0) items.push({ text: `Evening: ${evening.join(', ')}`, color: 'violet', badge: '🌙' })
-                  if (anytime.length > 0) items.push({ text: `Anytime: ${anytime.join(', ')}`, color: 'emerald', badge: '⏰' })
+                  // What to take NOW
+                  const nowItems: string[] = []
+                  if (timeOfDay === 'morning' || timeOfDay === 'afternoon') {
+                    morning.forEach(m => nowItems.push(m.name))
+                  } else {
+                    evening.forEach(e => nowItems.push(e.name))
+                    afternoon.forEach(a => nowItems.push(a.name))
+                  }
+                  if (nowItems.length > 0) {
+                    items.push({ text: `Take now: ${nowItems.join(', ')}`, color: 'emerald', badge: '▶' })
+                  }
 
-                  // Timing tips
+                  // AM Routine
+                  if (morning.length > 0) {
+                    const details = morning.map(m => `${m.name} (${m.reason})`).join(', ')
+                    items.push({ text: `AM: ${details}`, color: 'cyan', badge: '🌅' })
+                  }
+
+                  // PM Routine
+                  if (evening.length > 0) {
+                    const details = evening.map(e => `${e.name} (${e.reason})`).join(', ')
+                    items.push({ text: `PM: ${details}`, color: 'violet', badge: '🌙' })
+                  }
+
+                  // Afternoon
+                  if (afternoon.length > 0) {
+                    items.push({ text: `Midday: ${afternoon.map(a => a.name).join(', ')}`, color: 'amber', badge: '☀️' })
+                  }
+
+                  // Spacing rules (what to separate)
+                  const spacing: string[] = []
                   allSuppData.forEach(sd => {
-                    if (sd.advice?.how.includes('fat-soluble') || sd.advice?.when.includes('With fatty meal')) {
-                      items.push({ text: `${sd.name.split(' ')[0]}: take with fatty meal`, color: 'cyan', badge: '💡' })
-                    }
-                    if (sd.advice?.how.includes('empty stomach') || sd.advice?.when.includes('Empty stomach')) {
-                      items.push({ text: `${sd.name.split(' ')[0]}: take 30min before food`, color: 'cyan', badge: '💡' })
+                    if (sd.advice && sd.advice.avoid.length > 0) {
+                      const hasAvoid = sd.advice.avoid.filter(a => suppNames.some(n => n.includes(a.toLowerCase())))
+                      if (hasAvoid.length > 0) spacing.push(`${sd.name.split(' ')[0]} ↔ ${hasAvoid[0]}`)
                     }
                   })
+                  if (spacing.length > 0) items.push({ text: `Separate: ${spacing.join(', ')}`, color: 'rose', badge: '⚠' })
 
-                  // Gaps in schedule
-                  if (morning.length === 0 && evening.length === 0 && allSuppData.length > 0) {
-                    items.push({ text: 'No clear schedule yet — log consistently', color: 'amber', badge: '!' })
+                  // Fat-soluble reminders
+                  const fatSoluble = allSuppData.filter(sd => sd.advice?.how.includes('fat-soluble') || sd.advice?.when.includes('fatty meal') || sd.advice?.how.includes('with fat'))
+                  if (fatSoluble.length > 0) {
+                    items.push({ text: `Take with fat: ${fatSoluble.map(s => s.name.split(' ')[0]).join(', ')}`, color: 'cyan', badge: '🥑' })
+                  }
+
+                  // Next dose countdown
+                  const remaining = deduped.flatMap(s => s.doses.filter(d => !d.taken).map(d => ({ name: s.name.split(' ')[0], time: d.time })))
+                  if (remaining.length > 0) {
+                    const sorted = remaining.sort((a, b) => {
+                      const timeOrder = ['Morning', 'Afternoon', 'Evening', 'Night']
+                      return timeOrder.indexOf(a.time || 'Morning') - timeOrder.indexOf(b.time || 'Morning')
+                    })
+                    const next = sorted[0]
+                    items.push({ text: `Next: ${next.name} at ${next.time}`, color: 'emerald', badge: '→' })
                   }
 
                   if (items.length === 0) items.push({ text: 'Add supplements to see timing', color: 'amber', badge: '—' })
 
-                  insights.push({ icon: Clock, title: 'Optimal Timing', items, color: 'cyan', metric: `${morning.length + afternoon.length + evening.length + anytime.length} scheduled` })
+                  insights.push({ icon: Clock, title: 'Optimal Timing', items, color: 'cyan', metric: timeOfDay })
                 }
 
                 // INSIGHT 3: IDEAS & HACKS — smart tips + combos + trends
