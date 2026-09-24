@@ -1459,15 +1459,19 @@ export function SupplementTracker() {
               {/* ──── MODE: PLANNING ──── */}
               {coachMode === 'planning' && (() => {
                 const COLORS = ['#f59e0b', '#f97316', '#8b5cf6', '#6366f1', '#06b6d4', '#10b981']
-                const allSuppCostData = supplements.map((s, i) => ({
+                const dedupedSupps = Array.from(new Map(supplements.map(s => [s.name, s])).values())
+                const allSuppCostData = dedupedSupps.map((s, i) => ({
                   name: s.name,
                   cost: s.cost && s.totalServings && s.totalServings > 0 ? s.cost! : 0,
                   hasData: !!(s.cost && s.totalServings && s.totalServings > 0),
                   fill: COLORS[i % COLORS.length],
+                  refillDays: s.refillDays || 30,
+                  id: s.id,
                 }))
                 const totalAllCost = allSuppCostData.reduce((sum, s) => sum + s.cost, 0)
                 const suppsWithCost = allSuppCostData.filter(s => s.hasData)
                 const suppsWithoutCost = allSuppCostData.filter(s => !s.hasData)
+                const dedupedCostBreakdown = Array.from(new Map(costBreakdown.map(c => [c.name, c])).values())
                 return (
                 <div className="space-y-2.5">
                   {/* ═══ SPENDING ═══ */}
@@ -1477,9 +1481,9 @@ export function SupplementTracker() {
                     <div className="flex items-center gap-1.5 mb-3">
                       <DollarSign className="w-3 h-3 text-amber-400" />
                       <span className="text-[9px] font-bold text-white">Spending</span>
-                      <span className="text-[7px] text-gray-500 ml-auto">{supplements.length} supps</span>
+                      <span className="text-[7px] text-gray-500 ml-auto">{dedupedSupps.length} supps</span>
                     </div>
-                    {supplements.length > 0 ? (
+                    {dedupedSupps.length > 0 ? (
                       <div className="flex gap-3 items-center">
                         {/* Donut */}
                         <div className="relative w-[92px] h-[92px] shrink-0">
@@ -1540,81 +1544,73 @@ export function SupplementTracker() {
                       {criticalRefills.length > 0 && <span className="text-[7px] font-black text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded-full">{criticalRefills.length} urgent</span>}
                     </div>
 
-                    {/* Cost summary — 4 mini cards */}
-                    <div className="grid grid-cols-4 gap-1.5 mb-3">
+                    {/* Cost summary — horizontal strip */}
+                    <div className="flex gap-1 mb-3">
                       {[
-                        { label: 'Day', value: costPerDay, icon: '☀' },
-                        { label: 'Week', value: costPerWeek, icon: '📅' },
-                        { label: 'Month', value: monthlyProjection, icon: '📊' },
-                        { label: 'Year', value: yearlyProjection, icon: '🎯' },
+                        { label: 'Day', value: costPerDay, color: 'text-emerald-400' },
+                        { label: 'Week', value: costPerWeek, color: 'text-cyan-400' },
+                        { label: 'Month', value: monthlyProjection, color: 'text-amber-300' },
+                        { label: 'Year', value: yearlyProjection, color: 'text-violet-400' },
                       ].map((item) => (
-                        <div key={item.label} className="relative text-center p-2 rounded-xl bg-gradient-to-b from-white/[0.03] to-white/[0.01] border border-white/[0.05] overflow-hidden">
-                          <span className="text-[10px] font-black text-white/60 block leading-none mb-0.5">{item.icon}</span>
-                          <span className="text-[11px] font-black text-amber-300 block leading-none">${item.value}</span>
-                          <span className="text-[5px] text-gray-500 font-bold uppercase mt-0.5 block">{item.label}</span>
+                        <div key={item.label} className="flex-1 text-center py-1.5 px-1 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                          <span className={`text-[11px] font-black ${item.color} block leading-none`}>${item.value}</span>
+                          <span className="text-[5px] text-gray-500 font-bold uppercase">{item.label}</span>
                         </div>
                       ))}
                     </div>
 
-                    {/* Refill list — horizontal pill cards */}
-                    {refillData.length > 0 && (
-                      <div className="space-y-1.5 mb-3 pt-2.5 border-t border-white/[0.04]">
-                        {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 4).map((r) => {
-                          const ringColor = r.urgency === 'critical' ? '#ef4444' : r.urgency === 'warning' ? '#f59e0b' : '#10b981'
-                          const ringBg = r.urgency === 'critical' ? 'rgba(239,68,68,0.08)' : r.urgency === 'warning' ? 'rgba(245,158,11,0.06)' : 'rgba(16,185,129,0.05)'
-                          const pct = Math.min(Math.max(r.pctUsed, 2), 100)
-                          const circumference = 2 * Math.PI * 8
-                          const dashOffset = circumference - (pct / 100) * circumference
+                    {/* Supplement cards — one per unique supplement */}
+                    {dedupedSupps.length > 0 && (
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {dedupedSupps.map((s) => {
+                          const refill = refillData.find(r => r.name === s.name)
+                          const cost = dedupedCostBreakdown.find(c => c.name === s.name)
+                          const daysLeft = refill ? refill.daysUntilRefill : null
+                          const pctUsed = refill ? refill.pctUsed : 0
+                          const urgency = refill ? refill.urgency : 'safe'
+                          const ringColor = urgency === 'critical' ? '#ef4444' : urgency === 'warning' ? '#f59e0b' : '#10b981'
+                          const circumference = 2 * Math.PI * 10
+                          const dashOffset = circumference - (Math.min(pctUsed, 100) / 100) * circumference
+                          const bgGlow = urgency === 'critical' ? 'from-rose-500/[0.06]' : urgency === 'warning' ? 'from-amber-500/[0.04]' : 'from-white/[0.02]'
                           return (
-                            <div key={r.id} className="flex items-center gap-2.5 p-2 rounded-xl border transition-all"
-                              style={{ background: ringBg, borderColor: ringColor + '18' }}>
-                              {/* Mini ring */}
-                              <div className="relative w-8 h-8 shrink-0">
-                                <svg className="w-8 h-8 -rotate-90" viewBox="0 0 20 20">
-                                  <circle cx="10" cy="10" r="8" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2" />
-                                  <circle cx="10" cy="10" r="8" fill="none" stroke={ringColor} strokeWidth="2" strokeLinecap="round"
-                                    strokeDasharray={circumference} strokeDashoffset={dashOffset} className="transition-all duration-700" />
-                                </svg>
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                  {r.urgency === 'critical' ? <AlertTriangle className="w-2.5 h-2.5" style={{ color: ringColor }} /> :
-                                   r.urgency === 'warning' ? <Clock className="w-2.5 h-2.5" style={{ color: ringColor }} /> :
-                                   <CheckCircle2 className="w-2.5 h-2.5" style={{ color: ringColor }} />}
+                            <div key={s.id || s.name} className={`relative rounded-xl bg-gradient-to-b ${bgGlow} to-white/[0.008] border border-white/[0.05] p-2.5 overflow-hidden`}>
+                              {/* Top row: ring + name + cost */}
+                              <div className="flex items-start gap-2 mb-1.5">
+                                <div className="relative w-7 h-7 shrink-0">
+                                  <svg className="w-7 h-7 -rotate-90" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2" />
+                                    <circle cx="12" cy="12" r="10" fill="none" stroke={ringColor} strokeWidth="2" strokeLinecap="round"
+                                      strokeDasharray={circumference} strokeDashoffset={dashOffset} className="transition-all duration-700" />
+                                  </svg>
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-[6px] font-black" style={{ color: ringColor }}>{daysLeft !== null ? daysLeft : '—'}</span>
+                                  </div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-[8px] font-bold text-white block truncate leading-tight">{s.name}</span>
+                                  {daysLeft !== null && (
+                                    <span className="text-[6px] font-bold" style={{ color: ringColor }}>
+                                      {daysLeft <= 0 ? 'EMPTY' : daysLeft + 'd left'}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[8px] font-bold text-white truncate">{r.name}</span>
-                                  <span className="text-[6px] font-bold" style={{ color: ringColor }}>
-                                    {r.daysUntilRefill <= 0 ? 'EMPTY' : r.daysUntilRefill + 'd'}
-                                  </span>
+                              {/* Bottom row: cost + status */}
+                              <div className="flex items-center justify-between">
+                                {cost ? (
+                                  <span className="text-[7px] font-bold text-amber-300/80 tabular-nums">${cost.perDay}/day</span>
+                                ) : (
+                                  <span className="text-[6px] text-gray-600">no cost</span>
+                                )}
+                                <div className="flex items-center gap-0.5">
+                                  {urgency === 'critical' && <AlertTriangle className="w-2 h-2 text-rose-400" />}
+                                  {urgency === 'warning' && <Clock className="w-2 h-2 text-amber-400" />}
+                                  {urgency === 'safe' && <CheckCircle2 className="w-2 h-2 text-emerald-500/50" />}
                                 </div>
-                                <span className="text-[6px] text-gray-500 block">{r.pctUsed}% of {r.refillDays}-day supply</span>
                               </div>
                             </div>
                           )
                         })}
-                      </div>
-                    )}
-
-                    {/* Cost breakdown — mini bars */}
-                    {costBreakdown.length > 0 && (
-                      <div className="pt-2.5 border-t border-white/[0.04]">
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <DollarSign className="w-2.5 h-2.5 text-amber-400/60" />
-                          <span className="text-[7px] font-bold text-gray-400 uppercase tracking-wider">Per Supplement</span>
-                        </div>
-                        <div className="space-y-1.5">
-                          {costBreakdown.slice(0, 4).map((c, i) => (
-                            <div key={i} className="flex items-center gap-1.5">
-                              <span className="text-[7px] text-gray-400 truncate w-14 shrink-0">{c.name}</span>
-                              <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                                <div className="h-full rounded-full bg-gradient-to-r from-amber-500/50 to-amber-400/70 transition-all duration-500"
-                                  style={{ width: c.pct + '%' }} />
-                              </div>
-                              <span className="text-[7px] font-bold text-amber-300/80 tabular-nums w-7 text-right">${c.perDay}</span>
-                            </div>
-                          ))}
-                        </div>
                       </div>
                     )}
                   </div>
