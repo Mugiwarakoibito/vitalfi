@@ -1053,7 +1053,7 @@ export function SupplementTracker() {
                   const morningSupps = allSuppData.filter(s => s.times.some(t => t === 'Morning'))
                   const eveningSupps = allSuppData.filter(s => s.times.some(t => t === 'Evening' || t === 'Night'))
                   if (morningSupps.length > 0 && eveningSupps.length > 0) {
-                    items.push({ text: `AM: ${morningSupps.map(s => s.name.split(' ')[0]).join(', ')} · PM: ${eveningSupps.map(s => s.name.split(' ')[0]).join(', ')}`, color: 'cyan', badge: '⏰' })
+                    items.push({ text: `Morning: ${morningSupps.map(s => s.name.split(' ')[0]).join(', ')} · Evening: ${eveningSupps.map(s => s.name.split(' ')[0]).join(', ')}`, color: 'cyan', badge: '⏰' })
                   }
 
                   if (items.length === 0) items.push({ text: 'Take supplements consistently', color: 'emerald', badge: '✓' })
