@@ -916,30 +916,41 @@ export function SupplementTracker() {
                 const insights: { icon: typeof Zap; title: string; items: { text: string; color?: string }[]; color: string; metric?: string }[] = []
                 const suppNames = deduped.map((s: { name: string }) => s.name.toLowerCase())
 
-                // INSIGHT 1: HOW TO TAKE — timing, absorption, tips for each supplement
+                // INSIGHT 1: HOW TO TAKE — every supplement with timing, how, tip, dosage
                 {
                   const items: { text: string; color?: string }[] = []
                   allSuppData.forEach(sd => {
+                    const timeLabel = sd.times[0] || 'Any time'
                     if (sd.advice) {
                       items.push({ text: `${sd.name}: ${sd.advice.when} — ${sd.advice.how}`, color: 'cyan' })
-                      if (sd.advice.tip) items.push({ text: `  tip: ${sd.advice.tip}` })
+                      if (sd.advice.tip) items.push({ text: `  Tip: ${sd.advice.tip}`, color: 'cyan' })
+                      if (sd.dosage) items.push({ text: `  Dose: ${sd.dosage}`, color: 'cyan' })
                     } else {
-                      items.push({ text: `${sd.name}: Take at ${sd.times[0] || 'any time'} — ${sd.dosage}` })
+                      items.push({ text: `${sd.name}: Take at ${timeLabel} — ${sd.dosage || 'standard dose'}`, color: 'cyan' })
                     }
+                    // adherence status
+                    const pct = sd.dosesTotal > 0 ? Math.round((sd.dosesTaken / sd.dosesTotal) * 100) : 0
+                    const status = pct === 100 ? 'taken today' : pct > 0 ? `${sd.dosesTaken}/${sd.dosesTotal} done` : 'not yet'
+                    items.push({ text: `  Status: ${status} (${sd.rate7}% this week)`, color: pct === 100 ? 'emerald' : pct > 0 ? 'amber' : 'rose' })
                   })
                   const color = items.length > 0 ? 'cyan' : 'emerald'
                   insights.push({ icon: Clock, title: 'How to Take', items, color, metric: `${allSuppData.length} supplements` })
                 }
 
-                // INSIGHT 2: COMPANION STACK — what pairs well, what's missing
+                // INSIGHT 2: COMPANION STACK — full synergy map, missing, conflicts
                 {
                   const items: { text: string; color?: string }[] = []
 
                   // What pairs well from YOUR stack
+                  let hasAnyPair = false
                   allSuppData.forEach(sd => {
                     if (sd.advice && sd.advice.pairs.length > 0) {
                       const hasPairs = sd.advice.pairs.filter(p => suppNames.some(n => n.includes(p.toLowerCase())))
-                      if (hasPairs.length > 0) items.push({ text: `${sd.name} + ${hasPairs.join(', ')} — ${sd.advice.pairs.filter(p => hasPairs.includes(p)).map(p => getAdvice(p)?.tip || '').filter(Boolean).join('; ') || 'great synergy'}`, color: 'emerald' })
+                      if (hasPairs.length > 0) {
+                        hasAnyPair = true
+                        const tips = sd.advice.pairs.filter(p => hasPairs.includes(p)).map(p => getAdvice(p)?.tip || '').filter(Boolean).join('; ')
+                        items.push({ text: `${sd.name} + ${hasPairs.join(', ')} — ${tips || 'great synergy'}`, color: 'emerald' })
+                      }
                     }
                   })
 
@@ -947,29 +958,46 @@ export function SupplementTracker() {
                   const allPairs = allSuppData.flatMap(sd => sd.advice?.pairs || [])
                   const uniquePairs = [...new Set(allPairs)]
                   const missing = uniquePairs.filter(p => !suppNames.some(n => n.includes(p.toLowerCase())))
-                  if (missing.length > 0) items.push({ text: `Consider adding: ${missing.slice(0, 3).join(', ')} — pairs with your current stack`, color: 'amber' })
+                  if (missing.length > 0) items.push({ text: `Consider adding: ${missing.slice(0, 4).join(', ')} — pairs with your current stack`, color: 'amber' })
 
                   // Conflicts to watch
                   allSuppData.forEach(sd => {
                     if (sd.advice && sd.advice.avoid.length > 0) {
                       const hasAvoid = sd.advice.avoid.filter(a => suppNames.some(n => n.includes(a.toLowerCase())))
-                      if (hasAvoid.length > 0) items.push({ text: `⚠ ${sd.name} — avoid ${hasAvoid.join(', ')} (separate by 2h)`, color: 'rose' })
+                      if (hasAvoid.length > 0) items.push({ text: `Warning: ${sd.name} — avoid ${hasAvoid.join(', ')} (separate by 2h)`, color: 'rose' })
                     }
                   })
 
-                  if (items.length === 0) items.push({ text: 'No conflicts detected — stack is well balanced', color: 'emerald' })
+                  // Synergy summary per supp
+                  allSuppData.forEach(sd => {
+                    if (sd.synergies && sd.synergies.length > 0) {
+                      items.push({ text: `${sd.name}: ${sd.synergies.map(s => `${s.b} — ${s.message}`).join(', ')}`, color: 'emerald' })
+                    }
+                  })
+
+                  if (!hasAnyPair && items.length === 0) items.push({ text: 'No synergy data yet — log more supplements for pair recommendations', color: 'amber' })
 
                   const color = items.some(i => i.color === 'rose') ? 'rose' : items.some(i => i.color === 'amber') ? 'amber' : 'emerald'
                   insights.push({ icon: Layers, title: 'Companion Stack', items, color, metric: 'synergy' })
                 }
 
-                // INSIGHT 3: IDEAS & HACKS — creative ways to use your supplements
+                // INSIGHT 3: IDEAS & HACKS — creative tips, combos, schedule suggestions
                 {
                   const items: { text: string; color?: string }[] = []
+
+                  // Per-supplement ideas
                   allSuppData.forEach(sd => {
                     if (sd.advice && sd.advice.ideas.length > 0) {
                       sd.advice.ideas.forEach(idea => items.push({ text: `${sd.name}: ${idea}` }))
+                    } else {
+                      items.push({ text: `${sd.name}: Take consistently at the same time each day for best results` })
                     }
+                  })
+
+                  // Trend insights
+                  allSuppData.forEach(sd => {
+                    if (sd.trend > 10) items.push({ text: `${sd.name}: Upward trend — ${sd.trend}% improvement this week`, color: 'emerald' })
+                    else if (sd.trend < -10) items.push({ text: `${sd.name}: Declining adherence — ${Math.abs(sd.trend)}% drop this week`, color: 'rose' })
                   })
 
                   // Stack combos
@@ -978,7 +1006,19 @@ export function SupplementTracker() {
                     if (suppNames.some(n => n.includes('creatine')) && suppNames.some(n => n.includes('whey'))) combos.push('Creatine + Whey post-workout — muscle synthesis')
                     if (suppNames.some(n => n.includes('omega')) && suppNames.some(n => n.includes('vitamin d'))) combos.push('Omega-3 + D3 — heart + immune powerhouse')
                     if (suppNames.some(n => n.includes('magnesium')) && suppNames.some(n => n.includes('zinc'))) combos.push('Mg + Zn at bedtime — deep sleep stack')
+                    if (suppNames.some(n => n.includes('iron')) && suppNames.some(n => n.includes('vitamin c'))) combos.push('Iron + Vitamin C — 6x absorption boost')
+                    if (suppNames.some(n => n.includes('curcumin')) && suppNames.some(n => n.includes('omega'))) combos.push('Curcumin + Omega-3 — anti-inflammatory stack')
                     combos.forEach(c => items.push({ text: c, color: 'violet' }))
+                  }
+
+                  // Schedule suggestion
+                  if (allSuppData.length >= 3) {
+                    const morning = allSuppData.filter(s => s.times.some(t => t === 'Morning'))
+                    const evening = allSuppData.filter(s => s.times.some(t => t === 'Evening' || t === 'Night'))
+                    if (morning.length > 0 && evening.length > 0) {
+                      items.push({ text: `Schedule: ${morning.map(s => s.name).join(', ')} in the morning`, color: 'violet' })
+                      items.push({ text: `Schedule: ${evening.map(s => s.name).join(', ')} in the evening`, color: 'violet' })
+                    }
                   }
 
                   if (items.length === 0) items.push({ text: 'Take supplements consistently for best results', color: 'emerald' })
@@ -1143,37 +1183,36 @@ export function SupplementTracker() {
                               <span className="text-[8px] font-black" style={{ color: overallScore >= 80 ? '#10b981' : overallScore >= 50 ? '#f59e0b' : '#ef4444' }}>{overallScore}%</span>
                               <span className="text-[6px] text-gray-600">body score</span>
                             </div>
-                            {/* System cards — fit box, horizontal scroll */}
-                            <div className="relative">
-                              <div className="flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            {/* System cards — grid fill */}
+                            <div className="grid grid-cols-3 gap-2">
                               {scored.map(({ name, sys, matched, coverage, adherence, healthScore, matchedDetails }) => {
                                 const Icon = sys.icon
                                 const circumference = 2 * Math.PI * 16
                                 const offset = circumference * (1 - healthScore / 100)
                                 return (
-                                  <div key={name} className="snap-start shrink-0 w-[160px] rounded-2xl p-3.5 bg-white/[0.02] border border-white/[0.04]">
-                                    <div className="flex items-center gap-2.5 mb-3">
+                                  <div key={name} className="rounded-2xl p-3 bg-white/[0.02] border border-white/[0.04]">
+                                    <div className="flex items-center gap-2 mb-2">
                                       <div className="relative">
-                                        <svg viewBox="0 0 40 40" className="w-11 h-11 -rotate-90">
+                                        <svg viewBox="0 0 40 40" className="w-9 h-9 -rotate-90">
                                           <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2.5" />
                                           <circle cx="20" cy="20" r="16" fill="none" stroke={sys.color} strokeWidth="3" strokeLinecap="round"
                                             strokeDasharray={circumference} strokeDashoffset={offset} className="transition-all duration-700" />
                                         </svg>
                                         <div className="absolute inset-0 flex items-center justify-center">
-                                          <Icon className="w-4.5 h-4.5" style={{ color: sys.color }} />
+                                          <Icon className="w-3.5 h-3.5" style={{ color: sys.color }} />
                                         </div>
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <div className="text-[11px] font-bold text-white truncate">{name}</div>
-                                        <div className="text-[8px] text-gray-500">{matched.length} supp{matched.length > 1 ? 's' : ''}</div>
+                                        <div className="text-[10px] font-bold text-white truncate">{name}</div>
+                                        <div className="text-[7px] text-gray-500">{matched.length} supp{matched.length > 1 ? 's' : ''}</div>
                                       </div>
-                                      <span className="text-[14px] font-black" style={{ color: sys.color }}>{healthScore}</span>
+                                      <span className="text-[13px] font-black" style={{ color: sys.color }}>{healthScore}</span>
                                     </div>
-                                    <div className="space-y-1.5 mb-2.5">
+                                    <div className="space-y-1 mb-2">
                                       <div>
                                         <div className="flex justify-between mb-0.5">
-                                          <span className="text-[8px] text-gray-600">coverage</span>
-                                          <span className="text-[8px] font-bold" style={{ color: sys.color }}>{coverage}%</span>
+                                          <span className="text-[7px] text-gray-600">coverage</span>
+                                          <span className="text-[7px] font-bold" style={{ color: sys.color }}>{coverage}%</span>
                                         </div>
                                         <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
                                           <div className="h-full rounded-full" style={{ width: `${coverage}%`, background: sys.color }} />
@@ -1181,32 +1220,26 @@ export function SupplementTracker() {
                                       </div>
                                       <div>
                                         <div className="flex justify-between mb-0.5">
-                                          <span className="text-[8px] text-gray-600">adherence</span>
-                                          <span className="text-[8px] font-bold" style={{ color: sys.color }}>{adherence}%</span>
+                                          <span className="text-[7px] text-gray-600">adherence</span>
+                                          <span className="text-[7px] font-bold" style={{ color: sys.color }}>{adherence}%</span>
                                         </div>
                                         <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
                                           <div className="h-full rounded-full" style={{ width: `${Math.min(adherence, 100)}%`, background: `${sys.color}aa` }} />
                                         </div>
                                       </div>
                                     </div>
-                                    <div className="space-y-1">
+                                    <div className="space-y-0.5">
                                       {matchedDetails.slice(0, 3).map((md, i) => (
                                         <div key={i} className="flex items-center gap-1.5">
                                           <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${md.taken === md.total ? 'bg-emerald-400' : md.taken > 0 ? 'bg-amber-400' : 'bg-gray-600'}`} />
-                                          <span className="text-[8px] text-gray-400 flex-1 truncate">{md.name}</span>
-                                          <span className="text-[8px] font-bold text-gray-500">{md.taken}/{md.total}</span>
+                                          <span className="text-[7px] text-gray-400 flex-1 truncate">{md.name}</span>
+                                          <span className="text-[7px] font-bold text-gray-500">{md.taken}/{md.total}</span>
                                         </div>
                                       ))}
                                     </div>
                                   </div>
                                 )
                               })}
-                              </div>
-                              {scored.length > 2 && (
-                                <div className="absolute right-0 top-0 bottom-1 w-6 bg-gradient-to-l from-[#0b0b12] to-transparent pointer-events-none flex items-center justify-end">
-                                  <ChevronRight className="w-2.5 h-2.5 text-gray-500 animate-pulse" />
-                                </div>
-                              )}
                             </div>
                           </div>
                         )
