@@ -932,73 +932,56 @@ export function SupplementTracker() {
                   insights.push({ icon: Clock, title: 'How to Take', items, color, metric: `${allSuppData.length} supplements` })
                 }
 
-                // INSIGHT 2: COMPANION STACK — rich synergy data
+                // INSIGHT 2: COMPANION STACK — concise, beautiful pairs
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
 
-                  // Active pairs with effect descriptions
+                  // Active synergy pairs
                   allSuppData.forEach(sd => {
                     if (sd.advice && sd.advice.pairs.length > 0) {
                       const hasPairs = sd.advice.pairs.filter(p => suppNames.some(n => n.includes(p.toLowerCase())))
-                      if (hasPairs.length > 0) {
-                        const effects = hasPairs.map(p => {
-                          const advice = getAdvice(p)
-                          return advice ? `${p} (${advice.tip})` : p
-                        }).join(', ')
-                        items.push({ text: `${sd.name} + ${effects}`, color: 'emerald', badge: '✓' })
-                      }
+                      if (hasPairs.length > 0) items.push({ text: `${sd.name} + ${hasPairs.join(', ')}`, color: 'emerald', badge: '✓' })
                     }
                   })
 
-                  // What each supp pairs with (even if not in your stack yet)
-                  allSuppData.forEach(sd => {
-                    if (sd.advice && sd.advice.pairs.length > 0) {
-                      const notInStack = sd.advice.pairs.filter(p => !suppNames.some(n => n.includes(p.toLowerCase())))
-                      if (notInStack.length > 0) {
-                        items.push({ text: `${sd.name}: also pairs with ${notInStack.join(', ')}`, color: 'amber', badge: '+' })
-                      }
-                    }
-                  })
-
-                  // Missing companions from your stack
+                  // Missing companions
                   const allPairs = allSuppData.flatMap(sd => sd.advice?.pairs || [])
                   const uniquePairs = [...new Set(allPairs)]
                   const missing = uniquePairs.filter(p => !suppNames.some(n => n.includes(p.toLowerCase())))
-                  if (missing.length > 0) items.push({ text: `Top additions: ${missing.slice(0, 4).join(', ')}`, color: 'amber', badge: '★' })
+                  if (missing.length > 0) items.push({ text: `Add: ${missing.slice(0, 3).join(', ')}`, color: 'amber', badge: '+' })
 
-                  // Conflicts to watch
+                  // Conflicts
                   allSuppData.forEach(sd => {
                     if (sd.advice && sd.advice.avoid.length > 0) {
                       const hasAvoid = sd.advice.avoid.filter(a => suppNames.some(n => n.includes(a.toLowerCase())))
-                      if (hasAvoid.length > 0) items.push({ text: `${sd.name}: avoid ${hasAvoid.join(', ')} — separate 2h`, color: 'rose', badge: '!' })
+                      if (hasAvoid.length > 0) items.push({ text: `Avoid: ${sd.name} + ${hasAvoid.join(', ')}`, color: 'rose', badge: '!' })
                     }
                   })
 
-                  // Synergy effects from SUPP_INTERACTIONS
+                  // Interaction effects
                   allSuppData.forEach(sd => {
                     if (sd.synergies && sd.synergies.length > 0) {
                       sd.synergies.forEach(s => items.push({ text: `${sd.name} → ${s.b}: ${s.message}`, color: 'emerald', badge: '~' }))
                     }
                   })
 
-                  if (items.length === 0) items.push({ text: 'Log more supplements for synergy data', color: 'amber', badge: '—' })
+                  if (items.length === 0) items.push({ text: 'No synergy data yet', color: 'amber', badge: '—' })
 
                   const color = items.some(i => i.color === 'rose') ? 'rose' : items.some(i => i.color === 'amber') ? 'amber' : 'emerald'
                   insights.push({ icon: Layers, title: 'Companion Stack', items, color, metric: 'synergy' })
                 }
 
-                // INSIGHT 3: IDEAS & HACKS — one best tip per supplement + best combo
+                // INSIGHT 3: IDEAS & HACKS — one best tip per supplement
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
 
-                  // Best idea per supplement (only first)
                   allSuppData.forEach(sd => {
                     if (sd.advice && sd.advice.ideas.length > 0) {
                       items.push({ text: `${sd.name}: ${sd.advice.ideas[0]}` })
                     }
                   })
 
-                  // Top combo only
+                  // Top combo
                   if (allSuppData.length >= 2) {
                     const combos: string[] = []
                     if (suppNames.some(n => n.includes('creatine')) && suppNames.some(n => n.includes('whey'))) combos.push('Creatine + Whey')
@@ -1007,7 +990,7 @@ export function SupplementTracker() {
                     if (combos.length > 0) items.push({ text: `Best stack: ${combos[0]}`, color: 'violet', badge: '★' })
                   }
 
-                  if (items.length === 0) items.push({ text: 'Take supplements consistently for best results', color: 'emerald', badge: '✓' })
+                  if (items.length === 0) items.push({ text: 'Take supplements consistently', color: 'emerald', badge: '✓' })
 
                   insights.push({ icon: Sparkles, title: 'Ideas & Hacks', items, color: 'violet', metric: 'tips' })
                 }
@@ -1174,14 +1157,14 @@ export function SupplementTracker() {
                               <span className="text-[8px] font-black" style={{ color: overallScore >= 80 ? '#10b981' : overallScore >= 50 ? '#f59e0b' : '#ef4444' }}>{overallScore}%</span>
                               <span className="text-[6px] text-gray-600">body score</span>
                             </div>
-                            {/* System cards — wrap to rows */}
-                            <div className="flex flex-wrap gap-2">
+                            {/* System cards — grid fill */}
+                            <div className="grid grid-cols-3 gap-2">
                               {scored.map(({ name, sys, matched, coverage, adherence, healthScore, matchedDetails }) => {
                                 const Icon = sys.icon
                                 const circumference = 2 * Math.PI * 16
                                 const offset = circumference * (1 - healthScore / 100)
                                 return (
-                                  <div key={name} className="shrink-0 w-[140px] rounded-2xl p-3 bg-white/[0.02] border border-white/[0.04]">
+                                  <div key={name} className="rounded-2xl p-3 bg-white/[0.02] border border-white/[0.04]">
                                     <div className="flex items-center gap-2 mb-2">
                                       <div className="relative">
                                         <svg viewBox="0 0 40 40" className="w-10 h-10 -rotate-90">
