@@ -932,62 +932,79 @@ export function SupplementTracker() {
                   insights.push({ icon: Clock, title: 'How to Take', items, color, metric: `${allSuppData.length} supplements` })
                 }
 
-                // INSIGHT 2: COMPANION STACK — concise pair/missing/conflict lines
+                // INSIGHT 2: COMPANION STACK — rich synergy data
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
 
-                  // Active pairs
+                  // Active pairs with effect descriptions
                   allSuppData.forEach(sd => {
                     if (sd.advice && sd.advice.pairs.length > 0) {
                       const hasPairs = sd.advice.pairs.filter(p => suppNames.some(n => n.includes(p.toLowerCase())))
-                      if (hasPairs.length > 0) items.push({ text: `${sd.name} + ${hasPairs.join(', ')}`, color: 'emerald', badge: '✓' })
+                      if (hasPairs.length > 0) {
+                        const effects = hasPairs.map(p => {
+                          const advice = getAdvice(p)
+                          return advice ? `${p} (${advice.tip})` : p
+                        }).join(', ')
+                        items.push({ text: `${sd.name} + ${effects}`, color: 'emerald', badge: '✓' })
+                      }
                     }
                   })
 
-                  // Missing companions
+                  // What each supp pairs with (even if not in your stack yet)
+                  allSuppData.forEach(sd => {
+                    if (sd.advice && sd.advice.pairs.length > 0) {
+                      const notInStack = sd.advice.pairs.filter(p => !suppNames.some(n => n.includes(p.toLowerCase())))
+                      if (notInStack.length > 0) {
+                        items.push({ text: `${sd.name}: also pairs with ${notInStack.join(', ')}`, color: 'amber', badge: '+' })
+                      }
+                    }
+                  })
+
+                  // Missing companions from your stack
                   const allPairs = allSuppData.flatMap(sd => sd.advice?.pairs || [])
                   const uniquePairs = [...new Set(allPairs)]
                   const missing = uniquePairs.filter(p => !suppNames.some(n => n.includes(p.toLowerCase())))
-                  if (missing.length > 0) items.push({ text: `Add: ${missing.slice(0, 3).join(', ')}`, color: 'amber', badge: '+' })
+                  if (missing.length > 0) items.push({ text: `Top additions: ${missing.slice(0, 4).join(', ')}`, color: 'amber', badge: '★' })
 
-                  // Conflicts
+                  // Conflicts to watch
                   allSuppData.forEach(sd => {
                     if (sd.advice && sd.advice.avoid.length > 0) {
                       const hasAvoid = sd.advice.avoid.filter(a => suppNames.some(n => n.includes(a.toLowerCase())))
-                      if (hasAvoid.length > 0) items.push({ text: `${sd.name}: avoid ${hasAvoid.join(', ')}`, color: 'rose', badge: '!' })
+                      if (hasAvoid.length > 0) items.push({ text: `${sd.name}: avoid ${hasAvoid.join(', ')} — separate 2h`, color: 'rose', badge: '!' })
                     }
                   })
 
-                  if (items.length === 0) items.push({ text: 'No synergy data yet', color: 'amber', badge: '—' })
+                  // Synergy effects from SUPP_INTERACTIONS
+                  allSuppData.forEach(sd => {
+                    if (sd.synergies && sd.synergies.length > 0) {
+                      sd.synergies.forEach(s => items.push({ text: `${sd.name} → ${s.b}: ${s.message}`, color: 'emerald', badge: '~' }))
+                    }
+                  })
+
+                  if (items.length === 0) items.push({ text: 'Log more supplements for synergy data', color: 'amber', badge: '—' })
 
                   const color = items.some(i => i.color === 'rose') ? 'rose' : items.some(i => i.color === 'amber') ? 'amber' : 'emerald'
                   insights.push({ icon: Layers, title: 'Companion Stack', items, color, metric: 'synergy' })
                 }
 
-                // INSIGHT 3: IDEAS & HACKS — concise actionable tips
+                // INSIGHT 3: IDEAS & HACKS — one best tip per supplement + best combo
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
 
-                  // Best ideas per supplement (max 2 each)
+                  // Best idea per supplement (only first)
                   allSuppData.forEach(sd => {
                     if (sd.advice && sd.advice.ideas.length > 0) {
-                      sd.advice.ideas.slice(0, 2).forEach(idea => items.push({ text: `${sd.name}: ${idea}` }))
+                      items.push({ text: `${sd.name}: ${sd.advice.ideas[0]}` })
                     }
                   })
 
-                  // Trend arrows
-                  allSuppData.forEach(sd => {
-                    if (sd.trend > 10) items.push({ text: `${sd.name}: +${sd.trend}% this week`, color: 'emerald', badge: '↑' })
-                    else if (sd.trend < -10) items.push({ text: `${sd.name}: ${sd.trend}% this week`, color: 'rose', badge: '↓' })
-                  })
-
-                  // Top combos
+                  // Top combo only
                   if (allSuppData.length >= 2) {
                     const combos: string[] = []
                     if (suppNames.some(n => n.includes('creatine')) && suppNames.some(n => n.includes('whey'))) combos.push('Creatine + Whey')
                     if (suppNames.some(n => n.includes('omega')) && suppNames.some(n => n.includes('vitamin d'))) combos.push('Omega-3 + D3')
                     if (suppNames.some(n => n.includes('magnesium')) && suppNames.some(n => n.includes('zinc'))) combos.push('Mg + Zn')
-                    if (combos.length > 0) items.push({ text: `Stack: ${combos.join(' · ')}`, color: 'violet', badge: '★' })
+                    if (combos.length > 0) items.push({ text: `Best stack: ${combos[0]}`, color: 'violet', badge: '★' })
                   }
 
                   if (items.length === 0) items.push({ text: 'Take supplements consistently for best results', color: 'emerald', badge: '✓' })
@@ -1157,39 +1174,38 @@ export function SupplementTracker() {
                               <span className="text-[8px] font-black" style={{ color: overallScore >= 80 ? '#10b981' : overallScore >= 50 ? '#f59e0b' : '#ef4444' }}>{overallScore}%</span>
                               <span className="text-[6px] text-gray-600">body score</span>
                             </div>
-                            {/* System cards — horizontal scroll */}
-                            <div className="relative">
-                              <div className="flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            {/* System cards — wrap to rows */}
+                            <div className="flex flex-wrap gap-2">
                               {scored.map(({ name, sys, matched, coverage, adherence, healthScore, matchedDetails }) => {
                                 const Icon = sys.icon
                                 const circumference = 2 * Math.PI * 16
                                 const offset = circumference * (1 - healthScore / 100)
                                 return (
-                                  <div key={name} className="snap-start shrink-0 w-[135px] rounded-2xl p-3 bg-white/[0.02] border border-white/[0.04]">
+                                  <div key={name} className="shrink-0 w-[140px] rounded-2xl p-3 bg-white/[0.02] border border-white/[0.04]">
                                     <div className="flex items-center gap-2 mb-2">
                                       <div className="relative">
-                                        <svg viewBox="0 0 40 40" className="w-9 h-9 -rotate-90">
+                                        <svg viewBox="0 0 40 40" className="w-10 h-10 -rotate-90">
                                           <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2.5" />
                                           <circle cx="20" cy="20" r="16" fill="none" stroke={sys.color} strokeWidth="3" strokeLinecap="round"
                                             strokeDasharray={circumference} strokeDashoffset={offset} className="transition-all duration-700" />
                                         </svg>
                                         <div className="absolute inset-0 flex items-center justify-center">
-                                          <Icon className="w-3.5 h-3.5" style={{ color: sys.color }} />
+                                          <Icon className="w-4 h-4" style={{ color: sys.color }} />
                                         </div>
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <div className="text-[9px] font-bold text-white truncate">{name}</div>
+                                        <div className="text-[10px] font-bold text-white truncate">{name}</div>
                                         <div className="text-[7px] text-gray-500">{matched.length} supp{matched.length > 1 ? 's' : ''}</div>
                                       </div>
-                                      <span className="text-[12px] font-black" style={{ color: sys.color }}>{healthScore}</span>
+                                      <span className="text-[13px] font-black" style={{ color: sys.color }}>{healthScore}</span>
                                     </div>
-                                    <div className="space-y-1 mb-1.5">
+                                    <div className="space-y-1 mb-2">
                                       <div>
                                         <div className="flex justify-between mb-0.5">
                                           <span className="text-[7px] text-gray-600">coverage</span>
                                           <span className="text-[7px] font-bold" style={{ color: sys.color }}>{coverage}%</span>
                                         </div>
-                                        <div className="h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                                        <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
                                           <div className="h-full rounded-full" style={{ width: `${coverage}%`, background: sys.color }} />
                                         </div>
                                       </div>
@@ -1198,7 +1214,7 @@ export function SupplementTracker() {
                                           <span className="text-[7px] text-gray-600">adherence</span>
                                           <span className="text-[7px] font-bold" style={{ color: sys.color }}>{adherence}%</span>
                                         </div>
-                                        <div className="h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                                        <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
                                           <div className="h-full rounded-full" style={{ width: `${Math.min(adherence, 100)}%`, background: `${sys.color}aa` }} />
                                         </div>
                                       </div>
@@ -1215,12 +1231,6 @@ export function SupplementTracker() {
                                   </div>
                                 )
                               })}
-                              </div>
-                              {scored.length > 2 && (
-                                <div className="absolute right-0 top-0 bottom-1 w-6 bg-gradient-to-l from-[#0b0b12] to-transparent pointer-events-none flex items-center justify-end">
-                                  <ChevronRight className="w-2.5 h-2.5 text-gray-500 animate-pulse" />
-                                </div>
-                              )}
                             </div>
                           </div>
                         )
