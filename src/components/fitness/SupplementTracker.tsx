@@ -652,9 +652,12 @@ export function SupplementTracker() {
           }
           const dedupedForCost = Array.from(new Map(supplements.map(s => [s.name, s])).values())
           const totalDailyCost = dedupedForCost.reduce((sum, s) => sum + getSuppDailyCost(s), 0)
+          const todayDate = new Date()
+          const daysInMonth = new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0).getDate()
+          const daysInYear = ((todayDate.getFullYear() % 4 === 0 && todayDate.getFullYear() % 100 !== 0) || todayDate.getFullYear() % 400 === 0) ? 366 : 365
           const costPerDay = totalDailyCost > 0 ? totalDailyCost.toFixed(2) : '0'
-          const costPerMonth = totalDailyCost > 0 ? (totalDailyCost * 30).toFixed(2) : '0'
-          const costPerYear = totalDailyCost > 0 ? (totalDailyCost * 365).toFixed(2) : '0'
+          const costPerMonth = totalDailyCost > 0 ? (totalDailyCost * daysInMonth).toFixed(2) : '0'
+          const costPerYear = totalDailyCost > 0 ? (totalDailyCost * daysInYear).toFixed(2) : '0'
           const costBreakdown = dedupedForCost.filter(s => s.cost && s.totalServings && s.totalServings > 0).map(s => ({
             name: s.name, cost: s.cost!, perDay: getSuppDailyCost(s).toFixed(2),
             pct: totalDailyCost > 0 ? Math.round((getSuppDailyCost(s) / totalDailyCost) * 100) : 0
