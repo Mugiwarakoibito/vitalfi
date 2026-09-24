@@ -1526,69 +1526,66 @@ export function SupplementTracker() {
                     </div>
 
                     {dedupedCostBreakdown.length > 0 ? (
-                      <div className="flex gap-3 items-center mb-3">
-                        {/* Donut chart */}
-                        <div className="relative w-[88px] h-[88px] shrink-0">
-                          <div className="absolute inset-0 rounded-full bg-amber-500/[0.03] blur-xl" />
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie data={dedupedCostBreakdown.map((c, i) => ({
-                                name: c.name, value: c.cost, fill: ['#f59e0b', '#f97316', '#8b5cf6', '#6366f1', '#06b6d4', '#10b981'][i % 6]
-                              }))} cx="50%" cy="50%" innerRadius={26} outerRadius={38} paddingAngle={3} dataKey="value" strokeWidth={0}>
-                                {dedupedCostBreakdown.map((_c, i) => (
-                                  <Cell key={i} fill={['#f59e0b', '#f97316', '#8b5cf6', '#6366f1', '#06b6d4', '#10b981'][i % 6]} fillOpacity={0.85} />
-                                ))}
-                              </Pie>
-                            </PieChart>
-                          </ResponsiveContainer>
-                          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-[12px] font-black text-white leading-none drop-shadow-lg">${monthlyProjection}</span>
-                            <span className="text-[5px] text-gray-400 font-bold mt-0.5">/month</span>
+                      <>
+                        {/* Big donut — centered */}
+                        <div className="flex justify-center mb-3">
+                          <div className="relative w-[140px] h-[140px]">
+                            <div className="absolute inset-0 rounded-full bg-amber-500/[0.03] blur-2xl" />
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie data={dedupedCostBreakdown.map((c, i) => ({
+                                  name: c.name, value: parseFloat(c.perDay), fill: ['#f59e0b', '#f97316', '#8b5cf6', '#6366f1', '#06b6d4', '#10b981'][i % 6]
+                                }))} cx="50%" cy="50%" innerRadius={42} outerRadius={60} paddingAngle={4} dataKey="value" strokeWidth={0}>
+                                  {dedupedCostBreakdown.map((_c, i) => (
+                                    <Cell key={i} fill={['#f59e0b', '#f97316', '#8b5cf6', '#6366f1', '#06b6d4', '#10b981'][i % 6]} fillOpacity={0.85} />
+                                  ))}
+                                </Pie>
+                              </PieChart>
+                            </ResponsiveContainer>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                              <span className="text-[18px] font-black text-white leading-none drop-shadow-lg">${monthlyProjection}</span>
+                              <span className="text-[7px] text-gray-400 font-bold mt-1">/month</span>
+                              <span className="text-[6px] text-gray-600 mt-0.5">${costPerDay}/day</span>
+                            </div>
                           </div>
                         </div>
-                        {/* Summary pills */}
-                        <div className="flex-1 space-y-1.5">
-                          <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
-                            <div className="w-1 h-1 rounded-full bg-emerald-400 shrink-0" />
-                            <span className="text-[7px] text-gray-400 flex-1">Per Day</span>
-                            <span className="text-[10px] font-black text-emerald-400 tabular-nums">${costPerDay}</span>
+
+                        {/* Legend — colored pills */}
+                        <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mb-3">
+                          {dedupedCostBreakdown.map((c, i) => {
+                            const color = ['#f59e0b', '#f97316', '#8b5cf6', '#6366f1', '#06b6d4', '#10b981'][i % 6]
+                            return (
+                              <div key={i} className="flex items-center gap-1">
+                                <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                <span className="text-[7px] text-gray-400">{c.name}</span>
+                                <span className="text-[7px] font-bold tabular-nums" style={{ color }}>${c.perDay}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+
+                        {/* Summary strip */}
+                        <div className="flex gap-1.5 pt-2 border-t border-white/[0.04]">
+                          <div className="flex-1 text-center">
+                            <span className="text-[11px] font-black text-emerald-400 block leading-none">${costPerDay}</span>
+                            <span className="text-[5px] text-gray-500 font-bold uppercase">day</span>
                           </div>
-                          <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-amber-500/[0.04] border border-amber-500/10">
-                            <div className="w-1 h-1 rounded-full bg-amber-400 shrink-0" />
-                            <span className="text-[7px] text-gray-400 flex-1">Per Month</span>
-                            <span className="text-[10px] font-black text-amber-300 tabular-nums">${monthlyProjection}</span>
+                          <div className="w-px bg-white/[0.06]" />
+                          <div className="flex-1 text-center">
+                            <span className="text-[11px] font-black text-amber-300 block leading-none">${monthlyProjection}</span>
+                            <span className="text-[5px] text-gray-500 font-bold uppercase">month</span>
                           </div>
-                          <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-violet-500/[0.04] border border-violet-500/10">
-                            <div className="w-1 h-1 rounded-full bg-violet-400 shrink-0" />
-                            <span className="text-[7px] text-gray-400 flex-1">Per Year</span>
-                            <span className="text-[10px] font-black text-violet-400 tabular-nums">${yearlyProjection}</span>
+                          <div className="w-px bg-white/[0.06]" />
+                          <div className="flex-1 text-center">
+                            <span className="text-[11px] font-black text-violet-400 block leading-none">${yearlyProjection}</span>
+                            <span className="text-[5px] text-gray-500 font-bold uppercase">year</span>
                           </div>
                         </div>
-                      </div>
+                      </>
                     ) : (
-                      <div className="py-3 text-center mb-3">
+                      <div className="py-4 text-center">
                         <DollarSign className="w-5 h-5 text-gray-600 mx-auto mb-1" />
                         <span className="text-[8px] text-gray-500">Add cost & servings to see breakdown</span>
-                      </div>
-                    )}
-
-                    {/* Per supplement breakdown */}
-                    {dedupedCostBreakdown.length > 0 && (
-                      <div className="space-y-1.5 pt-2.5 border-t border-white/[0.04]">
-                        {dedupedCostBreakdown.map((c, i) => {
-                          const colors = ['#f59e0b', '#f97316', '#8b5cf6', '#6366f1', '#06b6d4', '#10b981']
-                          const color = colors[i % colors.length]
-                          return (
-                            <div key={i} className="flex items-center gap-2">
-                              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                              <span className="text-[7px] text-gray-300 truncate flex-1">{c.name}</span>
-                              <div className="w-16 h-1 rounded-full bg-white/[0.04] overflow-hidden shrink-0">
-                                <div className="h-full rounded-full transition-all duration-500" style={{ width: c.pct + '%', backgroundColor: color, opacity: 0.7 }} />
-                              </div>
-                              <span className="text-[7px] font-bold text-amber-300/80 tabular-nums w-10 text-right">${c.perDay}<span className="text-gray-600 font-normal">/d</span></span>
-                            </div>
-                          )
-                        })}
                       </div>
                     )}
                   </div>
