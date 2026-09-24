@@ -932,62 +932,84 @@ export function SupplementTracker() {
                   insights.push({ icon: Clock, title: 'How to Take', items, color, metric: `${allSuppData.length} supplements` })
                 }
 
-                // INSIGHT 2: COMPANION STACK — concise, beautiful pairs
+                // INSIGHT 2: COMPANION STACK — visual pair map
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
 
-                  // Active synergy pairs
+                  // Build pair connections
+                  const pairConnections: { from: string; to: string; type: 'synergy' | 'conflict' }[] = []
                   allSuppData.forEach(sd => {
-                    if (sd.advice && sd.advice.pairs.length > 0) {
-                      const hasPairs = sd.advice.pairs.filter(p => suppNames.some(n => n.includes(p.toLowerCase())))
-                      if (hasPairs.length > 0) items.push({ text: `${sd.name} + ${hasPairs.join(', ')}`, color: 'emerald', badge: '✓' })
+                    if (sd.advice) {
+                      sd.advice.pairs.forEach(p => {
+                        if (suppNames.some(n => n.includes(p.toLowerCase()))) {
+                          pairConnections.push({ from: sd.name, to: p, type: 'synergy' })
+                        }
+                      })
+                      sd.advice.avoid.forEach(a => {
+                        if (suppNames.some(n => n.includes(a.toLowerCase()))) {
+                          pairConnections.push({ from: sd.name, to: a, type: 'conflict' })
+                        }
+                      })
                     }
                   })
 
-                  // Missing companions
+                  // Render as compact visual pairs
+                  const seen = new Set<string>()
+                  pairConnections.forEach(conn => {
+                    const key = [conn.from, conn.to].sort().join('+')
+                    if (!seen.has(key)) {
+                      seen.add(key)
+                      if (conn.type === 'synergy') {
+                        items.push({ text: `${conn.from} ↔ ${conn.to}`, color: 'emerald', badge: '♥' })
+                      } else {
+                        items.push({ text: `${conn.from} ✕ ${conn.to}`, color: 'rose', badge: '!' })
+                      }
+                    }
+                  })
+
+                  // Missing companions (top 2)
                   const allPairs = allSuppData.flatMap(sd => sd.advice?.pairs || [])
                   const uniquePairs = [...new Set(allPairs)]
                   const missing = uniquePairs.filter(p => !suppNames.some(n => n.includes(p.toLowerCase())))
-                  if (missing.length > 0) items.push({ text: `Add: ${missing.slice(0, 3).join(', ')}`, color: 'amber', badge: '+' })
+                  if (missing.length > 0) items.push({ text: `+ ${missing.slice(0, 2).join(', ')}`, color: 'amber', badge: '+' })
 
-                  // Conflicts
-                  allSuppData.forEach(sd => {
-                    if (sd.advice && sd.advice.avoid.length > 0) {
-                      const hasAvoid = sd.advice.avoid.filter(a => suppNames.some(n => n.includes(a.toLowerCase())))
-                      if (hasAvoid.length > 0) items.push({ text: `Avoid: ${sd.name} + ${hasAvoid.join(', ')}`, color: 'rose', badge: '!' })
-                    }
-                  })
-
-                  // Interaction effects
-                  allSuppData.forEach(sd => {
-                    if (sd.synergies && sd.synergies.length > 0) {
-                      sd.synergies.forEach(s => items.push({ text: `${sd.name} → ${s.b}: ${s.message}`, color: 'emerald', badge: '~' }))
-                    }
-                  })
-
-                  if (items.length === 0) items.push({ text: 'No synergy data yet', color: 'amber', badge: '—' })
+                  if (items.length === 0) items.push({ text: 'No pairs yet', color: 'amber', badge: '—' })
 
                   const color = items.some(i => i.color === 'rose') ? 'rose' : items.some(i => i.color === 'amber') ? 'amber' : 'emerald'
-                  insights.push({ icon: Layers, title: 'Companion Stack', items, color, metric: 'synergy' })
+                  insights.push({ icon: Layers, title: 'Companion Stack', items, color, metric: `${pairConnections.filter(c => c.type === 'synergy').length} pairs` })
                 }
 
-                // INSIGHT 3: IDEAS & HACKS — one best tip per supplement
+                // INSIGHT 3: IDEAS & HACKS — smart tips + combos + trends
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
 
+                  // Per-supplement: best tip + benefit
                   allSuppData.forEach(sd => {
                     if (sd.advice && sd.advice.ideas.length > 0) {
-                      items.push({ text: `${sd.name}: ${sd.advice.ideas[0]}` })
+                      items.push({ text: `${sd.name}: ${sd.advice.ideas[0]}`, color: 'violet', badge: '💡' })
                     }
                   })
 
-                  // Top combo
+                  // Trend-based insight
+                  allSuppData.forEach(sd => {
+                    if (sd.trend > 15) items.push({ text: `${sd.name}: +${sd.trend}% adherence this week`, color: 'emerald', badge: '↑' })
+                    else if (sd.trend < -15) items.push({ text: `${sd.name}: ${sd.trend}% drop — needs attention`, color: 'rose', badge: '↓' })
+                  })
+
+                  // Smart combo based on what you have
                   if (allSuppData.length >= 2) {
                     const combos: string[] = []
-                    if (suppNames.some(n => n.includes('creatine')) && suppNames.some(n => n.includes('whey'))) combos.push('Creatine + Whey')
-                    if (suppNames.some(n => n.includes('omega')) && suppNames.some(n => n.includes('vitamin d'))) combos.push('Omega-3 + D3')
-                    if (suppNames.some(n => n.includes('magnesium')) && suppNames.some(n => n.includes('zinc'))) combos.push('Mg + Zn')
-                    if (combos.length > 0) items.push({ text: `Best stack: ${combos[0]}`, color: 'violet', badge: '★' })
+                    if (suppNames.some(n => n.includes('creatine')) && suppNames.some(n => n.includes('whey'))) combos.push('Creatine + Whey post-workout')
+                    if (suppNames.some(n => n.includes('omega')) && suppNames.some(n => n.includes('vitamin d'))) combos.push('Omega-3 + D3 together')
+                    if (suppNames.some(n => n.includes('magnesium')) && suppNames.some(n => n.includes('zinc'))) combos.push('Mg + Zn at bedtime')
+                    if (combos.length > 0) items.push({ text: `Stack: ${combos[0]}`, color: 'violet', badge: '★' })
+                  }
+
+                  // Timing insight
+                  const morningSupps = allSuppData.filter(s => s.times.some(t => t === 'Morning'))
+                  const eveningSupps = allSuppData.filter(s => s.times.some(t => t === 'Evening' || t === 'Night'))
+                  if (morningSupps.length > 0 && eveningSupps.length > 0) {
+                    items.push({ text: `AM: ${morningSupps.map(s => s.name.split(' ')[0]).join(', ')} · PM: ${eveningSupps.map(s => s.name.split(' ')[0]).join(', ')}`, color: 'cyan', badge: '⏰' })
                   }
 
                   if (items.length === 0) items.push({ text: 'Take supplements consistently', color: 'emerald', badge: '✓' })
