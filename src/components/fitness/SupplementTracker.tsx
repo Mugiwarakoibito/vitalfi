@@ -932,57 +932,52 @@ export function SupplementTracker() {
                   insights.push({ icon: Clock, title: 'How to Take', items, color, metric: `${allSuppData.length} supplements` })
                 }
 
-                // INSIGHT 2: STACK BENEFITS MAP — what each combo does for you
+                // INSIGHT 2: SAFETY WARNINGS — interactions, side effects, timing
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
 
-                  // What your current stack does
-                  const stackBenefits: { text: string; color: string; badge: string }[] = []
-                  if (suppNames.some(n => n.includes('vitamin d'))) {
-                    stackBenefits.push({ text: 'Vitamin D → Immune + Bones', color: 'emerald', badge: '🛡️' })
-                  }
-                  if (suppNames.some(n => n.includes('omega'))) {
-                    stackBenefits.push({ text: 'Omega-3 → Heart + Brain', color: 'rose', badge: '❤️' })
-                  }
-                  if (suppNames.some(n => n.includes('creatine'))) {
-                    stackBenefits.push({ text: 'Creatine → Muscle + Energy', color: 'amber', badge: '💪' })
-                  }
-                  if (suppNames.some(n => n.includes('magnesium'))) {
-                    stackBenefits.push({ text: 'Magnesium → Sleep + Recovery', color: 'violet', badge: '😴' })
-                  }
-                  if (suppNames.some(n => n.includes('zinc'))) {
-                    stackBenefits.push({ text: 'Zinc → Immune + Skin', color: 'emerald', badge: '🛡️' })
-                  }
-                  if (suppNames.some(n => n.includes('iron'))) {
-                    stackBenefits.push({ text: 'Iron → Energy + Oxygen', color: 'amber', badge: '⚡' })
-                  }
-                  if (suppNames.some(n => n.includes('b12'))) {
-                    stackBenefits.push({ text: 'B12 → Energy + Brain', color: 'cyan', badge: '🧠' })
-                  }
-                  if (suppNames.some(n => n.includes('collagen'))) {
-                    stackBenefits.push({ text: 'Collagen → Skin + Joints', color: 'pink', badge: '✨' })
-                  }
-                  if (suppNames.some(n => n.includes('pre-workout') || n.includes('caffeine'))) {
-                    stackBenefits.push({ text: 'Pre-workout → Focus + Energy', color: 'cyan', badge: '⚡' })
-                  }
-                  stackBenefits.forEach(b => items.push(b))
+                  // Conflicts between your supplements
+                  allSuppData.forEach(sd => {
+                    if (sd.advice && sd.advice.avoid.length > 0) {
+                      const hasAvoid = sd.advice.avoid.filter(a => suppNames.some(n => n.includes(a.toLowerCase())))
+                      if (hasAvoid.length > 0) {
+                        hasAvoid.forEach(a => items.push({ text: `${sd.name} + ${a}: separate by 2h`, color: 'rose', badge: '⚠' }))
+                      }
+                    }
+                  })
 
-                  // What you're missing
-                  const covered = new Set<string>()
-                  if (suppNames.some(n => n.includes('vitamin d'))) { covered.add('immune'); covered.add('bones') }
-                  if (suppNames.some(n => n.includes('omega'))) { covered.add('heart'); covered.add('brain') }
-                  if (suppNames.some(n => n.includes('creatine'))) { covered.add('muscle'); covered.add('energy') }
-                  if (suppNames.some(n => n.includes('magnesium'))) { covered.add('sleep'); covered.add('recovery') }
+                  // Timing warnings
+                  allSuppData.forEach(sd => {
+                    if (sd.advice?.when.includes('Empty stomach') || sd.advice?.how.includes('empty stomach')) {
+                      items.push({ text: `${sd.name}: take on empty stomach`, color: 'amber', badge: '⏰' })
+                    }
+                    if (sd.advice?.how.includes('fat-soluble') || sd.advice?.how.includes('with fat') || sd.advice?.when.includes('With fatty meal')) {
+                      items.push({ text: `${sd.name}: always take with fat`, color: 'cyan', badge: '💡' })
+                    }
+                  })
 
-                  const allBenefits = ['heart', 'immune', 'brain', 'sleep', 'muscle', 'energy', 'bones', 'recovery']
-                  const missing = allBenefits.filter(b => !covered.has(b))
-                  if (missing.length > 0) {
-                    items.push({ text: `Missing: ${missing.slice(0, 2).join(', ')}`, color: 'amber', badge: '+' })
-                  }
+                  // Food/drink interactions
+                  allSuppData.forEach(sd => {
+                    if (sd.name.toLowerCase().includes('iron')) {
+                      items.push({ text: `Iron: avoid coffee/tea within 1h`, color: 'rose', badge: '☕' })
+                    }
+                    if (sd.name.toLowerCase().includes('calcium')) {
+                      items.push({ text: `Calcium: separate from iron by 2h`, color: 'rose', badge: '⏰' })
+                    }
+                  })
 
-                  if (items.length === 0) items.push({ text: 'Add supplements to see benefits', color: 'amber', badge: '—' })
+                  if (items.length === 0) items.push({ text: 'No warnings — stack is safe', color: 'emerald', badge: '✓' })
 
-                  insights.push({ icon: Layers, title: 'Stack Benefits', items, color: items.some(i => i.color === 'amber') ? 'amber' : 'emerald', metric: `${stackBenefits.length} covered` })
+                  // Deduplicate
+                  const seen = new Set<string>()
+                  const dedupedItems = items.filter(item => {
+                    if (seen.has(item.text)) return false
+                    seen.add(item.text)
+                    return true
+                  })
+
+                  const color = dedupedItems.some(i => i.color === 'rose') ? 'rose' : dedupedItems.some(i => i.color === 'amber') ? 'amber' : 'emerald'
+                  insights.push({ icon: ShieldAlert, title: 'Safety Warnings', items: dedupedItems, color, metric: dedupedItems.length > 0 ? `${dedupedItems.length} alerts` : 'safe' })
                 }
 
                 // INSIGHT 3: IDEAS & HACKS — smart tips + combos + trends
