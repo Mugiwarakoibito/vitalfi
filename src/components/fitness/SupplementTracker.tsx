@@ -1524,40 +1524,70 @@ export function SupplementTracker() {
                       <span className="text-[9px] font-bold text-white">Cost Overview</span>
                     </div>
 
-                    {/* Summary — 3 big numbers */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="flex-1 text-center p-2 rounded-xl bg-gradient-to-b from-amber-500/[0.06] to-amber-500/[0.02] border border-amber-500/10">
-                        <span className="text-[14px] font-black text-amber-300 block leading-none">${costPerDay}</span>
-                        <span className="text-[5px] text-gray-500 font-bold uppercase">per day</span>
-                      </div>
-                      <div className="flex-1 text-center p-2 rounded-xl bg-gradient-to-b from-amber-500/[0.06] to-amber-500/[0.02] border border-amber-500/10">
-                        <span className="text-[14px] font-black text-amber-300 block leading-none">${monthlyProjection}</span>
-                        <span className="text-[5px] text-gray-500 font-bold uppercase">per month</span>
-                      </div>
-                      <div className="flex-1 text-center p-2 rounded-xl bg-gradient-to-b from-amber-500/[0.06] to-amber-500/[0.02] border border-amber-500/10">
-                        <span className="text-[14px] font-black text-amber-300 block leading-none">${yearlyProjection}</span>
-                        <span className="text-[5px] text-gray-500 font-bold uppercase">per year</span>
-                      </div>
-                    </div>
-
-                    {/* Per supplement — horizontal bars */}
                     {dedupedCostBreakdown.length > 0 ? (
-                      <div className="space-y-1.5">
-                        {dedupedCostBreakdown.map((c, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <span className="text-[7px] text-gray-300 truncate w-16 shrink-0">{c.name}</span>
-                            <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                              <div className="h-full rounded-full bg-gradient-to-r from-amber-500/50 to-amber-400/70 transition-all duration-500"
-                                style={{ width: c.pct + '%' }} />
-                            </div>
-                            <span className="text-[7px] font-bold text-amber-300/80 tabular-nums w-10 text-right">${c.perDay}<span className="text-gray-600 font-normal">/d</span></span>
+                      <div className="flex gap-3 items-center mb-3">
+                        {/* Donut chart */}
+                        <div className="relative w-[88px] h-[88px] shrink-0">
+                          <div className="absolute inset-0 rounded-full bg-amber-500/[0.03] blur-xl" />
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={dedupedCostBreakdown.map((c, i) => ({
+                                name: c.name, value: c.cost, fill: ['#f59e0b', '#f97316', '#8b5cf6', '#6366f1', '#06b6d4', '#10b981'][i % 6]
+                              }))} cx="50%" cy="50%" innerRadius={26} outerRadius={38} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                                {dedupedCostBreakdown.map((_c, i) => (
+                                  <Cell key={i} fill={['#f59e0b', '#f97316', '#8b5cf6', '#6366f1', '#06b6d4', '#10b981'][i % 6]} fillOpacity={0.85} />
+                                ))}
+                              </Pie>
+                            </PieChart>
+                          </ResponsiveContainer>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span className="text-[12px] font-black text-white leading-none drop-shadow-lg">${monthlyProjection}</span>
+                            <span className="text-[5px] text-gray-400 font-bold mt-0.5">/month</span>
                           </div>
-                        ))}
+                        </div>
+                        {/* Summary pills */}
+                        <div className="flex-1 space-y-1.5">
+                          <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
+                            <div className="w-1 h-1 rounded-full bg-emerald-400 shrink-0" />
+                            <span className="text-[7px] text-gray-400 flex-1">Per Day</span>
+                            <span className="text-[10px] font-black text-emerald-400 tabular-nums">${costPerDay}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-amber-500/[0.04] border border-amber-500/10">
+                            <div className="w-1 h-1 rounded-full bg-amber-400 shrink-0" />
+                            <span className="text-[7px] text-gray-400 flex-1">Per Month</span>
+                            <span className="text-[10px] font-black text-amber-300 tabular-nums">${monthlyProjection}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-violet-500/[0.04] border border-violet-500/10">
+                            <div className="w-1 h-1 rounded-full bg-violet-400 shrink-0" />
+                            <span className="text-[7px] text-gray-400 flex-1">Per Year</span>
+                            <span className="text-[10px] font-black text-violet-400 tabular-nums">${yearlyProjection}</span>
+                          </div>
+                        </div>
                       </div>
                     ) : (
-                      <div className="py-3 text-center">
+                      <div className="py-3 text-center mb-3">
                         <DollarSign className="w-5 h-5 text-gray-600 mx-auto mb-1" />
                         <span className="text-[8px] text-gray-500">Add cost & servings to see breakdown</span>
+                      </div>
+                    )}
+
+                    {/* Per supplement breakdown */}
+                    {dedupedCostBreakdown.length > 0 && (
+                      <div className="space-y-1.5 pt-2.5 border-t border-white/[0.04]">
+                        {dedupedCostBreakdown.map((c, i) => {
+                          const colors = ['#f59e0b', '#f97316', '#8b5cf6', '#6366f1', '#06b6d4', '#10b981']
+                          const color = colors[i % colors.length]
+                          return (
+                            <div key={i} className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                              <span className="text-[7px] text-gray-300 truncate flex-1">{c.name}</span>
+                              <div className="w-16 h-1 rounded-full bg-white/[0.04] overflow-hidden shrink-0">
+                                <div className="h-full rounded-full transition-all duration-500" style={{ width: c.pct + '%', backgroundColor: color, opacity: 0.7 }} />
+                              </div>
+                              <span className="text-[7px] font-bold text-amber-300/80 tabular-nums w-10 text-right">${c.perDay}<span className="text-gray-600 font-normal">/d</span></span>
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
                   </div>
