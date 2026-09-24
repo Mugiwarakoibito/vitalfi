@@ -932,52 +932,56 @@ export function SupplementTracker() {
                   insights.push({ icon: Clock, title: 'How to Take', items, color, metric: `${allSuppData.length} supplements` })
                 }
 
-                // INSIGHT 2: SAFETY WARNINGS — interactions, side effects, timing
+                // INSIGHT 2: OPTIMAL TIMING — when to take what for best results
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
 
-                  // Conflicts between your supplements
+                  // Group by optimal time
+                  const morning: string[] = []
+                  const afternoon: string[] = []
+                  const evening: string[] = []
+                  const anytime: string[] = []
+
                   allSuppData.forEach(sd => {
-                    if (sd.advice && sd.advice.avoid.length > 0) {
-                      const hasAvoid = sd.advice.avoid.filter(a => suppNames.some(n => n.includes(a.toLowerCase())))
-                      if (hasAvoid.length > 0) {
-                        hasAvoid.forEach(a => items.push({ text: `${sd.name} + ${a}: separate by 2h`, color: 'rose', badge: '⚠' }))
-                      }
+                    const name = sd.name.split(' ')[0]
+                    const when = sd.advice?.when?.toLowerCase() || ''
+                    const how = sd.advice?.how?.toLowerCase() || ''
+
+                    if (when.includes('morning') || when.includes('empty stomach') || how.includes('morning') || how.includes('breakfast')) {
+                      morning.push(name)
+                    } else if (when.includes('bedtime') || when.includes('evening') || when.includes('night') || how.includes('sleep')) {
+                      evening.push(name)
+                    } else if (when.includes('lunch') || when.includes('afternoon')) {
+                      afternoon.push(name)
+                    } else {
+                      anytime.push(name)
                     }
                   })
 
-                  // Timing warnings
+                  // Build schedule
+                  if (morning.length > 0) items.push({ text: `Morning: ${morning.join(', ')}`, color: 'cyan', badge: '🌅' })
+                  if (afternoon.length > 0) items.push({ text: `Afternoon: ${afternoon.join(', ')}`, color: 'amber', badge: '☀️' })
+                  if (evening.length > 0) items.push({ text: `Evening: ${evening.join(', ')}`, color: 'violet', badge: '🌙' })
+                  if (anytime.length > 0) items.push({ text: `Anytime: ${anytime.join(', ')}`, color: 'emerald', badge: '⏰' })
+
+                  // Timing tips
                   allSuppData.forEach(sd => {
-                    if (sd.advice?.when.includes('Empty stomach') || sd.advice?.how.includes('empty stomach')) {
-                      items.push({ text: `${sd.name}: take on empty stomach`, color: 'amber', badge: '⏰' })
+                    if (sd.advice?.how.includes('fat-soluble') || sd.advice?.when.includes('With fatty meal')) {
+                      items.push({ text: `${sd.name.split(' ')[0]}: take with fatty meal`, color: 'cyan', badge: '💡' })
                     }
-                    if (sd.advice?.how.includes('fat-soluble') || sd.advice?.how.includes('with fat') || sd.advice?.when.includes('With fatty meal')) {
-                      items.push({ text: `${sd.name}: always take with fat`, color: 'cyan', badge: '💡' })
-                    }
-                  })
-
-                  // Food/drink interactions
-                  allSuppData.forEach(sd => {
-                    if (sd.name.toLowerCase().includes('iron')) {
-                      items.push({ text: `Iron: avoid coffee/tea within 1h`, color: 'rose', badge: '☕' })
-                    }
-                    if (sd.name.toLowerCase().includes('calcium')) {
-                      items.push({ text: `Calcium: separate from iron by 2h`, color: 'rose', badge: '⏰' })
+                    if (sd.advice?.how.includes('empty stomach') || sd.advice?.when.includes('Empty stomach')) {
+                      items.push({ text: `${sd.name.split(' ')[0]}: take 30min before food`, color: 'cyan', badge: '💡' })
                     }
                   })
 
-                  if (items.length === 0) items.push({ text: 'No warnings — stack is safe', color: 'emerald', badge: '✓' })
+                  // Gaps in schedule
+                  if (morning.length === 0 && evening.length === 0 && allSuppData.length > 0) {
+                    items.push({ text: 'No clear schedule yet — log consistently', color: 'amber', badge: '!' })
+                  }
 
-                  // Deduplicate
-                  const seen = new Set<string>()
-                  const dedupedItems = items.filter(item => {
-                    if (seen.has(item.text)) return false
-                    seen.add(item.text)
-                    return true
-                  })
+                  if (items.length === 0) items.push({ text: 'Add supplements to see timing', color: 'amber', badge: '—' })
 
-                  const color = dedupedItems.some(i => i.color === 'rose') ? 'rose' : dedupedItems.some(i => i.color === 'amber') ? 'amber' : 'emerald'
-                  insights.push({ icon: ShieldAlert, title: 'Safety Warnings', items: dedupedItems, color, metric: dedupedItems.length > 0 ? `${dedupedItems.length} alerts` : 'safe' })
+                  insights.push({ icon: Clock, title: 'Optimal Timing', items, color: 'cyan', metric: `${morning.length + afternoon.length + evening.length + anytime.length} scheduled` })
                 }
 
                 // INSIGHT 3: IDEAS & HACKS — smart tips + combos + trends
