@@ -979,18 +979,23 @@ export function SupplementTracker() {
                   // AM Routine
                   if (morning.length > 0) {
                     const details = morning.map(m => `${m.name} (${m.reason})`).join(', ')
-                    items.push({ text: `AM: ${details}`, color: 'cyan', badge: '🌅' })
+                    items.push({ text: `Morning: ${details}`, color: 'cyan', badge: '🌅' })
                   }
 
                   // PM Routine
                   if (evening.length > 0) {
                     const details = evening.map(e => `${e.name} (${e.reason})`).join(', ')
-                    items.push({ text: `PM: ${details}`, color: 'violet', badge: '🌙' })
+                    items.push({ text: `Evening: ${details}`, color: 'violet', badge: '🌙' })
                   }
 
                   // Afternoon
                   if (afternoon.length > 0) {
-                    items.push({ text: `Midday: ${afternoon.map(a => a.name).join(', ')}`, color: 'amber', badge: '☀️' })
+                    items.push({ text: `Afternoon: ${afternoon.map(a => a.name).join(', ')}`, color: 'amber', badge: '☀️' })
+                  }
+
+                  // Night
+                  if (evening.some(e => e.reason.includes('sleep'))) {
+                    items.push({ text: `Night: take before bed for better sleep`, color: 'violet', badge: '💤' })
                   }
 
                   // Spacing rules (what to separate)
@@ -1002,12 +1007,6 @@ export function SupplementTracker() {
                     }
                   })
                   if (spacing.length > 0) items.push({ text: `Separate: ${spacing.join(', ')}`, color: 'rose', badge: '⚠' })
-
-                  // Fat-soluble reminders
-                  const fatSoluble = allSuppData.filter(sd => sd.advice?.how.includes('fat-soluble') || sd.advice?.when.includes('fatty meal') || sd.advice?.how.includes('with fat'))
-                  if (fatSoluble.length > 0) {
-                    items.push({ text: `Take with fat: ${fatSoluble.map(s => s.name.split(' ')[0]).join(', ')}`, color: 'cyan', badge: '🥑' })
-                  }
 
                   // Next dose countdown
                   const remaining = deduped.flatMap(s => s.doses.filter(d => !d.taken).map(d => ({ name: s.name.split(' ')[0], time: d.time })))
