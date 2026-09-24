@@ -945,6 +945,7 @@ export function SupplementTracker() {
                   const morning: { name: string; reason: string }[] = []
                   const afternoon: { name: string; reason: string }[] = []
                   const evening: { name: string; reason: string }[] = []
+                  const anytime: string[] = []
 
                   allSuppData.forEach(sd => {
                     const short = sd.name.split(' ')[0]
@@ -958,9 +959,7 @@ export function SupplementTracker() {
                     } else if (when.includes('lunch') || when.includes('afternoon') || when.includes('fatty meal')) {
                       afternoon.push({ name: short, reason: 'with lunch' })
                     } else {
-                      // Anytime — suggest based on current time
-                      if (timeOfDay === 'morning') morning.push({ name: short, reason: 'anytime' })
-                      else evening.push({ name: short, reason: 'anytime' })
+                      anytime.push(short)
                     }
                   })
 
@@ -976,26 +975,26 @@ export function SupplementTracker() {
                     items.push({ text: `Take now: ${nowItems.join(', ')}`, color: 'emerald', badge: '▶' })
                   }
 
-                  // AM Routine
+                  // Morning
                   if (morning.length > 0) {
                     const details = morning.map(m => `${m.name} (${m.reason})`).join(', ')
                     items.push({ text: `Morning: ${details}`, color: 'cyan', badge: '🌅' })
                   }
 
-                  // PM Routine
+                  // Afternoon
+                  if (afternoon.length > 0) {
+                    items.push({ text: `Afternoon: ${afternoon.map(a => `${a.name} (${a.reason})`).join(', ')}`, color: 'amber', badge: '☀️' })
+                  }
+
+                  // Evening
                   if (evening.length > 0) {
                     const details = evening.map(e => `${e.name} (${e.reason})`).join(', ')
                     items.push({ text: `Evening: ${details}`, color: 'violet', badge: '🌙' })
                   }
 
-                  // Afternoon
-                  if (afternoon.length > 0) {
-                    items.push({ text: `Afternoon: ${afternoon.map(a => a.name).join(', ')}`, color: 'amber', badge: '☀️' })
-                  }
-
-                  // Night
-                  if (evening.some(e => e.reason.includes('sleep'))) {
-                    items.push({ text: `Night: take before bed for better sleep`, color: 'violet', badge: '💤' })
+                  // Anytime
+                  if (anytime.length > 0) {
+                    items.push({ text: `Anytime: ${anytime.join(', ')}`, color: 'emerald', badge: '⏰' })
                   }
 
                   // Spacing rules (what to separate)
