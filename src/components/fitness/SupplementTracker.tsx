@@ -932,51 +932,57 @@ export function SupplementTracker() {
                   insights.push({ icon: Clock, title: 'How to Take', items, color, metric: `${allSuppData.length} supplements` })
                 }
 
-                // INSIGHT 2: COMPANION STACK — visual pair map
+                // INSIGHT 2: STACK BENEFITS MAP — what each combo does for you
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
 
-                  // Build pair connections
-                  const pairConnections: { from: string; to: string; type: 'synergy' | 'conflict' }[] = []
-                  allSuppData.forEach(sd => {
-                    if (sd.advice) {
-                      sd.advice.pairs.forEach(p => {
-                        if (suppNames.some(n => n.includes(p.toLowerCase()))) {
-                          pairConnections.push({ from: sd.name, to: p, type: 'synergy' })
-                        }
-                      })
-                      sd.advice.avoid.forEach(a => {
-                        if (suppNames.some(n => n.includes(a.toLowerCase()))) {
-                          pairConnections.push({ from: sd.name, to: a, type: 'conflict' })
-                        }
-                      })
-                    }
-                  })
+                  // What your current stack does
+                  const stackBenefits: { text: string; color: string; badge: string }[] = []
+                  if (suppNames.some(n => n.includes('vitamin d'))) {
+                    stackBenefits.push({ text: 'Vitamin D → Immune + Bones', color: 'emerald', badge: '🛡️' })
+                  }
+                  if (suppNames.some(n => n.includes('omega'))) {
+                    stackBenefits.push({ text: 'Omega-3 → Heart + Brain', color: 'rose', badge: '❤️' })
+                  }
+                  if (suppNames.some(n => n.includes('creatine'))) {
+                    stackBenefits.push({ text: 'Creatine → Muscle + Energy', color: 'amber', badge: '💪' })
+                  }
+                  if (suppNames.some(n => n.includes('magnesium'))) {
+                    stackBenefits.push({ text: 'Magnesium → Sleep + Recovery', color: 'violet', badge: '😴' })
+                  }
+                  if (suppNames.some(n => n.includes('zinc'))) {
+                    stackBenefits.push({ text: 'Zinc → Immune + Skin', color: 'emerald', badge: '🛡️' })
+                  }
+                  if (suppNames.some(n => n.includes('iron'))) {
+                    stackBenefits.push({ text: 'Iron → Energy + Oxygen', color: 'amber', badge: '⚡' })
+                  }
+                  if (suppNames.some(n => n.includes('b12'))) {
+                    stackBenefits.push({ text: 'B12 → Energy + Brain', color: 'cyan', badge: '🧠' })
+                  }
+                  if (suppNames.some(n => n.includes('collagen'))) {
+                    stackBenefits.push({ text: 'Collagen → Skin + Joints', color: 'pink', badge: '✨' })
+                  }
+                  if (suppNames.some(n => n.includes('pre-workout') || n.includes('caffeine'))) {
+                    stackBenefits.push({ text: 'Pre-workout → Focus + Energy', color: 'cyan', badge: '⚡' })
+                  }
+                  stackBenefits.forEach(b => items.push(b))
 
-                  // Render as compact visual pairs
-                  const seen = new Set<string>()
-                  pairConnections.forEach(conn => {
-                    const key = [conn.from, conn.to].sort().join('+')
-                    if (!seen.has(key)) {
-                      seen.add(key)
-                      if (conn.type === 'synergy') {
-                        items.push({ text: `${conn.from} ↔ ${conn.to}`, color: 'emerald', badge: '♥' })
-                      } else {
-                        items.push({ text: `${conn.from} ✕ ${conn.to}`, color: 'rose', badge: '!' })
-                      }
-                    }
-                  })
+                  // What you're missing
+                  const covered = new Set<string>()
+                  if (suppNames.some(n => n.includes('vitamin d'))) { covered.add('immune'); covered.add('bones') }
+                  if (suppNames.some(n => n.includes('omega'))) { covered.add('heart'); covered.add('brain') }
+                  if (suppNames.some(n => n.includes('creatine'))) { covered.add('muscle'); covered.add('energy') }
+                  if (suppNames.some(n => n.includes('magnesium'))) { covered.add('sleep'); covered.add('recovery') }
 
-                  // Missing companions (top 2)
-                  const allPairs = allSuppData.flatMap(sd => sd.advice?.pairs || [])
-                  const uniquePairs = [...new Set(allPairs)]
-                  const missing = uniquePairs.filter(p => !suppNames.some(n => n.includes(p.toLowerCase())))
-                  if (missing.length > 0) items.push({ text: `+ ${missing.slice(0, 2).join(', ')}`, color: 'amber', badge: '+' })
+                  const allBenefits = ['heart', 'immune', 'brain', 'sleep', 'muscle', 'energy', 'bones', 'recovery']
+                  const missing = allBenefits.filter(b => !covered.has(b))
+                  if (missing.length > 0) {
+                    items.push({ text: `Missing: ${missing.slice(0, 2).join(', ')}`, color: 'amber', badge: '+' })
+                  }
 
-                  if (items.length === 0) items.push({ text: 'No pairs yet', color: 'amber', badge: '—' })
+                  if (items.length === 0) items.push({ text: 'Add supplements to see benefits', color: 'amber', badge: '—' })
 
-                  const color = items.some(i => i.color === 'rose') ? 'rose' : items.some(i => i.color === 'amber') ? 'amber' : 'emerald'
-                  insights.push({ icon: Layers, title: 'Companion Stack', items, color, metric: `${pairConnections.filter(c => c.type === 'synergy').length} pairs` })
+                  insights.push({ icon: Layers, title: 'Stack Benefits', items, color: items.some(i => i.color === 'amber') ? 'amber' : 'emerald', metric: `${stackBenefits.length} covered` })
                 }
 
                 // INSIGHT 3: IDEAS & HACKS — smart tips + combos + trends
