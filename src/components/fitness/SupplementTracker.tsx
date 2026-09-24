@@ -650,13 +650,14 @@ export function SupplementTracker() {
             const timesPerWeek = match ? parseInt(match[1]) : 3
             return (perServing * timesPerWeek) / 7
           }
-          const totalCost = supplements.reduce((sum, s) => sum + getSuppDailyCost(s), 0) * 30
-          const costPerDay = totalCost > 0 ? (totalCost / 30).toFixed(2) : '0'
-          const monthlyProjection = totalCost > 0 ? totalCost.toFixed(0) : '0'
-          const yearlyProjection = totalCost > 0 ? (totalCost * 12).toFixed(0) : '0'
-          const costBreakdown = supplements.filter(s => s.cost && s.totalServings && s.totalServings > 0).map(s => ({
+          const dedupedForCost = Array.from(new Map(supplements.map(s => [s.name, s])).values())
+          const totalDailyCost = dedupedForCost.reduce((sum, s) => sum + getSuppDailyCost(s), 0)
+          const costPerDay = totalDailyCost > 0 ? totalDailyCost.toFixed(2) : '0'
+          const monthlyProjection = totalDailyCost > 0 ? (totalDailyCost * 30).toFixed(0) : '0'
+          const yearlyProjection = totalDailyCost > 0 ? (totalDailyCost * 30 * 12).toFixed(0) : '0'
+          const costBreakdown = dedupedForCost.filter(s => s.cost && s.totalServings && s.totalServings > 0).map(s => ({
             name: s.name, cost: s.cost!, perDay: getSuppDailyCost(s).toFixed(2),
-            pct: totalCost > 0 ? Math.round((getSuppDailyCost(s) * 30 / totalCost) * 100) : 0
+            pct: totalDailyCost > 0 ? Math.round((getSuppDailyCost(s) / totalDailyCost) * 100) : 0
           })).sort((a, b) => b.cost - a.cost)
 
 
