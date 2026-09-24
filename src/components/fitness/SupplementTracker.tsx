@@ -646,11 +646,26 @@ export function SupplementTracker() {
             return sum
           }, 0)
           const costPerDay = totalCost > 0 ? (totalCost / 30).toFixed(2) : '0'
+          const costPerWeek = (parseFloat(costPerDay) * 7).toFixed(0)
           const monthlyProjection = totalCost > 0 ? totalCost.toFixed(0) : '0'
+          const yearlyProjection = totalCost > 0 ? (totalCost * 12).toFixed(0) : '0'
           const costBreakdown = supplements.filter(s => s.cost && s.totalServings && s.totalServings > 0).map(s => ({
             name: s.name, cost: s.cost!, perDay: (s.cost! / 30).toFixed(2),
             pct: totalCost > 0 ? Math.round((s.cost! / totalCost) * 100) : 0
           })).sort((a, b) => b.cost - a.cost)
+
+          // ─── Gap Analysis (Enhanced) ───
+          const commonSupps = [
+            { name: 'Vitamin D', why: 'Immune & bone health', priority: 'high' as const },
+            { name: 'Omega-3', why: 'Heart & brain function', priority: 'high' as const },
+            { name: 'Magnesium', why: 'Sleep & muscle recovery', priority: 'high' as const },
+            { name: 'Probiotics', why: 'Gut health & immunity', priority: 'medium' as const },
+            { name: 'Zinc', why: 'Immune & testosterone', priority: 'medium' as const },
+            { name: 'B12', why: 'Energy & nerve health', priority: 'medium' as const },
+            { name: 'Iron', why: 'Oxygen transport', priority: 'low' as const },
+            { name: 'Collagen', why: 'Skin & joint health', priority: 'low' as const },
+          ]
+          const missing = commonSupps.filter(c => !supplements.some(s => s.name.toLowerCase().includes(c.name.toLowerCase())))
 
           // ─── takenAt: Real Timing Analysis ───
           const realTiming = supplements.map(s => {
@@ -1455,72 +1470,185 @@ export function SupplementTracker() {
 
               {/* ──── MODE: PLANNING ──── */}
               {coachMode === 'planning' && (() => {
+                const COLORS = ['#f59e0b', '#f97316', '#8b5cf6', '#6366f1', '#06b6d4', '#10b981']
+                const costPieData = costBreakdown.map((c, i) => ({ name: c.name, value: c.cost, fill: COLORS[i % COLORS.length] }))
                 return (
                 <div className="space-y-2.5">
-                  {/* Refill + Cost Combined */}
-                  <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <Package className="w-3 h-3 text-amber-400" />
-                      <span className="text-[9px] font-bold text-white">Refill & Cost</span>
-                      <div className="flex-1" />
-                      {criticalRefills.length > 0 && <span className="text-[7px] font-black text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded">{criticalRefills.length} urgent</span>}
-                    </div>
-
-                    {/* Refill items */}
-                    <div className="space-y-1.5 mb-3">
-                      {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).slice(0, 3).map((r) => (
-                        <div key={r.id} className={'flex items-center gap-2 p-2 rounded-lg border transition-all ' +
-                          (r.urgency === 'critical' ? 'bg-rose-500/[0.06] border-rose-500/15' :
-                           r.urgency === 'warning' ? 'bg-amber-500/[0.04] border-amber-500/10' :
-                           'bg-white/[0.02] border-white/[0.04]')}>
-                          <div className={'w-4 h-4 rounded flex items-center justify-center shrink-0 ' +
-                            (r.urgency === 'critical' ? 'bg-rose-500/15' : r.urgency === 'warning' ? 'bg-amber-500/10' : 'bg-white/[0.03]')}>
-                            {r.urgency === 'critical' ? <AlertTriangle className="w-2.5 h-2.5 text-rose-400" /> :
-                             r.urgency === 'warning' ? <Clock className="w-2.5 h-2.5 text-amber-400" /> :
-                             <CheckCircle2 className="w-2.5 h-2.5 text-gray-500" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[8px] font-bold text-white truncate">{r.name}</span>
-                              <span className={'text-[7px] font-bold ' + (r.urgency === 'critical' ? 'text-rose-400' : r.urgency === 'warning' ? 'text-amber-400' : 'text-gray-500')}>
-                                {r.daysUntilRefill <= 0 ? 'EMPTY' : r.daysUntilRefill + 'd left'}
-                              </span>
-                            </div>
-                            <div className="w-full h-1 rounded-full bg-white/[0.04] overflow-hidden mt-1">
-                              <div className={'h-full rounded-full transition-all ' + (r.urgency === 'critical' ? 'bg-rose-500' : r.urgency === 'warning' ? 'bg-amber-500' : 'bg-emerald-500/50')}
-                                style={{ width: Math.max(r.pctUsed, 2) + '%' }} />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Cost summary */}
-                    <div className="grid grid-cols-2 gap-1.5 mb-2">
-                      <div className="text-center p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                        <span className="text-[12px] font-black text-amber-300 block">{'$' + costPerDay}</span>
-                        <span className="text-[6px] text-gray-500 font-bold uppercase">Per Day</span>
+                  {/* Refill Countdown */}
+                  {refillData.length > 0 && (
+                    <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-rose-400/20 to-transparent" />
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Package className="w-3 h-3 text-rose-400" />
+                        <span className="text-[9px] font-bold text-white">Refill Countdown</span>
+                        <div className="flex-1" />
+                        {criticalRefills.length > 0 && <span className="text-[7px] font-black text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded">{criticalRefills.length} urgent</span>}
                       </div>
-                      <div className="text-center p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                        <span className="text-[12px] font-black text-amber-300 block">{'$' + monthlyProjection}</span>
-                        <span className="text-[6px] text-gray-500 font-bold uppercase">Monthly</span>
-                      </div>
-                    </div>
-
-                    {costBreakdown.length > 0 && (
-                      <div className="space-y-1 pt-1.5 border-t border-white/[0.04]">
-                        {costBreakdown.slice(0, 3).map((c, i) => (
-                          <div key={i} className="flex items-center gap-1.5">
-                            <span className="text-[7px] text-gray-400 truncate w-14 shrink-0">{c.name}</span>
-                            <div className="flex-1 h-1 rounded-full bg-white/[0.04] overflow-hidden">
-                              <div className="h-full rounded-full bg-amber-500/40" style={{ width: c.pct + '%' }} />
+                      <div className="space-y-1.5">
+                        {refillData.sort((a, b) => a.daysUntilRefill - b.daysUntilRefill).map((r) => (
+                          <div key={r.id} className={'flex items-center gap-2 p-2 rounded-lg border transition-all ' +
+                            (r.urgency === 'critical' ? 'bg-rose-500/[0.06] border-rose-500/15' :
+                             r.urgency === 'warning' ? 'bg-amber-500/[0.04] border-amber-500/10' :
+                             'bg-white/[0.02] border-white/[0.04]')}>
+                            <div className={'w-5 h-5 rounded flex items-center justify-center shrink-0 ' +
+                              (r.urgency === 'critical' ? 'bg-rose-500/15' : r.urgency === 'warning' ? 'bg-amber-500/10' : 'bg-white/[0.03]')}>
+                              {r.urgency === 'critical' ? <AlertTriangle className="w-3 h-3 text-rose-400" /> :
+                               r.urgency === 'warning' ? <Clock className="w-3 h-3 text-amber-400" /> :
+                               <CheckCircle2 className="w-3 h-3 text-gray-500" />}
                             </div>
-                            <span className="text-[7px] font-bold text-amber-300 tabular-nums w-6 text-right">{'$' + c.perDay + '/d'}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-bold text-white truncate">{r.name}</span>
+                                <span className={'text-[7px] font-bold ' + (r.urgency === 'critical' ? 'text-rose-400' : r.urgency === 'warning' ? 'text-amber-400' : 'text-gray-500')}>
+                                  {r.daysUntilRefill <= 0 ? 'EMPTY' : r.daysUntilRefill + 'd left'}
+                                </span>
+                              </div>
+                              <div className="w-full h-1 rounded-full bg-white/[0.04] overflow-hidden mt-1">
+                                <div className={'h-full rounded-full transition-all ' + (r.urgency === 'critical' ? 'bg-rose-500' : r.urgency === 'warning' ? 'bg-amber-500' : 'bg-emerald-500/50')}
+                                  style={{ width: Math.max(r.pctUsed, 2) + '%' }} />
+                              </div>
+                              <span className="text-[6px] text-gray-500">{r.pctUsed}% of {r.refillDays}-day supply used</span>
+                            </div>
                           </div>
                         ))}
                       </div>
-                    )}
+                    </div>
+                  )}
+
+                  {/* Cost Row */}
+                  <div className="grid grid-cols-3 gap-2.5">
+                    <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <DollarSign className="w-3 h-3 text-amber-400" />
+                        <span className="text-[9px] font-bold text-white">Spending</span>
+                      </div>
+                      {costPieData.length > 0 ? (
+                        <>
+                          <div className="h-24">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie data={costPieData} cx="50%" cy="50%" innerRadius={25} outerRadius={40} paddingAngle={2} dataKey="value" strokeWidth={0}>
+                                  {costPieData.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.8} />)}
+                                </Pie>
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="flex flex-wrap justify-center gap-2 mt-1">
+                            {costBreakdown.slice(0, 3).map((c, i) => (
+                              <div key={i} className="flex items-center gap-1">
+                                <div className="w-1.5 h-1.5 rounded" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                <span className="text-[6px] text-gray-500">{c.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="h-24 flex items-center justify-center">
+                          <span className="text-[8px] text-gray-600">No cost data</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="col-span-2 rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <DollarSign className="w-3 h-3 text-amber-400" />
+                        <span className="text-[9px] font-bold text-white">Cost Overview</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5 mb-2">
+                        <div className="text-center p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                          <span className="text-[14px] font-black text-amber-300 block">{'$' + costPerDay}</span>
+                          <span className="text-[6px] text-gray-500 font-bold uppercase">Per Day</span>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                          <span className="text-[14px] font-black text-amber-300 block">{'$' + costPerWeek}</span>
+                          <span className="text-[6px] text-gray-500 font-bold uppercase">Per Week</span>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                          <span className="text-[14px] font-black text-amber-300 block">{'$' + monthlyProjection}</span>
+                          <span className="text-[6px] text-gray-500 font-bold uppercase">Monthly</span>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                          <span className="text-[14px] font-black text-amber-300 block">{'$' + yearlyProjection}</span>
+                          <span className="text-[6px] text-gray-500 font-bold uppercase">Yearly</span>
+                        </div>
+                      </div>
+                      {costBreakdown.length > 0 && (
+                        <div className="space-y-1 pt-1.5 border-t border-white/[0.04]">
+                          {costBreakdown.slice(0, 3).map((c, i) => (
+                            <div key={i} className="flex items-center gap-1.5">
+                              <span className="text-[7px] text-gray-400 truncate w-14 shrink-0">{c.name}</span>
+                              <div className="flex-1 h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                                <div className="h-full rounded-full bg-amber-500/40" style={{ width: c.pct + '%' }} />
+                              </div>
+                              <span className="text-[7px] font-bold text-amber-300 tabular-nums w-6 text-right">{'$' + c.perDay + '/d'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {missing.length > 0 && (
+                    <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-rose-400/20 to-transparent" />
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <ShieldAlert className="w-3 h-3 text-rose-400" />
+                        <span className="text-[9px] font-bold text-white">Gap Analysis</span>
+                        <div className="flex-1" />
+                        <span className="text-[7px] text-gray-500">{missing.length} missing</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {missing.slice(0, 4).map(m => (
+                          <div key={m.name} className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                            <div className={'w-1.5 h-1.5 rounded-full shrink-0 ' + (m.priority === 'high' ? 'bg-rose-400 shadow-[0_0_4px_rgba(239,68,68,0.4)]' : m.priority === 'medium' ? 'bg-amber-400' : 'bg-gray-500')} />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[9px] font-bold text-white block truncate">{m.name}</span>
+                              <span className="text-[7px] text-gray-500 truncate block">{m.why}</span>
+                            </div>
+                            <span className={'text-[6px] font-bold uppercase px-1 py-0.5 rounded shrink-0 ' +
+                              (m.priority === 'high' ? 'bg-rose-500/10 text-rose-400' :
+                               m.priority === 'medium' ? 'bg-amber-500/10 text-amber-400' :
+                               'bg-gray-500/10 text-gray-400')}>{m.priority}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-xl bg-gradient-to-br from-violet-500/[0.04] to-indigo-500/[0.01] border border-violet-500/10 p-3 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/20 to-transparent" />
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Zap className="w-3 h-3 text-violet-400" />
+                      <span className="text-[9px] font-bold text-white">Action Items</span>
+                    </div>
+                    <div className="space-y-1">
+                      {realTiming.filter(r => !r.isAligned && r.actualCategory !== 'Unknown').slice(0, 2).map((r, i) => (
+                        <div key={'ta' + i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-amber-500/[0.04] border border-amber-500/10">
+                          <Clock className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                          <span className="text-[8px] text-gray-300">Move <span className="font-bold text-white">{r.name}</span> from <span className="font-bold text-cyan-400">{r.actualCategory}</span> to <span className="font-bold text-emerald-400">{r.plannedCategory}</span></span>
+                        </div>
+                      ))}
+                      {criticalRefills.slice(0, 1).map((r, i) => (
+                        <div key={'ra' + i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-rose-500/[0.04] border border-rose-500/10">
+                          <Package className="w-2.5 h-2.5 text-rose-400 shrink-0" />
+                          <span className="text-[8px] text-gray-300">Restock <span className="font-bold text-white">{r.name}</span> {'\u2014'} {r.daysUntilRefill <= 0 ? 'EMPTY' : r.daysUntilRefill + 'd remaining'}</span>
+                        </div>
+                      ))}
+                      {remainingToday.length > 0 && (
+                        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-cyan-500/[0.04] border border-cyan-500/10">
+                          <AlertTriangle className="w-2.5 h-2.5 text-cyan-400 shrink-0" />
+                          <span className="text-[8px] text-gray-300">Still need: <span className="font-bold text-white">{remainingToday.map(r => r.name).join(', ')}</span></span>
+                        </div>
+                      )}
+                      {missing.slice(0, 1).map((m, i) => (
+                        <div key={'ma' + i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-violet-500/[0.04] border border-violet-500/10">
+                          <Plus className="w-2.5 h-2.5 text-violet-400 shrink-0" />
+                          <span className="text-[8px] text-gray-300">Consider <span className="font-bold text-white">{m.name}</span> {'\u2014'} {m.why}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 )
