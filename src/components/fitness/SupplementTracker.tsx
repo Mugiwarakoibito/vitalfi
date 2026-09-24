@@ -641,17 +641,23 @@ export function SupplementTracker() {
           const synergyScore = Math.min(100, 50 + synergies.length * 15 - conflicts.length * 20)
 
           // ─── Cost Intelligence ───
-          const totalCost = supplements.reduce((sum, s) => {
-            if (s.cost && s.totalServings && s.totalServings > 0) return sum + s.cost
-            return sum
-          }, 0)
+          const getSuppDailyCost = (s: { cost?: number; totalServings?: number; frequency?: string }) => {
+            if (!s.cost || !s.totalServings || s.totalServings <= 0) return 0
+            const perServing = s.cost / s.totalServings
+            const freq = s.frequency || 'daily'
+            if (freq === 'daily') return perServing
+            const match = freq.match(/(\d+)/)
+            const timesPerWeek = match ? parseInt(match[1]) : 3
+            return (perServing * timesPerWeek) / 7
+          }
+          const totalCost = supplements.reduce((sum, s) => sum + getSuppDailyCost(s), 0) * 30
           const costPerDay = totalCost > 0 ? (totalCost / 30).toFixed(2) : '0'
-          const costPerWeek = (parseFloat(costPerDay) * 7).toFixed(0)
+          const costPerWeek = totalCost > 0 ? (totalCost / 30 * 7).toFixed(0) : '0'
           const monthlyProjection = totalCost > 0 ? totalCost.toFixed(0) : '0'
           const yearlyProjection = totalCost > 0 ? (totalCost * 12).toFixed(0) : '0'
           const costBreakdown = supplements.filter(s => s.cost && s.totalServings && s.totalServings > 0).map(s => ({
-            name: s.name, cost: s.cost!, perDay: (s.cost! / 30).toFixed(2),
-            pct: totalCost > 0 ? Math.round((s.cost! / totalCost) * 100) : 0
+            name: s.name, cost: s.cost!, perDay: getSuppDailyCost(s).toFixed(2),
+            pct: totalCost > 0 ? Math.round((getSuppDailyCost(s) * 30 / totalCost) * 100) : 0
           })).sort((a, b) => b.cost - a.cost)
 
 
@@ -1460,14 +1466,17 @@ export function SupplementTracker() {
               {coachMode === 'planning' && (() => {
                 const COLORS = ['#f59e0b', '#f97316', '#8b5cf6', '#6366f1', '#06b6d4', '#10b981']
                 const dedupedSupps = Array.from(new Map(supplements.map(s => [s.name, s])).values())
-                const allSuppCostData = dedupedSupps.map((s, i) => ({
-                  name: s.name,
-                  cost: s.cost && s.totalServings && s.totalServings > 0 ? s.cost! : 0,
-                  hasData: !!(s.cost && s.totalServings && s.totalServings > 0),
-                  fill: COLORS[i % COLORS.length],
-                  refillDays: s.refillDays || 30,
-                  id: s.id,
-                }))
+                const allSuppCostData = dedupedSupps.map((s, i) => {
+                  const dailyCost = getSuppDailyCost(s)
+                  return {
+                    name: s.name,
+                    cost: dailyCost > 0 ? dailyCost * 30 : 0,
+                    hasData: !!(s.cost && s.totalServings && s.totalServings > 0),
+                    fill: COLORS[i % COLORS.length],
+                    refillDays: s.refillDays || 30,
+                    id: s.id,
+                  }
+                })
                 const totalAllCost = allSuppCostData.reduce((sum, s) => sum + s.cost, 0)
                 const suppsWithCost = allSuppCostData.filter(s => s.hasData)
                 const suppsWithoutCost = allSuppCostData.filter(s => !s.hasData)
@@ -1515,7 +1524,7 @@ export function SupplementTracker() {
                               <div className="w-10 h-[3px] rounded-full bg-white/[0.04] overflow-hidden shrink-0">
                                 <div className="h-full rounded-full" style={{ width: (s.cost / totalAllCost * 100) + '%', backgroundColor: COLORS[i % COLORS.length], opacity: 0.7 }} />
                               </div>
-                              <span className="text-[7px] font-bold text-amber-300/90 tabular-nums w-7 text-right">${s.cost}</span>
+                              <span className="text-[7px] font-bold text-amber-300/90 tabular-nums w-7 text-right">${(s.cost / 30).toFixed(2)}</span>
                             </div>
                           ))}
                           {suppsWithoutCost.length > 0 && (
@@ -1582,9 +1591,10 @@ export function SupplementTracker() {
                                     <circle cx="12" cy="12" r="10" fill="none" stroke={ringColor} strokeWidth="2" strokeLinecap="round"
                                       strokeDasharray={circumference} strokeDashoffset={dashOffset} className="transition-all duration-700" />
                                   </svg>
-                                  <div className="absolute inset-0 flex items-center justify-center">
-                                    <span className="text-[6px] font-black" style={{ color: ringColor }}>{daysLeft !== null ? daysLeft : '—'}</span>
-                                  </div>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                  <span className="text-[7px] font-black leading-none" style={{ color: ringColor }}>{daysLeft !== null ? daysLeft : '—'}</span>
+                                  <span className="text-[4px] text-gray-500 leading-none mt-px">days</span>
+                                </div>
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <span className="text-[8px] font-bold text-white block truncate leading-tight">{s.name}</span>
