@@ -653,8 +653,8 @@ export function SupplementTracker() {
           const dedupedForCost = Array.from(new Map(supplements.map(s => [s.name, s])).values())
           const totalDailyCost = dedupedForCost.reduce((sum, s) => sum + getSuppDailyCost(s), 0)
           const costPerDay = totalDailyCost > 0 ? totalDailyCost.toFixed(2) : '0'
-          const monthlyProjection = totalDailyCost > 0 ? (totalDailyCost * 30).toFixed(0) : '0'
-          const yearlyProjection = totalDailyCost > 0 ? (totalDailyCost * 30 * 12).toFixed(0) : '0'
+          const costPerMonth = totalDailyCost > 0 ? (totalDailyCost * 30).toFixed(2) : '0'
+          const costPerYear = totalDailyCost > 0 ? (totalDailyCost * 365).toFixed(2) : '0'
           const costBreakdown = dedupedForCost.filter(s => s.cost && s.totalServings && s.totalServings > 0).map(s => ({
             name: s.name, cost: s.cost!, perDay: getSuppDailyCost(s).toFixed(2),
             pct: totalDailyCost > 0 ? Math.round((getSuppDailyCost(s) / totalDailyCost) * 100) : 0
@@ -1543,7 +1543,7 @@ export function SupplementTracker() {
                               </PieChart>
                             </ResponsiveContainer>
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                              <span className="text-[18px] font-black text-white leading-none drop-shadow-lg">${monthlyProjection}</span>
+                              <span className="text-[18px] font-black text-white leading-none drop-shadow-lg">${costPerMonth}</span>
                               <span className="text-[7px] text-gray-400 font-bold mt-1">/month</span>
                               <span className="text-[6px] text-gray-600 mt-0.5">${costPerDay}/day</span>
                             </div>
@@ -1572,12 +1572,12 @@ export function SupplementTracker() {
                           </div>
                           <div className="w-px bg-white/[0.06]" />
                           <div className="flex-1 text-center">
-                            <span className="text-[11px] font-black text-amber-300 block leading-none">${monthlyProjection}</span>
+                            <span className="text-[11px] font-black text-amber-300 block leading-none">${costPerMonth}</span>
                             <span className="text-[5px] text-gray-500 font-bold uppercase">month</span>
                           </div>
                           <div className="w-px bg-white/[0.06]" />
                           <div className="flex-1 text-center">
-                            <span className="text-[11px] font-black text-violet-400 block leading-none">${yearlyProjection}</span>
+                            <span className="text-[11px] font-black text-violet-400 block leading-none">${costPerYear}</span>
                             <span className="text-[5px] text-gray-500 font-bold uppercase">year</span>
                           </div>
                         </div>
