@@ -901,69 +901,69 @@ export function SupplementTracker() {
                 const insights: { icon: typeof Zap; title: string; items: { text: string; color?: string; badge?: string }[]; color: string; metric?: string }[] = []
                 const suppNames = deduped.map((s: { name: string }) => s.name.toLowerCase())
 
-                // INSIGHT 1: FOOD PAIRING GUIDE — what to eat with each supplement for best absorption
+                // INSIGHT 1: FOOD PAIRING GUIDE — one rich line per supplement
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
                   const foodDB: Record<string, { eat: string; avoid: string; tip: string }> = {
-                    'Vitamin D': { eat: 'fatty fish, egg yolks, avocado, olive oil, cheese', avoid: 'high-fiber bran cereal, statin drugs', tip: '3x absorption when taken with dietary fat' },
-                    'Vitamin D3': { eat: 'fatty fish, egg yolks, avocado, olive oil, cheese', avoid: 'high-fiber bran cereal, statin drugs', tip: '3x absorption when taken with dietary fat' },
-                    'Omega-3': { eat: 'salmon, mackerel, walnuts, flaxseed, sardines, chia seeds', avoid: 'very low-fat meals, blood thinners without doctor approval', tip: 'Freeze fish oil capsules to reduce fish burps' },
-                    'Omega-3 Fish Oil': { eat: 'salmon, mackerel, walnuts, flaxseed, sardines, chia seeds', avoid: 'very low-fat meals, blood thinners without doctor approval', tip: 'Freeze fish oil capsules to reduce fish burps' },
-                    'Iron': { eat: 'vitamin C foods: citrus, bell peppers, strawberries, kiwi, tomatoes', avoid: 'coffee, tea, calcium supplements, dairy within 1 hour', tip: '6x absorption boost when paired with vitamin C' },
-                    'Magnesium': { eat: 'dark chocolate, spinach, almonds, pumpkin seeds, black beans, avocado', avoid: 'high-dose calcium supplements at same time', tip: 'Glycinate for sleep, Threonate for brain, Citrate for muscles' },
-                    'Zinc': { eat: 'pumpkin seeds, beef, chickpeas, cashews, crab, lobster', avoid: 'high-phytate grains, dairy, iron at same time', tip: 'Take with dinner to avoid nausea' },
-                    'Creatine': { eat: 'anything — take with carbs or protein for better uptake', avoid: 'excessive caffeine may reduce uptake', tip: '3-5g daily, timing does not matter, consistency is key' },
-                    'Whey Protein': { eat: 'banana, berries, oats, peanut butter in a shake', avoid: 'taking without water', tip: 'Post-workout within 30min for best muscle synthesis' },
-                    'B12': { eat: 'meat, fish, eggs, dairy, fortified nutritional yeast', avoid: 'none significant', tip: 'Sublingual methylcobalamin form is best absorbed' },
-                    'Collagen': { eat: 'vitamin C foods essential: citrus, berries, bell peppers, kiwi', avoid: 'high-dose calcium at same time', tip: '8x collagen synthesis when paired with vitamin C' },
-                    'Probiotics': { eat: 'prebiotic foods: garlic, onion, banana, oats, asparagus, Jerusalem artichoke', avoid: 'hot drinks immediately after, antibiotics (separate by 2h)', tip: 'Take 30min before breakfast for best colonization' },
-                    'CoQ10': { eat: 'fatty meals: nuts, olive oil, avocado, fatty fish, peanuts', avoid: 'none significant', tip: 'Ubiquinol form is 3x more absorbable than ubiquinone' },
-                    'Curcumin': { eat: 'black pepper + healthy fat: olive oil, coconut oil, ghee', avoid: 'taking without fat or black pepper', tip: '20x absorption boost with piperine from black pepper' },
-                    'Calcium': { eat: 'dairy, leafy greens, fortified foods, sardines with bones, almonds', avoid: 'iron, zinc, high-fiber foods at same time', tip: 'Take in morning, magnesium at night for best absorption' },
-                    'Vitamin C': { eat: 'citrus, kiwi, bell peppers, broccoli, strawberries, guava', avoid: 'none significant', tip: 'Take with iron supplements for maximum absorption' },
-                    'Vitamin K2': { eat: 'natto, hard cheeses, egg yolks, chicken, sauerkraut', avoid: 'blood thinners without doctor approval', tip: 'Directs calcium to bones, prevents arterial buildup' },
-                    'Ashwagandha': { eat: 'warm milk, honey, ghee (traditional Ayurvedic method)', avoid: 'caffeine, alcohol', tip: 'Take with fat for better absorption of withanolides' },
-                    'Melatonin': { eat: 'tart cherries, walnuts, bananas, almonds', avoid: 'caffeine, bright screens before bed', tip: 'Start with 0.5mg, increase only if needed' },
-                    'Lion\'s Mane': { eat: 'healthy fats: olive oil, coconut oil, avocado', avoid: 'none significant', tip: 'Take in morning for cognitive benefits throughout day' },
-                    'Lions Mane': { eat: 'healthy fats: olive oil, coconut oil, avocado', avoid: 'none significant', tip: 'Take in morning for cognitive benefits throughout day' },
-                    'Pre-workout': { eat: 'light snack 30min before: banana, rice cake', avoid: 'heavy meals, excessive caffeine stacking', tip: 'Take 20-30min before training for full effect' },
-                    'Multivitamin': { eat: 'largest meal of the day with fat', avoid: 'empty stomach, calcium, iron, zinc at same time', tip: 'Fat-soluble vitamins (A, D, E, K) need dietary fat' },
-                    'Rhodiola': { eat: 'empty stomach, morning', avoid: 'caffeine, stimulants', tip: 'Take 20min before breakfast for adaptogenic benefits' },
-                    'L-Theanine': { eat: 'can take with or without food', avoid: 'none significant', tip: 'Pair with caffeine for calm focus without jitters' },
-                    'Fiber': { eat: 'plenty of water, fruits, vegetables', avoid: 'taking within 2h of other supplements (blocks absorption)', tip: 'Take at bedtime, separate from all other supplements' },
-                    'Vitamin E': { eat: 'nuts, seeds, avocado, olive oil, spinach', avoid: 'blood thinners without doctor approval', tip: 'Take with fatty meal for best absorption' },
-                    'B-Complex': { eat: 'eggs, meat, legumes, leafy greens, whole grains', avoid: 'none significant', tip: 'Take in morning — B vitamins can interfere with sleep' },
-                    'Beta-Alanine': { eat: 'can take with or without food', avoid: 'none significant', tip: 'Tingling sensation (paresthesia) is normal and harmless' },
-                    'EAAs': { eat: 'during or immediately after workout', avoid: 'none significant', tip: 'Take intra-workout for best muscle protein synthesis' },
-                    'HMB': { eat: 'with meal for better absorption', avoid: 'none significant', tip: 'Take 3g daily split into 1g doses for best results' },
-                    'Niacin': { eat: 'with food to reduce flush', avoid: 'hot drinks, alcohol (increases flush)', tip: 'Flush form is more effective than no-flush for lipid benefits' },
-                    'Psyllium': { eat: 'large glass of water immediately after', avoid: 'taking without enough water', tip: 'Take at bedtime, separate from all other medications' },
-                    'Digestive Enzymes': { eat: 'take right before or with first bite of meal', avoid: 'taking on empty stomach', tip: 'Take before largest meal for best digestive support' },
-                    'Elderberry': { eat: 'can take with or without food', avoid: 'raw elderberry (cooked only)', tip: 'Start at first sign of cold symptoms for best effect' },
-                    'Quercetin': { eat: 'with vitamin C for better absorption', avoid: 'none significant', tip: 'Take with bromelain for enhanced anti-inflammatory effect' },
-                    'Tart Cherry': { eat: 'can take with or without food', avoid: 'none significant', tip: 'Take 30min before bed for natural melatonin + recovery' },
-                    'Glycine': { eat: 'warm water or herbal tea before bed', avoid: 'none significant', tip: '3g before bed for improved sleep quality' },
-                    'GABA': { eat: 'can take with or without food', avoid: 'none significant', tip: 'Take on empty stomach for best crossing of blood-brain barrier' },
-                    'Saffron': { eat: 'with meal for absorption', avoid: 'none significant', tip: 'Take consistently for 6-8 weeks for mood benefits' },
-                    'Bacopa': { eat: 'with fatty meal for better absorption', avoid: 'none significant', tip: 'Take consistently for 8-12 weeks for memory benefits' },
-                    'Phosphatidylserine': { eat: 'with fatty meal', avoid: 'none significant', tip: 'Take 100mg 2-3x daily for cognitive support' },
-                    'K2': { eat: 'natto, hard cheeses, egg yolks, chicken, sauerkraut', avoid: 'blood thinners without doctor approval', tip: 'Directs calcium to bones, prevents arterial buildup' },
-                    'Prebiotics': { eat: 'garlic, onion, banana, oats, asparagus, Jerusalem artichoke', avoid: 'none significant', tip: 'Feed your probiotics — take together for best results' },
-                    'Glucosamine': { eat: 'with meal for better absorption', avoid: 'shellfish allergy (some derived from shellfish)', tip: 'Combine with chondroitin for enhanced joint support' },
-                    'Hyaluronic Acid': { eat: 'with meal for better absorption', avoid: 'none significant', tip: 'Take with vitamin C for collagen + hydration synergy' },
-                    'Silica': { eat: 'oats, barley, beer, green beans, bananas', avoid: 'none significant', tip: 'Supports connective tissue, hair, skin, and nails' },
-                    'Biotin': { eat: 'eggs, nuts, seeds, sweet potatoes, spinach', avoid: 'can interfere with lab tests (stop 48h before bloodwork)', tip: 'Take with B-complex for best keratin production' },
-                    'Folate': { eat: 'leafy greens, legumes, asparagus, Brussels sprouts', avoid: 'none significant', tip: 'Use methylfolate (5-MTHF) form, not folic acid' },
-                    'Copper': { eat: 'oysters, dark chocolate, cashews, lentils, sunflower seeds', avoid: 'zinc at same time (competes for absorption)', tip: 'Take with zinc but at different times of day' },
+                    'Vitamin D': { eat: 'fatty fish, eggs, avocado, olive oil', avoid: 'high-fiber bran cereal', tip: '3x absorption with fat' },
+                    'Vitamin D3': { eat: 'fatty fish, eggs, avocado, olive oil', avoid: 'high-fiber bran cereal', tip: '3x absorption with fat' },
+                    'Omega-3': { eat: 'salmon, walnuts, flaxseed, sardines', avoid: 'very low-fat meals', tip: 'Freeze capsules to reduce burps' },
+                    'Omega-3 Fish Oil': { eat: 'salmon, walnuts, flaxseed, sardines', avoid: 'very low-fat meals', tip: 'Freeze capsules to reduce burps' },
+                    'Iron': { eat: 'vitamin C foods: citrus, bell peppers, strawberries', avoid: 'coffee, tea, calcium within 1h', tip: '6x boost with vitamin C' },
+                    'Magnesium': { eat: 'dark chocolate, spinach, almonds, pumpkin seeds', avoid: 'high-dose calcium supplements', tip: 'Glycinate for sleep, Threonate for brain' },
+                    'Zinc': { eat: 'pumpkin seeds, beef, chickpeas, cashews', avoid: 'high-phytate grains, dairy at same time', tip: 'Take with dinner to avoid nausea' },
+                    'Creatine': { eat: 'anything — take with carbs for better uptake', avoid: 'excessive caffeine may reduce uptake', tip: '3-5g daily, consistency is key' },
+                    'Whey Protein': { eat: 'banana, berries, oats, peanut butter in a shake', avoid: 'taking without water', tip: 'Post-workout within 30min for best synthesis' },
+                    'B12': { eat: 'meat, fish, eggs, dairy, fortified yeast', avoid: 'none significant', tip: 'Sublingual methylcobalamin is best form' },
+                    'Collagen': { eat: 'vitamin C foods: citrus, berries, bell peppers', avoid: 'high-dose calcium at same time', tip: '8x synthesis with vitamin C' },
+                    'Probiotics': { eat: 'prebiotic foods: garlic, onion, banana, oats', avoid: 'hot drinks immediately after, antibiotics', tip: 'Take 30min before breakfast' },
+                    'CoQ10': { eat: 'fatty meals: nuts, olive oil, avocado', avoid: 'none significant', tip: 'Ubiquinol form is 3x more absorbable' },
+                    'Curcumin': { eat: 'black pepper + healthy fat: olive oil, coconut oil', avoid: 'taking without fat or pepper', tip: '20x boost with black pepper' },
+                    'Calcium': { eat: 'dairy, leafy greens, fortified foods, sardines', avoid: 'iron, zinc at same time', tip: 'Take in morning, magnesium at night' },
+                    'Vitamin C': { eat: 'citrus, kiwi, bell peppers, broccoli, strawberries', avoid: 'none significant', tip: 'Take with iron for max absorption' },
+                    'Ashwagandha': { eat: 'warm milk, honey, ghee', avoid: 'caffeine, alcohol', tip: 'Take with fat for better withanolide absorption' },
+                    'Melatonin': { eat: 'tart cherries, walnuts, bananas', avoid: 'caffeine, bright screens before bed', tip: 'Start with 0.5mg, increase only if needed' },
+                    'Lion\'s Mane': { eat: 'healthy fats: olive oil, coconut oil, avocado', avoid: 'none significant', tip: 'Take in morning for cognitive benefits' },
+                    'Lions Mane': { eat: 'healthy fats: olive oil, coconut oil, avocado', avoid: 'none significant', tip: 'Take in morning for cognitive benefits' },
+                    'Pre-workout': { eat: 'light snack 30min before: banana, rice cake', avoid: 'heavy meals, excessive caffeine', tip: 'Take 20-30min before training' },
+                    'Multivitamin': { eat: 'largest meal of the day with fat', avoid: 'empty stomach, calcium, iron, zinc at same time', tip: 'Fat-soluble vitamins need dietary fat' },
+                    'Rhodiola': { eat: 'empty stomach, morning', avoid: 'caffeine, stimulants', tip: 'Take 20min before breakfast' },
+                    'L-Theanine': { eat: 'can take with or without food', avoid: 'none significant', tip: 'Pair with caffeine for calm focus' },
+                    'Fiber': { eat: 'plenty of water, fruits, vegetables', avoid: 'taking within 2h of other supplements', tip: 'Take at bedtime, separate from all others' },
+                    'Vitamin E': { eat: 'nuts, seeds, avocado, olive oil', avoid: 'blood thinners without doctor approval', tip: 'Take with fatty meal' },
+                    'B-Complex': { eat: 'eggs, meat, legumes, leafy greens', avoid: 'none significant', tip: 'Take in morning — can interfere with sleep' },
+                    'Beta-Alanine': { eat: 'can take with or without food', avoid: 'none significant', tip: 'Tingling is normal and harmless' },
+                    'EAAs': { eat: 'during or immediately after workout', avoid: 'none significant', tip: 'Take intra-workout for best MPS' },
+                    'HMB': { eat: 'with meal for better absorption', avoid: 'none significant', tip: '3g daily split into 1g doses' },
+                    'Niacin': { eat: 'with food to reduce flush', avoid: 'hot drinks, alcohol', tip: 'Flush form is more effective for lipids' },
+                    'Psyllium': { eat: 'large glass of water immediately after', avoid: 'taking without enough water', tip: 'Take at bedtime, separate from medications' },
+                    'Digestive Enzymes': { eat: 'take right before or with first bite', avoid: 'taking on empty stomach', tip: 'Take before largest meal' },
+                    'Elderberry': { eat: 'can take with or without food', avoid: 'raw elderberry (cooked only)', tip: 'Start at first sign of cold' },
+                    'Quercetin': { eat: 'with vitamin C for better absorption', avoid: 'none significant', tip: 'Take with bromelain for enhanced effect' },
+                    'Tart Cherry': { eat: 'can take with or without food', avoid: 'none significant', tip: 'Take 30min before bed for melatonin + recovery' },
+                    'Glycine': { eat: 'warm water or herbal tea before bed', avoid: 'none significant', tip: '3g before bed for better sleep quality' },
+                    'GABA': { eat: 'can take with or without food', avoid: 'none significant', tip: 'Take on empty stomach for best brain crossing' },
+                    'Saffron': { eat: 'with meal for absorption', avoid: 'none significant', tip: 'Consistent for 6-8 weeks for mood benefits' },
+                    'Bacopa': { eat: 'with fatty meal for better absorption', avoid: 'none significant', tip: 'Consistent for 8-12 weeks for memory' },
+                    'Phosphatidylserine': { eat: 'with fatty meal', avoid: 'none significant', tip: '100mg 2-3x daily for cognitive support' },
+                    'K2': { eat: 'natto, hard cheeses, egg yolks, chicken', avoid: 'blood thinners without doctor approval', tip: 'Directs calcium to bones, prevents arterial buildup' },
+                    'Prebiotics': { eat: 'garlic, onion, banana, oats, asparagus', avoid: 'none significant', tip: 'Feed your probiotics — take together' },
+                    'Glucosamine': { eat: 'with meal for better absorption', avoid: 'shellfish allergy (some derived from shellfish)', tip: 'Combine with chondroitin for joints' },
+                    'Hyaluronic Acid': { eat: 'with meal for better absorption', avoid: 'none significant', tip: 'Take with vitamin C for hydration synergy' },
+                    'Silica': { eat: 'oats, barley, green beans, bananas', avoid: 'none significant', tip: 'Supports connective tissue, hair, skin, nails' },
+                    'Biotin': { eat: 'eggs, nuts, seeds, sweet potatoes', avoid: 'can interfere with lab tests', tip: 'Stop 48h before bloodwork' },
+                    'Folate': { eat: 'leafy greens, legumes, asparagus, Brussels sprouts', avoid: 'none significant', tip: 'Use methylfolate (5-MTHF), not folic acid' },
+                    'Copper': { eat: 'oysters, dark chocolate, cashews, lentils', avoid: 'zinc at same time (competes)', tip: 'Take with zinc but at different times' },
+                    'Vitamin K2': { eat: 'natto, hard cheeses, egg yolks, chicken', avoid: 'blood thinners without doctor approval', tip: 'Directs calcium to bones' },
+                    'Fish Oil': { eat: 'salmon, walnuts, flaxseed, sardines', avoid: 'very low-fat meals', tip: 'Freeze capsules to reduce burps' },
                   }
                   allSuppData.forEach(sd => {
                     const short = sd.name.split(' ')[0]
                     const key = Object.keys(foodDB).find(k => sd.name.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(sd.name.toLowerCase().split(' ')[0]))
                     const p = key ? foodDB[key] : null
                     if (p) {
-                      items.push({ text: `${short}: eat with ${p.eat}`, color: 'emerald', badge: 'F' })
-                      if (p.avoid !== 'none significant') items.push({ text: `${short}: avoid ${p.avoid}`, color: 'rose', badge: '!' })
-                      items.push({ text: `${short}: ${p.tip}`, color: 'cyan', badge: '*' })
+                      const avoid = p.avoid !== 'none significant' ? ` avoid ${p.avoid}` : ''
+                      items.push({ text: `${short}: eat with ${p.eat},${avoid} — ${p.tip}`, color: 'emerald', badge: 'F' })
                     } else {
                       items.push({ text: `${short}: no food pairing data available`, color: 'amber', badge: '?' })
                     }
@@ -972,7 +972,7 @@ export function SupplementTracker() {
                   insights.push({ icon: Apple, title: 'Food Pairing Guide', items, color: 'emerald', metric: `${allSuppData.length} supps` })
                 }
 
-                // INSIGHT 2: SUPPLEMENT FATIGUE ALERT — cycling + how long you have been taking
+                // INSIGHT 2: SUPPLEMENT FATIGUE ALERT — one rich line per supplement
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
                   const now = new Date()
@@ -981,46 +981,34 @@ export function SupplementTracker() {
                     const supp = deduped.find(d => d.name === sd.name)
                     if (!supp) return
                     const short = sd.name.split(' ')[0]
-                    // Find ALL logs for this supplement (not just today)
                     const suppAllLogs = logs.filter(l => l.supplementId === supp.id)
                     if (suppAllLogs.length === 0) {
-                      items.push({ text: `${short}: no logs yet — start tracking to monitor fatigue`, color: 'amber', badge: '?' })
+                      items.push({ text: `${short}: no logs yet — start tracking`, color: 'amber', badge: '?' })
                       return
                     }
-                    // Get unique dates logged
                     const uniqueDates = [...new Set(suppAllLogs.map(l => l.date))].sort()
-                    const earliestDate = uniqueDates[0]
-                    const latestDate = uniqueDates[uniqueDates.length - 1]
-                    const earliest = new Date(earliestDate + 'T12:00:00')
-                    const latest = new Date(latestDate + 'T12:00:00')
+                    const earliest = new Date(uniqueDates[0] + 'T12:00:00')
+                    const latest = new Date(uniqueDates[uniqueDates.length - 1] + 'T12:00:00')
                     const daysSinceFirst = Math.floor((now.getTime() - earliest.getTime()) / (1000 * 60 * 60 * 24))
                     const daysSinceLast = Math.floor((now.getTime() - latest.getTime()) / (1000 * 60 * 60 * 24))
                     const totalDaysLogged = uniqueDates.length
-                    // Calculate consecutive streak from today backwards
                     let streak = 0
                     for (let i = 0; i < 365; i++) {
-                      const d = new Date(now)
-                      d.setDate(d.getDate() - i)
-                      const dateStr = toLocalDate(d)
-                      if (suppAllLogs.some(l => l.date === dateStr)) streak++
+                      const d = new Date(now); d.setDate(d.getDate() - i)
+                      if (suppAllLogs.some(l => l.date === toLocalDate(d))) streak++
                       else break
                     }
-                    // Check for gaps (days missed in the tracking period)
-                    const missedDays = daysSinceFirst - totalDaysLogged
                     const adherence = daysSinceFirst > 0 ? Math.round((totalDaysLogged / daysSinceFirst) * 100) : 0
 
-                    if (daysSinceFirst >= 90) {
-                      items.push({ text: `${short}: ${daysSinceFirst} days since first dose — consider 2-week cycle break`, color: 'rose', badge: '!' })
-                    } else if (daysSinceFirst >= 60) {
-                      items.push({ text: `${short}: ${daysSinceFirst} days ongoing — cycle break recommended in ${90 - daysSinceFirst} days`, color: 'amber', badge: '~' })
-                    } else if (daysSinceFirst >= 30) {
-                      items.push({ text: `${short}: ${daysSinceFirst} days tracked, ${adherence}% adherence, ${streak}d current streak`, color: 'emerald', badge: '✓' })
-                    } else {
-                      items.push({ text: `${short}: ${daysSinceFirst} days tracked, ${totalDaysLogged} entries, ${missedDays} gaps`, color: 'emerald', badge: '✓' })
-                    }
-                    if (daysSinceLast > 1 && daysSinceFirst > 0) {
-                      items.push({ text: `${short}: last taken ${daysSinceLast} days ago — resume or remove?`, color: 'rose', badge: '?' })
-                    }
+                    let status = ''
+                    let color = 'emerald'
+                    let badge = '✓'
+                    if (daysSinceFirst >= 90) { status = `${daysSinceFirst}d — consider 2-week break`; color = 'rose'; badge = '!' }
+                    else if (daysSinceFirst >= 60) { status = `${daysSinceFirst}d — break in ${90 - daysSinceFirst}d`; color = 'amber'; badge = '~' }
+                    else if (daysSinceLast > 1) { status = `${daysSinceFirst}d tracked, ${streak}d streak, ${adherence}% adherence, last ${daysSinceLast}d ago`; color = 'rose'; badge = '?' }
+                    else { status = `${daysSinceFirst}d tracked, ${streak}d streak, ${adherence}% adherence`; color = 'emerald'; badge = '✓' }
+
+                    items.push({ text: `${short}: ${status}`, color, badge })
                   })
 
                   if (items.length === 0) items.push({ text: 'No fatigue alerts — your stack is healthy', color: 'emerald', badge: '✓' })
@@ -1028,58 +1016,62 @@ export function SupplementTracker() {
                   insights.push({ icon: AlertTriangle, title: 'Fatigue Alert', items, color: cycleAlerts > 0 ? 'rose' : 'emerald', metric: cycleAlerts > 0 ? `${cycleAlerts} alerts` : 'all good' })
                 }
 
-                // INSIGHT 3: SUPPLEMENT INTERACTIONS — synergies + conflicts between your supplements
+                // INSIGHT 3: SUPPLEMENT INTERACTIONS — one rich line per supplement
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
-                  const synergies: string[] = []
-                  const conflicts: string[] = []
-                  const timingRules: string[] = []
                   const seen = new Set<string>()
 
-                  // Check all pairs of user's supplements against interaction DB
-                  SUPP_INTERACTIONS.forEach(inter => {
-                    const hasA = suppNames.some(n => n.includes(inter.a.toLowerCase()))
-                    const hasB = suppNames.some(n => n.includes(inter.b.toLowerCase()))
-                    if (hasA && hasB) {
-                      const key = [inter.a, inter.b].sort().join('+')
-                      if (!seen.has(key)) {
-                        seen.add(key)
-                        const pair = `${inter.a.split(' ')[0]} + ${inter.b.split(' ')[0]}`
-                        if (inter.type === 'synergy') {
-                          synergies.push(`${pair}: ${inter.message}`)
-                          items.push({ text: `${pair}: ${inter.message}`, color: 'emerald', badge: '+' })
-                        } else if (inter.type === 'conflict') {
-                          conflicts.push(`${pair}: ${inter.message}`)
-                          items.push({ text: `${pair}: ${inter.message}`, color: 'rose', badge: '!' })
-                        } else {
-                          timingRules.push(`${pair}: ${inter.message}`)
-                          items.push({ text: `${pair}: ${inter.message}`, color: 'cyan', badge: '~' })
+                  allSuppData.forEach(sd => {
+                    const short = sd.name.split(' ')[0]
+                    const synergies: string[] = []
+                    const conflicts: string[] = []
+                    const timings: string[] = []
+
+                    // Check SUPP_INTERACTIONS
+                    SUPP_INTERACTIONS.forEach(inter => {
+                      const hasA = sd.name.toLowerCase().includes(inter.a.toLowerCase())
+                      const hasB = suppNames.some(n => n.includes(inter.b.toLowerCase()) && n !== sd.name.toLowerCase())
+                      const hasA2 = suppNames.some(n => n.includes(inter.a.toLowerCase()) && n !== sd.name.toLowerCase())
+                      const hasB2 = sd.name.toLowerCase().includes(inter.b.toLowerCase())
+                      if ((hasA && hasB) || (hasA2 && hasB2)) {
+                        const other = hasA ? inter.b.split(' ')[0] : inter.a.split(' ')[0]
+                        const key = [short, other].sort().join('+')
+                        if (!seen.has(key)) {
+                          seen.add(key)
+                          if (inter.type === 'synergy') synergies.push(`${other} — ${inter.message}`)
+                          else if (inter.type === 'conflict') conflicts.push(`${other} — ${inter.message}`)
+                          else timings.push(`${other} — ${inter.message}`)
                         }
                       }
-                    }
-                  })
+                    })
 
-                  // Also check adviceDB avoid lists for additional conflicts
-                  allSuppData.forEach(sd => {
+                    // Check adviceDB avoid lists
                     if (sd.advice && sd.advice.avoid.length > 0) {
                       sd.advice.avoid.forEach(avoidItem => {
-                        const avoidKey = `${sd.name.split(' ')[0]}+${avoidItem}`
-                        if (!seen.has(avoidKey)) {
-                          const hasAvoid = suppNames.some(n => n.includes(avoidItem.toLowerCase()))
-                          if (hasAvoid) {
-                            seen.add(avoidKey)
-                            conflicts.push(`${sd.name.split(' ')[0]} + ${avoidItem}: avoid taking together`)
-                            items.push({ text: `${sd.name.split(' ')[0]} + ${avoidItem}: avoid taking together`, color: 'rose', badge: '!' })
+                        const hasAvoid = suppNames.some(n => n.includes(avoidItem.toLowerCase()))
+                        if (hasAvoid) {
+                          const key = [short, avoidItem].sort().join('+')
+                          if (!seen.has(key)) {
+                            seen.add(key)
+                            conflicts.push(`${avoidItem} — avoid taking together`)
                           }
                         }
                       })
                     }
+
+                    const parts: string[] = []
+                    if (synergies.length > 0) parts.push(`+ ${synergies.join(', ')}`)
+                    if (conflicts.length > 0) parts.push(`! ${conflicts.join(', ')}`)
+                    if (timings.length > 0) parts.push(`~ ${timings.join(', ')}`)
+
+                    if (parts.length > 0) {
+                      const hasConflict = conflicts.length > 0
+                      items.push({ text: `${short}: ${parts.join(' | ')}`, color: hasConflict ? 'rose' : 'violet', badge: hasConflict ? '!' : '+' })
+                    }
                   })
 
-                  if (synergies.length > 0) items.push({ text: `Take together: ${synergies.map(s => s.split(':')[0]).join(', ')}`, color: 'emerald', badge: '→' })
-                  if (conflicts.length > 0) items.push({ text: `Separate: ${conflicts.map(c => c.split(':')[0]).join(', ')}`, color: 'rose', badge: '⚠' })
                   if (items.length === 0) items.push({ text: 'Add 2+ supplements to see interactions', color: 'amber', badge: '—' })
-                  insights.push({ icon: Layers, title: 'Supplement Interactions', items, color: conflicts.length > 0 ? 'rose' : 'violet', metric: `${synergies.length}+ ${conflicts.length}! ${timingRules.length}~` })
+                  insights.push({ icon: Layers, title: 'Supplement Interactions', items, color: items.some(i => i.badge === '!') ? 'rose' : 'violet', metric: `${items.length} pairs found` })
                 }
 
                 const finalInsights = insights.slice(0, 3)
