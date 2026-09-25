@@ -1018,38 +1018,46 @@ export function SupplementTracker() {
                 // INSIGHT 3: SUPPLEMENT INTERACTIONS — one line per supplement, all shown
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
-                  const seen = new Set<string>()
 
                   allSuppData.forEach(sd => {
                     const short = sd.name.split(' ')[0]
                     const synergies: string[] = []
                     const conflicts: string[] = []
                     const timings: string[] = []
+                    const seenForThis = new Set<string>()
 
                     SUPP_INTERACTIONS.forEach(inter => {
-                      const hasA = sd.name.toLowerCase().includes(inter.a.toLowerCase())
-                      const hasB = suppNames.some(n => n.includes(inter.b.toLowerCase()) && n !== sd.name.toLowerCase())
-                      const hasA2 = suppNames.some(n => n.includes(inter.a.toLowerCase()) && n !== sd.name.toLowerCase())
-                      const hasB2 = sd.name.toLowerCase().includes(inter.b.toLowerCase())
-                      if ((hasA && hasB) || (hasA2 && hasB2)) {
-                        const other = hasA ? inter.b.split(' ')[0] : inter.a.split(' ')[0]
-                        const key = [short, other].sort().join('+')
-                        if (!seen.has(key)) {
-                          seen.add(key)
-                          if (inter.type === 'synergy') synergies.push(`${other} (${inter.message})`)
-                          else if (inter.type === 'conflict') conflicts.push(`${other} (${inter.message})`)
-                          else timings.push(`${other} (${inter.message})`)
-                        }
+                      const nameA = inter.a.toLowerCase()
+                      const nameB = inter.b.toLowerCase()
+                      const iHaveA = sd.name.toLowerCase().includes(nameA)
+                      const iHaveB = sd.name.toLowerCase().includes(nameB)
+                      const otherHasA = suppNames.some(n => n.includes(nameA) && !n.includes(sd.name.toLowerCase()))
+                      const otherHasB = suppNames.some(n => n.includes(nameB) && !n.includes(sd.name.toLowerCase()))
+
+                      // I have A, someone else has B → interaction applies to me
+                      if (iHaveA && otherHasB && !seenForThis.has(inter.b)) {
+                        seenForThis.add(inter.b)
+                        const entry = `${inter.b.split(' ')[0]} (${inter.message})`
+                        if (inter.type === 'synergy') synergies.push(entry)
+                        else if (inter.type === 'conflict') conflicts.push(entry)
+                        else timings.push(entry)
+                      }
+                      // I have B, someone else has A → interaction applies to me
+                      if (iHaveB && otherHasA && !seenForThis.has(inter.a)) {
+                        seenForThis.add(inter.a)
+                        const entry = `${inter.a.split(' ')[0]} (${inter.message})`
+                        if (inter.type === 'synergy') synergies.push(entry)
+                        else if (inter.type === 'conflict') conflicts.push(entry)
+                        else timings.push(entry)
                       }
                     })
 
                     if (sd.advice && sd.advice.avoid.length > 0) {
                       sd.advice.avoid.forEach(avoidItem => {
-                        const hasAvoid = suppNames.some(n => n.includes(avoidItem.toLowerCase()))
-                        if (hasAvoid) {
-                          const key = [short, avoidItem].sort().join('+')
-                          if (!seen.has(key)) {
-                            seen.add(key)
+                        if (!seenForThis.has(avoidItem)) {
+                          const hasAvoid = suppNames.some(n => n.includes(avoidItem.toLowerCase()))
+                          if (hasAvoid) {
+                            seenForThis.add(avoidItem)
                             conflicts.push(`${avoidItem} (blocks absorption)`)
                           }
                         }
