@@ -1005,9 +1005,10 @@ export function SupplementTracker() {
                   insights.push({ icon: AlertTriangle, title: 'Fatigue Alert', items, color: alerts > 0 ? 'rose' : 'emerald', metric: alerts > 0 ? `${alerts} need break` : 'all good' })
                 }
 
-                // INSIGHT 3: SUPPLEMENT INTERACTIONS — one line per supplement, no duplicates within line
+                // INSIGHT 3: SUPPLEMENT INTERACTIONS — each pair shown once only
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
+                  const claimedPairs = new Set<string>()
 
                   allSuppData.forEach(sd => {
                     const fullName = sd.name
@@ -1025,22 +1026,26 @@ export function SupplementTracker() {
                       const otherHasB = suppNames.some(n => n.includes(nameB) && !n.includes(sd.name.toLowerCase()))
 
                       if (iHaveA && otherHasB && !seenForThis.has(inter.b)) {
-                        seenForThis.add(inter.b)
-                        const pairKey = [inter.a, inter.b].sort().join('+')
-                        seenForThis.add(pairKey)
-                        const entry = { other: inter.b, msg: inter.message }
-                        if (inter.type === 'synergy') synergies.push(entry)
-                        else if (inter.type === 'conflict') conflicts.push(entry)
-                        else timings.push(entry)
+                        const pairKey = [inter.a, inter.b].sort().join('|')
+                        if (!claimedPairs.has(pairKey)) {
+                          claimedPairs.add(pairKey)
+                          seenForThis.add(inter.b)
+                          const entry = { other: inter.b, msg: inter.message }
+                          if (inter.type === 'synergy') synergies.push(entry)
+                          else if (inter.type === 'conflict') conflicts.push(entry)
+                          else timings.push(entry)
+                        }
                       }
-                      if (iHaveB && otherHasA && !seenForThis.has(inter.a) && !seenForThis.has([inter.a, inter.b].sort().join('+'))) {
-                        seenForThis.add(inter.a)
-                        const pairKey = [inter.a, inter.b].sort().join('+')
-                        seenForThis.add(pairKey)
-                        const entry = { other: inter.a, msg: inter.message }
-                        if (inter.type === 'synergy') synergies.push(entry)
-                        else if (inter.type === 'conflict') conflicts.push(entry)
-                        else timings.push(entry)
+                      if (iHaveB && otherHasA && !seenForThis.has(inter.a)) {
+                        const pairKey = [inter.a, inter.b].sort().join('|')
+                        if (!claimedPairs.has(pairKey)) {
+                          claimedPairs.add(pairKey)
+                          seenForThis.add(inter.a)
+                          const entry = { other: inter.a, msg: inter.message }
+                          if (inter.type === 'synergy') synergies.push(entry)
+                          else if (inter.type === 'conflict') conflicts.push(entry)
+                          else timings.push(entry)
+                        }
                       }
                     })
 
@@ -1049,29 +1054,24 @@ export function SupplementTracker() {
                         if (!seenForThis.has(avoidItem)) {
                           const hasAvoid = suppNames.some(n => n.includes(avoidItem.toLowerCase()))
                           if (hasAvoid) {
-                            seenForThis.add(avoidItem)
-                            conflicts.push({ other: avoidItem, msg: 'blocks absorption — separate by 2 hours' })
+                            const pairKey = [fullName, avoidItem].sort().join('|')
+                            if (!claimedPairs.has(pairKey)) {
+                              claimedPairs.add(pairKey)
+                              seenForThis.add(avoidItem)
+                              conflicts.push({ other: avoidItem, msg: 'blocks absorption — separate by 2 hours' })
+                            }
                           }
                         }
                       })
                     }
 
                     const parts: string[] = []
-                    if (synergies.length > 0) {
-                      synergies.forEach(s => parts.push(`works well with ${s.other} — ${s.msg}`))
-                    }
-                    if (conflicts.length > 0) {
-                      conflicts.forEach(c => parts.push(`avoid with ${c.other} — ${c.msg}`))
-                    }
-                    if (timings.length > 0) {
-                      timings.forEach(t => parts.push(`timing rule with ${t.other} — ${t.msg}`))
-                    }
+                    if (synergies.length > 0) synergies.forEach(s => parts.push(`works well with ${s.other} — ${s.msg}`))
+                    if (conflicts.length > 0) conflicts.forEach(c => parts.push(`avoid with ${c.other} — ${c.msg}`))
+                    if (timings.length > 0) timings.forEach(t => parts.push(`timing rule with ${t.other} — ${t.msg}`))
 
                     if (parts.length > 0) {
-                      const text = `${fullName} ${parts.join(', ')}`
-                      items.push({ text, color: conflicts.length > 0 ? 'rose' : 'violet', badge: conflicts.length > 0 ? '!' : '+' })
-                    } else {
-                      items.push({ text: `${fullName} has no known interactions with your other supplements`, color: 'gray', badge: '—' })
+                      items.push({ text: `${fullName} ${parts.join(', ')}`, color: conflicts.length > 0 ? 'rose' : 'violet', badge: conflicts.length > 0 ? '!' : '+' })
                     }
                   })
 
