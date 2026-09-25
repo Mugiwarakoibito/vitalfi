@@ -980,10 +980,10 @@ export function SupplementTracker() {
                   allSuppData.forEach(sd => {
                     const supp = deduped.find(d => d.name === sd.name)
                     if (!supp) return
-                    const short = sd.name.split(' ')[0]
+                    const fullName = sd.name
                     const suppAllLogs = logs.filter(l => l.supplementId === supp.id)
                     if (suppAllLogs.length === 0) {
-                      items.push({ text: `${short}: not tracked yet`, color: 'amber', badge: '?' })
+                      items.push({ text: `You haven't logged ${fullName} yet`, color: 'amber', badge: '?' })
                       return
                     }
                     const uniqueDates = [...new Set(suppAllLogs.map(l => l.date))].sort()
@@ -991,11 +991,11 @@ export function SupplementTracker() {
                     const daysSinceFirst = Math.floor((now.getTime() - earliest.getTime()) / (1000 * 60 * 60 * 24))
 
                     if (daysSinceFirst >= 90) {
-                      items.push({ text: `You've taken ${short} for ${daysSinceFirst} days, consider a 2-week cycle off`, color: 'rose', badge: '!' })
+                      items.push({ text: `You've taken ${fullName} for ${daysSinceFirst} days, consider a 2-week cycle off`, color: 'rose', badge: '!' })
                     } else if (daysSinceFirst >= 60) {
-                      items.push({ text: `You've taken ${short} for ${daysSinceFirst} days, consider a break in ${90 - daysSinceFirst} days`, color: 'amber', badge: '~' })
+                      items.push({ text: `You've taken ${fullName} for ${daysSinceFirst} days, consider a break in ${90 - daysSinceFirst} days`, color: 'amber', badge: '~' })
                     } else {
-                      items.push({ text: `You've taken ${short} for ${daysSinceFirst} days — no break needed yet`, color: 'emerald', badge: '✓' })
+                      items.push({ text: `You've taken ${fullName} for ${daysSinceFirst} days, no break needed yet`, color: 'emerald', badge: '✓' })
                     }
                   })
 
