@@ -651,7 +651,8 @@ export function SupplementTracker() {
             return (perServing * timesPerWeek) / 7
           }
           const dedupedForCost = Array.from(new Map(supplements.map(s => [s.name, s])).values())
-          const totalDailyCost = dedupedForCost.reduce((sum, s) => sum + getSuppDailyCost(s), 0)
+          const rawDailyCost = dedupedForCost.reduce((sum, s) => sum + getSuppDailyCost(s), 0)
+          const totalDailyCost = parseFloat(rawDailyCost.toFixed(2))
           const todayDate = new Date()
           const daysInMonth = new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0).getDate()
           const daysInYear = ((todayDate.getFullYear() % 4 === 0 && todayDate.getFullYear() % 100 !== 0) || todayDate.getFullYear() % 400 === 0) ? 366 : 365
