@@ -901,66 +901,77 @@ export function SupplementTracker() {
                 const insights: { icon: typeof Zap; title: string; items: { text: string; color?: string; badge?: string }[]; color: string; metric?: string }[] = []
                 const suppNames = deduped.map((s: { name: string }) => s.name.toLowerCase())
 
-                // INSIGHT 1: FOOD PAIRING GUIDE — what to eat with each supplement
+                // INSIGHT 1: FOOD PAIRING GUIDE — rich per-supplement cards
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
-                  const foodDB: Record<string, { food: string; avoid: string }> = {
-                    'Vitamin D': { food: 'fatty fish, egg yolks, avocado', avoid: 'high-fiber bran cereal' },
-                    'Omega-3': { food: 'salmon, walnuts, flaxseed', avoid: 'large fatty meals (reduces uptake)' },
-                    'Iron': { food: 'vitamin C foods: citrus, bell peppers, strawberries', avoid: 'coffee, tea, calcium-rich foods within 1h' },
-                    'Magnesium': { food: 'dark chocolate, spinach, almonds', avoid: 'high-dose calcium supplements' },
-                    'Zinc': { food: 'pumpkin seeds, beef, chickpeas', avoid: 'high-phytate grains, dairy at same time' },
-                    'Creatine': { food: 'anything — take with carbs for uptake', avoid: 'caffeine may reduce effectiveness' },
-                    'B12': { food: 'meat, fish, eggs, dairy', avoid: 'none significant' },
-                    'Collagen': { food: 'vitamin C foods essential — citrus, berries', avoid: 'high-dose calcium at same time' },
-                    'Probiotics': { food: 'prebiotic foods: garlic, onion, banana, oats', avoid: 'hot drinks immediately after' },
-                    'CoQ10': { food: 'fatty meals: nuts, olive oil, avocado', avoid: 'none significant' },
-                    'Curcumin': { food: 'black pepper (20x boost) + healthy fat', avoid: 'taking without fat' },
-                    'Calcium': { food: 'dairy, leafy greens, fortified foods', avoid: 'iron, zinc at same time' },
-                    'Vitamin C': { food: 'citrus, kiwi, bell peppers, broccoli', avoid: 'none significant' },
+                  const foodDB: Record<string, { food: string; avoid: string; tip: string; multiplier: string }> = {
+                    'Vitamin D': { food: 'fatty fish, egg yolks, avocado, olive oil', avoid: 'high-fiber bran cereal', tip: 'Take with K2 to direct calcium to bones', multiplier: '3x absorption with fat' },
+                    'Omega-3': { food: 'salmon, walnuts, flaxseed, sardines', avoid: 'large meals without fat', tip: 'Freeze capsules to reduce fish burps', multiplier: '2x absorption with fatty meal' },
+                    'Iron': { food: 'vitamin C foods: citrus, bell peppers, strawberries, kiwi', avoid: 'coffee, tea, calcium within 1h', tip: 'Take on empty stomach for max absorption', multiplier: '6x boost with vitamin C' },
+                    'Magnesium': { food: 'dark chocolate, spinach, almonds, pumpkin seeds', avoid: 'high-dose calcium supplements', tip: 'Glycinate for sleep, Threonate for brain', multiplier: 'Better sleep when paired with zinc' },
+                    'Zinc': { food: 'pumpkin seeds, beef, chickpeas, cashews', avoid: 'high-phytate grains, dairy', tip: 'Take with dinner to avoid nausea', multiplier: 'Immune boost with vitamin C' },
+                    'Creatine': { food: 'anything — take with carbs for better uptake', avoid: 'caffeine may reduce uptake slightly', tip: '3-5g daily, timing does not matter', multiplier: 'Better uptake with carbs' },
+                    'B12': { food: 'meat, fish, eggs, dairy, fortified cereals', avoid: 'none significant', tip: 'Sublingual methylcobalamin is best form', multiplier: '2x absorption sublingual' },
+                    'Collagen': { food: 'vitamin C foods essential: citrus, berries, bell peppers', avoid: 'high-dose calcium at same time', tip: 'Take 30min before food for best results', multiplier: '8x synthesis with vitamin C' },
+                    'Probiotics': { food: 'prebiotic foods: garlic, onion, banana, oats, asparagus', avoid: 'hot drinks immediately after', tip: 'Refrigerate for potency, take before breakfast', multiplier: 'Survival boost with prebiotics' },
+                    'CoQ10': { food: 'fatty meals: nuts, olive oil, avocado, fatty fish', avoid: 'none significant', tip: 'Ubiquinol form is 3x more absorbable', multiplier: '3x absorption as ubiquinol' },
+                    'Curcumin': { food: 'black pepper + healthy fat: olive oil, coconut oil', avoid: 'taking without fat or pepper', tip: 'Always pair with piperine from black pepper', multiplier: '20x boost with black pepper' },
+                    'Calcium': { food: 'dairy, leafy greens, fortified foods, sardines', avoid: 'iron, zinc at same time', tip: 'Take in morning, magnesium at night', multiplier: 'Absorption with vitamin D' },
+                    'Vitamin C': { food: 'citrus, kiwi, bell peppers, broccoli, strawberries', avoid: 'none significant', tip: 'Take with iron for maximum absorption', multiplier: 'Synergy with iron and collagen' },
                   }
+                  // Group supplements by pairing quality
+                  const paired: string[] = []
+                  const unpaired: string[] = []
                   allSuppData.forEach(sd => {
-                    const short = sd.name.split(' ')[0]
                     const key = Object.keys(foodDB).find(k => sd.name.toLowerCase().includes(k.toLowerCase()))
                     const pairing = key ? foodDB[key] : null
                     if (pairing) {
-                      items.push({ text: `${short}: eat with ${pairing.food}`, color: 'emerald', badge: 'F' })
-                      if (pairing.avoid !== 'none significant') {
-                        items.push({ text: `${short}: avoid ${pairing.avoid}`, color: 'amber', badge: '!' })
-                      }
+                      paired.push(sd.name.split(' ')[0])
+                      items.push({ text: `${sd.name.split(' ')[0]}: ${pairing.food}`, color: 'emerald', badge: 'F' })
+                      items.push({ text: `${sd.name.split(' ')[0]}: avoid ${pairing.avoid}`, color: 'rose', badge: '!' })
+                      items.push({ text: `${sd.name.split(' ')[0]}: ${pairing.tip} (${pairing.multiplier})`, color: 'cyan', badge: '*' })
+                    } else {
+                      unpaired.push(sd.name.split(' ')[0])
                     }
                   })
+                  if (unpaired.length > 0) items.push({ text: `No food data: ${unpaired.join(', ')}`, color: 'amber', badge: '?' })
                   if (items.length === 0) items.push({ text: 'Add supplements to see food pairings', color: 'amber', badge: '—' })
-                  insights.push({ icon: Apple, title: 'Food Pairing Guide', items, color: 'emerald', metric: `${allSuppData.length} supps` })
+                  insights.push({ icon: Apple, title: 'Food Pairing Guide', items, color: 'emerald', metric: `${paired.length}/${allSuppData.length} paired` })
                 }
 
-                // INSIGHT 2: SUPPLEMENT FATIGUE ALERT — cycling + adherence drops
+                // INSIGHT 2: FATIGUE ALERT — rich per-supplement status cards
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
 
-                  // Adherence drops this week vs last
+                  // Per-supplement status cards
                   allSuppData.forEach(sd => {
-                    if (sd.trend < -15) {
-                      items.push({ text: `${sd.name.split(' ')[0]}: ${sd.trend}% adherence drop this week`, color: 'rose', badge: '↓' })
-                    } else if (sd.trend > 15) {
-                      items.push({ text: `${sd.name.split(' ')[0]}: +${sd.trend}% improvement`, color: 'emerald', badge: '↑' })
-                    }
+                    const short = sd.name.split(' ')[0]
+                    const pct = sd.dosesTotal > 0 ? Math.round((sd.dosesTaken / sd.dosesTotal) * 100) : 0
+                    const rateBar = pct >= 80 ? '████' : pct >= 50 ? '███░' : pct > 0 ? '██░░' : '░░░░'
+                    const trendIcon = sd.trend > 15 ? '↑' : sd.trend < -15 ? '↓' : '→'
+                    const trendText = sd.trend > 0 ? `+${sd.trend}%` : `${sd.trend}%`
+                    const todayStatus = pct === 100 ? 'Done' : pct > 0 ? `${sd.dosesTaken}/${sd.dosesTotal}` : 'Not started'
+                    const todayColor = pct === 100 ? 'emerald' : pct > 0 ? 'amber' : 'rose'
+                    items.push({ text: `${short} 7d:${sd.rate7}% 30d:${sd.rate30}% ${trendIcon}${trendText} ${rateBar} today:${todayStatus}`, color: todayColor, badge: `${pct}%` })
                   })
 
-                  // Low adherence warnings
-                  allSuppData.forEach(sd => {
-                    if (sd.dosesTotal > 0 && sd.dosesTaken === 0) {
-                      items.push({ text: `${sd.name.split(' ')[0]}: 0/${sd.dosesTotal} taken today`, color: 'rose', badge: '○' })
-                    }
-                  })
+                  // Stack health score
+                  const avgAdherence = allSuppData.length > 0 ? Math.round(allSuppData.reduce((s, sd) => s + (sd.dosesTotal > 0 ? (sd.dosesTaken / sd.dosesTotal) * 100 : 0), 0) / allSuppData.length) : 0
+                  const improving = allSuppData.filter(s => s.trend > 15).length
+                  const declining = allSuppData.filter(s => s.trend < -15).length
+                  const done = allSuppData.filter(s => s.done).length
+                  items.push({ text: `Stack health: ${avgAdherence}% avg adherence | ${done}/${allSuppData.length} complete today | ${improving} improving, ${declining} declining`, color: avgAdherence >= 70 ? 'emerald' : 'amber', badge: '#' })
 
                   if (items.length === 0) items.push({ text: 'No fatigue alerts — your stack is healthy', color: 'emerald', badge: '✓' })
-                  insights.push({ icon: AlertTriangle, title: 'Fatigue Alert', items, color: items[0]?.color === 'emerald' ? 'emerald' : 'amber', metric: items.length > 0 ? `${items.length} alerts` : 'all clear' })
+                  insights.push({ icon: AlertTriangle, title: 'Fatigue Alert', items, color: declining > 0 ? 'rose' : 'amber', metric: `${allSuppData.length} supps tracked` })
                 }
 
-                // INSIGHT 3: SUPPLEMENT INTERACTIONS — synergies + conflicts
+                // INSIGHT 3: SUPPLEMENT INTERACTIONS — grouped by type with stats
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
+                  const synergies: string[] = []
+                  const conflicts: string[] = []
+                  const timingRules: string[] = []
                   const seen = new Set<string>()
                   SUPP_INTERACTIONS.forEach(inter => {
                     const hasA = suppNames.some(n => n.includes(inter.a.toLowerCase()))
@@ -969,20 +980,28 @@ export function SupplementTracker() {
                       const key = [inter.a, inter.b].sort().join('+')
                       if (!seen.has(key)) {
                         seen.add(key)
+                        const pair = `${inter.a.split(' ')[0]} + ${inter.b.split(' ')[0]}`
                         if (inter.type === 'synergy') {
-                          items.push({ text: `${inter.a} + ${inter.b}: ${inter.message}`, color: 'emerald', badge: '+' })
+                          synergies.push(`${pair}: ${inter.message}`)
+                          items.push({ text: `${pair}: ${inter.message}`, color: 'emerald', badge: '+' })
                         } else if (inter.type === 'conflict') {
-                          items.push({ text: `${inter.a} + ${inter.b}: ${inter.message}`, color: 'rose', badge: '!' })
+                          conflicts.push(`${pair}: ${inter.message}`)
+                          items.push({ text: `${pair}: ${inter.message}`, color: 'rose', badge: '!' })
                         } else {
-                          items.push({ text: `${inter.a} + ${inter.b}: ${inter.message}`, color: 'cyan', badge: '~' })
+                          timingRules.push(`${pair}: ${inter.message}`)
+                          items.push({ text: `${pair}: ${inter.message}`, color: 'cyan', badge: '~' })
                         }
                       }
                     }
                   })
+                  // Summary at bottom
+                  if (synergies.length > 0 || conflicts.length > 0) {
+                    const takeTogether = synergies.length > 0 ? synergies.map(s => s.split(':')[0]).join(', ') : 'none'
+                    const separate = conflicts.length > 0 ? conflicts.map(c => c.split(':')[0]).join(', ') : 'none'
+                    items.push({ text: `Take together: ${takeTogether} | Separate: ${separate}`, color: 'violet', badge: '#' })
+                  }
                   if (items.length === 0) items.push({ text: 'Add 2+ supplements to see interactions', color: 'amber', badge: '—' })
-                  const synergyCount = items.filter(i => i.badge === '+').length
-                  const conflictCount = items.filter(i => i.badge === '!').length
-                  insights.push({ icon: Layers, title: 'Supplement Interactions', items, color: conflictCount > 0 ? 'rose' : 'violet', metric: `${synergyCount} syn / ${conflictCount} con` })
+                  insights.push({ icon: Layers, title: 'Supplement Interactions', items, color: conflicts.length > 0 ? 'rose' : 'violet', metric: `${synergies.length}+ ${conflicts.length}! ${timingRules.length}~` })
                 }
 
                 const finalInsights = insights.slice(0, 3)
