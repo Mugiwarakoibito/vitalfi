@@ -1072,6 +1072,8 @@ export function SupplementTracker() {
 
                     if (parts.length > 0) {
                       items.push({ text: `${fullName} ${parts.join(', ')}`, color: conflicts.length > 0 ? 'rose' : 'violet', badge: conflicts.length > 0 ? '!' : '+' })
+                    } else {
+                      items.push({ text: `${fullName} has no interactions with your other supplements`, color: 'gray', badge: '—' })
                     }
                   })
 
