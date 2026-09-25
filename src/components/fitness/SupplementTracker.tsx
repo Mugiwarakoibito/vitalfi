@@ -991,11 +991,11 @@ export function SupplementTracker() {
                     const daysSinceFirst = Math.floor((now.getTime() - earliest.getTime()) / (1000 * 60 * 60 * 24))
 
                     if (daysSinceFirst >= 90) {
-                      items.push({ text: `${short}: taken for ${daysSinceFirst} days — take a 2-week break`, color: 'rose', badge: '!' })
+                      items.push({ text: `You've taken ${short} for ${daysSinceFirst} days, consider a 2-week cycle off`, color: 'rose', badge: '!' })
                     } else if (daysSinceFirst >= 60) {
-                      items.push({ text: `${short}: taken for ${daysSinceFirst} days — cycle break in ${90 - daysSinceFirst} days`, color: 'amber', badge: '~' })
+                      items.push({ text: `You've taken ${short} for ${daysSinceFirst} days, consider a break in ${90 - daysSinceFirst} days`, color: 'amber', badge: '~' })
                     } else {
-                      items.push({ text: `${short}: taken for ${daysSinceFirst} days — OK`, color: 'emerald', badge: '✓' })
+                      items.push({ text: `You've taken ${short} for ${daysSinceFirst} days — no break needed yet`, color: 'emerald', badge: '✓' })
                     }
                   })
 
