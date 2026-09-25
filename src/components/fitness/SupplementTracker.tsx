@@ -1026,13 +1026,17 @@ export function SupplementTracker() {
 
                       if (iHaveA && otherHasB && !seenForThis.has(inter.b)) {
                         seenForThis.add(inter.b)
+                        const pairKey = [inter.a, inter.b].sort().join('+')
+                        seenForThis.add(pairKey)
                         const entry = { other: inter.b, msg: inter.message }
                         if (inter.type === 'synergy') synergies.push(entry)
                         else if (inter.type === 'conflict') conflicts.push(entry)
                         else timings.push(entry)
                       }
-                      if (iHaveB && otherHasA && !seenForThis.has(inter.a)) {
+                      if (iHaveB && otherHasA && !seenForThis.has(inter.a) && !seenForThis.has([inter.a, inter.b].sort().join('+'))) {
                         seenForThis.add(inter.a)
+                        const pairKey = [inter.a, inter.b].sort().join('+')
+                        seenForThis.add(pairKey)
                         const entry = { other: inter.a, msg: inter.message }
                         if (inter.type === 'synergy') synergies.push(entry)
                         else if (inter.type === 'conflict') conflicts.push(entry)
