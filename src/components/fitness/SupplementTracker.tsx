@@ -625,21 +625,6 @@ export function SupplementTracker() {
 
 
 
-          // ─── Synergy Intelligence ───
-          const synergyPairs = supplements.flatMap((s, i) =>
-            supplements.slice(i + 1).map(s2 => {
-              const inter = SUPP_INTERACTIONS.find(x =>
-                (x.a.toLowerCase() === s.name.toLowerCase() && x.b.toLowerCase() === s2.name.toLowerCase()) ||
-                (x.a.toLowerCase() === s2.name.toLowerCase() && x.b.toLowerCase() === s.name.toLowerCase())
-              )
-              return { a: s.name, b: s2.name, type: inter?.type || 'neutral', message: inter?.message || '' }
-            })
-          )
-          const synergies = synergyPairs.filter(s => s.type === 'synergy')
-          const conflicts = synergyPairs.filter(s => s.type === 'conflict')
-          const timingPairs = synergyPairs.filter(s => s.type === 'timing')
-          const synergyScore = Math.min(100, 50 + synergies.length * 15 - conflicts.length * 20)
-
           // ─── Cost Intelligence ───
           const getSuppDailyCost = (s: { cost?: number; totalServings?: number; frequency?: string }) => {
             if (!s.cost || !s.totalServings || s.totalServings <= 0) return 0
@@ -1297,14 +1282,17 @@ export function SupplementTracker() {
                   { name: 'Aligned', value: timingAlignment, fill: '#10b981' },
                   { name: 'Misaligned', value: realTiming.length - timingAlignment, fill: '#f59e0b' },
                 ]
+                const scoreLabel = timingAlignmentPct >= 80 ? 'Excellent' : timingAlignmentPct >= 50 ? 'Good' : timingAlignmentPct > 0 ? 'Needs work' : 'No data'
+                const scoreColor = timingAlignmentPct >= 80 ? '#10b981' : timingAlignmentPct >= 50 ? '#f59e0b' : '#ef4444'
                 return (
                 <div className="space-y-2.5">
-                  {/* Real Timing Timeline */}
-                  <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent" />
-                    <div className="flex items-center gap-1.5 mb-2.5">
+                  {/* ═══ REAL TIMELINE ═══ */}
+                  <div className="rounded-2xl bg-gradient-to-br from-white/[0.05] to-white/[0.015] border border-white/[0.08] p-3.5 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/25 to-transparent" />
+                    <div className="absolute -top-12 -right-12 w-24 h-24 bg-cyan-500/[0.04] rounded-full blur-2xl" />
+                    <div className="flex items-center gap-1.5 mb-3">
                       <Clock className="w-3 h-3 text-cyan-400" />
-                      <span className="text-[9px] font-bold text-white">Real Timing (from takenAt)</span>
+                      <span className="text-[9px] font-bold text-white">Real Timing</span>
                       <div className="flex-1" />
                       <span className="text-[8px] font-black text-cyan-300">{timingAlignmentPct}%</span>
                       <span className="text-[7px] text-gray-500">aligned</span>
@@ -1317,30 +1305,26 @@ export function SupplementTracker() {
                         const alignedHere = scheduled.filter(r => r.actualCategory === t)
                         const misalignedHere = scheduled.filter(r => r.actualCategory !== t && r.actualCategory !== 'Unknown')
                         return (
-                          <div key={t} className={'rounded-lg p-2 border relative overflow-hidden transition-all bg-gradient-to-br ' + tc.bg + ' ' + tc.border +
-                            (alignedHere.length > 0 && misalignedHere.length === 0 ? ' shadow-md ' + tc.glow : '')}>
-                            <div className="flex items-center gap-1 mb-1.5">
+                          <div key={t} className={'rounded-xl p-2.5 border relative overflow-hidden transition-all bg-gradient-to-br ' + tc.bg + ' ' + tc.border}>
+                            <div className="flex items-center gap-1 mb-2">
                               <Icon className={'w-3 h-3 ' + tc.icon} />
                               <span className={'text-[8px] font-bold ' + tc.text}>{t}</span>
                             </div>
-                            <div className="space-y-0.5 min-h-[28px]">
+                            <div className="space-y-1 min-h-[32px]">
                               {scheduled.length > 0 ? scheduled.map((r, j) => (
                                 <div key={j} className="flex items-center gap-1">
-                                  <div className={'w-1 h-1 rounded-full shrink-0 ' + (r.actualCategory === t ? 'bg-emerald-400' : r.actualCategory === 'Unknown' ? 'bg-gray-500' : 'bg-amber-400')} />
+                                  <div className={'w-1.5 h-1.5 rounded-full shrink-0 ' + (r.actualCategory === t ? 'bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.4)]' : r.actualCategory === 'Unknown' ? 'bg-gray-500' : 'bg-amber-400')} />
                                   <span className="text-[7px] text-gray-300 truncate">{r.name}</span>
-                                  {r.actualCategory !== 'Unknown' && r.actualCategory !== t && (
-                                    <span className="text-[5px] text-amber-400 shrink-0">{r.actualCategory}</span>
-                                  )}
                                 </div>
                               )) : <span className="text-[7px] text-gray-600 italic">Empty</span>}
                             </div>
                             {misalignedHere.length > 0 && (
-                              <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
+                              <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
                                 <span className="text-[6px] font-black text-amber-400">{misalignedHere.length}</span>
                               </div>
                             )}
                             {alignedHere.length > 0 && misalignedHere.length === 0 && scheduled.length > 0 && (
-                              <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+                              <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
                                 <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
                               </div>
                             )}
@@ -1350,21 +1334,23 @@ export function SupplementTracker() {
                     </div>
                   </div>
 
-                  {/* Per-Supp Real vs Planned */}
+                  {/* ═══ REAL VS PLANNED + ALIGNMENT ═══ */}
                   <div className="grid grid-cols-3 gap-2.5">
-                    <div className="col-span-2 rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
-                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
-                      <div className="flex items-center gap-1.5 mb-2">
+                    {/* Real vs Planned */}
+                    <div className="col-span-2 rounded-2xl bg-gradient-to-br from-white/[0.05] to-white/[0.015] border border-white/[0.08] p-3.5 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/25 to-transparent" />
+                      <div className="absolute -top-12 -left-12 w-24 h-24 bg-amber-500/[0.04] rounded-full blur-2xl" />
+                      <div className="flex items-center gap-1.5 mb-3">
                         <Sun className="w-3 h-3 text-amber-400" />
-                        <span className="text-[9px] font-bold text-white">Real vs Planned Timing</span>
+                        <span className="text-[9px] font-bold text-white">Real vs Planned</span>
                         <div className="flex-1" />
                         <span className="text-[7px] text-gray-500">{timingAlignment}/{realTiming.length} aligned</span>
                       </div>
                       <div className="space-y-1.5">
                         {realTiming.slice(0, 6).map((r, i) => (
-                          <div key={i} className={'flex items-center gap-2 p-2 rounded-lg border transition-all ' +
-                            (r.isAligned ? 'bg-emerald-500/[0.04] border-emerald-500/10' : 'bg-white/[0.02] border-white/[0.04] hover:border-white/[0.08]')}>
-                            <div className={'w-5 h-5 rounded flex items-center justify-center shrink-0 ' +
+                          <div key={i} className={'flex items-center gap-2.5 p-2 rounded-xl border transition-all ' +
+                            (r.isAligned ? 'bg-emerald-500/[0.04] border-emerald-500/10' : r.actualCategory === 'Unknown' ? 'bg-white/[0.01] border-white/[0.03]' : 'bg-amber-500/[0.03] border-amber-500/08')}>
+                            <div className={'w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ' +
                               (r.isAligned ? 'bg-emerald-500/15' : r.actualCategory === 'Unknown' ? 'bg-gray-500/10' : 'bg-amber-500/10')}>
                               {r.isAligned ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> :
                                r.actualCategory === 'Unknown' ? <Clock className="w-3 h-3 text-gray-500" /> :
@@ -1372,8 +1358,8 @@ export function SupplementTracker() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[9px] font-bold text-white truncate">{r.name}</span>
-                                <span className="text-[6px] text-gray-500">{r.doseCount} doses logged</span>
+                                <span className="text-[8px] font-bold text-white truncate">{r.name}</span>
+                                <span className="text-[6px] text-gray-500">{r.doseCount} doses</span>
                               </div>
                               <div className="flex items-center gap-1 mt-0.5">
                                 {r.actualCategory !== 'Unknown' ? (
@@ -1384,82 +1370,51 @@ export function SupplementTracker() {
                                     {r.isAligned && <span className="text-[7px] text-emerald-400 font-bold">{'\u2713'}</span>}
                                   </>
                                 ) : (
-                                  <span className="text-[7px] text-gray-500 italic">No takenAt data yet</span>
+                                  <span className="text-[7px] text-gray-500 italic">No data</span>
                                 )}
                               </div>
-                              <div className="flex items-center gap-1 mt-0.5">
-                                <span className="text-[6px] text-gray-500">{r.consistency}</span>
-                              </div>
+                              <span className="text-[6px] text-gray-500 block mt-0.5">{r.consistency}</span>
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
-                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/20 to-transparent" />
-                      <div className="flex items-center gap-1.5 mb-1">
+                    {/* Alignment Score */}
+                    <div className="rounded-2xl bg-gradient-to-br from-white/[0.05] to-white/[0.015] border border-white/[0.08] p-3.5 relative overflow-hidden flex flex-col">
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/25 to-transparent" />
+                      <div className="absolute -top-12 -right-12 w-24 h-24 bg-violet-500/[0.04] rounded-full blur-2xl" />
+                      <div className="flex items-center gap-1.5 mb-2">
                         <Sparkles className="w-3 h-3 text-violet-400" />
                         <span className="text-[9px] font-bold text-white">Alignment</span>
                       </div>
-                      <div className="h-20">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie data={optData} cx="50%" cy="50%" innerRadius={22} outerRadius={35} paddingAngle={3} dataKey="value" strokeWidth={0}>
-                              {optData.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.8} />)}
-                            </Pie>
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                      <div className="flex justify-center gap-3 mt-1">
-                        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-emerald-500" /><span className="text-[7px] text-gray-500">{timingAlignment} opt</span></div>
-                        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-amber-500" /><span className="text-[7px] text-gray-500">{realTiming.length - timingAlignment} fix</span></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Synergy Stats */}
-                  <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.07] p-3 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-400/20 to-transparent" />
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <Layers className="w-3 h-3 text-violet-400" />
-                      <span className="text-[9px] font-bold text-white">Synergy Map</span>
-                      <div className="flex-1" />
-                      <span className="text-[8px] font-black text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded">{synergyScore}</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-1.5 mb-2">
-                      <div className="text-center p-2 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
-                        <span className="text-[14px] font-black text-emerald-400 block">{synergies.length}</span>
-                        <span className="text-[6px] text-gray-500 font-bold uppercase">Syn</span>
-                      </div>
-                      <div className="text-center p-2 rounded-lg bg-rose-500/[0.04] border border-rose-500/10">
-                        <span className="text-[14px] font-black text-rose-400 block">{conflicts.length}</span>
-                        <span className="text-[6px] text-gray-500 font-bold uppercase">Con</span>
-                      </div>
-                      <div className="text-center p-2 rounded-lg bg-amber-500/[0.04] border border-amber-500/10">
-                        <span className="text-[14px] font-black text-amber-400 block">{timingPairs.length}</span>
-                        <span className="text-[6px] text-gray-500 font-bold uppercase">Tim</span>
-                      </div>
-                      <div className="text-center p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                        <span className="text-[14px] font-black text-gray-400 block">{synergyPairs.filter(s => s.type === 'neutral').length}</span>
-                        <span className="text-[6px] text-gray-500 font-bold uppercase">Neu</span>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      {synergies.slice(0, 2).map((s, i) => (
-                        <div key={'sy' + i} className="flex items-center gap-2 p-1.5 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
-                          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
-                          <span className="text-[8px] text-emerald-300 font-bold truncate">{s.a} + {s.b}</span>
-                          <span className="text-[7px] text-gray-500 ml-auto truncate">{s.message}</span>
+                      {/* Big donut */}
+                      <div className="flex-1 flex items-center justify-center">
+                        <div className="relative w-[80px] h-[80px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={optData} cx="50%" cy="50%" innerRadius={24} outerRadius={36} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                                {optData.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.85} />)}
+                              </Pie>
+                            </PieChart>
+                          </ResponsiveContainer>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span className="text-[14px] font-black leading-none" style={{ color: scoreColor }}>{timingAlignmentPct}%</span>
+                            <span className="text-[5px] text-gray-500 font-bold mt-0.5">{scoreLabel}</span>
+                          </div>
                         </div>
-                      ))}
-                      {conflicts.slice(0, 1).map((s, i) => (
-                        <div key={'co' + i} className="flex items-center gap-2 p-1.5 rounded-lg bg-rose-500/[0.04] border border-rose-500/10">
-                          <AlertTriangle className="w-2.5 h-2.5 text-rose-400 shrink-0" />
-                          <span className="text-[8px] text-rose-300 font-bold truncate">{s.a} + {s.b}</span>
-                          <span className="text-[7px] text-gray-500 ml-auto truncate">{s.message}</span>
+                      </div>
+                      {/* Legend */}
+                      <div className="flex justify-center gap-3 mt-2 pt-2 border-t border-white/[0.04]">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded bg-emerald-500" />
+                          <span className="text-[7px] text-gray-400">{timingAlignment} aligned</span>
                         </div>
-                      ))}
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded bg-amber-500" />
+                          <span className="text-[7px] text-gray-400">{realTiming.length - timingAlignment} to fix</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
