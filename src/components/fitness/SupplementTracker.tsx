@@ -972,7 +972,7 @@ export function SupplementTracker() {
                   insights.push({ icon: Apple, title: 'Food Pairing Guide', items, color: 'emerald', metric: `${allSuppData.length} supps` })
                 }
 
-                // INSIGHT 2: SUPPLEMENT FATIGUE ALERT — one rich line per supplement
+                // INSIGHT 2: SUPPLEMENT FATIGUE ALERT — simple, readable lines
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
                   const now = new Date()
@@ -983,7 +983,7 @@ export function SupplementTracker() {
                     const short = sd.name.split(' ')[0]
                     const suppAllLogs = logs.filter(l => l.supplementId === supp.id)
                     if (suppAllLogs.length === 0) {
-                      items.push({ text: `${short}: no logs yet — start tracking`, color: 'amber', badge: '?' })
+                      items.push({ text: `${short}: not tracked yet`, color: 'amber', badge: '?' })
                       return
                     }
                     const uniqueDates = [...new Set(suppAllLogs.map(l => l.date))].sort()
@@ -998,25 +998,24 @@ export function SupplementTracker() {
                       if (suppAllLogs.some(l => l.date === toLocalDate(d))) streak++
                       else break
                     }
-                    const adherence = daysSinceFirst > 0 ? Math.round((totalDaysLogged / daysSinceFirst) * 100) : 0
 
-                    let status = ''
-                    let color = 'emerald'
-                    let badge = '✓'
-                    if (daysSinceFirst >= 90) { status = `${daysSinceFirst}d — consider 2-week break`; color = 'rose'; badge = '!' }
-                    else if (daysSinceFirst >= 60) { status = `${daysSinceFirst}d — break in ${90 - daysSinceFirst}d`; color = 'amber'; badge = '~' }
-                    else if (daysSinceLast > 1) { status = `${daysSinceFirst}d tracked, ${streak}d streak, ${adherence}% adherence, last ${daysSinceLast}d ago`; color = 'rose'; badge = '?' }
-                    else { status = `${daysSinceFirst}d tracked, ${streak}d streak, ${adherence}% adherence`; color = 'emerald'; badge = '✓' }
-
-                    items.push({ text: `${short}: ${status}`, color, badge })
+                    if (daysSinceFirst >= 90) {
+                      items.push({ text: `${short}: ${daysSinceFirst} days — take a 2-week break`, color: 'rose', badge: '!' })
+                    } else if (daysSinceFirst >= 60) {
+                      items.push({ text: `${short}: ${daysSinceFirst} days — break in ${90 - daysSinceFirst} days`, color: 'amber', badge: '~' })
+                    } else if (daysSinceLast > 1) {
+                      items.push({ text: `${short}: ${totalDaysLogged} days logged, streak ${streak}d, last ${daysSinceLast}d ago`, color: 'rose', badge: '?' })
+                    } else {
+                      items.push({ text: `${short}: ${totalDaysLogged} days logged, streak ${streak}d`, color: 'emerald', badge: '✓' })
+                    }
                   })
 
-                  if (items.length === 0) items.push({ text: 'No fatigue alerts — your stack is healthy', color: 'emerald', badge: '✓' })
-                  const cycleAlerts = items.filter(i => i.badge === '!' || i.badge === '?').length
-                  insights.push({ icon: AlertTriangle, title: 'Fatigue Alert', items, color: cycleAlerts > 0 ? 'rose' : 'emerald', metric: cycleAlerts > 0 ? `${cycleAlerts} alerts` : 'all good' })
+                  if (items.length === 0) items.push({ text: 'No fatigue alerts', color: 'emerald', badge: '✓' })
+                  const alerts = items.filter(i => i.badge === '!' || i.badge === '?').length
+                  insights.push({ icon: AlertTriangle, title: 'Fatigue Alert', items, color: alerts > 0 ? 'rose' : 'emerald', metric: alerts > 0 ? `${alerts} alerts` : 'all good' })
                 }
 
-                // INSIGHT 3: SUPPLEMENT INTERACTIONS — one rich line per supplement
+                // INSIGHT 3: SUPPLEMENT INTERACTIONS — one line per supplement, all shown
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
                   const seen = new Set<string>()
@@ -1027,7 +1026,6 @@ export function SupplementTracker() {
                     const conflicts: string[] = []
                     const timings: string[] = []
 
-                    // Check SUPP_INTERACTIONS
                     SUPP_INTERACTIONS.forEach(inter => {
                       const hasA = sd.name.toLowerCase().includes(inter.a.toLowerCase())
                       const hasB = suppNames.some(n => n.includes(inter.b.toLowerCase()) && n !== sd.name.toLowerCase())
@@ -1038,14 +1036,13 @@ export function SupplementTracker() {
                         const key = [short, other].sort().join('+')
                         if (!seen.has(key)) {
                           seen.add(key)
-                          if (inter.type === 'synergy') synergies.push(`${other} — ${inter.message}`)
-                          else if (inter.type === 'conflict') conflicts.push(`${other} — ${inter.message}`)
-                          else timings.push(`${other} — ${inter.message}`)
+                          if (inter.type === 'synergy') synergies.push(`${other} (${inter.message})`)
+                          else if (inter.type === 'conflict') conflicts.push(`${other} (${inter.message})`)
+                          else timings.push(`${other} (${inter.message})`)
                         }
                       }
                     })
 
-                    // Check adviceDB avoid lists
                     if (sd.advice && sd.advice.avoid.length > 0) {
                       sd.advice.avoid.forEach(avoidItem => {
                         const hasAvoid = suppNames.some(n => n.includes(avoidItem.toLowerCase()))
@@ -1053,25 +1050,27 @@ export function SupplementTracker() {
                           const key = [short, avoidItem].sort().join('+')
                           if (!seen.has(key)) {
                             seen.add(key)
-                            conflicts.push(`${avoidItem} — avoid taking together`)
+                            conflicts.push(`${avoidItem} (blocks absorption)`)
                           }
                         }
                       })
                     }
 
                     const parts: string[] = []
-                    if (synergies.length > 0) parts.push(`+ ${synergies.join(', ')}`)
-                    if (conflicts.length > 0) parts.push(`! ${conflicts.join(', ')}`)
-                    if (timings.length > 0) parts.push(`~ ${timings.join(', ')}`)
+                    if (synergies.length > 0) parts.push(`+${synergies.join(', ')}`)
+                    if (conflicts.length > 0) parts.push(`!${conflicts.join(', ')}`)
+                    if (timings.length > 0) parts.push(`~${timings.join(', ')}`)
 
                     if (parts.length > 0) {
-                      const hasConflict = conflicts.length > 0
-                      items.push({ text: `${short}: ${parts.join(' | ')}`, color: hasConflict ? 'rose' : 'violet', badge: hasConflict ? '!' : '+' })
+                      items.push({ text: `${short}: ${parts.join(' | ')}`, color: conflicts.length > 0 ? 'rose' : 'violet', badge: conflicts.length > 0 ? '!' : '+' })
+                    } else {
+                      items.push({ text: `${short}: no interactions found`, color: 'gray', badge: '—' })
                     }
                   })
 
-                  if (items.length === 0) items.push({ text: 'Add 2+ supplements to see interactions', color: 'amber', badge: '—' })
-                  insights.push({ icon: Layers, title: 'Supplement Interactions', items, color: items.some(i => i.badge === '!') ? 'rose' : 'violet', metric: `${items.length} pairs found` })
+                  if (items.length === 0) items.push({ text: 'Add supplements to see interactions', color: 'amber', badge: '—' })
+                  const conflictCount = items.filter(i => i.badge === '!').length
+                  insights.push({ icon: Layers, title: 'Supplement Interactions', items, color: conflictCount > 0 ? 'rose' : 'violet', metric: `${items.length} supps` })
                 }
 
                 const finalInsights = insights.slice(0, 3)
