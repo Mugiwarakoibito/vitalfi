@@ -1010,10 +1010,10 @@ export function SupplementTracker() {
                   const items: { text: string; color?: string; badge?: string }[] = []
 
                   allSuppData.forEach(sd => {
-                    const short = sd.name.split(' ')[0]
-                    const synergies: string[] = []
-                    const conflicts: string[] = []
-                    const timings: string[] = []
+                    const fullName = sd.name
+                    const synergies: { other: string; msg: string }[] = []
+                    const conflicts: { other: string; msg: string }[] = []
+                    const timings: { other: string; msg: string }[] = []
                     const seenForThis = new Set<string>()
 
                     SUPP_INTERACTIONS.forEach(inter => {
@@ -1024,18 +1024,16 @@ export function SupplementTracker() {
                       const otherHasA = suppNames.some(n => n.includes(nameA) && !n.includes(sd.name.toLowerCase()))
                       const otherHasB = suppNames.some(n => n.includes(nameB) && !n.includes(sd.name.toLowerCase()))
 
-                      // I have A, someone else has B → interaction applies to me
                       if (iHaveA && otherHasB && !seenForThis.has(inter.b)) {
                         seenForThis.add(inter.b)
-                        const entry = `${inter.b.split(' ')[0]} (${inter.message})`
+                        const entry = { other: inter.b, msg: inter.message }
                         if (inter.type === 'synergy') synergies.push(entry)
                         else if (inter.type === 'conflict') conflicts.push(entry)
                         else timings.push(entry)
                       }
-                      // I have B, someone else has A → interaction applies to me
                       if (iHaveB && otherHasA && !seenForThis.has(inter.a)) {
                         seenForThis.add(inter.a)
-                        const entry = `${inter.a.split(' ')[0]} (${inter.message})`
+                        const entry = { other: inter.a, msg: inter.message }
                         if (inter.type === 'synergy') synergies.push(entry)
                         else if (inter.type === 'conflict') conflicts.push(entry)
                         else timings.push(entry)
@@ -1048,21 +1046,29 @@ export function SupplementTracker() {
                           const hasAvoid = suppNames.some(n => n.includes(avoidItem.toLowerCase()))
                           if (hasAvoid) {
                             seenForThis.add(avoidItem)
-                            conflicts.push(`${avoidItem} (blocks absorption)`)
+                            conflicts.push({ other: avoidItem, msg: 'blocks absorption — separate by 2 hours' })
                           }
                         }
                       })
                     }
 
+                    // Build natural sentence
                     const parts: string[] = []
-                    if (synergies.length > 0) parts.push(`+${synergies.join(', ')}`)
-                    if (conflicts.length > 0) parts.push(`!${conflicts.join(', ')}`)
-                    if (timings.length > 0) parts.push(`~${timings.join(', ')}`)
+                    if (synergies.length > 0) {
+                      synergies.forEach(s => parts.push(`works well with ${s.other} — ${s.msg}`))
+                    }
+                    if (conflicts.length > 0) {
+                      conflicts.forEach(c => parts.push(`avoid with ${c.other} — ${c.msg}`))
+                    }
+                    if (timings.length > 0) {
+                      timings.forEach(t => parts.push(`timing rule with ${t.other} — ${t.msg}`))
+                    }
 
                     if (parts.length > 0) {
-                      items.push({ text: `${short}: ${parts.join(' | ')}`, color: conflicts.length > 0 ? 'rose' : 'violet', badge: conflicts.length > 0 ? '!' : '+' })
+                      const text = `${fullName} ${parts.join(', ')}`
+                      items.push({ text, color: conflicts.length > 0 ? 'rose' : 'violet', badge: conflicts.length > 0 ? '!' : '+' })
                     } else {
-                      items.push({ text: `${short}: no interactions found`, color: 'gray', badge: '—' })
+                      items.push({ text: `${fullName} has no known interactions with your other supplements`, color: 'gray', badge: '—' })
                     }
                   })
 
