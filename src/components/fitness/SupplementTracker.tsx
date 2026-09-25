@@ -972,7 +972,7 @@ export function SupplementTracker() {
                   insights.push({ icon: Apple, title: 'Food Pairing Guide', items, color: 'emerald', metric: `${allSuppData.length} supps` })
                 }
 
-                // INSIGHT 2: SUPPLEMENT FATIGUE ALERT — simple, readable lines
+                // INSIGHT 2: SUPPLEMENT FATIGUE ALERT — how long taken, when to cycle off
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
                   const now = new Date()
@@ -988,33 +988,20 @@ export function SupplementTracker() {
                     }
                     const uniqueDates = [...new Set(suppAllLogs.map(l => l.date))].sort()
                     const earliest = new Date(uniqueDates[0] + 'T12:00:00')
-                    const latest = new Date(uniqueDates[uniqueDates.length - 1] + 'T12:00:00')
                     const daysSinceFirst = Math.floor((now.getTime() - earliest.getTime()) / (1000 * 60 * 60 * 24))
-                    const daysSinceLast = Math.floor((now.getTime() - latest.getTime()) / (1000 * 60 * 60 * 24))
-                    const totalDaysLogged = uniqueDates.length
-                    // Calculate streak from LAST logged date backwards (not from today)
-                    let streak = 0
-                    const lastDate = new Date(uniqueDates[uniqueDates.length - 1] + 'T12:00:00')
-                    for (let i = 0; i < 365; i++) {
-                      const d = new Date(lastDate); d.setDate(d.getDate() - i)
-                      if (suppAllLogs.some(l => l.date === toLocalDate(d))) streak++
-                      else break
-                    }
 
                     if (daysSinceFirst >= 90) {
-                      items.push({ text: `${short}: ${daysSinceFirst} days — take a 2-week break`, color: 'rose', badge: '!' })
+                      items.push({ text: `${short}: taken for ${daysSinceFirst} days — take a 2-week break`, color: 'rose', badge: '!' })
                     } else if (daysSinceFirst >= 60) {
-                      items.push({ text: `${short}: ${daysSinceFirst} days — break in ${90 - daysSinceFirst} days`, color: 'amber', badge: '~' })
-                    } else if (daysSinceLast > 1) {
-                      items.push({ text: `${short}: ${totalDaysLogged} days logged, ${streak}d streak, last ${daysSinceLast}d ago`, color: 'rose', badge: '?' })
+                      items.push({ text: `${short}: taken for ${daysSinceFirst} days — cycle break in ${90 - daysSinceFirst} days`, color: 'amber', badge: '~' })
                     } else {
-                      items.push({ text: `${short}: ${totalDaysLogged} days logged, ${streak}d streak`, color: 'emerald', badge: '✓' })
+                      items.push({ text: `${short}: taken for ${daysSinceFirst} days — OK`, color: 'emerald', badge: '✓' })
                     }
                   })
 
                   if (items.length === 0) items.push({ text: 'No fatigue alerts', color: 'emerald', badge: '✓' })
-                  const alerts = items.filter(i => i.badge === '!' || i.badge === '?').length
-                  insights.push({ icon: AlertTriangle, title: 'Fatigue Alert', items, color: alerts > 0 ? 'rose' : 'emerald', metric: alerts > 0 ? `${alerts} alerts` : 'all good' })
+                  const alerts = items.filter(i => i.badge === '!' || i.badge === '~').length
+                  insights.push({ icon: AlertTriangle, title: 'Fatigue Alert', items, color: alerts > 0 ? 'rose' : 'emerald', metric: alerts > 0 ? `${alerts} need break` : 'all good' })
                 }
 
                 // INSIGHT 3: SUPPLEMENT INTERACTIONS — one line per supplement, all shown
