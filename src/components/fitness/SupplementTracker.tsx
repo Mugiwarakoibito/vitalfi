@@ -992,9 +992,11 @@ export function SupplementTracker() {
                     const daysSinceFirst = Math.floor((now.getTime() - earliest.getTime()) / (1000 * 60 * 60 * 24))
                     const daysSinceLast = Math.floor((now.getTime() - latest.getTime()) / (1000 * 60 * 60 * 24))
                     const totalDaysLogged = uniqueDates.length
+                    // Calculate streak from LAST logged date backwards (not from today)
                     let streak = 0
+                    const lastDate = new Date(uniqueDates[uniqueDates.length - 1] + 'T12:00:00')
                     for (let i = 0; i < 365; i++) {
-                      const d = new Date(now); d.setDate(d.getDate() - i)
+                      const d = new Date(lastDate); d.setDate(d.getDate() - i)
                       if (suppAllLogs.some(l => l.date === toLocalDate(d))) streak++
                       else break
                     }
@@ -1004,9 +1006,9 @@ export function SupplementTracker() {
                     } else if (daysSinceFirst >= 60) {
                       items.push({ text: `${short}: ${daysSinceFirst} days — break in ${90 - daysSinceFirst} days`, color: 'amber', badge: '~' })
                     } else if (daysSinceLast > 1) {
-                      items.push({ text: `${short}: ${totalDaysLogged} days logged, streak ${streak}d, last ${daysSinceLast}d ago`, color: 'rose', badge: '?' })
+                      items.push({ text: `${short}: ${totalDaysLogged} days logged, ${streak}d streak, last ${daysSinceLast}d ago`, color: 'rose', badge: '?' })
                     } else {
-                      items.push({ text: `${short}: ${totalDaysLogged} days logged, streak ${streak}d`, color: 'emerald', badge: '✓' })
+                      items.push({ text: `${short}: ${totalDaysLogged} days logged, ${streak}d streak`, color: 'emerald', badge: '✓' })
                     }
                   })
 
