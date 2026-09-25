@@ -983,19 +983,20 @@ export function SupplementTracker() {
                     const fullName = sd.name
                     const suppAllLogs = logs.filter(l => l.supplementId === supp.id)
                     if (suppAllLogs.length === 0) {
-                      items.push({ text: `You haven't logged ${fullName} yet`, color: 'amber', badge: '?' })
+                      items.push({ text: `You haven't started tracking ${fullName} yet — take your first dose to begin monitoring`, color: 'amber', badge: '?' })
                       return
                     }
                     const uniqueDates = [...new Set(suppAllLogs.map(l => l.date))].sort()
                     const earliest = new Date(uniqueDates[0] + 'T12:00:00')
                     const daysSinceFirst = Math.floor((now.getTime() - earliest.getTime()) / (1000 * 60 * 60 * 24))
+                    const startDate = earliest.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
                     if (daysSinceFirst >= 90) {
-                      items.push({ text: `You've taken ${fullName} for ${daysSinceFirst} days, consider a 2-week cycle off`, color: 'rose', badge: '!' })
+                      items.push({ text: `You've taken ${fullName} for ${daysSinceFirst} days since ${startDate} — consider a 2-week cycle off to avoid tolerance`, color: 'rose', badge: '!' })
                     } else if (daysSinceFirst >= 60) {
-                      items.push({ text: `You've taken ${fullName} for ${daysSinceFirst} days, consider a break in ${90 - daysSinceFirst} days`, color: 'amber', badge: '~' })
+                      items.push({ text: `You've taken ${fullName} for ${daysSinceFirst} days since ${startDate} — cycle break recommended in ${90 - daysSinceFirst} days`, color: 'amber', badge: '~' })
                     } else {
-                      items.push({ text: `You've taken ${fullName} for ${daysSinceFirst} days, no break needed yet`, color: 'emerald', badge: '✓' })
+                      items.push({ text: `You've taken ${fullName} for ${daysSinceFirst} days since ${startDate} — ${90 - daysSinceFirst} days until a cycle break is recommended`, color: 'emerald', badge: '✓' })
                     }
                   })
 
