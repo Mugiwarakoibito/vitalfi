@@ -901,72 +901,89 @@ export function SupplementTracker() {
                 const insights: { icon: typeof Zap; title: string; items: { text: string; color?: string; badge?: string }[]; color: string; metric?: string }[] = []
                 const suppNames = deduped.map((s: { name: string }) => s.name.toLowerCase())
 
-                // INSIGHT 1: FOOD PAIRING GUIDE — rich per-supplement cards
+                // INSIGHT 1: FOOD PAIRING GUIDE — what to eat with each supplement
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
-                  const foodDB: Record<string, { food: string; avoid: string; tip: string; multiplier: string }> = {
-                    'Vitamin D': { food: 'fatty fish, egg yolks, avocado, olive oil', avoid: 'high-fiber bran cereal', tip: 'Take with K2 to direct calcium to bones', multiplier: '3x absorption with fat' },
-                    'Omega-3': { food: 'salmon, walnuts, flaxseed, sardines', avoid: 'large meals without fat', tip: 'Freeze capsules to reduce fish burps', multiplier: '2x absorption with fatty meal' },
-                    'Iron': { food: 'vitamin C foods: citrus, bell peppers, strawberries, kiwi', avoid: 'coffee, tea, calcium within 1h', tip: 'Take on empty stomach for max absorption', multiplier: '6x boost with vitamin C' },
-                    'Magnesium': { food: 'dark chocolate, spinach, almonds, pumpkin seeds', avoid: 'high-dose calcium supplements', tip: 'Glycinate for sleep, Threonate for brain', multiplier: 'Better sleep when paired with zinc' },
-                    'Zinc': { food: 'pumpkin seeds, beef, chickpeas, cashews', avoid: 'high-phytate grains, dairy', tip: 'Take with dinner to avoid nausea', multiplier: 'Immune boost with vitamin C' },
-                    'Creatine': { food: 'anything — take with carbs for better uptake', avoid: 'caffeine may reduce uptake slightly', tip: '3-5g daily, timing does not matter', multiplier: 'Better uptake with carbs' },
-                    'B12': { food: 'meat, fish, eggs, dairy, fortified cereals', avoid: 'none significant', tip: 'Sublingual methylcobalamin is best form', multiplier: '2x absorption sublingual' },
-                    'Collagen': { food: 'vitamin C foods essential: citrus, berries, bell peppers', avoid: 'high-dose calcium at same time', tip: 'Take 30min before food for best results', multiplier: '8x synthesis with vitamin C' },
-                    'Probiotics': { food: 'prebiotic foods: garlic, onion, banana, oats, asparagus', avoid: 'hot drinks immediately after', tip: 'Refrigerate for potency, take before breakfast', multiplier: 'Survival boost with prebiotics' },
-                    'CoQ10': { food: 'fatty meals: nuts, olive oil, avocado, fatty fish', avoid: 'none significant', tip: 'Ubiquinol form is 3x more absorbable', multiplier: '3x absorption as ubiquinol' },
-                    'Curcumin': { food: 'black pepper + healthy fat: olive oil, coconut oil', avoid: 'taking without fat or pepper', tip: 'Always pair with piperine from black pepper', multiplier: '20x boost with black pepper' },
-                    'Calcium': { food: 'dairy, leafy greens, fortified foods, sardines', avoid: 'iron, zinc at same time', tip: 'Take in morning, magnesium at night', multiplier: 'Absorption with vitamin D' },
-                    'Vitamin C': { food: 'citrus, kiwi, bell peppers, broccoli, strawberries', avoid: 'none significant', tip: 'Take with iron for maximum absorption', multiplier: 'Synergy with iron and collagen' },
+                  const foodDB: Record<string, { eat: string; avoid: string; tip: string }> = {
+                    'Vitamin D': { eat: 'fatty fish, egg yolks, avocado, olive oil', avoid: 'high-fiber bran cereal', tip: '3x absorption when taken with fat' },
+                    'Omega-3': { eat: 'salmon, walnuts, flaxseed, sardines', avoid: 'large meals without fat', tip: 'Freeze capsules to reduce fish burps' },
+                    'Iron': { eat: 'vitamin C foods: citrus, bell peppers, strawberries, kiwi', avoid: 'coffee, tea, calcium within 1 hour', tip: '6x boost when paired with vitamin C' },
+                    'Magnesium': { eat: 'dark chocolate, spinach, almonds, pumpkin seeds', avoid: 'high-dose calcium supplements', tip: 'Glycinate for sleep, Threonate for brain' },
+                    'Zinc': { eat: 'pumpkin seeds, beef, chickpeas, cashews', avoid: 'high-phytate grains, dairy at same time', tip: 'Take with dinner to avoid nausea' },
+                    'Creatine': { eat: 'anything — take with carbs for better uptake', avoid: 'caffeine may reduce uptake slightly', tip: '3-5g daily, timing does not matter' },
+                    'B12': { eat: 'meat, fish, eggs, dairy, fortified cereals', avoid: 'none significant', tip: 'Sublingual methylcobalamin is best form' },
+                    'Collagen': { eat: 'vitamin C foods essential: citrus, berries, bell peppers', avoid: 'high-dose calcium at same time', tip: '8x collagen synthesis with vitamin C' },
+                    'Probiotics': { eat: 'prebiotic foods: garlic, onion, banana, oats, asparagus', avoid: 'hot drinks immediately after', tip: 'Take before breakfast for best colonization' },
+                    'CoQ10': { eat: 'fatty meals: nuts, olive oil, avocado, fatty fish', avoid: 'none significant', tip: 'Ubiquinol form is 3x more absorbable' },
+                    'Curcumin': { eat: 'black pepper + healthy fat: olive oil, coconut oil', avoid: 'taking without fat or pepper', tip: '20x absorption boost with black pepper' },
+                    'Calcium': { eat: 'dairy, leafy greens, fortified foods, sardines', avoid: 'iron, zinc at same time', tip: 'Take in morning, magnesium at night' },
+                    'Vitamin C': { eat: 'citrus, kiwi, bell peppers, broccoli, strawberries', avoid: 'none significant', tip: 'Take with iron for maximum absorption' },
                   }
-                  // Group supplements by pairing quality
-                  const paired: string[] = []
-                  const unpaired: string[] = []
-                  allSuppData.forEach(sd => {
-                    const key = Object.keys(foodDB).find(k => sd.name.toLowerCase().includes(k.toLowerCase()))
-                    const pairing = key ? foodDB[key] : null
-                    if (pairing) {
-                      paired.push(sd.name.split(' ')[0])
-                      items.push({ text: `${sd.name.split(' ')[0]}: ${pairing.food}`, color: 'emerald', badge: 'F' })
-                      items.push({ text: `${sd.name.split(' ')[0]}: avoid ${pairing.avoid}`, color: 'rose', badge: '!' })
-                      items.push({ text: `${sd.name.split(' ')[0]}: ${pairing.tip} (${pairing.multiplier})`, color: 'cyan', badge: '*' })
-                    } else {
-                      unpaired.push(sd.name.split(' ')[0])
-                    }
-                  })
-                  if (unpaired.length > 0) items.push({ text: `No food data: ${unpaired.join(', ')}`, color: 'amber', badge: '?' })
-                  if (items.length === 0) items.push({ text: 'Add supplements to see food pairings', color: 'amber', badge: '—' })
-                  insights.push({ icon: Apple, title: 'Food Pairing Guide', items, color: 'emerald', metric: `${paired.length}/${allSuppData.length} paired` })
-                }
-
-                // INSIGHT 2: FATIGUE ALERT — rich per-supplement status cards
-                {
-                  const items: { text: string; color?: string; badge?: string }[] = []
-
-                  // Per-supplement status cards
                   allSuppData.forEach(sd => {
                     const short = sd.name.split(' ')[0]
-                    const pct = sd.dosesTotal > 0 ? Math.round((sd.dosesTaken / sd.dosesTotal) * 100) : 0
-                    const rateBar = pct >= 80 ? '████' : pct >= 50 ? '███░' : pct > 0 ? '██░░' : '░░░░'
-                    const trendIcon = sd.trend > 15 ? '↑' : sd.trend < -15 ? '↓' : '→'
-                    const trendText = sd.trend > 0 ? `+${sd.trend}%` : `${sd.trend}%`
-                    const todayStatus = pct === 100 ? 'Done' : pct > 0 ? `${sd.dosesTaken}/${sd.dosesTotal}` : 'Not started'
-                    const todayColor = pct === 100 ? 'emerald' : pct > 0 ? 'amber' : 'rose'
-                    items.push({ text: `${short} 7d:${sd.rate7}% 30d:${sd.rate30}% ${trendIcon}${trendText} ${rateBar} today:${todayStatus}`, color: todayColor, badge: `${pct}%` })
+                    const key = Object.keys(foodDB).find(k => sd.name.toLowerCase().includes(k.toLowerCase()))
+                    const p = key ? foodDB[key] : null
+                    if (p) {
+                      items.push({ text: `Eat with ${short}: ${p.eat}`, color: 'emerald', badge: 'F' })
+                      if (p.avoid !== 'none significant') items.push({ text: `Avoid with ${short}: ${p.avoid}`, color: 'rose', badge: '!' })
+                      items.push({ text: `${short} tip: ${p.tip}`, color: 'cyan', badge: '*' })
+                    }
                   })
-
-                  // Stack health score
-                  const avgAdherence = allSuppData.length > 0 ? Math.round(allSuppData.reduce((s, sd) => s + (sd.dosesTotal > 0 ? (sd.dosesTaken / sd.dosesTotal) * 100 : 0), 0) / allSuppData.length) : 0
-                  const improving = allSuppData.filter(s => s.trend > 15).length
-                  const declining = allSuppData.filter(s => s.trend < -15).length
-                  const done = allSuppData.filter(s => s.done).length
-                  items.push({ text: `Stack health: ${avgAdherence}% avg adherence | ${done}/${allSuppData.length} complete today | ${improving} improving, ${declining} declining`, color: avgAdherence >= 70 ? 'emerald' : 'amber', badge: '#' })
-
-                  if (items.length === 0) items.push({ text: 'No fatigue alerts — your stack is healthy', color: 'emerald', badge: '✓' })
-                  insights.push({ icon: AlertTriangle, title: 'Fatigue Alert', items, color: declining > 0 ? 'rose' : 'amber', metric: `${allSuppData.length} supps tracked` })
+                  if (items.length === 0) items.push({ text: 'Add supplements to see food pairings', color: 'amber', badge: '—' })
+                  insights.push({ icon: Apple, title: 'Food Pairing Guide', items, color: 'emerald', metric: `${allSuppData.length} supps` })
                 }
 
-                // INSIGHT 3: SUPPLEMENT INTERACTIONS — grouped by type with stats
+                // INSIGHT 2: SUPPLEMENT FATIGUE ALERT — how long you've been taking + cycle suggestions
+                {
+                  const items: { text: string; color?: string; badge?: string }[] = []
+                  const now = new Date()
+
+                  allSuppData.forEach(sd => {
+                    const supp = deduped.find(d => d.name === sd.name)
+                    if (!supp) return
+                    const short = sd.name.split(' ')[0]
+                    // Find all logs for this supplement
+                    const suppLogs = logs.filter(l => l.supplementId === supp.id && l.takenAt)
+                    if (suppLogs.length === 0) {
+                      items.push({ text: `${short}: no logs yet — start tracking`, color: 'amber', badge: '?' })
+                      return
+                    }
+                    // Find earliest and latest log dates
+                    const dates = suppLogs.map(l => new Date(l.takenAt).getTime()).sort((a, b) => a - b)
+                    const earliest = new Date(dates[0])
+                    const latest = new Date(dates[dates.length - 1])
+                    const daysSinceFirst = Math.floor((now.getTime() - earliest.getTime()) / (1000 * 60 * 60 * 24))
+                    const daysSinceLast = Math.floor((now.getTime() - latest.getTime()) / (1000 * 60 * 60 * 24))
+                    const totalDaysLogged = new Set(suppLogs.map(l => l.date)).size
+                    // Check consecutive days (streak)
+                    const uniqueDates = [...new Set(suppLogs.map(l => l.date))].sort()
+                    let streak = 1
+                    for (let i = uniqueDates.length - 1; i > 0; i--) {
+                      const prev = new Date(uniqueDates[i - 1])
+                      const curr = new Date(uniqueDates[i])
+                      const diff = Math.floor((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24))
+                      if (diff === 1) streak++
+                      else break
+                    }
+
+                    if (daysSinceFirst >= 90) {
+                      items.push({ text: `${short}: taken for ${daysSinceFirst} days — consider 2-week break`, color: 'rose', badge: '!' })
+                    } else if (daysSinceFirst >= 60) {
+                      items.push({ text: `${short}: ${daysSinceFirst} days ongoing — cycle break in ${90 - daysSinceFirst} days`, color: 'amber', badge: '~' })
+                    } else {
+                      items.push({ text: `${short}: ${daysSinceFirst} days tracked, ${streak}d streak, ${totalDaysLogged} days logged`, color: 'emerald', badge: '✓' })
+                    }
+                    if (daysSinceLast > 2) {
+                      items.push({ text: `${short}: last taken ${daysSinceLast} days ago — resume or remove?`, color: 'rose', badge: '?' })
+                    }
+                  })
+
+                  if (items.length === 0) items.push({ text: 'No fatigue alerts — your stack is healthy', color: 'emerald', badge: '✓' })
+                  const cycleAlerts = items.filter(i => i.badge === '!' || i.badge === '?').length
+                  insights.push({ icon: AlertTriangle, title: 'Fatigue Alert', items, color: cycleAlerts > 0 ? 'rose' : 'emerald', metric: cycleAlerts > 0 ? `${cycleAlerts} cycle alerts` : 'all good' })
+                }
+
+                // INSIGHT 3: SUPPLEMENT INTERACTIONS — synergies + conflicts between your supplements
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
                   const synergies: string[] = []
@@ -982,24 +999,20 @@ export function SupplementTracker() {
                         seen.add(key)
                         const pair = `${inter.a.split(' ')[0]} + ${inter.b.split(' ')[0]}`
                         if (inter.type === 'synergy') {
-                          synergies.push(`${pair}: ${inter.message}`)
+                          synergies.push(pair)
                           items.push({ text: `${pair}: ${inter.message}`, color: 'emerald', badge: '+' })
                         } else if (inter.type === 'conflict') {
-                          conflicts.push(`${pair}: ${inter.message}`)
+                          conflicts.push(pair)
                           items.push({ text: `${pair}: ${inter.message}`, color: 'rose', badge: '!' })
                         } else {
-                          timingRules.push(`${pair}: ${inter.message}`)
+                          timingRules.push(pair)
                           items.push({ text: `${pair}: ${inter.message}`, color: 'cyan', badge: '~' })
                         }
                       }
                     }
                   })
-                  // Summary at bottom
-                  if (synergies.length > 0 || conflicts.length > 0) {
-                    const takeTogether = synergies.length > 0 ? synergies.map(s => s.split(':')[0]).join(', ') : 'none'
-                    const separate = conflicts.length > 0 ? conflicts.map(c => c.split(':')[0]).join(', ') : 'none'
-                    items.push({ text: `Take together: ${takeTogether} | Separate: ${separate}`, color: 'violet', badge: '#' })
-                  }
+                  if (synergies.length > 0) items.push({ text: `Take together: ${synergies.join(', ')}`, color: 'emerald', badge: '→' })
+                  if (conflicts.length > 0) items.push({ text: `Separate: ${conflicts.join(', ')}`, color: 'rose', badge: '⚠' })
                   if (items.length === 0) items.push({ text: 'Add 2+ supplements to see interactions', color: 'amber', badge: '—' })
                   insights.push({ icon: Layers, title: 'Supplement Interactions', items, color: conflicts.length > 0 ? 'rose' : 'violet', metric: `${synergies.length}+ ${conflicts.length}! ${timingRules.length}~` })
                 }
