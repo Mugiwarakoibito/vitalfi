@@ -917,72 +917,58 @@ export function SupplementTracker() {
                   insights.push({ icon: Clock, title: 'How to Take', items, color, metric: `${allSuppData.length} supplements` })
                 }
 
-                // INSIGHT 2: OPTIMAL TIMING — smart schedule + spacing + next dose
+                // INSIGHT 2: OPTIMAL TIMING — schedule-driven grouping
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
                   const now = new Date()
                   const currentHour = now.getHours()
-
-                  // Current time context
                   const timeOfDay = currentHour < 10 ? 'morning' : currentHour < 15 ? 'afternoon' : currentHour < 20 ? 'evening' : 'night'
 
-                  // Group by optimal time with reasons
-                  const morning: { name: string; reason: string }[] = []
-                  const afternoon: { name: string; reason: string }[] = []
-                  const evening: { name: string; reason: string }[] = []
-                  const anytime: string[] = []
-
+                  // Group by user's ACTUAL schedule (sd.times), not adviceDB
+                  const timeMap: Record<string, { name: string; advice: string }[]> = { Morning: [], Afternoon: [], Evening: [], Night: [] }
+                  const anytimeList: { name: string; advice: string }[] = []
                   allSuppData.forEach(sd => {
                     const short = sd.name.split(' ')[0]
                     const when = sd.advice?.when?.toLowerCase() || ''
                     const how = sd.advice?.how?.toLowerCase() || ''
-
-                    if (when.includes('morning') || when.includes('empty stomach') || how.includes('morning') || how.includes('breakfast')) {
-                      morning.push({ name: short, reason: how.includes('fat') ? 'with fat' : when.includes('empty') ? 'empty stomach' : 'with breakfast' })
-                    } else if (when.includes('bedtime') || when.includes('evening') || when.includes('night') || how.includes('sleep')) {
-                      evening.push({ name: short, reason: how.includes('sleep') ? 'promotes sleep' : 'with dinner' })
-                    } else if (when.includes('lunch') || when.includes('afternoon') || when.includes('fatty meal')) {
-                      afternoon.push({ name: short, reason: 'with lunch' })
-                    } else {
-                      anytime.push(short)
-                    }
+                    const reason = how.includes('fat') ? 'with fat' : how.includes('empty') ? 'empty stomach' : when.includes('sleep') ? 'promotes sleep' : when.includes('dinner') ? 'with dinner' : when.includes('lunch') ? 'with lunch' : 'best absorbed'
+                    const planTimes = sd.times.length > 0 ? sd.times : ['Anytime']
+                    const placed = new Set<string>()
+                    planTimes.forEach(t => {
+                      if (t in timeMap && !placed.has(t)) {
+                        timeMap[t].push({ name: short, advice: reason })
+                        placed.add(t)
+                      }
+                    })
+                    if (placed.size === 0) anytimeList.push({ name: short, advice: reason })
                   })
 
                   // What to take NOW
-                  const nowItems: string[] = []
-                  if (timeOfDay === 'morning' || timeOfDay === 'afternoon') {
-                    morning.forEach(m => nowItems.push(m.name))
-                  } else {
-                    evening.forEach(e => nowItems.push(e.name))
-                    afternoon.forEach(a => nowItems.push(a.name))
-                  }
+                  const nowTimeKey = currentHour < 12 ? 'Morning' : currentHour < 17 ? 'Afternoon' : currentHour < 21 ? 'Evening' : 'Night'
+                  const nowItems = timeMap[nowTimeKey] || []
                   if (nowItems.length > 0) {
-                    items.push({ text: `Take now: ${nowItems.join(', ')}`, color: 'emerald', badge: '▶' })
+                    items.push({ text: `Take now: ${nowItems.map(n => n.name).join(', ')}`, color: 'emerald', badge: '▶' })
                   }
 
-                  // Morning
-                  if (morning.length > 0) {
-                    const details = morning.map(m => `${m.name} (${m.reason})`).join(', ')
-                    items.push({ text: `Morning: ${details}`, color: 'cyan', badge: '🌅' })
+                  // Each time block
+                  const timeBlocks: { key: string; label: string; color: string; badge: string }[] = [
+                    { key: 'Morning', label: 'Morning', color: 'cyan', badge: '🌅' },
+                    { key: 'Afternoon', label: 'Afternoon', color: 'amber', badge: '☀' },
+                    { key: 'Evening', label: 'Evening', color: 'violet', badge: '🌙' },
+                    { key: 'Night', label: 'Night', color: 'indigo', badge: '🌑' },
+                  ]
+                  timeBlocks.forEach(block => {
+                    const list = timeMap[block.key]
+                    if (list.length > 0) {
+                      const details = list.map(m => `${m.name} (${m.advice})`).join(', ')
+                      items.push({ text: `${block.label}: ${details}`, color: block.color, badge: block.badge })
+                    }
+                  })
+                  if (anytimeList.length > 0) {
+                    items.push({ text: `Anytime: ${anytimeList.map(m => m.name).join(', ')}`, color: 'emerald', badge: '⏰' })
                   }
 
-                  // Afternoon
-                  if (afternoon.length > 0) {
-                    items.push({ text: `Afternoon: ${afternoon.map(a => `${a.name} (${a.reason})`).join(', ')}`, color: 'amber', badge: '☀️' })
-                  }
-
-                  // Evening
-                  if (evening.length > 0) {
-                    const details = evening.map(e => `${e.name} (${e.reason})`).join(', ')
-                    items.push({ text: `Evening: ${details}`, color: 'violet', badge: '🌙' })
-                  }
-
-                  // Anytime
-                  if (anytime.length > 0) {
-                    items.push({ text: `Anytime: ${anytime.join(', ')}`, color: 'emerald', badge: '⏰' })
-                  }
-
-                  // Spacing rules (what to separate)
+                  // Spacing rules
                   const spacing: string[] = []
                   allSuppData.forEach(sd => {
                     if (sd.advice && sd.advice.avoid.length > 0) {
