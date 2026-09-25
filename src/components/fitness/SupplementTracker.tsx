@@ -5,7 +5,7 @@ import {
   Trash2, Sunrise, Sunset, Moon, Sun, Sparkles, Activity,
   DollarSign, Layers, CalendarCheck, Calendar,
   Brain, ShieldAlert, Zap, Package,
-  CheckCircle2, BarChart3,
+  CheckCircle2, BarChart3, Apple,
   ChevronLeft, ChevronRight, RotateCcw, Flame,
   TrendingUp, ChevronDown,
 } from 'lucide-react'
@@ -897,139 +897,92 @@ export function SupplementTracker() {
                   return { name: s.name, dosage: s.dosage, done, dosesTaken, dosesTotal, rate7, rate30, times, advice, refill, conflicts, synergies, trend }
                 })
 
-                // ── 3 Insights: Advice, Companions, Ideas ──
+                // ── 3 Insights: Food Pairing, Fatigue Alert, Interactions ──
                 const insights: { icon: typeof Zap; title: string; items: { text: string; color?: string; badge?: string }[]; color: string; metric?: string }[] = []
                 const suppNames = deduped.map((s: { name: string }) => s.name.toLowerCase())
 
-                // INSIGHT 1: HOW TO TAKE — concise per-supplement cards
+                // INSIGHT 1: FOOD PAIRING GUIDE — what to eat with each supplement
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
-                  allSuppData.forEach(sd => {
-                    const timeLabel = sd.times[0] || 'Any time'
-                    const pct = sd.dosesTotal > 0 ? Math.round((sd.dosesTaken / sd.dosesTotal) * 100) : 0
-                    const statusIcon = pct === 100 ? '✓' : pct > 0 ? `${sd.dosesTaken}/${sd.dosesTotal}` : '○'
-                    const statusColor = pct === 100 ? 'emerald' : pct > 0 ? 'amber' : 'rose'
-                    const when = sd.advice?.when || timeLabel
-                    const tip = sd.advice?.tip || sd.advice?.how || ''
-                    items.push({ text: `${sd.name}: ${when}${tip ? ` — ${tip}` : ''}`, color: statusColor, badge: statusIcon })
-                  })
-                  const color = items.length > 0 ? 'cyan' : 'emerald'
-                  insights.push({ icon: Clock, title: 'How to Take', items, color, metric: `${allSuppData.length} supplements` })
-                }
-
-                // INSIGHT 2: OPTIMAL TIMING — schedule-driven grouping
-                {
-                  const items: { text: string; color?: string; badge?: string }[] = []
-                  const now = new Date()
-                  const currentHour = now.getHours()
-                  const timeOfDay = currentHour < 10 ? 'morning' : currentHour < 15 ? 'afternoon' : currentHour < 20 ? 'evening' : 'night'
-
-                  // Group by user's ACTUAL schedule (sd.times), not adviceDB
-                  const timeMap: Record<string, { name: string; advice: string }[]> = { Morning: [], Afternoon: [], Evening: [], Night: [] }
-                  const anytimeList: { name: string; advice: string }[] = []
+                  const foodDB: Record<string, { food: string; avoid: string }> = {
+                    'Vitamin D': { food: 'fatty fish, egg yolks, avocado', avoid: 'high-fiber bran cereal' },
+                    'Omega-3': { food: 'salmon, walnuts, flaxseed', avoid: 'large fatty meals (reduces uptake)' },
+                    'Iron': { food: 'vitamin C foods: citrus, bell peppers, strawberries', avoid: 'coffee, tea, calcium-rich foods within 1h' },
+                    'Magnesium': { food: 'dark chocolate, spinach, almonds', avoid: 'high-dose calcium supplements' },
+                    'Zinc': { food: 'pumpkin seeds, beef, chickpeas', avoid: 'high-phytate grains, dairy at same time' },
+                    'Creatine': { food: 'anything — take with carbs for uptake', avoid: 'caffeine may reduce effectiveness' },
+                    'B12': { food: 'meat, fish, eggs, dairy', avoid: 'none significant' },
+                    'Collagen': { food: 'vitamin C foods essential — citrus, berries', avoid: 'high-dose calcium at same time' },
+                    'Probiotics': { food: 'prebiotic foods: garlic, onion, banana, oats', avoid: 'hot drinks immediately after' },
+                    'CoQ10': { food: 'fatty meals: nuts, olive oil, avocado', avoid: 'none significant' },
+                    'Curcumin': { food: 'black pepper (20x boost) + healthy fat', avoid: 'taking without fat' },
+                    'Calcium': { food: 'dairy, leafy greens, fortified foods', avoid: 'iron, zinc at same time' },
+                    'Vitamin C': { food: 'citrus, kiwi, bell peppers, broccoli', avoid: 'none significant' },
+                  }
                   allSuppData.forEach(sd => {
                     const short = sd.name.split(' ')[0]
-                    const when = sd.advice?.when?.toLowerCase() || ''
-                    const how = sd.advice?.how?.toLowerCase() || ''
-                    const reason = how.includes('fat') ? 'with fat' : how.includes('empty') ? 'empty stomach' : when.includes('sleep') ? 'promotes sleep' : when.includes('dinner') ? 'with dinner' : when.includes('lunch') ? 'with lunch' : 'best absorbed'
-                    const planTimes = sd.times.length > 0 ? sd.times : ['Anytime']
-                    const placed = new Set<string>()
-                    planTimes.forEach(t => {
-                      if (t in timeMap && !placed.has(t)) {
-                        timeMap[t].push({ name: short, advice: reason })
-                        placed.add(t)
+                    const key = Object.keys(foodDB).find(k => sd.name.toLowerCase().includes(k.toLowerCase()))
+                    const pairing = key ? foodDB[key] : null
+                    if (pairing) {
+                      items.push({ text: `${short}: eat with ${pairing.food}`, color: 'emerald', badge: 'F' })
+                      if (pairing.avoid !== 'none significant') {
+                        items.push({ text: `${short}: avoid ${pairing.avoid}`, color: 'amber', badge: '!' })
                       }
-                    })
-                    if (placed.size === 0) anytimeList.push({ name: short, advice: reason })
-                  })
-
-                  // What to take NOW
-                  const nowTimeKey = currentHour < 12 ? 'Morning' : currentHour < 17 ? 'Afternoon' : currentHour < 21 ? 'Evening' : 'Night'
-                  const nowItems = timeMap[nowTimeKey] || []
-                  if (nowItems.length > 0) {
-                    items.push({ text: `Take now: ${nowItems.map(n => n.name).join(', ')}`, color: 'emerald', badge: '▶' })
-                  }
-
-                  // Each time block
-                  const timeBlocks: { key: string; label: string; color: string; badge: string }[] = [
-                    { key: 'Morning', label: 'Morning', color: 'cyan', badge: '🌅' },
-                    { key: 'Afternoon', label: 'Afternoon', color: 'amber', badge: '☀' },
-                    { key: 'Evening', label: 'Evening', color: 'violet', badge: '🌙' },
-                    { key: 'Night', label: 'Night', color: 'indigo', badge: '🌑' },
-                  ]
-                  timeBlocks.forEach(block => {
-                    const list = timeMap[block.key]
-                    if (list.length > 0) {
-                      const details = list.map(m => `${m.name} (${m.advice})`).join(', ')
-                      items.push({ text: `${block.label}: ${details}`, color: block.color, badge: block.badge })
                     }
                   })
-                  if (anytimeList.length > 0) {
-                    items.push({ text: `Anytime: ${anytimeList.map(m => m.name).join(', ')}`, color: 'emerald', badge: '⏰' })
-                  }
-
-                  // Spacing rules
-                  const spacing: string[] = []
-                  allSuppData.forEach(sd => {
-                    if (sd.advice && sd.advice.avoid.length > 0) {
-                      const hasAvoid = sd.advice.avoid.filter(a => suppNames.some(n => n.includes(a.toLowerCase())))
-                      if (hasAvoid.length > 0) spacing.push(`${sd.name.split(' ')[0]} ↔ ${hasAvoid[0]}`)
-                    }
-                  })
-                  if (spacing.length > 0) items.push({ text: `Separate: ${spacing.join(', ')}`, color: 'rose', badge: '⚠' })
-
-                  // Next dose countdown
-                  const remaining = deduped.flatMap(s => s.doses.filter(d => !d.taken).map(d => ({ name: s.name.split(' ')[0], time: d.time })))
-                  if (remaining.length > 0) {
-                    const sorted = remaining.sort((a, b) => {
-                      const timeOrder = ['Morning', 'Afternoon', 'Evening', 'Night']
-                      return timeOrder.indexOf(a.time || 'Morning') - timeOrder.indexOf(b.time || 'Morning')
-                    })
-                    const next = sorted[0]
-                    items.push({ text: `Next: ${next.name} at ${next.time}`, color: 'emerald', badge: '→' })
-                  }
-
-                  if (items.length === 0) items.push({ text: 'Add supplements to see timing', color: 'amber', badge: '—' })
-
-                  insights.push({ icon: Clock, title: 'Optimal Timing', items, color: 'cyan', metric: timeOfDay })
+                  if (items.length === 0) items.push({ text: 'Add supplements to see food pairings', color: 'amber', badge: '—' })
+                  insights.push({ icon: Apple, title: 'Food Pairing Guide', items, color: 'emerald', metric: `${allSuppData.length} supps` })
                 }
 
-                // INSIGHT 3: IDEAS & HACKS — smart tips + combos + trends
+                // INSIGHT 2: SUPPLEMENT FATIGUE ALERT — cycling + adherence drops
                 {
                   const items: { text: string; color?: string; badge?: string }[] = []
 
-                  // Per-supplement: best tip + benefit
+                  // Adherence drops this week vs last
                   allSuppData.forEach(sd => {
-                    if (sd.advice && sd.advice.ideas.length > 0) {
-                      items.push({ text: `${sd.name}: ${sd.advice.ideas[0]}`, color: 'violet', badge: '💡' })
+                    if (sd.trend < -15) {
+                      items.push({ text: `${sd.name.split(' ')[0]}: ${sd.trend}% adherence drop this week`, color: 'rose', badge: '↓' })
+                    } else if (sd.trend > 15) {
+                      items.push({ text: `${sd.name.split(' ')[0]}: +${sd.trend}% improvement`, color: 'emerald', badge: '↑' })
                     }
                   })
 
-                  // Trend-based insight
+                  // Low adherence warnings
                   allSuppData.forEach(sd => {
-                    if (sd.trend > 15) items.push({ text: `${sd.name}: +${sd.trend}% adherence this week`, color: 'emerald', badge: '↑' })
-                    else if (sd.trend < -15) items.push({ text: `${sd.name}: ${sd.trend}% drop — needs attention`, color: 'rose', badge: '↓' })
+                    if (sd.dosesTotal > 0 && sd.dosesTaken === 0) {
+                      items.push({ text: `${sd.name.split(' ')[0]}: 0/${sd.dosesTotal} taken today`, color: 'rose', badge: '○' })
+                    }
                   })
 
-                  // Smart combo based on what you have
-                  if (allSuppData.length >= 2) {
-                    const combos: string[] = []
-                    if (suppNames.some(n => n.includes('creatine')) && suppNames.some(n => n.includes('whey'))) combos.push('Creatine + Whey post-workout')
-                    if (suppNames.some(n => n.includes('omega')) && suppNames.some(n => n.includes('vitamin d'))) combos.push('Omega-3 + D3 together')
-                    if (suppNames.some(n => n.includes('magnesium')) && suppNames.some(n => n.includes('zinc'))) combos.push('Mg + Zn at bedtime')
-                    if (combos.length > 0) items.push({ text: `Stack: ${combos[0]}`, color: 'violet', badge: '★' })
-                  }
+                  if (items.length === 0) items.push({ text: 'No fatigue alerts — your stack is healthy', color: 'emerald', badge: '✓' })
+                  insights.push({ icon: AlertTriangle, title: 'Fatigue Alert', items, color: items[0]?.color === 'emerald' ? 'emerald' : 'amber', metric: items.length > 0 ? `${items.length} alerts` : 'all clear' })
+                }
 
-                  // Timing insight
-                  const morningSupps = allSuppData.filter(s => s.times.some(t => t === 'Morning'))
-                  const eveningSupps = allSuppData.filter(s => s.times.some(t => t === 'Evening' || t === 'Night'))
-                  if (morningSupps.length > 0 && eveningSupps.length > 0) {
-                    items.push({ text: `Morning: ${morningSupps.map(s => s.name.split(' ')[0]).join(', ')} · Evening: ${eveningSupps.map(s => s.name.split(' ')[0]).join(', ')}`, color: 'cyan', badge: '⏰' })
-                  }
-
-                  if (items.length === 0) items.push({ text: 'Take supplements consistently', color: 'emerald', badge: '✓' })
-
-                  insights.push({ icon: Sparkles, title: 'Ideas & Hacks', items, color: 'violet', metric: 'tips' })
+                // INSIGHT 3: SUPPLEMENT INTERACTIONS — synergies + conflicts
+                {
+                  const items: { text: string; color?: string; badge?: string }[] = []
+                  const seen = new Set<string>()
+                  SUPP_INTERACTIONS.forEach(inter => {
+                    const hasA = suppNames.some(n => n.includes(inter.a.toLowerCase()))
+                    const hasB = suppNames.some(n => n.includes(inter.b.toLowerCase()))
+                    if (hasA && hasB) {
+                      const key = [inter.a, inter.b].sort().join('+')
+                      if (!seen.has(key)) {
+                        seen.add(key)
+                        if (inter.type === 'synergy') {
+                          items.push({ text: `${inter.a} + ${inter.b}: ${inter.message}`, color: 'emerald', badge: '+' })
+                        } else if (inter.type === 'conflict') {
+                          items.push({ text: `${inter.a} + ${inter.b}: ${inter.message}`, color: 'rose', badge: '!' })
+                        } else {
+                          items.push({ text: `${inter.a} + ${inter.b}: ${inter.message}`, color: 'cyan', badge: '~' })
+                        }
+                      }
+                    }
+                  })
+                  if (items.length === 0) items.push({ text: 'Add 2+ supplements to see interactions', color: 'amber', badge: '—' })
+                  const synergyCount = items.filter(i => i.badge === '+').length
+                  const conflictCount = items.filter(i => i.badge === '!').length
+                  insights.push({ icon: Layers, title: 'Supplement Interactions', items, color: conflictCount > 0 ? 'rose' : 'violet', metric: `${synergyCount} syn / ${conflictCount} con` })
                 }
 
                 const finalInsights = insights.slice(0, 3)
