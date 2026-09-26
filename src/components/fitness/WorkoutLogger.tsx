@@ -654,6 +654,7 @@ export function WorkoutLogger() {
   const [showFilters, _setShowFilters] = useState(false)
   const [showWeeklyAnalytics, setShowWeeklyAnalytics] = useState(false)
   const [weeklyTab, setWeeklyTab] = useState<'overview' | 'muscles' | 'compare' | 'daily'>('overview')
+  const [weeklyNavOffset, setWeeklyNavOffset] = useState(0)
   const [showTypeDropdown, setShowTypeDropdown] = useState(false)
   const fromDayRef = useRef<HTMLInputElement>(null)
   const fromMonthRef = useRef<HTMLInputElement>(null)
@@ -1167,7 +1168,7 @@ export function WorkoutLogger() {
 
       {/* Weekly Analytics Panel */}
       <AnimatePresence>{showWeeklyAnalytics && workouts.length > 0 && (() => {
-        const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay()); weekStart.setHours(0,0,0,0)
+        const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() - weeklyNavOffset * 7); weekStart.setHours(0,0,0,0)
         const lastWeekEnd = new Date(weekStart); lastWeekEnd.setDate(lastWeekEnd.getDate() - 1)
         const lastWeekStart = new Date(lastWeekEnd); lastWeekStart.setDate(lastWeekStart.getDate() - 6); lastWeekStart.setHours(0,0,0,0)
         const thisWeekWorkouts = workouts.filter(w => new Date(w.date) >= weekStart)
@@ -1254,6 +1255,29 @@ export function WorkoutLogger() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Week Navigation */}
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <button onClick={() => setWeeklyNavOffset(o => o + 1)} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold text-white">
+                  {weeklyNavOffset === 0 ? 'This Week' : `${Math.abs(weeklyNavOffset)} week${Math.abs(weeklyNavOffset) > 1 ? 's' : ''} ago`}
+                </span>
+                <span className="text-[9px] text-gray-500">
+                  {weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(weekStart.getTime() + 6 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+              <button disabled={weeklyNavOffset === 0} onClick={() => setWeeklyNavOffset(o => Math.min(o - 1, 0))} className={`p-1.5 rounded-lg border transition-all ${weeklyNavOffset === 0 ? 'bg-white/5 border-white/5 text-gray-700 cursor-not-allowed' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+              {weeklyNavOffset !== 0 && (
+                <button onClick={() => setWeeklyNavOffset(0)} className="text-[9px] px-2 py-1 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-all font-medium">
+                  Jump to now
+                </button>
+              )}
             </div>
 
             <AnimatePresence mode="wait">
