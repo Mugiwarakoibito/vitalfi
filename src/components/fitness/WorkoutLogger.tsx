@@ -1231,39 +1231,37 @@ export function WorkoutLogger() {
           return { pct: `${Math.abs(diff).toFixed(0)}%`, up: diff >= 0, arrow: diff >= 0 ? '\u2191' : '\u2193', label: diff >= 0 ? 'up' : 'down' }
         }
 
-        const glassTooltip = { background: 'rgba(17,17,17,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 11, backdropFilter: 'blur(12px)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }
-
         return (
-        <motion.div key="weekly-analytics" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }}>
-          <div className="relative overflow-hidden rounded-2xl border border-violet-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-violet-500/5">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/15 rounded-full -mr-16 -mt-16 blur-xl" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-fuchsia-500/10 rounded-full -ml-12 -mb-12 blur-lg" />
-            <div className="relative">
-              <div className="flex items-center gap-2 mb-4">
+        <motion.div key="weekly-analytics" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+          <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl p-5">
+            {/* Header + Tabs */}
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-400/20 to-violet-500/20 border border-violet-500/20 flex items-center justify-center">
                   <Activity className="w-3.5 h-3.5 text-violet-400" />
                 </div>
-                <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">Weekly Analytics</span>
-                <div className="ml-auto flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
-                  <div className={`w-1.5 h-1.5 rounded-full ${heatScore.score >= 60 ? 'bg-emerald-400' : heatScore.score >= 30 ? 'bg-amber-400' : 'bg-gray-500'}`} />
-                  <span className="text-[9px] text-gray-400">{heatScore.label}</span>
+                <div>
+                  <span className="text-xs font-semibold text-white">Weekly Analytics</span>
+                  <p className="text-[10px] text-gray-500">{thisWeekWorkouts.length} workouts &middot; {thisWeekTotalDur}min total</p>
                 </div>
               </div>
-
-              <div className="flex items-center gap-1.5 bg-white/5 rounded-xl p-1 border border-white/10 mb-4">
+              <div className="flex items-center gap-1 bg-white/5 rounded-xl p-0.5 border border-white/10">
                 {tabs.map(t => (
                   <button key={t.id} onClick={() => setWeeklyTab(t.id)}
-                    className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${weeklyTab === t.id ? 'bg-gradient-to-br from-white/15 to-white/5 text-white shadow-[0_0_30px_rgba(255,255,255,0.08)] border border-white/15 backdrop-blur-sm' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent'}`}>
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all ${weeklyTab === t.id ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'text-gray-500 hover:text-white'}`}>
                     <t.icon className="w-3.5 h-3.5" />
                     {t.label}
                   </button>
                 ))}
               </div>
+            </div>
 
+            <AnimatePresence mode="wait">
               {/* ═══ OVERVIEW TAB ═══ */}
               {weeklyTab === 'overview' && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <motion.div key="overview" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="space-y-4">
+                  {/* 4 Stat Cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {[
                       { label: 'Workouts', value: thisWeekWorkouts.length, unit: '', d: delta(thisWeekWorkouts.length, lastWeekWorkouts.length), icon: Dumbbell, color: 'sky' },
                       { label: 'Volume', value: thisWeekVol.toLocaleString(), unit: 'kg', d: delta(thisWeekVol, lastWeekVol), icon: Weight, color: 'violet' },
@@ -1272,15 +1270,15 @@ export function WorkoutLogger() {
                     ].map(({ label, value, unit, d, icon: Icon, color }) => (
                       <div key={label} className={`relative overflow-hidden rounded-2xl border border-${color}-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-${color}-500/5 min-h-[7.5rem]`}>
                         <div className={`absolute top-0 right-0 w-20 h-20 bg-${color}-500/15 rounded-full -mr-10 -mt-10 blur-xl`} />
-                        <div className="relative">
+                        <div className="relative h-full flex flex-col justify-center">
                           <div className="flex items-center gap-2 text-sm mb-1">
                             <Icon className={`w-4 h-4 text-${color}-400/80`} />
                             <span className={`text-${color}-400/80`}>{label}</span>
                           </div>
                           <p className={`text-3xl font-bold text-${color}-400 drop-shadow-lg`}>{value}<span className="text-sm text-gray-500 ml-1 font-normal">{unit}</span></p>
-                          <div className={`flex items-center gap-1 mt-1 text-[10px] font-medium ${d.up ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          <div className={`flex items-center gap-1 mt-1 text-[10px] ${d.up ? 'text-emerald-400' : 'text-rose-400'}`}>
                             <span>{d.arrow}</span>
-                            <span>{d.pct}</span>
+                            <span className="font-semibold">{d.pct}</span>
                             <span className="text-gray-600">vs last week</span>
                           </div>
                         </div>
@@ -1288,32 +1286,26 @@ export function WorkoutLogger() {
                     ))}
                   </div>
 
+                  {/* Best Workout */}
                   {bestWorkout && (
-                    <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-amber-500/5">
-                      <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
-                      <div className="relative flex items-start gap-3">
-                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400/20 to-amber-500/20 border border-amber-500/20 flex items-center justify-center shrink-0">
-                          <Flame className="w-3.5 h-3.5 text-amber-400" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[9px] font-bold text-amber-400/70 uppercase tracking-wider">Peak Performance</span>
-                          <p className="text-sm font-semibold text-white mt-0.5 truncate">{bestWorkout.name}</p>
-                          <div className="flex items-center gap-3 mt-1.5">
-                            <span className="text-xs text-amber-300/80">{bestVol.toLocaleString()}kg</span>
-                            <span className="text-[10px] text-gray-600">&middot;</span>
-                            <span className="text-xs text-gray-400">{bestWorkout.exercises.length} exercises</span>
-                            <span className="text-[10px] text-gray-600">&middot;</span>
-                            <span className="text-xs text-gray-400">{bestWorkout.duration || 0}min</span>
-                          </div>
-                        </div>
+                    <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 flex gap-2.5 items-start">
+                      <div className="text-lg shrink-0 mt-0.5">🏆</div>
+                      <div className="space-y-1 flex-1">
+                        <p className="text-[11px] font-bold text-amber-300">Peak Performance</p>
+                        <p className="text-[10px] text-gray-400 leading-normal">
+                          <span className="text-white font-semibold">{bestWorkout.name}</span> — {bestVol.toLocaleString()}kg volume, {bestWorkout.exercises.length} exercises, {bestWorkout.duration || 0}min
+                        </p>
                       </div>
                     </div>
                   )}
 
-                  <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] p-4" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(59,130,246,0.04) 50%, rgba(6,182,212,0.03) 100%)' }}>
-                    <div className="absolute -top-12 -right-12 w-32 h-32 bg-violet-500/[0.06] rounded-full blur-3xl" />
-                    <p className="text-[9px] font-bold text-white/60 uppercase tracking-wider mb-3 relative">Volume Trend</p>
-                    <div className="h-40 relative">
+                  {/* Volume Trend Chart */}
+                  <div className="rounded-xl bg-white/5 border border-white/10 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[9px] font-semibold text-gray-500 uppercase">Volume Trend</span>
+                      <span className="text-[8px] text-gray-500">Last 4 weeks</span>
+                    </div>
+                    <div className="h-48">
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={fourWeekData} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
                           <defs>
@@ -1325,59 +1317,72 @@ export function WorkoutLogger() {
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                           <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
                           <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
-                          <Tooltip contentStyle={glassTooltip} labelStyle={{ color: '#a78bfa', fontWeight: 600 }} formatter={(v: number) => [`${v.toLocaleString()}kg`, 'Volume']} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                          <Tooltip contentStyle={{ background: 'rgba(17,17,17,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 11, backdropFilter: 'blur(12px)' }} labelStyle={{ color: '#a78bfa', fontWeight: 600 }} formatter={(v: number) => [`${v.toLocaleString()}kg`, 'Volume']} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
                           <Area type="monotone" dataKey="volume" stroke="#a855f7" strokeWidth={2} fill="url(#volGrad)" dot={{ r: 3, fill: '#a855f7', stroke: '#0f0a1a', strokeWidth: 2 }} activeDot={{ r: 5, fill: '#c084fc', stroke: '#0f0a1a', strokeWidth: 2 }} />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3">
+                  {/* Bottom Stats */}
+                  <div className="grid grid-cols-3 gap-2">
                     {[
-                      { label: 'Total Time', value: `${thisWeekTotalDur}min`, color: 'emerald' },
-                      { label: 'Rest Days', value: `${7 - new Set(thisWeekWorkouts.map(w => new Date(w.date).toDateString())).size}`, color: 'amber' },
-                      { label: 'Avg/Session', value: `${thisWeekWorkouts.length > 0 ? Math.round(thisWeekVol / thisWeekWorkouts.length).toLocaleString() : 0}kg`, color: 'sky' },
-                    ].map(({ label, value, color }) => (
-                      <div key={label} className="relative overflow-hidden rounded-xl bg-white/5 border border-white/10 p-3 flex flex-col items-center justify-center text-center">
-                        <p className="text-[9px] text-gray-500 uppercase tracking-wider">{label}</p>
-                        <p className={`text-lg font-bold text-${color}-400 mt-0.5`}>{value}</p>
+                      { label: 'Total Time', value: `${thisWeekTotalDur}min`, color: 'emerald', icon: Timer },
+                      { label: 'Rest Days', value: `${7 - new Set(thisWeekWorkouts.map(w => new Date(w.date).toDateString())).size}`, color: 'amber', icon: Coffee },
+                      { label: 'Avg/Session', value: `${thisWeekWorkouts.length > 0 ? Math.round(thisWeekVol / thisWeekWorkouts.length).toLocaleString() : 0}kg`, color: 'sky', icon: TrendingUp },
+                    ].map(({ label, value, color, icon: Icon }) => (
+                      <div key={label} className="rounded-xl bg-white/5 border border-white/5 p-2.5 flex flex-col justify-between hover:bg-white/[0.08] hover:border-white/10 transition-all">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-semibold text-gray-500 uppercase">{label}</span>
+                          <Icon className={`w-3.5 h-3.5 text-${color}-400`} />
+                        </div>
+                        <p className={`text-xl font-black text-${color}-400 mt-1`}>{value}</p>
                       </div>
                     ))}
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {/* ═══ MUSCLES TAB ═══ */}
               {weeklyTab === 'muscles' && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-3">
+                <motion.div key="muscles" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="space-y-4">
+                  {/* 3 Stat Cards */}
+                  <div className="grid grid-cols-3 gap-2">
                     <div className="relative overflow-hidden rounded-2xl border border-violet-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-violet-500/5 min-h-[7.5rem]">
                       <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
-                      <div className="relative flex items-center gap-2 text-sm mb-1"><Target className="w-4 h-4 text-violet-400/80" /><span className="text-violet-400/80">Muscles Hit</span></div>
-                      <p className="text-3xl font-bold text-violet-400 drop-shadow-lg">{muscleCount}</p>
+                      <div className="relative h-full flex flex-col justify-center">
+                        <div className="flex items-center gap-2 text-violet-400/80 text-sm mb-1"><Target className="w-4 h-4" /><span>Muscles Hit</span></div>
+                        <p className="text-3xl font-bold text-violet-400 drop-shadow-lg">{muscleCount}</p>
+                      </div>
                     </div>
                     <div className={`relative overflow-hidden rounded-2xl border ${balanceScore >= 70 ? 'border-emerald-500/30 shadow-emerald-500/5' : balanceScore >= 40 ? 'border-amber-500/30 shadow-amber-500/5' : 'border-rose-500/30 shadow-rose-500/5'} bg-black/60 backdrop-blur-[12px] p-5 shadow-lg min-h-[7.5rem]`}>
                       <div className={`absolute top-0 right-0 w-20 h-20 ${balanceScore >= 70 ? 'bg-emerald-500/15' : balanceScore >= 40 ? 'bg-amber-500/15' : 'bg-rose-500/15'} rounded-full -mr-10 -mt-10 blur-xl`} />
-                      <div className="relative flex items-center gap-2 text-sm mb-1"><Shield className={`w-4 h-4 ${balanceScore >= 70 ? 'text-emerald-400/80' : balanceScore >= 40 ? 'text-amber-400/80' : 'text-rose-400/80'}`} /><span className={`${balanceScore >= 70 ? 'text-emerald-400/80' : balanceScore >= 40 ? 'text-amber-400/80' : 'text-rose-400/80'}`}>Balance</span></div>
-                      <p className={`text-3xl font-bold ${balanceScore >= 70 ? 'text-emerald-400' : balanceScore >= 40 ? 'text-amber-400' : 'text-rose-400'} drop-shadow-lg`}>{balanceScore}<span className="text-sm text-gray-500 ml-1 font-normal">%</span></p>
+                      <div className="relative h-full flex flex-col justify-center">
+                        <div className={`flex items-center gap-2 text-sm mb-1 ${balanceScore >= 70 ? 'text-emerald-400/80' : balanceScore >= 40 ? 'text-amber-400/80' : 'text-rose-400/80'}`}><Shield className="w-4 h-4" /><span>Balance</span></div>
+                        <p className={`text-3xl font-bold ${balanceScore >= 70 ? 'text-emerald-400' : balanceScore >= 40 ? 'text-amber-400' : 'text-rose-400'} drop-shadow-lg`}>{balanceScore}<span className="text-sm text-gray-500 ml-1 font-normal">%</span></p>
+                      </div>
                     </div>
                     <div className="relative overflow-hidden rounded-2xl border border-sky-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-sky-500/5 min-h-[7.5rem]">
                       <div className="absolute top-0 right-0 w-20 h-20 bg-sky-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
-                      <div className="relative flex items-center gap-2 text-sm mb-1"><Weight className="w-4 h-4 text-sky-400/80" /><span className="text-sky-400/80">Total Vol</span></div>
-                      <p className="text-3xl font-bold text-sky-400 drop-shadow-lg">{(totalPrimary + totalSecondary).toLocaleString()}<span className="text-sm text-gray-500 ml-1 font-normal">kg</span></p>
+                      <div className="relative h-full flex flex-col justify-center">
+                        <div className="flex items-center gap-2 text-sky-400/80 text-sm mb-1"><Weight className="w-4 h-4" /><span>Total Vol</span></div>
+                        <p className="text-3xl font-bold text-sky-400 drop-shadow-lg">{(totalPrimary + totalSecondary).toLocaleString()}<span className="text-sm text-gray-500 ml-1 font-normal">kg</span></p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] p-4" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(59,130,246,0.04) 50%, rgba(6,182,212,0.03) 100%)' }}>
-                    <div className="absolute -top-12 -right-12 w-32 h-32 bg-violet-500/[0.06] rounded-full blur-3xl" />
-                    <p className="text-[9px] font-bold text-white/60 uppercase tracking-wider mb-3 relative">Volume by Muscle</p>
-                    <div className="h-56 relative">
+                  {/* Chart */}
+                  <div className="rounded-xl bg-white/5 border border-white/10 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[9px] font-semibold text-gray-500 uppercase">Volume by Muscle</span>
+                    </div>
+                    <div className="h-56">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={sortedMuscles.slice(0, 8)} layout="vertical" margin={{ top: 0, right: 10, bottom: 0, left: 0 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                           <XAxis type="number" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
                           <YAxis type="category" dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} width={65} axisLine={false} tickLine={false} />
-                          <Tooltip contentStyle={glassTooltip} formatter={(v: number) => [`${v.toLocaleString()}kg`]} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                          <Tooltip contentStyle={{ background: 'rgba(17,17,17,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 11, backdropFilter: 'blur(12px)' }} formatter={(v: number) => [`${v.toLocaleString()}kg`]} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
                           <Bar dataKey="primary" name="Primary" fill="#a855f7" radius={[0, 4, 4, 0]} barSize={10} />
                           <Bar dataKey="secondary" name="Secondary" fill="#6366f1" radius={[0, 4, 4, 0]} stackId="a" barSize={10} />
                         </BarChart>
@@ -1385,32 +1390,33 @@ export function WorkoutLogger() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 rounded-full bg-violet-500" />
-                        <span className="text-[9px] text-gray-500 uppercase tracking-wider">Primary</span>
-                        <span className="ml-auto text-xs font-bold text-violet-400">{totalPrimary.toLocaleString()}kg</span>
+                  {/* Primary/Secondary Split */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-xl bg-white/5 border border-white/5 p-2.5 hover:bg-white/[0.08] hover:border-white/10 transition-all">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[9px] font-semibold text-gray-500 uppercase">Primary</span>
+                        <span className="text-xs font-bold text-violet-400">{totalPrimary.toLocaleString()}kg</span>
                       </div>
-                      <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                        <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-violet-400 transition-all duration-700" style={{ width: `${totalPrimary + totalSecondary > 0 ? (totalPrimary / (totalPrimary + totalSecondary)) * 100 : 0}%` }} />
+                      <div className="h-1 rounded-full bg-white/10 overflow-hidden">
+                        <div className="h-full rounded-full bg-violet-500 transition-all duration-500" style={{ width: `${totalPrimary + totalSecondary > 0 ? (totalPrimary / (totalPrimary + totalSecondary)) * 100 : 0}%` }} />
                       </div>
                     </div>
-                    <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 rounded-full bg-indigo-400" />
-                        <span className="text-[9px] text-gray-500 uppercase tracking-wider">Secondary</span>
-                        <span className="ml-auto text-xs font-bold text-indigo-400">{totalSecondary.toLocaleString()}kg</span>
+                    <div className="rounded-xl bg-white/5 border border-white/5 p-2.5 hover:bg-white/[0.08] hover:border-white/10 transition-all">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[9px] font-semibold text-gray-500 uppercase">Secondary</span>
+                        <span className="text-xs font-bold text-indigo-400">{totalSecondary.toLocaleString()}kg</span>
                       </div>
-                      <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                        <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-indigo-400 transition-all duration-700" style={{ width: `${totalPrimary + totalSecondary > 0 ? (totalSecondary / (totalPrimary + totalSecondary)) * 100 : 0}%` }} />
+                      <div className="h-1 rounded-full bg-white/10 overflow-hidden">
+                        <div className="h-full rounded-full bg-indigo-400 transition-all duration-500" style={{ width: `${totalPrimary + totalSecondary > 0 ? (totalSecondary / (totalPrimary + totalSecondary)) * 100 : 0}%` }} />
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  {/* Muscle List */}
+                  <div className="rounded-xl bg-white/5 border border-white/10 p-3 space-y-2">
+                    <span className="text-[9px] font-semibold text-gray-500 uppercase">Muscle Breakdown</span>
                     {sortedMuscles.slice(0, 8).map((m, i) => (
-                      <motion.div key={m.name} initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/[0.03] transition-colors">
+                      <motion.div key={m.name} initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/[0.05] transition-colors">
                         <span className="text-[10px] text-gray-500 w-4 text-center font-mono">{i + 1}</span>
                         <span className="text-xs text-gray-300 w-20 capitalize truncate font-medium">{m.name}</span>
                         <div className="flex-1 flex h-2 rounded-full bg-white/5 overflow-hidden gap-px">
@@ -1421,16 +1427,18 @@ export function WorkoutLogger() {
                       </motion.div>
                     ))}
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {/* ═══ COMPARE TAB ═══ */}
               {weeklyTab === 'compare' && (
-                <div className="space-y-4">
-                  <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] p-4" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(59,130,246,0.04) 50%, rgba(6,182,212,0.03) 100%)' }}>
-                    <div className="absolute -top-12 -right-12 w-32 h-32 bg-violet-500/[0.06] rounded-full blur-3xl" />
-                    <p className="text-[9px] font-bold text-white/60 uppercase tracking-wider mb-3 relative">This Week vs Last Week</p>
-                    <div className="h-48 relative">
+                <motion.div key="compare" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="space-y-4">
+                  {/* Chart */}
+                  <div className="rounded-xl bg-white/5 border border-white/10 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[9px] font-semibold text-gray-500 uppercase">This Week vs Last Week</span>
+                    </div>
+                    <div className="h-48">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={[
                           { metric: 'Workouts', thisWeek: thisWeekWorkouts.length, lastWeek: lastWeekWorkouts.length },
@@ -1441,7 +1449,7 @@ export function WorkoutLogger() {
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                           <XAxis dataKey="metric" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
                           <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
-                          <Tooltip contentStyle={glassTooltip} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                          <Tooltip contentStyle={{ background: 'rgba(17,17,17,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 11, backdropFilter: 'blur(12px)' }} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
                           <Bar dataKey="lastWeek" name="Last Week" fill="#374151" radius={[4, 4, 0, 0]} barSize={16} />
                           <Bar dataKey="thisWeek" name="This Week" fill="#a855f7" radius={[4, 4, 0, 0]} barSize={16} />
                         </BarChart>
@@ -1449,14 +1457,12 @@ export function WorkoutLogger() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Side by Side */}
+                  <div className="grid grid-cols-2 gap-2">
                     <div className="relative overflow-hidden rounded-2xl border border-violet-500/30 bg-black/60 backdrop-blur-[12px] p-5 shadow-lg shadow-violet-500/5">
                       <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/15 rounded-full -mr-10 -mt-10 blur-xl" />
                       <div className="relative">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-2 h-2 rounded-full bg-violet-400" />
-                          <span className="text-[9px] font-bold text-violet-300 uppercase tracking-wider">This Week</span>
-                        </div>
+                        <div className="flex items-center gap-2 text-violet-400/80 text-sm mb-3"><Activity className="w-4 h-4" /><span>This Week</span></div>
                         <div className="space-y-2">
                           {[
                             { l: 'Workouts', v: thisWeekWorkouts.length },
@@ -1474,10 +1480,7 @@ export function WorkoutLogger() {
                     </div>
                     <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-black/60 backdrop-blur-[12px] p-5 shadow-lg">
                       <div className="relative">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-2 h-2 rounded-full bg-gray-600" />
-                          <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Last Week</span>
-                        </div>
+                        <div className="flex items-center gap-2 text-gray-500 text-sm mb-3"><Activity className="w-4 h-4" /><span>Last Week</span></div>
                         <div className="space-y-2">
                           {[
                             { l: 'Workouts', v: lastWeekWorkouts.length },
@@ -1495,6 +1498,7 @@ export function WorkoutLogger() {
                     </div>
                   </div>
 
+                  {/* Delta Grid */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {[
                       { label: 'Workouts', cur: thisWeekWorkouts.length, prev: lastWeekWorkouts.length },
@@ -1504,9 +1508,9 @@ export function WorkoutLogger() {
                     ].map(({ label, cur, prev }) => {
                       const d = delta(cur, prev)
                       return (
-                        <div key={label} className={`rounded-xl bg-white/5 border ${d.up ? 'border-emerald-500/20' : 'border-rose-500/20'} p-3 text-center`}>
-                          <p className="text-[9px] text-gray-500 uppercase tracking-wider">{label}</p>
-                          <div className={`flex items-center justify-center gap-1 mt-1 text-sm font-bold ${d.up ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        <div key={label} className="rounded-xl bg-white/5 border border-white/5 p-2.5 flex flex-col justify-between hover:bg-white/[0.08] hover:border-white/10 transition-all">
+                          <span className="text-[9px] font-semibold text-gray-500 uppercase">{label}</span>
+                          <div className={`flex items-center gap-1 mt-1 text-sm font-bold ${d.up ? 'text-emerald-400' : 'text-rose-400'}`}>
                             <span>{d.arrow}</span>
                             <span>{d.pct}</span>
                           </div>
@@ -1514,22 +1518,24 @@ export function WorkoutLogger() {
                       )
                     })}
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {/* ═══ DAILY TAB ═══ */}
               {weeklyTab === 'daily' && (
-                <div className="space-y-4">
-                  <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] p-4" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(59,130,246,0.04) 50%, rgba(6,182,212,0.03) 100%)' }}>
-                    <div className="absolute -top-12 -right-12 w-32 h-32 bg-violet-500/[0.06] rounded-full blur-3xl" />
-                    <p className="text-[9px] font-bold text-white/60 uppercase tracking-wider mb-3 relative">Daily Volume</p>
-                    <div className="h-44 relative">
+                <motion.div key="daily" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="space-y-4">
+                  {/* Chart */}
+                  <div className="rounded-xl bg-white/5 border border-white/10 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[9px] font-semibold text-gray-500 uppercase">Daily Volume</span>
+                    </div>
+                    <div className="h-44">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={dailyData.map(d => ({ name: d.label, volume: d.volume, workouts: d.count }))} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                           <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
                           <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
-                          <Tooltip contentStyle={glassTooltip} formatter={(v: number) => [`${v.toLocaleString()}kg`, 'Volume']} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                          <Tooltip contentStyle={{ background: 'rgba(17,17,17,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 11, backdropFilter: 'blur(12px)' }} formatter={(v: number) => [`${v.toLocaleString()}kg`, 'Volume']} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
                           <Bar dataKey="volume" radius={[4, 4, 0, 0]} barSize={28}>
                             {dailyData.map((d, i) => (
                               <Cell key={i} fill={d.volume > 0 ? '#a855f7' : '#1f2937'} />
@@ -1540,12 +1546,13 @@ export function WorkoutLogger() {
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
+                  {/* Daily Rows */}
+                  <div className="rounded-xl bg-white/5 border border-white/10 p-3 space-y-1.5">
                     {dailyData.map((d, i) => (
-                      <motion.div key={d.name} initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/[0.03] transition-colors">
+                      <motion.div key={d.name} initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/[0.05] transition-colors">
                         <span className="text-xs text-gray-400 w-8 font-medium">{d.label}</span>
-                        <div className="flex-1 h-7 rounded-xl bg-white/5 border border-white/10 overflow-hidden relative">
-                          <div className="h-full rounded-xl bg-gradient-to-r from-violet-500 to-violet-400 transition-all duration-500 flex items-center justify-end pr-3"
+                        <div className="flex-1 h-7 rounded-lg bg-white/5 border border-white/10 overflow-hidden relative">
+                          <div className="h-full rounded-lg bg-gradient-to-r from-violet-500 to-violet-400 transition-all duration-500 flex items-center justify-end pr-3"
                             style={{ width: `${d.volume > 0 ? Math.max(14, (d.volume / maxDailyVol) * 100) : 0}%` }}>
                             {d.volume > 0 && <span className="text-[10px] text-white font-semibold drop-shadow-sm">{d.volume.toLocaleString()}kg</span>}
                           </div>
@@ -1562,32 +1569,32 @@ export function WorkoutLogger() {
                     ))}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3 pt-2 border-t border-white/5">
-                    <div className="text-center">
-                      <p className="text-[9px] text-gray-500 uppercase tracking-wider">Active Days</p>
-                      <p className="text-lg font-bold text-white mt-0.5">{dailyData.filter(d => d.count > 0).length}<span className="text-xs text-gray-500">/7</span></p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-[9px] text-gray-500 uppercase tracking-wider">Peak Day</p>
-                      <p className="text-lg font-bold text-white mt-0.5">{dailyData.reduce((a, b) => a.volume > b.volume ? a : b).name}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-[9px] text-gray-500 uppercase tracking-wider">Total</p>
-                      <p className="text-lg font-bold text-white mt-0.5">{thisWeekVol.toLocaleString()}<span className="text-xs text-gray-500">kg</span></p>
-                    </div>
+                  {/* Summary */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: 'Active Days', value: `${dailyData.filter(d => d.count > 0).length}/7`, color: 'emerald' },
+                      { label: 'Peak Day', value: dailyData.reduce((a, b) => a.volume > b.volume ? a : b).name, color: 'violet' },
+                      { label: 'Total Volume', value: `${thisWeekVol.toLocaleString()}kg`, color: 'sky' },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} className="rounded-xl bg-white/5 border border-white/5 p-2.5 flex flex-col justify-between hover:bg-white/[0.08] hover:border-white/10 transition-all">
+                        <span className="text-[9px] font-semibold text-gray-500 uppercase">{label}</span>
+                        <p className={`text-xl font-black text-${color}-400 mt-1`}>{value}</p>
+                      </div>
+                    ))}
                   </div>
 
+                  {/* Workout Types */}
                   {sortedTypes.length > 0 && (
-                    <div className="rounded-xl bg-white/5 border border-white/10 p-4">
-                      <p className="text-[9px] font-bold text-white/60 uppercase tracking-wider mb-3">Workout Types</p>
-                      <div className="flex flex-wrap gap-2">
+                    <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+                      <span className="text-[9px] font-semibold text-gray-500 uppercase mb-2 block">Workout Types</span>
+                      <div className="flex flex-wrap gap-1.5">
                         {sortedTypes.map(([type, count]) => {
                           const tc = typeConfig[type] || typeConfig.strength
                           const TypeIcon = tc.icon
                           return (
-                            <div key={type} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border ${tc.bg} ${tc.color} hover:scale-105 transition-transform`}>
+                            <div key={type} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border ${tc.bg} ${tc.color} hover:bg-white/[0.08] transition-all`}>
                               <TypeIcon className="w-3 h-3" />
-                              <span className="text-[10px] font-medium capitalize">{type.replace('_', ' ')}</span>
+                              <span className="text-[10px] font-semibold capitalize">{type.replace('_', ' ')}</span>
                               <span className="text-[10px] opacity-60 font-bold">x{count}</span>
                             </div>
                           )
@@ -1595,9 +1602,9 @@ export function WorkoutLogger() {
                       </div>
                     </div>
                   )}
-                </div>
+                </motion.div>
               )}
-            </div>
+            </AnimatePresence>
           </div>
         </motion.div>
         )
