@@ -962,8 +962,9 @@ export function SupplementTracker() {
                     const key = Object.keys(foodDB).find(k => sd.name.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(sd.name.toLowerCase().split(' ')[0]))
                     const p = key ? foodDB[key] : null
                     if (p) {
-                      const avoid = p.avoid !== 'none significant' ? ` avoid ${p.avoid}` : ''
-                      items.push({ text: `${short}: eat with ${p.eat},${avoid} — ${p.tip}`, color: 'emerald', badge: '\u2618' })
+                      items.push({ text: `${short}: eat with ${p.eat}`, color: 'emerald', badge: '+' })
+                      if (p.avoid !== 'none significant') items.push({ text: `${short}: avoid ${p.avoid}`, color: 'rose', badge: '!' })
+                      items.push({ text: `${short}: ${p.tip}`, color: 'cyan', badge: '*'})
                     } else {
                       items.push({ text: `${short}: no food pairing data available`, color: 'amber', badge: '?' })
                     }
