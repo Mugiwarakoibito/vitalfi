@@ -1237,12 +1237,7 @@ export function WorkoutLogger() {
           <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl p-5">
             {/* Header + Tabs */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-400/20 to-violet-500/20 border border-violet-500/20 flex items-center justify-center">
-                  <Activity className="w-3.5 h-3.5 text-violet-400" />
-                </div>
-                <span className="text-xs font-semibold text-white">Weekly Analytics</span>
-                <div className="flex items-center gap-1 ml-1">
+              <div className="flex items-center gap-1">
                   <button onClick={() => setWeeklyNavOffset(o => o + 1)} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -1256,7 +1251,6 @@ export function WorkoutLogger() {
                     <RotateCcw className="w-3.5 h-3.5" />
                   </button>
                 </div>
-              </div>
               <div className="flex items-center gap-1 bg-white/5 rounded-xl p-0.5 border border-white/10">
                 {tabs.map(t => (
                   <button key={t.id} onClick={() => setWeeklyTab(t.id)}
