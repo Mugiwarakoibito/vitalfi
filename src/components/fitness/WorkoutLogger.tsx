@@ -1241,9 +1241,20 @@ export function WorkoutLogger() {
                 <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-400/20 to-violet-500/20 border border-violet-500/20 flex items-center justify-center">
                   <Activity className="w-3.5 h-3.5 text-violet-400" />
                 </div>
-                <div>
-                  <span className="text-xs font-semibold text-white">Weekly Analytics</span>
-                  <p className="text-[10px] text-gray-500">{thisWeekWorkouts.length} workouts &middot; {thisWeekTotalDur}min total</p>
+                <span className="text-xs font-semibold text-white">Weekly Analytics</span>
+                <div className="flex items-center gap-1 ml-1">
+                  <button onClick={() => setWeeklyNavOffset(o => o + 1)} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">
+                    {weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(weekStart.getTime() + 6 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                  <button disabled={weeklyNavOffset === 0} onClick={() => setWeeklyNavOffset(o => Math.min(o - 1, 0))} className={`p-1.5 rounded-xl border transition-all ${weeklyNavOffset === 0 ? 'bg-white/[0.02] border-white/[0.04] text-gray-600 cursor-not-allowed' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20'}`}>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setWeeklyNavOffset(0)} className={`p-1.5 rounded-xl border transition-all ${weeklyNavOffset === 0 ? 'bg-white/[0.02] border-white/[0.04] text-gray-600' : 'bg-violet-500/10 border-violet-500/20 text-violet-400 hover:bg-violet-500/20'}`} title={weeklyNavOffset === 0 ? 'Current week' : 'This week'}>
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
               <div className="flex items-center gap-1 bg-white/5 rounded-xl p-0.5 border border-white/10">
@@ -1255,29 +1266,6 @@ export function WorkoutLogger() {
                   </button>
                 ))}
               </div>
-            </div>
-
-            {/* Week Navigation */}
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <button onClick={() => setWeeklyNavOffset(o => o + 1)} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold text-white">
-                  {weeklyNavOffset === 0 ? 'This Week' : `${Math.abs(weeklyNavOffset)} week${Math.abs(weeklyNavOffset) > 1 ? 's' : ''} ago`}
-                </span>
-                <span className="text-[9px] text-gray-500">
-                  {weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(weekStart.getTime() + 6 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </span>
-              </div>
-              <button disabled={weeklyNavOffset === 0} onClick={() => setWeeklyNavOffset(o => Math.min(o - 1, 0))} className={`p-1.5 rounded-lg border transition-all ${weeklyNavOffset === 0 ? 'bg-white/5 border-white/5 text-gray-700 cursor-not-allowed' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-              {weeklyNavOffset !== 0 && (
-                <button onClick={() => setWeeklyNavOffset(0)} className="text-[9px] px-2 py-1 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-all font-medium">
-                  Jump to now
-                </button>
-              )}
             </div>
 
             <AnimatePresence mode="wait">
