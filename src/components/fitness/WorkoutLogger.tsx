@@ -13,6 +13,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { generateId, formatDuration } from '@/lib/utils'
 import { storage } from '@/lib/storage'
 import { exerciseLibrary, getExerciseById, getAllMuscleGroups, categoryLabels, muscleGroupColors } from '@/lib/exercises'
+import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 
@@ -1175,28 +1176,73 @@ export function WorkoutLogger() {
         const lastWeekVol = lastWeekWorkouts.reduce((s,w) => s + calcVolume(w.exercises), 0)
         const thisWeekDur = thisWeekWorkouts.length > 0 ? Math.round(thisWeekWorkouts.reduce((s,w) => s + (w.duration||0), 0) / thisWeekWorkouts.length) : 0
         const lastWeekDur = lastWeekWorkouts.length > 0 ? Math.round(lastWeekWorkouts.reduce((s,w) => s + (w.duration||0), 0) / lastWeekWorkouts.length) : 0
-        const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
-        const dailyData = dayNames.map((name, i) => {
-          const dayWorkouts = thisWeekWorkouts.filter(w => { const d = new Date(w.date).getDay(); return d === (i + 1) % 7 })
-          return { name, count: dayWorkouts.length, volume: dayWorkouts.reduce((s,w) => s + calcVolume(w.exercises), 0) }
+        const thisWeekExCount = thisWeekWorkouts.reduce((s,w) => s + w.exercises.length, 0)
+        const lastWeekExCount = lastWeekWorkouts.reduce((s,w) => s + w.exercises.length, 0)
+
+        // 4-week volume trend
+        const fourWeekData = Array.from({ length: 4 }, (_, wi) => {
+          const ws = new Date(weekStart); ws.setDate(ws.getDate() - (3 - wi) * 7)
+          const we = new Date(ws); we.setDate(we.getDate() + 6); we.setHours(23,59,59,999)
+          const wws = workouts.filter(w => { const d = new Date(w.date); return d >= ws && d <= we })
+          const vol = wws.reduce((s,w) => s + calcVolume(w.exercises), 0)
+          const dur = wws.length > 0 ? Math.round(wws.reduce((s,w) => s + (w.duration||0), 0) / wws.length) : 0
+          return { week: `W${wi + 1}`, volume: vol, workouts: wws.length, duration: dur }
         })
-        const maxDailyVol = Math.max(...dailyData.map(d => d.volume), 1)
-        const muscleMap = new Map<string, number>()
+
+        // Best workout this week
+        const bestWorkout = thisWeekWorkouts.length > 0 ? thisWeekWorkouts.reduce((best, w) => calcVolume(w.exercises) > calcVolume(best.exercises) ? w : best) : null
+        const bestVol = bestWorkout ? calcVolume(bestWorkout.exercises) : 0
+
+        // Muscle data
+        const muscleMap = new Map<string, { primary: number; secondary: number }>()
         thisWeekWorkouts.forEach(w => w.exercises.forEach(ex => {
           const def = getExerciseById(ex.exerciseId)
           if (def) {
-            def.primaryMuscles.forEach(m => muscleMap.set(m, (muscleMap.get(m)||0) + calcVolume([ex])))
-            def.secondaryMuscles.forEach(m => muscleMap.set(m, (muscleMap.get(m)||0) + Math.round(calcVolume([ex]) * 0.3)))
+            def.primaryMuscles.forEach(m => {
+              const existing = muscleMap.get(m) || { primary: 0, secondary: 0 }
+              existing.primary += calcVolume([ex])
+              muscleMap.set(m, existing)
+            })
+            def.secondaryMuscles.forEach(m => {
+              const existing = muscleMap.get(m) || { primary: 0, secondary: 0 }
+              existing.secondary += Math.round(calcVolume([ex]) * 0.3)
+              muscleMap.set(m, existing)
+            })
           }
         }))
-        const sortedMuscles = [...muscleMap.entries()].sort((a,b) => b[1] - a[1])
-        const maxMuscleVol = sortedMuscles.length > 0 ? sortedMuscles[0][1] : 1
+        const sortedMuscles = [...muscleMap.entries()].map(([name, v]) => ({ name, ...v, total: v.primary + v.secondary })).sort((a,b) => b.total - a.total)
+        const maxMuscleVol = sortedMuscles.length > 0 ? sortedMuscles[0].total : 1
+        const totalPrimary = sortedMuscles.reduce((s,m) => s + m.primary, 0)
+        const totalSecondary = sortedMuscles.reduce((s,m) => s + m.secondary, 0)
+        const balanceScore = sortedMuscles.length > 0 ? Math.min(100, Math.round((Math.min(...sortedMuscles.map(m => m.total)) / Math.max(...sortedMuscles.map(m => m.total))) * 100)) : 0
+
+        // Daily data
+        const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+        const dayLabels = ['S','M','T','W','T','F','S']
+        const dailyData = dayNames.map((name, i) => {
+          const dayWorkouts = thisWeekWorkouts.filter(w => new Date(w.date).getDay() === i)
+          return { name, label: dayLabels[i], count: dayWorkouts.length, volume: dayWorkouts.reduce((s,w) => s + calcVolume(w.exercises), 0), types: [...new Set(dayWorkouts.map(w => w.type || w.category || 'strength'))] }
+        })
+        const maxDailyVol = Math.max(...dailyData.map(d => d.volume), 1)
+
+        // Type breakdown
+        const typeMap = new Map<string, number>()
+        thisWeekWorkouts.forEach(w => { const t = w.type || w.category || 'strength'; typeMap.set(t, (typeMap.get(t)||0) + 1) })
+        const sortedTypes = [...typeMap.entries()].sort((a,b) => b[1] - a[1])
+
         const tabs = [
           { id: 'overview' as const, label: 'Overview', icon: BarChart3 },
           { id: 'muscles' as const, label: 'Muscles', icon: Target },
           { id: 'compare' as const, label: 'Compare', icon: GitCompareArrows },
           { id: 'daily' as const, label: 'Daily', icon: CalendarDays },
         ]
+
+        const delta = (cur: number, prev: number) => {
+          if (prev === 0) return { pct: '--', up: true, text: 'no prior data' }
+          const diff = ((cur - prev) / prev) * 100
+          return { pct: `${diff >= 0 ? '+' : ''}${diff.toFixed(0)}%`, up: diff >= 0, text: diff >= 0 ? 'up' : 'down' }
+        }
+
         return (
         <motion.div key="weekly-analytics" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
           <div className="relative overflow-hidden rounded-2xl border border-violet-500/15 bg-black/60 backdrop-blur-xl p-5 shadow-lg">
@@ -1205,6 +1251,7 @@ export function WorkoutLogger() {
               <div className="flex items-center gap-2 text-violet-400/80 text-sm mb-3">
                 <Activity className="w-4 h-4" />
                 <span className="font-medium">Weekly Analytics</span>
+                <span className="ml-auto text-[10px] text-gray-600">{thisWeekWorkouts.length} workout{thisWeekWorkouts.length !== 1 ? 's' : ''} this week</span>
               </div>
               <div className="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/5 mb-4">
                 {tabs.map(t => (
@@ -1215,108 +1262,257 @@ export function WorkoutLogger() {
                   </button>
                 ))}
               </div>
+
+              {/* ═══ OVERVIEW TAB ═══ */}
               {weeklyTab === 'overview' && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">This Week</p>
-                    <p className="text-xl font-bold text-white mt-1">{thisWeekWorkouts.length} <span className="text-xs text-gray-500 font-normal">workouts</span></p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">{thisWeekWorkouts.length >= lastWeekWorkouts.length ? 'Same or more' : 'Less than last week'}</p>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { label: 'Workouts', value: thisWeekWorkouts.length, unit: '', d: delta(thisWeekWorkouts.length, lastWeekWorkouts.length), color: 'text-sky-400' },
+                      { label: 'Volume', value: thisWeekVol.toLocaleString(), unit: 'kg', d: delta(thisWeekVol, lastWeekVol), color: 'text-violet-400' },
+                      { label: 'Avg Duration', value: thisWeekDur > 0 ? `${thisWeekDur}` : '--', unit: 'min', d: delta(thisWeekDur, lastWeekDur), color: 'text-emerald-400' },
+                      { label: 'Exercises', value: thisWeekExCount, unit: '', d: delta(thisWeekExCount, lastWeekExCount), color: 'text-amber-400' },
+                    ].map(({ label, value, unit, d, color }) => (
+                      <div key={label} className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider">{label}</p>
+                        <p className={`text-xl font-bold ${color} mt-1`}>{value} <span className="text-xs text-gray-500 font-normal">{unit}</span></p>
+                        <p className={`text-[10px] mt-0.5 ${d.up ? 'text-emerald-400' : 'text-rose-400'}`}>{d.pct} {d.text}</p>
+                      </div>
+                    ))}
                   </div>
+                  {bestWorkout && (
+                    <div className="p-3 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/5 border border-amber-500/20">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Flame className="w-3.5 h-3.5 text-amber-400" />
+                        <span className="text-[10px] text-amber-400 uppercase tracking-wider font-medium">Best Workout This Week</span>
+                      </div>
+                      <p className="text-sm text-white font-medium">{bestWorkout.name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{bestVol.toLocaleString()}kg volume &middot; {bestWorkout.exercises.length} exercises &middot; {bestWorkout.duration || 0}min</p>
+                    </div>
+                  )}
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Weekly Volume</p>
-                    <p className="text-xl font-bold text-white mt-1">{thisWeekVol.toLocaleString()} <span className="text-xs text-gray-500 font-normal">kg</span></p>
-                    {lastWeekVol > 0 && <p className={`text-[10px] mt-0.5 ${thisWeekVol >= lastWeekVol ? 'text-emerald-400' : 'text-rose-400'}`}>{thisWeekVol >= lastWeekVol ? '+' : ''}{((thisWeekVol - lastWeekVol) / lastWeekVol * 100).toFixed(0)}% vs last week</p>}
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">4-Week Volume Trend</p>
+                    <div className="h-32">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={fourWeekData} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
+                          <defs>
+                            <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                              <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                          <YAxis hide />
+                          <Tooltip contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }} labelStyle={{ color: '#9ca3af' }} formatter={(v: number) => [`${v.toLocaleString()}kg`, 'Volume']} />
+                          <Area type="monotone" dataKey="volume" stroke="#8b5cf6" strokeWidth={2} fill="url(#volGrad)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Avg Duration</p>
-                    <p className="text-xl font-bold text-white mt-1">{thisWeekDur > 0 ? `${thisWeekDur}min` : '--'}</p>
-                    {lastWeekDur > 0 && <p className={`text-[10px] mt-0.5 ${thisWeekDur >= lastWeekDur ? 'text-emerald-400' : 'text-rose-400'}`}>{thisWeekDur >= lastWeekDur ? '+' : ''}{thisWeekDur - lastWeekDur}min vs last week</p>}
-                  </div>
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Heat Score</p>
-                    <p className="text-xl font-bold mt-1"><span className="text-orange-400">{heatScore.score}</span> <span className="text-xs text-gray-500 font-normal">{heatScore.label}</span></p>
-                    <div className="flex gap-0.5 mt-1">{[1,2,3].map(i => <Flame key={i} className={`w-3 h-3 ${i <= heatScore.flames ? 'text-orange-400' : 'text-white/10'}`} />)}</div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-2 rounded-lg bg-white/[0.03] border border-white/5 text-center">
+                      <p className="text-[10px] text-gray-500">Total Duration</p>
+                      <p className="text-sm font-bold text-white">{thisWeekWorkouts.reduce((s,w) => s + (w.duration||0), 0)}min</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-white/[0.03] border border-white/5 text-center">
+                      <p className="text-[10px] text-gray-500">Rest Days</p>
+                      <p className="text-sm font-bold text-white">{7 - new Set(thisWeekWorkouts.map(w => new Date(w.date).toDateString())).size}</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-white/[0.03] border border-white/5 text-center">
+                      <p className="text-[10px] text-gray-500">Avg Volume</p>
+                      <p className="text-sm font-bold text-white">{thisWeekWorkouts.length > 0 ? Math.round(thisWeekVol / thisWeekWorkouts.length).toLocaleString() : 0}kg</p>
+                    </div>
                   </div>
                 </div>
               )}
+
+              {/* ═══ MUSCLES TAB ═══ */}
               {weeklyTab === 'muscles' && (
-                <div className="space-y-2">
-                  {sortedMuscles.length === 0 && <p className="text-xs text-gray-500">No muscle data this week</p>}
-                  {sortedMuscles.slice(0, 10).map(([muscle, vol]) => (
-                    <div key={muscle} className="flex items-center gap-3">
-                      <span className="text-xs text-gray-400 w-24 capitalize truncate">{muscle}</span>
-                      <div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden">
-                        <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500" style={{ width: `${(vol / maxMuscleVol) * 100}%` }} />
-                      </div>
-                      <span className="text-xs text-gray-500 w-16 text-right">{vol.toLocaleString()}kg</span>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-2 rounded-lg bg-white/[0.03] border border-white/5 text-center">
+                      <p className="text-[10px] text-gray-500">Muscles Hit</p>
+                      <p className="text-sm font-bold text-violet-400">{sortedMuscles.length}</p>
                     </div>
-                  ))}
-                  {sortedMuscles.length > 10 && <p className="text-[10px] text-gray-600">+{sortedMuscles.length - 10} more muscle groups</p>}
-                </div>
-              )}
-              {weeklyTab === 'compare' && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-[10px] text-violet-400 uppercase tracking-wider font-medium mb-3">This Week</p>
-                    <div className="space-y-2.5">
-                      <div className="flex justify-between items-center"><span className="text-xs text-gray-400">Workouts</span><span className="text-sm font-bold text-white">{thisWeekWorkouts.length}</span></div>
-                      <div className="flex justify-between items-center"><span className="text-xs text-gray-400">Volume</span><span className="text-sm font-bold text-white">{thisWeekVol.toLocaleString()}kg</span></div>
-                      <div className="flex justify-between items-center"><span className="text-xs text-gray-400">Avg Duration</span><span className="text-sm font-bold text-white">{thisWeekDur}min</span></div>
-                      <div className="flex justify-between items-center"><span className="text-xs text-gray-400">Exercises</span><span className="text-sm font-bold text-white">{thisWeekWorkouts.reduce((s,w) => s + w.exercises.length, 0)}</span></div>
+                    <div className="p-2 rounded-lg bg-white/[0.03] border border-white/5 text-center">
+                      <p className="text-[10px] text-gray-500">Balance</p>
+                      <p className={`text-sm font-bold ${balanceScore >= 70 ? 'text-emerald-400' : balanceScore >= 40 ? 'text-amber-400' : 'text-rose-400'}`}>{balanceScore}%</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-white/[0.03] border border-white/5 text-center">
+                      <p className="text-[10px] text-gray-500">Total Volume</p>
+                      <p className="text-sm font-bold text-white">{(totalPrimary + totalSecondary).toLocaleString()}kg</p>
                     </div>
                   </div>
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-3">Last Week</p>
-                    <div className="space-y-2.5">
-                      <div className="flex justify-between items-center"><span className="text-xs text-gray-400">Workouts</span><span className="text-sm font-bold text-gray-400">{lastWeekWorkouts.length}</span></div>
-                      <div className="flex justify-between items-center"><span className="text-xs text-gray-400">Volume</span><span className="text-sm font-bold text-gray-400">{lastWeekVol.toLocaleString()}kg</span></div>
-                      <div className="flex justify-between items-center"><span className="text-xs text-gray-400">Avg Duration</span><span className="text-sm font-bold text-gray-400">{lastWeekDur}min</span></div>
-                      <div className="flex justify-between items-center"><span className="text-xs text-gray-400">Exercises</span><span className="text-sm font-bold text-gray-400">{lastWeekWorkouts.reduce((s,w) => s + w.exercises.length, 0)}</span></div>
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={sortedMuscles.slice(0, 8)} layout="vertical" margin={{ top: 0, right: 10, bottom: 0, left: 0 }}>
+                        <XAxis type="number" hide />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: '#9ca3af' }} width={70} axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }} formatter={(v: number) => [`${v.toLocaleString()}kg`]} />
+                        <Bar dataKey="primary" name="Primary" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="secondary" name="Secondary" fill="#6366f1" radius={[0, 4, 4, 0]} stackId="a" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-2 rounded-lg bg-white/[0.03] border border-white/5 text-center">
+                      <p className="text-[10px] text-gray-500">Primary Volume</p>
+                      <p className="text-sm font-bold text-violet-400">{totalPrimary.toLocaleString()}kg</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-white/[0.03] border border-white/5 text-center">
+                      <p className="text-[10px] text-gray-500">Secondary Volume</p>
+                      <p className="text-sm font-bold text-indigo-400">{totalSecondary.toLocaleString()}kg</p>
                     </div>
                   </div>
-                  <div className="col-span-2 p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Change</p>
-                    <div className="grid grid-cols-4 gap-3">
-                      {[
-                        { label: 'Workouts', thisVal: thisWeekWorkouts.length, lastVal: lastWeekWorkouts.length, unit: '' },
-                        { label: 'Volume', thisVal: thisWeekVol, lastVal: lastWeekVol, unit: 'kg' },
-                        { label: 'Duration', thisVal: thisWeekDur, lastVal: lastWeekDur, unit: 'min' },
-                        { label: 'Exercises', thisVal: thisWeekWorkouts.reduce((s,w) => s + w.exercises.length, 0), lastVal: lastWeekWorkouts.reduce((s,w) => s + w.exercises.length, 0), unit: '' },
-                      ].map(({ label, thisVal, lastVal }) => {
-                        const diff = thisVal - lastVal
-                        const pct = lastVal > 0 ? ((diff / lastVal) * 100).toFixed(0) : '--'
-                        return (
-                          <div key={label} className="text-center">
-                            <p className="text-[10px] text-gray-500 mb-1">{label}</p>
-                            <p className={`text-sm font-bold ${diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-rose-400' : 'text-gray-400'}`}>
-                              {lastVal > 0 ? `${diff >= 0 ? '+' : ''}${pct}%` : '--'}
-                            </p>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-              {weeklyTab === 'daily' && (
-                <div className="space-y-2">
-                  {dailyData.map((d) => (
-                    <div key={d.name} className="flex items-center gap-3">
-                      <span className="text-xs text-gray-400 w-8">{d.name}</span>
-                      <div className="flex-1 h-6 rounded-lg bg-white/5 overflow-hidden relative">
-                        <div className="h-full rounded-lg bg-gradient-to-r from-violet-500/80 to-fuchsia-500/80 transition-all duration-500 flex items-center justify-end pr-2"
-                          style={{ width: `${d.volume > 0 ? Math.max(8, (d.volume / maxDailyVol) * 100) : 0}%` }}>
-                          {d.volume > 0 && <span className="text-[10px] text-white font-medium">{d.volume.toLocaleString()}kg</span>}
+                  <div className="space-y-1.5">
+                    {sortedMuscles.slice(0, 8).map(m => (
+                      <div key={m.name} className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 w-20 capitalize truncate">{m.name}</span>
+                        <div className="flex-1 flex h-2 rounded-full bg-white/5 overflow-hidden">
+                          <div className="h-full bg-violet-500 transition-all duration-500" style={{ width: `${(m.primary / maxMuscleVol) * 100}%` }} />
+                          <div className="h-full bg-indigo-500/60 transition-all duration-500" style={{ width: `${(m.secondary / maxMuscleVol) * 100}%` }} />
                         </div>
-                        {d.volume === 0 && <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-600">Rest</span>}
+                        <span className="text-[10px] text-gray-500 w-12 text-right">{m.total.toLocaleString()}</span>
                       </div>
-                      <span className="text-xs text-gray-500 w-6 text-right">{d.count}</span>
-                    </div>
-                  ))}
-                  <div className="flex justify-between pt-2 border-t border-white/5 mt-2">
-                    <span className="text-[10px] text-gray-500">Total: {thisWeekWorkouts.length} workouts</span>
-                    <span className="text-[10px] text-gray-500">{thisWeekVol.toLocaleString()}kg volume</span>
+                    ))}
                   </div>
+                </div>
+              )}
+
+              {/* ═══ COMPARE TAB ═══ */}
+              {weeklyTab === 'compare' && (
+                <div className="space-y-4">
+                  <div className="h-44">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={[
+                        { metric: 'Workouts', thisWeek: thisWeekWorkouts.length, lastWeek: lastWeekWorkouts.length },
+                        { metric: 'Volume (k)', thisWeek: Math.round(thisWeekVol / 1000), lastWeek: Math.round(lastWeekVol / 1000) },
+                        { metric: 'Duration', thisWeek: thisWeekDur, lastWeek: lastWeekDur },
+                        { metric: 'Exercises', thisWeek: thisWeekExCount, lastWeek: lastWeekExCount },
+                      ]} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
+                        <XAxis dataKey="metric" tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                        <YAxis hide />
+                        <Tooltip contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }} />
+                        <Bar dataKey="lastWeek" name="Last Week" fill="#374151" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="thisWeek" name="This Week" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                      <p className="text-[10px] text-violet-400 uppercase tracking-wider font-medium mb-2">This Week</p>
+                      <div className="space-y-1.5">
+                        {[
+                          { l: 'Workouts', v: thisWeekWorkouts.length },
+                          { l: 'Volume', v: `${thisWeekVol.toLocaleString()}kg` },
+                          { l: 'Duration', v: `${thisWeekDur}min` },
+                          { l: 'Exercises', v: thisWeekExCount },
+                        ].map(({ l, v }) => (
+                          <div key={l} className="flex justify-between"><span className="text-xs text-gray-400">{l}</span><span className="text-xs font-bold text-white">{v}</span></div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Last Week</p>
+                      <div className="space-y-1.5">
+                        {[
+                          { l: 'Workouts', v: lastWeekWorkouts.length },
+                          { l: 'Volume', v: `${lastWeekVol.toLocaleString()}kg` },
+                          { l: 'Duration', v: `${lastWeekDur}min` },
+                          { l: 'Exercises', v: lastWeekExCount },
+                        ].map(({ l, v }) => (
+                          <div key={l} className="flex justify-between"><span className="text-xs text-gray-400">{l}</span><span className="text-xs font-bold text-gray-400">{v}</span></div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { label: 'Workouts', cur: thisWeekWorkouts.length, prev: lastWeekWorkouts.length },
+                      { label: 'Volume', cur: thisWeekVol, prev: lastWeekVol },
+                      { label: 'Duration', cur: thisWeekDur, prev: lastWeekDur },
+                      { label: 'Exercises', cur: thisWeekExCount, prev: lastWeekExCount },
+                    ].map(({ label, cur, prev }) => {
+                      const d = delta(cur, prev)
+                      return (
+                        <div key={label} className="p-2 rounded-lg bg-white/[0.03] border border-white/5 text-center">
+                          <p className="text-[10px] text-gray-500 mb-0.5">{label}</p>
+                          <p className={`text-xs font-bold ${d.up ? 'text-emerald-400' : 'text-rose-400'}`}>{d.pct}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ═══ DAILY TAB ═══ */}
+              {weeklyTab === 'daily' && (
+                <div className="space-y-4">
+                  <div className="h-40">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={dailyData.map(d => ({ name: d.label, volume: d.volume, workouts: d.count }))} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
+                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                        <YAxis hide />
+                        <Tooltip contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }} formatter={(v: number) => [`${v.toLocaleString()}kg`, 'Volume']} />
+                        <Bar dataKey="volume" radius={[4, 4, 0, 0]}>
+                          {dailyData.map((d, i) => (
+                            <Cell key={i} fill={d.volume > 0 ? '#8b5cf6' : '#1f2937'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="space-y-1.5">
+                    {dailyData.map(d => (
+                      <div key={d.name} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white/[0.02] transition-colors">
+                        <span className="text-xs text-gray-400 w-8">{d.label}</span>
+                        <div className="flex-1 h-5 rounded-md bg-white/5 overflow-hidden relative">
+                          <div className="h-full rounded-md bg-gradient-to-r from-violet-500/80 to-fuchsia-500/80 transition-all duration-500 flex items-center justify-end pr-2"
+                            style={{ width: `${d.volume > 0 ? Math.max(12, (d.volume / maxDailyVol) * 100) : 0}%` }}>
+                            {d.volume > 0 && <span className="text-[10px] text-white font-medium">{d.volume.toLocaleString()}kg</span>}
+                          </div>
+                          {d.volume === 0 && <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-600">Rest</span>}
+                        </div>
+                        <div className="flex gap-0.5 w-16 justify-end">
+                          {d.types.map(t => {
+                            const tc = typeConfig[t] || typeConfig.strength
+                            return <span key={t} className={`text-[8px] px-1 py-0.5 rounded border ${tc.bg} ${tc.color}`}>{t.slice(0,3)}</span>
+                          })}
+                        </div>
+                        <span className="text-xs text-gray-500 w-4 text-right">{d.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 pt-1 border-t border-white/5">
+                    <div className="text-center">
+                      <p className="text-[10px] text-gray-500">Active Days</p>
+                      <p className="text-xs font-bold text-white">{dailyData.filter(d => d.count > 0).length}/7</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] text-gray-500">Busiest Day</p>
+                      <p className="text-xs font-bold text-white">{dailyData.reduce((a, b) => a.volume > b.volume ? a : b).label}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] text-gray-500">Total Volume</p>
+                      <p className="text-xs font-bold text-white">{thisWeekVol.toLocaleString()}kg</p>
+                    </div>
+                  </div>
+                  {sortedTypes.length > 0 && (
+                    <div className="pt-2 border-t border-white/5">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Workout Types This Week</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {sortedTypes.map(([type, count]) => {
+                          const tc = typeConfig[type] || typeConfig.strength
+                          const TypeIcon = tc.icon
+                          return (
+                            <span key={type} className={`text-[10px] px-2 py-1 rounded-lg border ${tc.bg} ${tc.color}`}>
+                              <TypeIcon className="w-3 h-3 inline mr-1" />{type} x{count}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
