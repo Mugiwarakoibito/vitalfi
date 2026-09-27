@@ -1179,7 +1179,6 @@ export function WorkoutLogger() {
         const lastWeekDur = lastWeekWorkouts.length > 0 ? Math.round(lastWeekWorkouts.reduce((s,w) => s + (w.duration||0), 0) / lastWeekWorkouts.length) : 0
         const thisWeekExCount = thisWeekWorkouts.reduce((s,w) => s + w.exercises.length, 0)
         const lastWeekExCount = lastWeekWorkouts.reduce((s,w) => s + w.exercises.length, 0)
-        const thisWeekTotalDur = thisWeekWorkouts.reduce((s,w) => s + (w.duration||0), 0)
 
         const fourWeekData = Array.from({ length: 4 }, (_, wi) => {
           const ws = new Date(weekStart); ws.setDate(ws.getDate() - (3 - wi) * 7)
@@ -1188,9 +1187,6 @@ export function WorkoutLogger() {
           const vol = wws.reduce((s,w) => s + calcVolume(w.exercises), 0)
           return { week: `W${wi + 1}`, volume: vol, workouts: wws.length, label: wi === 3 ? 'This' : wi === 2 ? 'Last' : `${3 - wi}w ago` }
         })
-
-        const bestWorkout = thisWeekWorkouts.length > 0 ? thisWeekWorkouts.reduce((best, w) => calcVolume(w.exercises) > calcVolume(best.exercises) ? w : best) : null
-        const bestVol = bestWorkout ? calcVolume(bestWorkout.exercises) : 0
 
         const muscleMap = new Map<string, { primary: number; secondary: number }>()
         thisWeekWorkouts.forEach(w => w.exercises.forEach(ex => {
@@ -1268,76 +1264,76 @@ export function WorkoutLogger() {
                 <motion.div key="overview" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}>
                   <div className="rounded-xl bg-white/5 border border-white/10 p-4">
                     {/* Header */}
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[9px] font-semibold text-gray-500 uppercase">Volume Trend</span>
-                      <span className="text-[8px] text-gray-500">Last 4 weeks</span>
-                    </div>
-
-                    {/* Metric Row */}
-                    <div className="grid grid-cols-4 gap-2 mb-3">
-                      {[
-                        { label: 'Workouts', value: thisWeekWorkouts.length, unit: '', d: delta(thisWeekWorkouts.length, lastWeekWorkouts.length), color: 'sky' },
-                        { label: 'Volume', value: thisWeekVol.toLocaleString(), unit: 'kg', d: delta(thisWeekVol, lastWeekVol), color: 'violet' },
-                        { label: 'Avg Duration', value: thisWeekDur > 0 ? `${thisWeekDur}` : '--', unit: 'min', d: delta(thisWeekDur, lastWeekDur), color: 'emerald' },
-                        { label: 'Exercises', value: thisWeekExCount, unit: '', d: delta(thisWeekExCount, lastWeekExCount), color: 'amber' },
-                      ].map(({ label, value, unit, d, color }) => (
-                        <div key={label} className="rounded-xl bg-black/40 border border-white/5 p-2.5">
-                          <span className="text-[8px] font-semibold text-gray-500 uppercase tracking-wider">{label}</span>
-                          <p className={`text-lg font-bold text-${color}-400 mt-0.5`}>{value}<span className="text-[10px] text-gray-500 ml-0.5 font-normal">{unit}</span></p>
-                          <div className={`flex items-center gap-0.5 mt-0.5 text-[9px] ${d.up ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            <span>{d.arrow}</span>
-                            <span className="font-semibold">{d.pct}</span>
-                            <span className="text-gray-600">vs lw</span>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                        <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Volume Trend</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] text-gray-500">
+                          {weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(weekStart.getTime() + 6 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                        <div className="h-3 w-px bg-white/10" />
+                        <span className="text-[9px] text-gray-600">4 weeks</span>
+                      </div>
                     </div>
 
                     {/* Chart */}
-                    <div className="h-56 mb-3">
+                    <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={fourWeekData} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                        <AreaChart data={fourWeekData} margin={{ top: 15, right: 15, bottom: 5, left: 5 }}>
                           <defs>
                             <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#a855f7" stopOpacity={0.3} />
+                              <stop offset="0%" stopColor="#a855f7" stopOpacity={0.25} />
+                              <stop offset="50%" stopColor="#a855f7" stopOpacity={0.08} />
                               <stop offset="100%" stopColor="#a855f7" stopOpacity={0} />
                             </linearGradient>
+                            <filter id="glow">
+                              <feGaussianBlur stdDeviation="3" result="blur" />
+                              <feMerge>
+                                <feMergeNode in="blur" />
+                                <feMergeNode in="SourceGraphic" />
+                              </feMerge>
+                            </filter>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                          <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
-                          <Tooltip contentStyle={{ background: 'rgba(17,17,17,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 11, backdropFilter: 'blur(12px)' }} labelStyle={{ color: '#a78bfa', fontWeight: 600 }} formatter={(v: number) => [`${v.toLocaleString()}kg`, 'Volume']} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                          <Area type="monotone" dataKey="volume" stroke="#a855f7" strokeWidth={2} fill="url(#volGrad)" dot={{ r: 4, fill: '#a855f7', stroke: '#0f0a1a', strokeWidth: 2 }} activeDot={{ r: 6, fill: '#c084fc', stroke: '#0f0a1a', strokeWidth: 2 }} />
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                          <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} dy={5} />
+                          <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 'auto']} dx={-5} />
+                          <Tooltip
+                            contentStyle={{ background: 'rgba(17,17,17,0.95)', border: '1px solid rgba(168,85,247,0.2)', borderRadius: 12, fontSize: 11, backdropFilter: 'blur(12px)', boxShadow: '0 8px 32px rgba(168,85,247,0.1)' }}
+                            labelStyle={{ color: '#c084fc', fontWeight: 600, fontSize: 11 }}
+                            formatter={(v: number) => [`${v.toLocaleString()}kg`, 'Volume']}
+                            cursor={{ stroke: 'rgba(168,85,247,0.3)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="volume"
+                            stroke="#a855f7"
+                            strokeWidth={2.5}
+                            fill="url(#volGrad)"
+                            dot={(props: any) => {
+                              const { cx, cy, payload } = props
+                              const isMax = payload.volume === Math.max(...fourWeekData.map(d => d.volume))
+                              return (
+                                <g>
+                                  <circle cx={cx} cy={cy} r={isMax ? 6 : 4} fill={isMax ? '#c084fc' : '#a855f7'} stroke="#111111" strokeWidth={2} filter={isMax ? 'url(#glow)' : undefined} />
+                                  {isMax && <circle cx={cx} cy={cy} r={10} fill="none" stroke="rgba(168,85,247,0.2)" strokeWidth={1} />}
+                                </g>
+                              )
+                            }}
+                            activeDot={{ r: 7, fill: '#c084fc', stroke: '#111111', strokeWidth: 2, filter: 'url(#glow)' }}
+                          />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
 
-                    {/* Peak Performance */}
-                    {bestWorkout && (
-                      <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 flex gap-2.5 items-start mb-3">
-                        <div className="text-lg shrink-0 mt-0.5">🏆</div>
-                        <div className="space-y-1 flex-1">
-                          <p className="text-[11px] font-bold text-amber-300">Peak Performance</p>
-                          <p className="text-[10px] text-gray-400 leading-normal">
-                            <span className="text-white font-semibold">{bestWorkout.name}</span> — {bestVol.toLocaleString()}kg volume, {bestWorkout.exercises.length} exercises, {bestWorkout.duration || 0}min
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Bottom Stats */}
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { label: 'Total Time', value: `${thisWeekTotalDur}min`, color: 'emerald', icon: Timer },
-                        { label: 'Rest Days', value: `${7 - new Set(thisWeekWorkouts.map(w => new Date(w.date).toDateString())).size}`, color: 'amber', icon: Coffee },
-                        { label: 'Avg/Session', value: `${thisWeekWorkouts.length > 0 ? Math.round(thisWeekVol / thisWeekWorkouts.length).toLocaleString() : 0}kg`, color: 'sky', icon: TrendingUp },
-                      ].map(({ label, value, color, icon: Icon }) => (
-                        <div key={label} className="rounded-xl bg-black/40 border border-white/5 p-2.5 flex flex-col justify-between">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[8px] font-semibold text-gray-500 uppercase">{label}</span>
-                            <Icon className={`w-3 h-3 text-${color}-400`} />
-                          </div>
-                          <p className={`text-base font-bold text-${color}-400 mt-0.5`}>{value}</p>
+                    {/* Subtle Legend */}
+                    <div className="flex items-center justify-center gap-4 mt-3 pt-3 border-t border-white/5">
+                      {fourWeekData.map((w, i) => (
+                        <div key={i} className="flex items-center gap-1.5">
+                          <div className={`w-1.5 h-1.5 rounded-full ${i === fourWeekData.length - 1 ? 'bg-violet-400' : 'bg-gray-600'}`} />
+                          <span className={`text-[9px] ${i === fourWeekData.length - 1 ? 'text-gray-400 font-medium' : 'text-gray-600'}`}>{w.label}</span>
+                          <span className={`text-[9px] ${i === fourWeekData.length - 1 ? 'text-violet-400/80' : 'text-gray-700'}`}>{w.volume.toLocaleString()}kg</span>
                         </div>
                       ))}
                     </div>
