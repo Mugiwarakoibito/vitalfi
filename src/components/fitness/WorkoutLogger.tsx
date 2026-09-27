@@ -1265,118 +1265,170 @@ export function WorkoutLogger() {
             <AnimatePresence mode="wait">
               {/* ═══ OVERVIEW TAB ═══ */}
               {weeklyTab === 'overview' && (
-                <motion.div key="overview" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="space-y-3">
-                  {/* Chart Panel */}
-                  <div className="rounded-xl bg-black/40 border border-white/[0.06] p-5 relative overflow-hidden">
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
-                    <div className="h-72 relative">
+                <motion.div key="overview" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}>
+                  <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl p-5 space-y-4 relative overflow-hidden">
+                    {/* Ambient */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-40 bg-violet-500/[0.07] rounded-full blur-[80px] pointer-events-none" />
+
+                    {/* Hero Row */}
+                    <div className="relative flex items-end justify-between">
+                      <div>
+                        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1">This Week's Volume</p>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-5xl font-black text-white tracking-tight">{thisWeekVol.toLocaleString()}</span>
+                          <span className="text-lg font-bold text-violet-400/60">kg</span>
+                        </div>
+                        <div className={`flex items-center gap-1 mt-1 text-xs ${delta(thisWeekVol, lastWeekVol).up ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          <span>{delta(thisWeekVol, lastWeekVol).arrow}</span>
+                          <span className="font-bold">{delta(thisWeekVol, lastWeekVol).pct}</span>
+                          <span className="text-gray-600">vs last week</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1">Workouts</p>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-3xl font-black text-white">{thisWeekWorkouts.length}</span>
+                          <span className="text-xs text-gray-500">/ 7 days</span>
+                        </div>
+                        <div className={`flex items-center gap-1 mt-1 text-[10px] justify-end ${delta(thisWeekWorkouts.length, lastWeekWorkouts.length).up ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          <span>{delta(thisWeekWorkouts.length, lastWeekWorkouts.length).arrow}</span>
+                          <span className="font-bold">{delta(thisWeekWorkouts.length, lastWeekWorkouts.length).pct}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Chart */}
+                    <div className="relative h-52">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={fourWeekData} margin={{ top: 20, right: 20, bottom: 10, left: 10 }}>
+                        <AreaChart data={fourWeekData} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
                           <defs>
-                            <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#a855f7" stopOpacity={0.4} />
-                              <stop offset="40%" stopColor="#7c3aed" stopOpacity={0.15} />
+                            <linearGradient id="volGrad2" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#a855f7" stopOpacity={0.35} />
+                              <stop offset="50%" stopColor="#7c3aed" stopOpacity={0.1} />
                               <stop offset="100%" stopColor="#4c1d95" stopOpacity={0} />
                             </linearGradient>
-                            <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
-                              <stop offset="0%" stopColor="#7c3aed" />
+                            <linearGradient id="lineGrad2" x1="0" y1="0" x2="1" y2="0">
+                              <stop offset="0%" stopColor="#6d28d9" />
                               <stop offset="50%" stopColor="#a855f7" />
-                              <stop offset="100%" stopColor="#c084fc" />
+                              <stop offset="100%" stopColor="#e879f9" />
                             </linearGradient>
-                            <filter id="glow">
-                              <feGaussianBlur stdDeviation="4" result="blur" />
-                              <feMerge>
-                                <feMergeNode in="blur" />
-                                <feMergeNode in="SourceGraphic" />
-                              </feMerge>
-                            </filter>
-                            <filter id="softGlow">
-                              <feGaussianBlur stdDeviation="6" result="blur" />
-                              <feMerge>
-                                <feMergeNode in="blur" />
-                                <feMergeNode in="SourceGraphic" />
-                              </feMerge>
+                            <filter id="glow2">
+                              <feGaussianBlur stdDeviation="3.5" result="blur" />
+                              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                             </filter>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                          <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} dy={8} />
-                          <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 'auto']} dx={-5} />
+                          <XAxis dataKey="label" tick={{ fill: '#4b5563', fontSize: 10 }} axisLine={false} tickLine={false} dy={6} />
+                          <YAxis tick={{ fill: '#4b5563', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 'auto']} width={35} />
                           <Tooltip
-                            contentStyle={{ background: 'rgba(10,10,10,0.95)', border: '1px solid rgba(168,85,247,0.25)', borderRadius: 16, fontSize: 12, backdropFilter: 'blur(16px)', boxShadow: '0 12px 40px rgba(168,85,247,0.15), inset 0 1px 0 rgba(255,255,255,0.05)' }}
-                            labelStyle={{ color: '#c084fc', fontWeight: 700, fontSize: 12, marginBottom: 4 }}
+                            contentStyle={{ background: 'rgba(7,7,7,0.95)', border: '1px solid rgba(168,85,247,0.2)', borderRadius: 14, fontSize: 12, backdropFilter: 'blur(16px)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
+                            labelStyle={{ color: '#c084fc', fontWeight: 700, fontSize: 11 }}
                             formatter={(v: number) => [`${v.toLocaleString()}kg`, 'Volume']}
-                            cursor={{ stroke: 'rgba(168,85,247,0.4)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                            cursor={{ stroke: 'rgba(168,85,247,0.25)', strokeWidth: 1, strokeDasharray: '4 4' }}
                           />
                           <Area
                             type="monotone"
                             dataKey="volume"
-                            stroke="url(#lineGrad)"
-                            strokeWidth={3}
-                            fill="url(#volGrad)"
+                            stroke="url(#lineGrad2)"
+                            strokeWidth={2.5}
+                            fill="url(#volGrad2)"
                             dot={(props: any) => {
                               const { cx, cy, payload } = props
                               const isMax = payload.volume === Math.max(...fourWeekData.map(d => d.volume))
-                              const isLast = payload.label === 'This'
+                              const isThis = payload.label === 'This'
                               return (
                                 <g>
-                                  {isMax && <circle cx={cx} cy={cy} r={18} fill="rgba(168,85,247,0.08)" filter="url(#softGlow)" />}
-                                  <circle cx={cx} cy={cy} r={isMax ? 7 : isLast ? 5 : 3.5} fill={isMax ? '#c084fc' : isLast ? '#a855f7' : '#6d28d9'} stroke="#0a0a0a" strokeWidth={isMax ? 3 : 2} filter={isMax ? 'url(#glow)' : undefined} />
-                                  {isMax && <circle cx={cx} cy={cy} r={12} fill="none" stroke="rgba(168,85,247,0.15)" strokeWidth={1.5} />}
+                                  {isMax && <circle cx={cx} cy={cy} r={14} fill="rgba(168,85,247,0.06)" filter="url(#glow2)" />}
+                                  <circle cx={cx} cy={cy} r={isMax ? 6 : isThis ? 5 : 3} fill={isMax ? '#e879f9' : isThis ? '#a855f7' : '#581c87'} stroke="#0a0a0a" strokeWidth={2} filter={isMax ? 'url(#glow2)' : undefined} />
+                                  {isMax && <circle cx={cx} cy={cy} r={10} fill="none" stroke="rgba(168,85,247,0.12)" strokeWidth={1} />}
                                 </g>
                               )
                             }}
-                            activeDot={{ r: 8, fill: '#c084fc', stroke: '#0a0a0a', strokeWidth: 3, filter: 'url(#glow)' }}
+                            activeDot={{ r: 7, fill: '#e879f9', stroke: '#0a0a0a', strokeWidth: 2.5, filter: 'url(#glow2)' }}
                           />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
-                  </div>
 
-                  {/* Stat Cards */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {[
-                      { label: 'Workouts', value: thisWeekWorkouts.length, unit: '', d: delta(thisWeekWorkouts.length, lastWeekWorkouts.length), color: 'sky' },
-                      { label: 'Volume', value: thisWeekVol.toLocaleString(), unit: 'kg', d: delta(thisWeekVol, lastWeekVol), color: 'violet' },
-                      { label: 'Avg Duration', value: thisWeekDur > 0 ? `${thisWeekDur}` : '--', unit: 'min', d: delta(thisWeekDur, lastWeekDur), color: 'emerald' },
-                      { label: 'Exercises', value: thisWeekExCount, unit: '', d: delta(thisWeekExCount, lastWeekExCount), color: 'amber' },
-                    ].map(({ label, value, unit, d, color }) => (
-                      <div key={label} className="rounded-xl bg-black/40 border border-white/[0.06] p-3">
-                        <span className="text-[8px] font-semibold text-gray-500 uppercase tracking-wider">{label}</span>
-                        <p className={`text-xl font-bold text-${color}-400 mt-0.5`}>{value}<span className="text-[10px] text-gray-500 ml-0.5 font-normal">{unit}</span></p>
-                        <div className={`flex items-center gap-0.5 mt-0.5 text-[9px] ${d.up ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          <span>{d.arrow}</span>
-                          <span className="font-semibold">{d.pct}</span>
-                          <span className="text-gray-600">vs lw</span>
+                    {/* Stat Row */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { label: 'Avg Duration', value: thisWeekDur > 0 ? `${thisWeekDur}` : '--', unit: 'min', d: delta(thisWeekDur, lastWeekDur), color: 'emerald' },
+                        { label: 'Exercises', value: thisWeekExCount, unit: '', d: delta(thisWeekExCount, lastWeekExCount), color: 'amber' },
+                        { label: 'Avg/Session', value: thisWeekWorkouts.length > 0 ? Math.round(thisWeekVol / thisWeekWorkouts.length).toLocaleString() : '0', unit: 'kg', d: { pct: '--', up: true, arrow: '', label: '' }, color: 'sky' },
+                      ].map(({ label, value, unit, d, color }) => (
+                        <div key={label} className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 flex flex-col justify-between">
+                          <span className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">{label}</span>
+                          <div className="mt-1">
+                            <span className={`text-xl font-black text-${color}-400`}>{value}</span>
+                            <span className="text-[10px] text-gray-600 ml-0.5">{unit}</span>
+                          </div>
+                          {d.pct !== '--' && (
+                            <div className={`flex items-center gap-0.5 text-[9px] mt-0.5 ${d.up ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              <span>{d.arrow}</span>
+                              <span className="font-bold">{d.pct}</span>
+                              <span className="text-gray-600">vs lw</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Peak + Rest Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {/* Peak Performance */}
+                      {bestWorkout ? (
+                        <div className="rounded-xl bg-gradient-to-br from-amber-500/[0.08] to-orange-500/[0.04] border border-amber-500/15 p-3.5 flex gap-3 items-center">
+                          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                            <span className="text-lg">🏆</span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[9px] font-bold text-amber-400/80 uppercase tracking-wider mb-0.5">Peak Performance</p>
+                            <p className="text-xs text-white font-semibold truncate">{bestWorkout.name}</p>
+                            <p className="text-[10px] text-gray-500">{bestVol.toLocaleString()}kg · {bestWorkout.exercises.length} ex · {bestWorkout.duration || 0}min</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3.5 flex gap-3 items-center">
+                          <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                            <span className="text-lg">🏆</span>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Peak Performance</p>
+                            <p className="text-xs text-gray-600 italic">No workouts this week</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Rest Days */}
+                      <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3.5 flex gap-3 items-center">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                          <Coffee className="w-5 h-5 text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Rest Days</p>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-xl font-black text-emerald-400">{7 - new Set(thisWeekWorkouts.map(w => new Date(w.date).toDateString())).size}</span>
+                            <span className="text-[10px] text-gray-600">/ 7</span>
+                          </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
 
-                  {/* Best Workout */}
-                  {bestWorkout && (
-                    <div className="rounded-xl bg-amber-500/5 border border-amber-500/15 p-3 flex gap-2.5 items-start">
-                      <span className="text-base mt-0.5">🏆</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold text-amber-300 mb-0.5">Peak Performance</p>
-                        <p className="text-[10px] text-gray-400">
-                          <span className="text-white font-semibold">{bestWorkout.name}</span> — {bestVol.toLocaleString()}kg · {bestWorkout.exercises.length} exercises · {bestWorkout.duration || 0}min
-                        </p>
+                    {/* Total Time Bar */}
+                    <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">Total Time</span>
+                        <span className="text-xs font-bold text-emerald-400">{thisWeekTotalDur}min</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                        <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-700" style={{ width: `${Math.min(100, (thisWeekTotalDur / (7 * 60)) * 100)}%` }} />
+                      </div>
+                      <div className="flex justify-between mt-1">
+                        <span className="text-[8px] text-gray-600">0</span>
+                        <span className="text-[8px] text-gray-600">7h goal</span>
                       </div>
                     </div>
-                  )}
-
-                  {/* Bottom Row */}
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { label: 'Total Time', value: `${thisWeekTotalDur}min`, color: 'emerald' },
-                      { label: 'Rest Days', value: `${7 - new Set(thisWeekWorkouts.map(w => new Date(w.date).toDateString())).size}`, color: 'amber' },
-                      { label: 'Avg/Session', value: `${thisWeekWorkouts.length > 0 ? Math.round(thisWeekVol / thisWeekWorkouts.length).toLocaleString() : 0}kg`, color: 'sky' },
-                    ].map(({ label, value, color }) => (
-                      <div key={label} className="rounded-xl bg-black/40 border border-white/[0.06] p-2.5">
-                        <span className="text-[8px] font-semibold text-gray-500 uppercase">{label}</span>
-                        <p className={`text-base font-bold text-${color}-400 mt-0.5`}>{value}</p>
-                      </div>
-                    ))}
                   </div>
                 </motion.div>
               )}
