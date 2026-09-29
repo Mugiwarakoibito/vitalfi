@@ -1206,18 +1206,25 @@ export function WorkoutLogger() {
         thisWeekWorkouts.forEach(w => { const t = w.type || w.category || 'strength'; typeMap.set(t, (typeMap.get(t)||0) + 1) })
         const sortedTypes = [...typeMap.entries()].sort((a,b) => b[1] - a[1])
 
-        // Time of day analysis
-        const timeSlots = { morning: 0, afternoon: 0, evening: 0, night: 0 }
-        const timeVolume = { morning: 0, afternoon: 0, evening: 0, night: 0 }
+        // Muscle x Day heatmap data
+        const heatmapMuscles = sortedMuscles.slice(0, 6).map(m => m.name)
+        const muscleDayVol = new Map<string, Map<number, number>>()
+        heatmapMuscles.forEach(m => { muscleDayVol.set(m, new Map()) })
         thisWeekWorkouts.forEach(w => {
-          const h = new Date(w.createdAt || w.date).getHours()
-          const vol = calcVolume(w.exercises)
-          if (h >= 5 && h < 12) { timeSlots.morning++; timeVolume.morning += vol }
-          else if (h >= 12 && h < 17) { timeSlots.afternoon++; timeVolume.afternoon += vol }
-          else if (h >= 17 && h < 21) { timeSlots.evening++; timeVolume.evening += vol }
-          else { timeSlots.night++; timeVolume.night += vol }
+          const day = new Date(w.date).getDay()
+          w.exercises.forEach(ex => {
+            const def = getExerciseById(ex.exerciseId)
+            if (def) {
+              def.primaryMuscles.forEach(m => {
+                if (muscleDayVol.has(m)) {
+                  const dayMap = muscleDayVol.get(m)!
+                  dayMap.set(day, (dayMap.get(day) || 0) + calcVolume([ex]))
+                }
+              })
+            }
+          })
         })
-        const maxTimeCount = Math.max(...Object.values(timeSlots), 1)
+        const maxMuscleDayVol = Math.max(...[...muscleDayVol.values()].flatMap(m => [...m.values()]), 1)
 
         // Streak
         let currentStreak = 0
@@ -1560,49 +1567,64 @@ export function WorkoutLogger() {
                 </ResponsiveContainer>
               </div>
 
-              {/* Bottom: Time-of-Day Analysis */}
+              {/* Bottom: Muscle x Day Heatmap */}
               <div className="relative z-10 px-5 pb-5 pt-2">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Time of Day</span>
+                  <span className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Muscle Heatmap</span>
                   <div className="flex-1 h-px bg-white/[0.04]" />
-                  <span className="text-[8px] text-gray-600">{thisWeekWorkouts.length} sessions</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[8px] text-gray-600">Low</span>
+                    {[0.08, 0.2, 0.35, 0.5, 0.7].map((s, i) => (
+                      <div key={i} className="w-3 h-3 rounded-sm" style={{ background: `rgba(34,211,238,${s})` }} />
+                    ))}
+                    <span className="text-[8px] text-gray-600">High</span>
+                  </div>
                 </div>
-                <div className="grid grid-cols-4 gap-2">
-                  {([
-                    { key: 'morning' as const, label: 'Morning', sub: '5am–12pm', icon: '☀️', color: 'from-amber-500 to-yellow-500', bg: 'amber' },
-                    { key: 'afternoon' as const, label: 'Afternoon', sub: '12pm–5pm', icon: '🌤️', color: 'from-orange-500 to-amber-500', bg: 'orange' },
-                    { key: 'evening' as const, label: 'Evening', sub: '5pm–9pm', icon: '🌅', color: 'from-violet-500 to-purple-500', bg: 'violet' },
-                    { key: 'night' as const, label: 'Night', sub: '9pm–5am', icon: '🌙', color: 'from-blue-500 to-indigo-500', bg: 'blue' },
-                  ]).map(({ key, label, sub, icon, color, bg }, idx) => {
-                    const count = timeSlots[key]
-                    const vol = timeVolume[key]
-                    const pct = Math.round((count / maxTimeCount) * 100)
-                    const isMax = count === Math.max(...Object.values(timeSlots)) && count > 0
-                    return (
-                      <motion.div key={key} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.06 }}
-                        className={`relative rounded-xl p-3 border transition-all overflow-hidden
-                          ${isMax ? `border-${bg}-500/25 bg-gradient-to-br from-${bg}-500/[0.08] to-transparent` : 'border-white/[0.04] bg-white/[0.02]'}`}>
-                        {isMax && <div className={`absolute -top-4 -right-4 w-16 h-16 bg-${bg}-500/10 rounded-full blur-xl pointer-events-none`} />}
-                        <div className="flex items-center gap-1.5 mb-2 relative z-10">
-                          <span className="text-sm">{icon}</span>
-                          <span className={`text-[9px] font-semibold ${isMax ? `text-${bg}-400` : 'text-gray-500'}`}>{label}</span>
-                        </div>
-                        <div className="relative z-10">
-                          <p className={`text-lg font-black ${isMax ? 'text-white' : 'text-gray-400'}`}>{count}</p>
-                          <p className="text-[8px] text-gray-600">{sub}</p>
-                        </div>
-                        {/* Bar */}
-                        <div className="mt-2 w-full h-1 rounded-full bg-white/[0.04] overflow-hidden relative z-10">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                            transition={{ duration: 0.8, delay: 0.2 + idx * 0.06 }}
-                            className={`h-full rounded-full bg-gradient-to-r ${color}`} />
-                        </div>
-                        {vol > 0 && <p className="text-[8px] text-gray-600 mt-1 relative z-10">{vol.toLocaleString()}kg</p>}
-                      </motion.div>
-                    )
-                  })}
-                </div>
+                {heatmapMuscles.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr>
+                          <th className="text-left pb-2" />
+                          {['S','M','T','W','T','F','S'].map((d, i) => (
+                            <th key={i} className="text-center pb-2 text-[9px] text-gray-600 font-semibold w-[calc(100%/8)]">{d}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {heatmapMuscles.map((muscle, mi) => (
+                          <motion.tr key={muscle} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: mi * 0.05 }}>
+                            <td className="text-[10px] text-gray-400 capitalize pr-2 pb-1.5 font-medium whitespace-nowrap">{muscle}</td>
+                            {Array.from({ length: 7 }, (_, di) => {
+                              const vol = muscleDayVol.get(muscle)?.get(di) || 0
+                              const intensity = vol > 0 ? vol / maxMuscleDayVol : 0
+                              const hasData = vol > 0
+                              return (
+                                <td key={di} className="pb-1.5">
+                                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
+                                    transition={{ delay: mi * 0.05 + di * 0.02 }}
+                                    className={`aspect-square rounded-lg flex items-center justify-center transition-all mx-auto
+                                      ${hasData ? 'cursor-default' : 'bg-white/[0.02]'}`}
+                                    style={hasData ? {
+                                      background: `rgba(34,211,238,${0.1 + intensity * 0.55})`,
+                                      boxShadow: intensity > 0.5 ? `0 0 12px rgba(34,211,238,${intensity * 0.3})` : undefined
+                                    } : undefined}>
+                                    {hasData && (
+                                      <span className="text-[8px] font-bold text-cyan-300">{vol >= 1000 ? `${(vol/1000).toFixed(1)}k` : vol}</span>
+                                    )}
+                                  </motion.div>
+                                </td>
+                              )
+                            })}
+                          </motion.tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-gray-600 italic text-center py-4">No muscle data this week</p>
+                )}
               </div>
             </div>
 
