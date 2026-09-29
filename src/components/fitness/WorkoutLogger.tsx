@@ -1201,11 +1201,23 @@ export function WorkoutLogger() {
           const dw = thisWeekWorkouts.filter(w => new Date(w.date).getDay() === i)
           return { name, label: dayLabels[i], count: dw.length, volume: dw.reduce((s,w) => s + calcVolume(w.exercises), 0), types: [...new Set(dw.map(w => w.type || w.category || 'strength'))] }
         })
-        const maxDailyVol = Math.max(...dailyData.map(d => d.volume), 1)
 
         const typeMap = new Map<string, number>()
         thisWeekWorkouts.forEach(w => { const t = w.type || w.category || 'strength'; typeMap.set(t, (typeMap.get(t)||0) + 1) })
         const sortedTypes = [...typeMap.entries()].sort((a,b) => b[1] - a[1])
+
+        // Time of day analysis
+        const timeSlots = { morning: 0, afternoon: 0, evening: 0, night: 0 }
+        const timeVolume = { morning: 0, afternoon: 0, evening: 0, night: 0 }
+        thisWeekWorkouts.forEach(w => {
+          const h = new Date(w.createdAt || w.date).getHours()
+          const vol = calcVolume(w.exercises)
+          if (h >= 5 && h < 12) { timeSlots.morning++; timeVolume.morning += vol }
+          else if (h >= 12 && h < 17) { timeSlots.afternoon++; timeVolume.afternoon += vol }
+          else if (h >= 17 && h < 21) { timeSlots.evening++; timeVolume.evening += vol }
+          else { timeSlots.night++; timeVolume.night += vol }
+        })
+        const maxTimeCount = Math.max(...Object.values(timeSlots), 1)
 
         // Streak
         let currentStreak = 0
@@ -1548,40 +1560,46 @@ export function WorkoutLogger() {
                 </ResponsiveContainer>
               </div>
 
-              {/* Bottom: Heatmap Strip */}
+              {/* Bottom: Time-of-Day Analysis */}
               <div className="relative z-10 px-5 pb-5 pt-2">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Daily Intensity</span>
+                  <span className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Time of Day</span>
                   <div className="flex-1 h-px bg-white/[0.04]" />
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[8px] text-gray-600">Low</span>
-                    {[0.1, 0.25, 0.4, 0.55, 0.7].map((s, i) => (
-                      <div key={i} className="w-3 h-3 rounded-sm" style={{ background: `rgba(168,85,247,${s})` }} />
-                    ))}
-                    <span className="text-[8px] text-gray-600">High</span>
-                  </div>
+                  <span className="text-[8px] text-gray-600">{thisWeekWorkouts.length} sessions</span>
                 </div>
-                <div className="flex gap-1.5">
-                  {dailyData.map((d, i) => {
-                    const intensity = maxDailyVol > 0 ? d.volume / maxDailyVol : 0
-                    const hasWorkouts = d.count > 0
-                    const isSelected = selectedDay === i
+                <div className="grid grid-cols-4 gap-2">
+                  {([
+                    { key: 'morning' as const, label: 'Morning', sub: '5am–12pm', icon: '☀️', color: 'from-amber-500 to-yellow-500', bg: 'amber' },
+                    { key: 'afternoon' as const, label: 'Afternoon', sub: '12pm–5pm', icon: '🌤️', color: 'from-orange-500 to-amber-500', bg: 'orange' },
+                    { key: 'evening' as const, label: 'Evening', sub: '5pm–9pm', icon: '🌅', color: 'from-violet-500 to-purple-500', bg: 'violet' },
+                    { key: 'night' as const, label: 'Night', sub: '9pm–5am', icon: '🌙', color: 'from-blue-500 to-indigo-500', bg: 'blue' },
+                  ]).map(({ key, label, sub, icon, color, bg }, idx) => {
+                    const count = timeSlots[key]
+                    const vol = timeVolume[key]
+                    const pct = Math.round((count / maxTimeCount) * 100)
+                    const isMax = count === Math.max(...Object.values(timeSlots)) && count > 0
                     return (
-                      <motion.button key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.04 }}
-                        onClick={() => setSelectedDay(isSelected ? null : i)}
-                        className={`flex-1 rounded-xl py-2 px-1 text-center border transition-all duration-300 cursor-pointer
-                          ${isSelected ? 'border-violet-500/40 bg-violet-500/15 shadow-lg shadow-violet-500/10 scale-105' :
-                            hasWorkouts ? 'border-violet-500/10 hover:border-violet-500/25 hover:bg-violet-500/[0.06]' :
-                            'border-white/[0.03] hover:border-white/[0.06]'}`}
-                        style={hasWorkouts ? { background: `linear-gradient(180deg, rgba(168,85,247,${0.06 + intensity * 0.2}), transparent)` } : undefined}>
-                        <span className={`text-[10px] font-bold block ${hasWorkouts ? 'text-violet-300' : 'text-gray-700'}`}>{d.label}</span>
-                        {hasWorkouts ? (
-                          <span className="text-[8px] text-violet-400/70 font-medium block mt-0.5">{d.volume.toLocaleString()}</span>
-                        ) : (
-                          <span className="text-[7px] text-gray-700 italic block mt-0.5">rest</span>
-                        )}
-                      </motion.button>
+                      <motion.div key={key} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.06 }}
+                        className={`relative rounded-xl p-3 border transition-all overflow-hidden
+                          ${isMax ? `border-${bg}-500/25 bg-gradient-to-br from-${bg}-500/[0.08] to-transparent` : 'border-white/[0.04] bg-white/[0.02]'}`}>
+                        {isMax && <div className={`absolute -top-4 -right-4 w-16 h-16 bg-${bg}-500/10 rounded-full blur-xl pointer-events-none`} />}
+                        <div className="flex items-center gap-1.5 mb-2 relative z-10">
+                          <span className="text-sm">{icon}</span>
+                          <span className={`text-[9px] font-semibold ${isMax ? `text-${bg}-400` : 'text-gray-500'}`}>{label}</span>
+                        </div>
+                        <div className="relative z-10">
+                          <p className={`text-lg font-black ${isMax ? 'text-white' : 'text-gray-400'}`}>{count}</p>
+                          <p className="text-[8px] text-gray-600">{sub}</p>
+                        </div>
+                        {/* Bar */}
+                        <div className="mt-2 w-full h-1 rounded-full bg-white/[0.04] overflow-hidden relative z-10">
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.8, delay: 0.2 + idx * 0.06 }}
+                            className={`h-full rounded-full bg-gradient-to-r ${color}`} />
+                        </div>
+                        {vol > 0 && <p className="text-[8px] text-gray-600 mt-1 relative z-10">{vol.toLocaleString()}kg</p>}
+                      </motion.div>
                     )
                   })}
                 </div>
