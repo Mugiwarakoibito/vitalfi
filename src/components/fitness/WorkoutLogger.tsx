@@ -13,7 +13,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { generateId, formatDuration } from '@/lib/utils'
 import { storage } from '@/lib/storage'
 import { exerciseLibrary, getExerciseById, getAllMuscleGroups, categoryLabels, muscleGroupColors } from '@/lib/exercises'
-import { ResponsiveContainer, ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
+import { ResponsiveContainer, ComposedChart, Area, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 
@@ -1179,15 +1179,6 @@ export function WorkoutLogger() {
         const thisWeekDur = thisWeekWorkouts.length > 0 ? Math.round(thisWeekWorkouts.reduce((s,w) => s + (w.duration||0), 0) / thisWeekWorkouts.length) : 0
         const lastWeekDur = lastWeekWorkouts.length > 0 ? Math.round(lastWeekWorkouts.reduce((s,w) => s + (w.duration||0), 0) / lastWeekWorkouts.length) : 0
 
-        const fourWeekData = Array.from({ length: 4 }, (_, wi) => {
-          const ws = new Date(weekStart); ws.setDate(ws.getDate() - (3 - wi) * 7)
-          const we = new Date(ws); we.setDate(we.getDate() + 6); we.setHours(23,59,59,999)
-          const wws = workouts.filter(w => { const d = new Date(w.date); return d >= ws && d <= we })
-          const vol = wws.reduce((s,w) => s + calcVolume(w.exercises), 0)
-          const dur = wws.length > 0 ? Math.round(wws.reduce((s,w) => s + (w.duration||0), 0) / wws.length) : 0
-          return { week: `W${wi + 1}`, volume: vol, workouts: wws.length, duration: dur, label: wi === 3 ? 'This' : wi === 2 ? 'Last' : `${3 - wi}w ago` }
-        })
-
         const bestWorkout = thisWeekWorkouts.length > 0 ? thisWeekWorkouts.reduce((best, w) => calcVolume(w.exercises) > calcVolume(best.exercises) ? w : best) : null
         const bestVol = bestWorkout ? calcVolume(bestWorkout.exercises) : 0
 
@@ -1213,12 +1204,6 @@ export function WorkoutLogger() {
         const typeMap = new Map<string, number>()
         thisWeekWorkouts.forEach(w => { const t = w.type || w.category || 'strength'; typeMap.set(t, (typeMap.get(t)||0) + 1) })
         const sortedTypes = [...typeMap.entries()].sort((a,b) => b[1] - a[1])
-
-        const delta = (cur: number, prev: number) => {
-          if (prev === 0) return { pct: '--', up: true, arrow: '', label: 'no prior' }
-          const diff = ((cur - prev) / prev) * 100
-          return { pct: `${Math.abs(diff).toFixed(0)}%`, up: diff >= 0, arrow: diff >= 0 ? '\u2191' : '\u2193', label: diff >= 0 ? 'up' : 'down' }
-        }
 
         // Streak
         let currentStreak = 0
@@ -1412,163 +1397,191 @@ export function WorkoutLogger() {
             </div>
             )}
 
-            {/* ═══ COMBINED CHART: Volume Area + Workout Bars ═══ */}
+            {/* ═══ TRENDS: MEGA CHART ═══ */}
             {weeklyTab === 'trends' && (<>
-            <div className="relative rounded-2xl border border-violet-500/15 bg-gradient-to-br from-violet-500/[0.06] via-black/60 to-purple-500/[0.03] overflow-hidden">
-              <div className="absolute -top-16 -right-16 w-40 h-40 bg-violet-500/[0.06] rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-purple-500/[0.04] rounded-full blur-3xl pointer-events-none" />
-              <div className="p-4 pb-0 relative z-10">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-semibold text-violet-400/80 uppercase tracking-wider">Volume Trend</span>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-violet-500" /><span className="text-[9px] text-gray-500">Volume</span></div>
-                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-violet-500/30" /><span className="text-[9px] text-gray-500">Workouts</span></div>
+            <div className="relative rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.07] via-black/60 to-purple-500/[0.04] overflow-hidden">
+              {/* Glow orbs */}
+              <div className="absolute -top-20 -right-20 w-48 h-48 bg-violet-500/[0.06] rounded-full blur-[100px] pointer-events-none" />
+              <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-purple-500/[0.05] rounded-full blur-[100px] pointer-events-none" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-indigo-500/[0.03] rounded-full blur-[120px] pointer-events-none" />
+
+              {/* Header: Stats Row */}
+              <div className="relative z-10 px-5 pt-5 pb-3">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/10 border border-violet-500/25 flex items-center justify-center shadow-lg shadow-violet-500/10">
+                      <TrendingUp className="w-3.5 h-3.5 text-violet-400" />
+                    </div>
+                    <span className="text-[11px] font-bold text-violet-300 uppercase tracking-wider">Weekly Overview</span>
+                  </div>
+                  <div className="flex items-center gap-1 bg-white/[0.04] rounded-lg px-2 py-1 border border-white/[0.06]">
+                    <div className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
+                    <span className="text-[9px] text-gray-400 font-medium">This Week</span>
                   </div>
                 </div>
+                {/* Compact stat row */}
+                <div className="flex items-center gap-4 text-center">
+                  {[
+                    { label: 'Workouts', value: thisWeekWorkouts.length, max: 7, color: 'violet', icon: Dumbbell },
+                    { label: 'Volume', value: thisWeekVol, suffix: 'kg', color: 'cyan', icon: Weight },
+                    { label: 'Avg', value: thisWeekWorkouts.length > 0 ? Math.round(thisWeekVol / thisWeekWorkouts.length) : 0, suffix: 'kg', color: 'amber', icon: TrendingUp },
+                    { label: 'Duration', value: thisWeekDur, suffix: 'min', color: 'emerald', icon: Timer },
+                    { label: 'Days', value: dailyData.filter(d => d.count > 0).length, max: 7, color: 'rose', icon: Calendar },
+                  ].map(({ label, value, suffix, color, icon: Icon }) => {
+                    return (
+                      <div key={label} className="flex-1 relative group">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <Icon className={`w-3 h-3 text-${color}-400/60`} />
+                          <span className="text-[8px] text-gray-500 uppercase tracking-wider font-medium">{label}</span>
+                        </div>
+                        <p className={`text-lg font-black text-${color}-400`}>
+                          {typeof value === 'number' && value >= 1000 ? `${(value/1000).toFixed(1)}` : value}
+                          <span className="text-[9px] text-gray-500 font-normal ml-0.5">{suffix || (label === 'Workouts' ? '/7' : label === 'Days' ? '/7' : '')}</span>
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-              <div className="h-52 px-2 pb-2 relative z-10">
+
+              {/* Chart */}
+              <div className="relative z-10 h-64 px-2 pb-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={fourWeekData} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                  <ComposedChart data={dailyData.map((d, i) => ({
+                    name: d.label,
+                    fullName: d.name,
+                    volume: d.volume,
+                    workouts: d.count,
+                    types: d.types,
+                    dayIndex: i,
+                  }))} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
                     <defs>
-                      <linearGradient id="wAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#a855f7" stopOpacity={0.4} />
-                        <stop offset="40%" stopColor="#7c3aed" stopOpacity={0.15} />
-                        <stop offset="100%" stopColor="#6d28d9" stopOpacity={0} />
+                      <linearGradient id="dayBarGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#a855f7" stopOpacity={0.9} />
+                        <stop offset="100%" stopColor="#7c3aed" stopOpacity={0.3} />
                       </linearGradient>
-                      <linearGradient id="wLineGrad" x1="0" y1="0" x2="1" y2="0">
+                      <linearGradient id="dayBarGradActive" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#e879f9" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#a855f7" stopOpacity={0.5} />
+                      </linearGradient>
+                      <linearGradient id="volLineGrad" x1="0" y1="0" x2="1" y2="0">
                         <stop offset="0%" stopColor="#7c3aed" />
                         <stop offset="50%" stopColor="#a855f7" />
                         <stop offset="100%" stopColor="#e879f9" />
                       </linearGradient>
-                      <filter id="wGlow"><feGaussianBlur stdDeviation="4" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                      <filter id="dotGlow"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                      <filter id="barGlow"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                      <filter id="chartDotGlow"><feGaussianBlur stdDeviation="4" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} dy={8} />
-                    <YAxis yAxisId="vol" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 'auto']} width={40} tickFormatter={(v: number) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : `${v}`} />
-                    <YAxis yAxisId="cnt" orientation="right" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 'auto']} width={20} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 11, fontWeight: 600 }} axisLine={false} tickLine={false} dy={8} />
+                    <YAxis yAxisId="vol" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 'auto']} width={35} tickFormatter={(v: number) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : `${v}`} />
+                    <YAxis yAxisId="cnt" orientation="right" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 5]} width={15} />
                     <Tooltip
-                      contentStyle={{ background: 'rgba(10,10,10,0.95)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 16, fontSize: 12, backdropFilter: 'blur(20px)', boxShadow: '0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)' }}
-                      labelStyle={{ color: '#c084fc', fontWeight: 700, fontSize: 11, marginBottom: 8, borderBottom: '1px solid rgba(168,85,247,0.15)', paddingBottom: 6 }}
-                      formatter={(value: number, name: string) => name === 'volume' ? [`${value.toLocaleString()} kg`, 'Volume'] : [`${value}`, 'Sessions']}
-                      cursor={{ stroke: 'rgba(168,85,247,0.12)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload?.length) return null
+                        const data = payload[0]?.payload
+                        return (
+                          <div className="rounded-2xl border border-violet-500/25 bg-[#0a0a0a]/95 backdrop-blur-xl p-4 shadow-2xl shadow-violet-500/10 min-w-[180px]">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/[0.06]">
+                              <div className="w-6 h-6 rounded-lg bg-violet-500/15 flex items-center justify-center">
+                                <Calendar className="w-3 h-3 text-violet-400" />
+                              </div>
+                              <span className="text-[11px] font-bold text-violet-300">{data?.fullName || label}</span>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] text-gray-400">Volume</span>
+                                <span className="text-[11px] font-bold text-white">{(data?.volume || 0).toLocaleString()} kg</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] text-gray-400">Sessions</span>
+                                <span className="text-[11px] font-bold text-violet-400">{data?.workouts || 0}</span>
+                              </div>
+                              {data?.types?.length > 0 && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] text-gray-400">Types</span>
+                                  <div className="flex gap-1">
+                                    {data.types.map((t: string) => (
+                                      <span key={t} className="text-[8px] px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-300 capitalize font-medium">{t}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      }}
+                      cursor={{ stroke: 'rgba(168,85,247,0.15)', strokeWidth: 1, strokeDasharray: '4 4' }}
                     />
-                    <Bar yAxisId="cnt" dataKey="workouts" fill="rgba(168,85,247,0.12)" radius={[6, 6, 0, 0]} barSize={22} />
-                    <Area yAxisId="vol" type="monotone" dataKey="volume" stroke="url(#wLineGrad)" strokeWidth={2.5} fill="url(#wAreaGrad)"
+                    {/* Volume bars */}
+                    <Bar yAxisId="vol" dataKey="volume" radius={[8, 8, 0, 0]} barSize={32}>
+                      {dailyData.map((d, i) => {
+                        const isMax = d.volume === Math.max(...dailyData.map(dd => dd.volume))
+                        const hasWorkouts = d.count > 0
+                        return (
+                          <Cell key={i} fill={isMax ? 'url(#dayBarGradActive)' : hasWorkouts ? 'url(#dayBarGrad)' : 'rgba(255,255,255,0.03)'}
+                            stroke={isMax ? 'rgba(232,121,249,0.4)' : 'none'} strokeWidth={isMax ? 1 : 0}
+                            filter={isMax ? 'url(#barGlow)' : undefined} />
+                        )
+                      })}
+                    </Bar>
+                    {/* Workout count line */}
+                    <Area yAxisId="cnt" type="monotone" dataKey="workouts" stroke="url(#volLineGrad)" strokeWidth={2} fill="none"
                       dot={(props: any) => {
                         const { cx, cy, payload } = props
-                        const isMax = payload.volume === Math.max(...fourWeekData.map(d => d.volume))
-                        const isThis = payload.label === 'This'
+                        const hasWorkouts = payload.workouts > 0
+                        if (!hasWorkouts) return <></>
                         return (
                           <g>
-                            {isMax && <>
-                              <circle cx={cx} cy={cy} r={20} fill="rgba(168,85,247,0.06)" filter="url(#wGlow)" />
-                              <circle cx={cx} cy={cy} r={12} fill="none" stroke="rgba(168,85,247,0.15)" strokeWidth="1" strokeDasharray="3 3">
-                                <animate attributeName="r" from="10" to="20" dur="2s" repeatCount="indefinite" />
-                                <animate attributeName="opacity" from="0.6" to="0" dur="2s" repeatCount="indefinite" />
-                              </circle>
-                            </>}
-                            <circle cx={cx} cy={cy} r={isMax ? 6 : isThis ? 5 : 3} fill={isMax ? '#e879f9' : isThis ? '#a855f7' : '#581c87'} stroke="#0a0a0a" strokeWidth={2} filter={isMax ? 'url(#dotGlow)' : undefined} />
+                            <circle cx={cx} cy={cy} r={8} fill="rgba(168,85,247,0.1)" filter="url(#chartDotGlow)" />
+                            <circle cx={cx} cy={cy} r={4} fill="#e879f9" stroke="#0a0a0a" strokeWidth={2} />
+                            <text x={cx} y={cy - 12} textAnchor="middle" className="fill-violet-300 text-[9px] font-bold">{payload.workouts}</text>
                           </g>
                         )
                       }}
-                      activeDot={{ r: 7, fill: '#e879f9', stroke: '#0a0a0a', strokeWidth: 2.5, filter: 'url(#dotGlow)' }}
+                      activeDot={{ r: 6, fill: '#e879f9', stroke: '#0a0a0a', strokeWidth: 2, filter: 'url(#chartDotGlow)' }}
                     />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
-            </div>
 
-            {/* ═══ HERO STAT CARDS ═══ */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-              {[
-                { label: 'Workouts', value: `${thisWeekWorkouts.length}`, sub: '/ 7', d: delta(thisWeekWorkouts.length, lastWeekWorkouts.length), icon: Dumbbell, gradient: 'from-violet-500 to-purple-600', glow: 'violet', ring: 'ring-violet-500/20' },
-                { label: 'Volume', value: thisWeekVol >= 1000 ? `${(thisWeekVol/1000).toFixed(1)}` : `${thisWeekVol}`, sub: thisWeekVol >= 1000 ? 'tonnes' : 'kg', d: delta(thisWeekVol, lastWeekVol), icon: Weight, gradient: 'from-cyan-500 to-blue-600', glow: 'cyan', ring: 'ring-cyan-500/20' },
-                { label: 'Avg Load', value: thisWeekWorkouts.length > 0 ? `${Math.round(thisWeekVol / thisWeekWorkouts.length)}` : '0', sub: 'kg/s', d: delta(thisWeekWorkouts.length > 0 ? Math.round(thisWeekVol / thisWeekWorkouts.length) : 0, lastWeekWorkouts.length > 0 ? Math.round(lastWeekVol / lastWeekWorkouts.length) : 0), icon: TrendingUp, gradient: 'from-amber-500 to-orange-600', glow: 'amber', ring: 'ring-amber-500/20' },
-                { label: 'Duration', value: thisWeekDur > 0 ? `${thisWeekDur}` : '--', sub: 'min avg', d: delta(thisWeekDur, lastWeekDur), icon: Timer, gradient: 'from-emerald-500 to-teal-600', glow: 'emerald', ring: 'ring-emerald-500/20' },
-              ].map(({ label, value, sub, d, icon: Icon, gradient, glow }, idx) => (
-                <motion.div key={label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.06, duration: 0.4 }}
-                  className={`relative rounded-2xl border border-${glow}-500/15 bg-gradient-to-br from-${glow}-500/[0.06] via-black/60 to-${glow}-500/[0.02] p-4 overflow-hidden group hover:border-${glow}-500/30 transition-all duration-300`}>
-                  <div className={`absolute -top-6 -${idx % 2 === 0 ? 'right' : 'left'}-6 w-20 h-20 bg-${glow}-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-500`} />
-                  <div className="flex items-start justify-between mb-3 relative z-10">
-                    <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg shadow-${glow}-500/20`}>
-                      <Icon className="w-4.5 h-4.5 text-white" />
-                    </div>
-                    {d.pct !== '--' && (
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${d.up ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'}`}>
-                        {d.arrow} {d.pct}
-                      </span>
-                    )}
+              {/* Bottom: Heatmap Strip */}
+              <div className="relative z-10 px-5 pb-5 pt-2">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Daily Intensity</span>
+                  <div className="flex-1 h-px bg-white/[0.04]" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[8px] text-gray-600">Low</span>
+                    {[0.1, 0.25, 0.4, 0.55, 0.7].map((s, i) => (
+                      <div key={i} className="w-3 h-3 rounded-sm" style={{ background: `rgba(168,85,247,${s})` }} />
+                    ))}
+                    <span className="text-[8px] text-gray-600">High</span>
                   </div>
-                  <div className="relative z-10">
-                    <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium mb-0.5">{label}</p>
-                    <p className="text-2xl font-black text-white">{value}<span className="text-xs text-gray-500 font-normal ml-0.5">{sub}</span></p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* ═══ HEATMAP CALENDAR ═══ */}
-            <div className="rounded-2xl border border-violet-500/15 bg-gradient-to-br from-violet-500/[0.05] via-black/60 to-purple-500/[0.03] p-5 relative overflow-hidden">
-              <div className="absolute -top-12 -right-12 w-32 h-32 bg-violet-500/[0.05] rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-purple-500/[0.04] rounded-full blur-3xl pointer-events-none" />
-              <div className="flex items-center justify-between mb-4 relative z-10">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-violet-500/15 border border-violet-500/20 flex items-center justify-center">
-                    <Calendar className="w-3 h-3 text-violet-400" />
-                  </div>
-                  <span className="text-[11px] font-bold text-violet-300 uppercase tracking-wider">Weekly Heatmap</span>
                 </div>
-                <span className="text-[10px] text-gray-500">
-                  <span className="text-violet-400 font-bold">{dailyData.filter(d => d.count > 0).length}</span>/7 active
-                </span>
-              </div>
-              <div className="grid grid-cols-7 gap-2 relative z-10">
-                {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d, i) => (
-                  <span key={`hdr-${i}`} className="text-center text-[9px] text-gray-600 font-semibold uppercase tracking-wider">{d}</span>
-                ))}
-                {Array.from({ length: 7 }, (_, i) => {
-                  const dayWorkouts = thisWeekWorkouts.filter(w => new Date(w.date).getDay() === i)
-                  const vol = dayWorkouts.reduce((s,w) => s + calcVolume(w.exercises), 0)
-                  const intensity = maxDailyVol > 0 ? vol / maxDailyVol : 0
-                  const isSelected = selectedDay === i
-                  const hasWorkouts = dayWorkouts.length > 0
-                  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-                  return (
-                    <motion.button key={`heat-${i}`} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: i * 0.04, duration: 0.3 }}
-                      onClick={() => setSelectedDay(isSelected ? null : i)}
-                      className={`relative aspect-square rounded-xl flex flex-col items-center justify-center border transition-all duration-300 cursor-pointer group
-                        ${isSelected
-                          ? 'border-violet-500/50 bg-violet-500/20 shadow-lg shadow-violet-500/15 scale-110 ring-2 ring-violet-500/20'
-                          : hasWorkouts
-                            ? 'border-violet-500/15 hover:border-violet-500/30 hover:bg-violet-500/[0.08] hover:scale-105'
-                            : 'border-white/[0.04] hover:border-white/10 hover:bg-white/[0.02]'}`}>
-                      {hasWorkouts && (
-                        <div className="absolute inset-0 rounded-xl opacity-60" style={{
-                          background: `linear-gradient(135deg, rgba(168,85,247,${0.08 + intensity * 0.25}), rgba(139,92,246,${0.04 + intensity * 0.15}))`
-                        }} />
-                      )}
-                      <span className={`text-[11px] font-bold relative z-10 ${hasWorkouts ? 'text-white' : 'text-gray-600'}`}>
-                        {dayNames[i]}
-                      </span>
-                      {hasWorkouts ? (
-                        <span className="text-[8px] text-violet-300/90 mt-0.5 font-bold relative z-10">{vol >= 1000 ? `${(vol/1000).toFixed(1)}k` : vol}<span className="text-[6px] text-violet-400/60 ml-0.5">kg</span></span>
-                      ) : (
-                        <span className="text-[7px] text-gray-700 mt-0.5 italic relative z-10">rest</span>
-                      )}
-                      {hasWorkouts && <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 rounded-full bg-gradient-to-r from-violet-500/60 to-purple-500/60 shadow-sm shadow-violet-500/30" />}
-                    </motion.button>
-                  )
-                })}
-              </div>
-              {/* Intensity Legend */}
-              <div className="flex items-center justify-center gap-2 mt-4 relative z-10">
-                <span className="text-[8px] text-gray-600">Less</span>
-                {[0, 0.2, 0.4, 0.6, 0.8, 1].map((s, i) => (
-                  <div key={i} className="w-4 h-4 rounded-sm" style={{ background: `rgba(168,85,247,${0.05 + s * 0.4})` }} />
-                ))}
-                <span className="text-[8px] text-gray-600">More</span>
+                <div className="flex gap-1.5">
+                  {dailyData.map((d, i) => {
+                    const intensity = maxDailyVol > 0 ? d.volume / maxDailyVol : 0
+                    const hasWorkouts = d.count > 0
+                    const isSelected = selectedDay === i
+                    return (
+                      <motion.button key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.04 }}
+                        onClick={() => setSelectedDay(isSelected ? null : i)}
+                        className={`flex-1 rounded-xl py-2 px-1 text-center border transition-all duration-300 cursor-pointer
+                          ${isSelected ? 'border-violet-500/40 bg-violet-500/15 shadow-lg shadow-violet-500/10 scale-105' :
+                            hasWorkouts ? 'border-violet-500/10 hover:border-violet-500/25 hover:bg-violet-500/[0.06]' :
+                            'border-white/[0.03] hover:border-white/[0.06]'}`}
+                        style={hasWorkouts ? { background: `linear-gradient(180deg, rgba(168,85,247,${0.06 + intensity * 0.2}), transparent)` } : undefined}>
+                        <span className={`text-[10px] font-bold block ${hasWorkouts ? 'text-violet-300' : 'text-gray-700'}`}>{d.label}</span>
+                        {hasWorkouts ? (
+                          <span className="text-[8px] text-violet-400/70 font-medium block mt-0.5">{d.volume.toLocaleString()}</span>
+                        ) : (
+                          <span className="text-[7px] text-gray-700 italic block mt-0.5">rest</span>
+                        )}
+                      </motion.button>
+                    )
+                  })}
+                </div>
               </div>
             </div>
 
@@ -1614,7 +1627,7 @@ export function WorkoutLogger() {
                                 <div className="flex items-center gap-2 mt-0.5">
                                   <span className="text-[9px] text-violet-400/80 font-medium">{calcVolume(w.exercises).toLocaleString()}kg</span>
                                   <span className="text-[9px] text-gray-600">·</span>
-                                  <span className="text-[9px] text-gray-500">{w.exercises.length} exercises</span>
+                                  <span className="text-[9px] text-gray-500">{w.exercises.length} ex</span>
                                   <span className="text-[9px] text-gray-600">·</span>
                                   <span className="text-[9px] text-gray-500">{w.duration || 0}min</span>
                                 </div>
@@ -1639,66 +1652,27 @@ export function WorkoutLogger() {
               })()}
             </AnimatePresence>
 
-            {/* ═══ TYPES + ACTIVE DAYS ═══ */}
+            {/* ═══ SESSION TYPES ═══ */}
             {sortedTypes.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* Workout Type Breakdown */}
-                <div className="rounded-2xl border border-violet-500/15 bg-gradient-to-br from-violet-500/[0.05] via-black/60 to-purple-500/[0.03] p-4 relative overflow-hidden">
-                  <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-violet-500/[0.05] rounded-full blur-2xl pointer-events-none" />
-                  <span className="text-[10px] font-semibold text-violet-400/80 uppercase tracking-wider block mb-3 relative z-10">Session Types</span>
-                  <div className="space-y-2 relative z-10">
-                    {sortedTypes.map(([type, count]) => {
-                      const tc = typeConfig[type] || typeConfig.strength
-                      const pct = Math.round((count / thisWeekWorkouts.length) * 100)
-                      return (
-                        <div key={type} className="flex items-center gap-2.5">
-                          <div className={`w-7 h-7 rounded-lg ${tc.bg} border ${tc.color.includes('violet') ? 'border-violet-500/20' : tc.color.includes('red') ? 'border-red-500/20' : tc.color.includes('cyan') ? 'border-cyan-500/20' : tc.color.includes('amber') ? 'border-amber-500/20' : 'border-emerald-500/20'} flex items-center justify-center shrink-0`}>
-                            <tc.icon className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-[10px] text-gray-300 capitalize font-semibold">{type.replace('_', ' ')}</span>
-                              <span className="text-[10px] text-gray-500 font-medium">{count}× <span className="text-gray-600">({pct}%)</span></span>
-                            </div>
-                            <div className="w-full h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                              <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, ease: 'easeOut' }}
-                                className={`h-full rounded-full ${tc.color.includes('violet') ? 'bg-gradient-to-r from-violet-500 to-purple-400' : tc.color.includes('red') ? 'bg-gradient-to-r from-red-500 to-rose-400' : tc.color.includes('cyan') ? 'bg-gradient-to-r from-cyan-500 to-blue-400' : tc.color.includes('amber') ? 'bg-gradient-to-r from-amber-500 to-yellow-400' : 'bg-gradient-to-r from-emerald-500 to-green-400'}`} />
-                            </div>
-                          </div>
+              <div className="rounded-2xl border border-violet-500/15 bg-gradient-to-br from-violet-500/[0.05] via-black/60 to-purple-500/[0.03] p-4 relative overflow-hidden">
+                <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-violet-500/[0.05] rounded-full blur-2xl pointer-events-none" />
+                <span className="text-[10px] font-semibold text-violet-400/80 uppercase tracking-wider block mb-3 relative z-10">Session Types</span>
+                <div className="flex gap-2 flex-wrap relative z-10">
+                  {sortedTypes.map(([type, count]) => {
+                    const tc = typeConfig[type] || typeConfig.strength
+                    const pct = Math.round((count / thisWeekWorkouts.length) * 100)
+                    return (
+                      <div key={type} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] flex-1 min-w-[120px]">
+                        <div className={`w-7 h-7 rounded-lg ${tc.bg} flex items-center justify-center shrink-0`}>
+                          <tc.icon className="w-3.5 h-3.5" />
                         </div>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* Active Days Breakdown */}
-                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-                  <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-3">Daily Breakdown</span>
-                  <div className="space-y-1.5">
-                    {dailyData.map((d, i) => (
-                      <motion.div key={d.name} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                        className="flex items-center gap-2">
-                        <span className={`text-[10px] w-6 font-bold ${d.count > 0 ? 'text-violet-400' : 'text-gray-700'}`}>{d.label}</span>
-                        <div className="flex-1 h-5 rounded-lg bg-white/[0.02] border border-white/[0.04] overflow-hidden relative">
-                          {d.volume > 0 ? (
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(8, (d.volume / maxDailyVol) * 100)}%` }}
-                              transition={{ duration: 0.6, delay: i * 0.04, ease: [0.25, 0.46, 0.45, 0.94] }}
-                              className="h-full rounded-lg bg-gradient-to-r from-violet-600/80 to-purple-500/60 flex items-center justify-end pr-2">
-                              <span className="text-[9px] text-white/90 font-bold">{d.volume.toLocaleString()}</span>
-                            </motion.div>
-                          ) : (
-                            <span className="absolute inset-0 flex items-center pl-2 text-[9px] text-gray-700 italic">rest</span>
-                          )}
+                        <div className="min-w-0">
+                          <span className="text-[10px] text-gray-300 capitalize font-semibold block">{type.replace('_', ' ')}</span>
+                          <span className="text-[9px] text-gray-500">{count}× · {pct}%</span>
                         </div>
-                        <div className="flex gap-0.5 w-14 justify-end">
-                          {d.types.map(t => {
-                            const tc = typeConfig[t] || typeConfig.strength
-                            return <span key={t} className={`text-[7px] px-1 py-0.5 rounded ${tc.bg} ${tc.color} font-bold uppercase`}>{t.charAt(0)}</span>
-                          })}
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
