@@ -1170,9 +1170,10 @@ export function WorkoutLogger() {
       {/* Weekly Analytics Panel */}
       <AnimatePresence>{showWeeklyAnalytics && workouts.length > 0 && (() => {
         const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() - weeklyNavOffset * 7); weekStart.setHours(0,0,0,0)
+        const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 6); weekEnd.setHours(23,59,59,999)
         const lastWeekEnd = new Date(weekStart); lastWeekEnd.setDate(lastWeekEnd.getDate() - 1)
         const lastWeekStart = new Date(lastWeekEnd); lastWeekStart.setDate(lastWeekStart.getDate() - 6); lastWeekStart.setHours(0,0,0,0)
-        const thisWeekWorkouts = workouts.filter(w => new Date(w.date) >= weekStart)
+        const thisWeekWorkouts = workouts.filter(w => { const d = new Date(w.date); return d >= weekStart && d <= weekEnd })
         const lastWeekWorkouts = workouts.filter(w => { const d = new Date(w.date); return d >= lastWeekStart && d <= lastWeekEnd })
         const thisWeekVol = thisWeekWorkouts.reduce((s,w) => s + calcVolume(w.exercises), 0)
         const lastWeekVol = lastWeekWorkouts.reduce((s,w) => s + calcVolume(w.exercises), 0)
