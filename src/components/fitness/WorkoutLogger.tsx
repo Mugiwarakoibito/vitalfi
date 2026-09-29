@@ -655,6 +655,7 @@ export function WorkoutLogger() {
   const [showWeeklyAnalytics, setShowWeeklyAnalytics] = useState(false)
   const [weeklyNavOffset, setWeeklyNavOffset] = useState(0)
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
+  const [weeklyTab, setWeeklyTab] = useState<'trends' | 'performance' | 'insights'>('trends')
   const [showTypeDropdown, setShowTypeDropdown] = useState(false)
   const fromDayRef = useRef<HTMLInputElement>(null)
   const fromMonthRef = useRef<HTMLInputElement>(null)
@@ -1299,7 +1300,32 @@ export function WorkoutLogger() {
               </button>
             </div>
 
+            {/* ═══ SECTION TABS ═══ */}
+            <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
+              {([
+                { key: 'trends' as const, emoji: '📈', label: 'Trends', color: 'violet' },
+                { key: 'performance' as const, emoji: '💪', label: 'Performance', color: 'cyan' },
+                { key: 'insights' as const, emoji: '🧠', label: 'Insights', color: 'amber' },
+              ]).map(tab => (
+                <button key={tab.key} onClick={() => setWeeklyTab(tab.key)}
+                  className={`relative flex-1 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
+                    weeklyTab === tab.key
+                      ? tab.key === 'trends' ? 'text-violet-300 bg-gradient-to-b from-violet-500/20 to-violet-500/5 border border-violet-500/25 shadow-lg shadow-violet-500/8'
+                      : tab.key === 'performance' ? 'text-cyan-300 bg-gradient-to-b from-cyan-500/20 to-cyan-500/5 border border-cyan-500/25 shadow-lg shadow-cyan-500/8'
+                      : 'text-amber-300 bg-gradient-to-b from-amber-500/20 to-amber-500/5 border border-amber-500/25 shadow-lg shadow-amber-500/8'
+                      : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'
+                  }`}>
+                  <span className="relative z-10 flex items-center justify-center gap-1.5">
+                    <span>{tab.emoji}</span>
+                    {tab.label}
+                  </span>
+                  {weeklyTab === tab.key && <span className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/[0.06]" />}
+                </button>
+              ))}
+            </div>
+
             {/* ═══ HERO: Progress Ring + Streak + Intensity + Consistency ═══ */}
+            {weeklyTab === 'performance' && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {/* Progress Ring */}
               <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] relative overflow-hidden">
@@ -1361,8 +1387,10 @@ export function WorkoutLogger() {
                 <p className="text-[9px] text-gray-600 mt-1">{activeDays.length}d active</p>
               </div>
             </div>
+            )}
 
             {/* ═══ COMBINED CHART: Volume Area + Workout Bars ═══ */}
+            {weeklyTab === 'trends' && (<>
             <div className="relative h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={fourWeekData} margin={{ top: 15, right: 15, bottom: 5, left: 5 }}>
@@ -1506,8 +1534,10 @@ export function WorkoutLogger() {
                 )
               })()}
             </AnimatePresence>
+            </>)}
 
             {/* ═══ MUSCLE RADAR + IMBALANCE ═══ */}
+            {weeklyTab === 'performance' && (<>
             {sortedMuscles.length > 0 && (() => {
               const radarSize = 140
               const cx = radarSize / 2, cy = radarSize / 2
@@ -1679,8 +1709,10 @@ export function WorkoutLogger() {
                 </div>
               </div>
             </div>
+            </>)}
 
             {/* ═══ SMART INSIGHTS ═══ */}
+            {weeklyTab === 'insights' && (
             <div className="space-y-3">
               <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Insights</span>
 
@@ -1727,6 +1759,7 @@ export function WorkoutLogger() {
                 </span>
               </div>
             </div>
+            )}
           </div>
         </motion.div>
         )
