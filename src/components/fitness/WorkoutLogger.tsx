@@ -1284,138 +1284,164 @@ export function WorkoutLogger() {
           <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl p-5 space-y-5 relative overflow-hidden">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-80 bg-violet-500/[0.04] rounded-full blur-[120px] pointer-events-none" />
 
-            {/* ═══ WEEK NAV ═══ */}
-            <div className="flex items-center gap-1 relative">
-              <button onClick={() => setWeeklyNavOffset(o => o + 1)} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">
-                {weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(weekStart.getTime() + 6 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </span>
-              <button disabled={weeklyNavOffset === 0} onClick={() => setWeeklyNavOffset(o => Math.min(o - 1, 0))} className={`p-1.5 rounded-xl border transition-all ${weeklyNavOffset === 0 ? 'bg-white/[0.02] border-white/[0.04] text-gray-600 cursor-not-allowed' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20'}`}>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-              <button onClick={() => setWeeklyNavOffset(0)} className={`p-1.5 rounded-xl border transition-all ${weeklyNavOffset === 0 ? 'bg-white/[0.02] border-white/[0.04] text-gray-600' : 'bg-violet-500/10 border-violet-500/20 text-violet-400 hover:bg-violet-500/20'}`} title={weeklyNavOffset === 0 ? 'Current week' : 'Jump to now'}>
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* ═══ SECTION TABS ═══ */}
-            <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
-              {([
-                { key: 'trends' as const, emoji: '📈', label: 'Trends', color: 'violet' },
-                { key: 'performance' as const, emoji: '💪', label: 'Performance', color: 'cyan' },
-                { key: 'insights' as const, emoji: '🧠', label: 'Insights', color: 'amber' },
-              ]).map(tab => (
-                <button key={tab.key} onClick={() => setWeeklyTab(tab.key)}
-                  className={`relative flex-1 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
-                    weeklyTab === tab.key
-                      ? tab.key === 'trends' ? 'text-violet-300 bg-gradient-to-b from-violet-500/20 to-violet-500/5 border border-violet-500/25 shadow-lg shadow-violet-500/8'
-                      : tab.key === 'performance' ? 'text-cyan-300 bg-gradient-to-b from-cyan-500/20 to-cyan-500/5 border border-cyan-500/25 shadow-lg shadow-cyan-500/8'
-                      : 'text-amber-300 bg-gradient-to-b from-amber-500/20 to-amber-500/5 border border-amber-500/25 shadow-lg shadow-amber-500/8'
-                      : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'
-                  }`}>
-                  <span className="relative z-10 flex items-center justify-center gap-1.5">
-                    <span>{tab.emoji}</span>
-                    {tab.label}
-                  </span>
-                  {weeklyTab === tab.key && <span className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/[0.06]" />}
+            {/* ═══ WEEK NAV + SECTION TABS ═══ */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-1">
+                <button onClick={() => setWeeklyNavOffset(o => o + 1)} className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20 transition-all">
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
-              ))}
+                <span className="text-[10px] text-gray-500 font-medium px-2 min-w-[120px] text-center select-none">
+                  {weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(weekStart.getTime() + 6 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+                <button disabled={weeklyNavOffset === 0} onClick={() => setWeeklyNavOffset(o => Math.min(o - 1, 0))} className={`p-1.5 rounded-xl border transition-all ${weeklyNavOffset === 0 ? 'bg-white/[0.02] border-white/[0.04] text-gray-600 cursor-not-allowed' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-violet-500/20'}`}>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                {weeklyNavOffset !== 0 && (
+                  <button onClick={() => setWeeklyNavOffset(0)} className="p-1.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all" title="Jump to now">
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
+                {([
+                  { key: 'trends' as const, icon: TrendingUp, label: 'Trends' },
+                  { key: 'performance' as const, icon: Activity, label: 'Perf.' },
+                  { key: 'insights' as const, icon: Sparkles, label: 'Insights' },
+                ]).map(tab => {
+                  const TabIcon = tab.icon
+                  return (
+                    <button key={tab.key} onClick={() => setWeeklyTab(tab.key)}
+                      className={`relative px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
+                        weeklyTab === tab.key
+                          ? tab.key === 'trends' ? 'text-violet-300 bg-gradient-to-b from-violet-500/20 to-violet-500/5 border border-violet-500/25 shadow-lg shadow-violet-500/8'
+                          : tab.key === 'performance' ? 'text-cyan-300 bg-gradient-to-b from-cyan-500/20 to-cyan-500/5 border border-cyan-500/25 shadow-lg shadow-cyan-500/8'
+                          : 'text-amber-300 bg-gradient-to-b from-amber-500/20 to-amber-500/5 border border-amber-500/25 shadow-lg shadow-amber-500/8'
+                          : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent'
+                      }`}>
+                      <span className="relative z-10 flex items-center gap-1.5">
+                        <TabIcon className="w-3 h-3" />
+                        {tab.label}
+                      </span>
+                      {weeklyTab === tab.key && <span className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/[0.06]" />}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             {/* ═══ HERO: Progress Ring + Streak + Intensity + Consistency ═══ */}
             {weeklyTab === 'performance' && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {/* Progress Ring */}
-              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] relative overflow-hidden">
-                <svg width="90" height="90" viewBox="0 0 100 100" className="drop-shadow-lg">
+              <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.08] via-black/60 to-violet-500/[0.03] relative overflow-hidden">
+                <div className="absolute -top-8 -right-8 w-24 h-24 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
+                <svg width="90" height="90" viewBox="0 0 100 100" className="drop-shadow-lg relative z-10">
                   <defs>
                     <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" stopColor="#a855f7" />
+                      <stop offset="50%" stopColor="#c084fc" />
                       <stop offset="100%" stopColor="#e879f9" />
                     </linearGradient>
+                    <filter id="ringGlow"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                   </defs>
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="7" />
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(168,85,247,0.08)" strokeWidth="7" />
                   <circle cx="50" cy="50" r="40" fill="none" stroke="url(#ringGrad)" strokeWidth="7" strokeLinecap="round"
                     strokeDasharray={`${(goalPct / 100) * 251.2} 251.2`}
-                    transform="rotate(-90 50 50)" />
-                  <text x="50" y="44" textAnchor="middle" className="fill-white text-[18px] font-black">{goalPct}%</text>
-                  <text x="50" y="58" textAnchor="middle" className="fill-gray-500 text-[7px] font-medium">GOAL</text>
-                  <text x="50" y="67" textAnchor="middle" className="fill-violet-400 text-[8px] font-bold">{thisWeekWorkouts.length}/{weeklyGoal}</text>
+                    transform="rotate(-90 50 50)" filter="url(#ringGlow)" />
+                  <text x="50" y="42" textAnchor="middle" className="fill-white text-[20px] font-black">{goalPct}<tspan className="text-[11px]">%</tspan></text>
+                  <text x="50" y="56" textAnchor="middle" className="fill-gray-500 text-[7px] font-medium uppercase tracking-widest">Goal</text>
+                  <text x="50" y="67" textAnchor="middle" className="fill-violet-400 text-[9px] font-bold">{thisWeekWorkouts.length}/{weeklyGoal}</text>
                 </svg>
-                <span className="text-[9px] text-gray-500 mt-1 uppercase tracking-wider">Weekly Goal</span>
+                <span className="text-[9px] text-violet-400/70 mt-1 uppercase tracking-wider font-semibold relative z-10">Weekly Goal</span>
               </div>
 
               {/* Streak */}
-              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] relative overflow-hidden">
-                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-2">
-                  <Zap className="w-7 h-7 text-amber-400" />
+              <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.08] via-black/60 to-orange-500/[0.03] relative overflow-hidden">
+                <div className="absolute -top-8 -left-8 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-amber-500/25 flex items-center justify-center mb-2 relative z-10 shadow-lg shadow-amber-500/10">
+                  <Zap className="w-7 h-7 text-amber-400" fill="currentColor" />
                 </div>
-                <p className="text-2xl font-black text-white">{currentStreak}</p>
-                <p className="text-[9px] text-gray-500 uppercase tracking-wider">Day Streak</p>
-                <p className="text-[9px] text-gray-600 mt-1">Best: {longestStreak}d</p>
+                <p className="text-2xl font-black text-white relative z-10">{currentStreak}<span className="text-xs text-gray-500 font-normal ml-0.5">d</span></p>
+                <p className="text-[9px] text-amber-400/70 uppercase tracking-wider font-semibold relative z-10">Streak</p>
+                <p className="text-[9px] text-gray-600 mt-1 relative z-10">Best: {longestStreak}d</p>
               </div>
 
               {/* Intensity Score */}
-              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] relative overflow-hidden">
-                <div className="relative w-16 h-16 mb-2">
+              <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.08] via-black/60 to-teal-500/[0.03] relative overflow-hidden">
+                <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+                <div className="relative w-16 h-16 mb-2 z-10">
                   <svg viewBox="0 0 60 60" className="w-16 h-16 -rotate-90">
+                    <defs>
+                      <linearGradient id="intGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor={intensityScore >= 70 ? '#22c55e' : intensityScore >= 40 ? '#f59e0b' : '#ef4444'} />
+                        <stop offset="100%" stopColor={intensityScore >= 70 ? '#4ade80' : intensityScore >= 40 ? '#fbbf24' : '#f87171'} />
+                      </linearGradient>
+                    </defs>
                     <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="5" />
-                    <circle cx="30" cy="30" r="25" fill="none" stroke={intensityScore >= 70 ? '#22c55e' : intensityScore >= 40 ? '#f59e0b' : '#ef4444'} strokeWidth="5" strokeLinecap="round"
+                    <circle cx="30" cy="30" r="25" fill="none" stroke="url(#intGrad)" strokeWidth="5" strokeLinecap="round"
                       strokeDasharray={`${(intensityScore / 100) * 157} 157`} />
                   </svg>
                   <span className="absolute inset-0 flex items-center justify-center text-sm font-black text-white">{intensityScore}</span>
                 </div>
-                <p className="text-[9px] text-gray-500 uppercase tracking-wider">Intensity</p>
-                <p className={`text-[9px] mt-1 font-semibold ${intensityScore >= 70 ? 'text-emerald-400' : intensityScore >= 40 ? 'text-amber-400' : 'text-rose-400'}`}>
+                <p className="text-[9px] text-emerald-400/70 uppercase tracking-wider font-semibold z-10">Intensity</p>
+                <p className={`text-[9px] mt-1 font-bold z-10 ${intensityScore >= 70 ? 'text-emerald-400' : intensityScore >= 40 ? 'text-amber-400' : 'text-rose-400'}`}>
                   {intensityScore >= 70 ? 'High' : intensityScore >= 40 ? 'Moderate' : 'Low'}
                 </p>
               </div>
 
               {/* Consistency Score */}
-              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] relative overflow-hidden">
-                <div className="relative w-16 h-16 mb-2">
+              <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/[0.08] via-black/60 to-blue-500/[0.03] relative overflow-hidden">
+                <div className="absolute -top-8 -left-8 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
+                <div className="relative w-16 h-16 mb-2 z-10">
                   <svg viewBox="0 0 60 60" className="w-16 h-16 -rotate-90">
+                    <defs>
+                      <linearGradient id="conGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#22d3ee" />
+                        <stop offset="100%" stopColor="#67e8f9" />
+                      </linearGradient>
+                    </defs>
                     <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="5" />
-                    <circle cx="30" cy="30" r="25" fill="none" stroke={consistencyScore >= 70 ? '#22d3ee' : consistencyScore >= 40 ? '#a78bfa' : '#f87171'} strokeWidth="5" strokeLinecap="round"
+                    <circle cx="30" cy="30" r="25" fill="none" stroke="url(#conGrad)" strokeWidth="5" strokeLinecap="round"
                       strokeDasharray={`${(Math.min(100, consistencyScore) / 100) * 157} 157`} />
                   </svg>
                   <span className="absolute inset-0 flex items-center justify-center text-sm font-black text-white">{Math.min(100, consistencyScore)}</span>
                 </div>
-                <p className="text-[9px] text-gray-500 uppercase tracking-wider">Consistency</p>
-                <p className="text-[9px] text-gray-600 mt-1">{activeDays.length}d active</p>
+                <p className="text-[9px] text-cyan-400/70 uppercase tracking-wider font-semibold z-10">Consistency</p>
+                <p className="text-[9px] text-gray-600 mt-1 z-10">{activeDays.length}d active</p>
               </div>
             </div>
             )}
 
             {/* ═══ COMBINED CHART: Volume Area + Workout Bars ═══ */}
             {weeklyTab === 'trends' && (<>
-            <div className="relative h-56">
+            <div className="relative h-56 rounded-2xl border border-white/[0.06] bg-gradient-to-br from-violet-500/[0.04] via-black/40 to-purple-500/[0.02] p-3 overflow-hidden">
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-violet-500/8 rounded-full blur-3xl pointer-events-none" />
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={fourWeekData} margin={{ top: 15, right: 15, bottom: 5, left: 5 }}>
+                <ComposedChart data={fourWeekData} margin={{ top: 10, right: 10, bottom: 5, left: 0 }}>
                   <defs>
                     <linearGradient id="wAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#a855f7" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="#a855f7" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#a855f7" stopOpacity={0.4} />
+                      <stop offset="50%" stopColor="#7c3aed" stopOpacity={0.1} />
+                      <stop offset="100%" stopColor="#6d28d9" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="wLineGrad" x1="0" y1="0" x2="1" y2="0">
                       <stop offset="0%" stopColor="#7c3aed" />
+                      <stop offset="50%" stopColor="#a855f7" />
                       <stop offset="100%" stopColor="#e879f9" />
                     </linearGradient>
-                    <filter id="wGlow"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                    <filter id="wGlow"><feGaussianBlur stdDeviation="4" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                   <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} dy={8} />
                   <YAxis yAxisId="vol" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 'auto']} width={40} tickFormatter={(v: number) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : `${v}`} />
                   <YAxis yAxisId="cnt" orientation="right" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 'auto']} width={20} />
                   <Tooltip
-                    contentStyle={{ background: 'rgba(7,7,7,0.95)', border: '1px solid rgba(168,85,247,0.2)', borderRadius: 14, fontSize: 12, backdropFilter: 'blur(16px)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+                    contentStyle={{ background: 'rgba(7,7,7,0.95)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 16, fontSize: 12, backdropFilter: 'blur(20px)', boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(168,85,247,0.1)' }}
                     labelStyle={{ color: '#c084fc', fontWeight: 700, fontSize: 11, marginBottom: 6 }}
                     formatter={(value: number, name: string) => name === 'volume' ? [`${value.toLocaleString()}kg`, 'Volume'] : [`${value}`, 'Workouts']}
                     cursor={{ stroke: 'rgba(168,85,247,0.15)', strokeWidth: 1, strokeDasharray: '4 4' }}
                   />
-                  <Bar yAxisId="cnt" dataKey="workouts" fill="rgba(168,85,247,0.12)" radius={[4, 4, 0, 0]} barSize={20} />
+                  <Bar yAxisId="cnt" dataKey="workouts" fill="rgba(168,85,247,0.15)" radius={[6, 6, 0, 0]} barSize={18} />
                   <Area yAxisId="vol" type="monotone" dataKey="volume" stroke="url(#wLineGrad)" strokeWidth={2.5} fill="url(#wAreaGrad)"
                     dot={(props: any) => {
                       const { cx, cy, payload } = props
@@ -1423,7 +1449,7 @@ export function WorkoutLogger() {
                       const isThis = payload.label === 'This'
                       return (
                         <g>
-                          {isMax && <circle cx={cx} cy={cy} r={16} fill="rgba(168,85,247,0.06)" filter="url(#wGlow)" />}
+                          {isMax && <circle cx={cx} cy={cy} r={18} fill="rgba(168,85,247,0.08)" filter="url(#wGlow)" />}
                           <circle cx={cx} cy={cy} r={isMax ? 6 : isThis ? 5 : 3} fill={isMax ? '#e879f9' : isThis ? '#a855f7' : '#581c87'} stroke="#0a0a0a" strokeWidth={2} filter={isMax ? 'url(#wGlow)' : undefined} />
                         </g>
                       )
@@ -1435,30 +1461,32 @@ export function WorkoutLogger() {
             </div>
 
             {/* ═══ STAT STRIP ═══ */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-4 gap-2">
               {[
-                { label: 'Workouts', value: `${thisWeekWorkouts.length}`, sub: `/ 7`, d: delta(thisWeekWorkouts.length, lastWeekWorkouts.length) },
-                { label: 'Volume', value: `${thisWeekVol.toLocaleString()}`, sub: 'kg', d: delta(thisWeekVol, lastWeekVol) },
-                { label: 'Avg', value: thisWeekWorkouts.length > 0 ? `${Math.round(thisWeekVol / thisWeekWorkouts.length)}` : '0', sub: 'kg/session', d: delta(thisWeekWorkouts.length > 0 ? Math.round(thisWeekVol / thisWeekWorkouts.length) : 0, lastWeekWorkouts.length > 0 ? Math.round(lastWeekVol / lastWeekWorkouts.length) : 0) },
-                { label: 'Duration', value: thisWeekDur > 0 ? `${thisWeekDur}` : '--', sub: 'min avg', d: delta(thisWeekDur, lastWeekDur) },
-              ].map(({ label, value, sub, d }) => (
-                <div key={label} className="text-center">
+                { label: 'Workouts', value: `${thisWeekWorkouts.length}`, sub: `/ 7`, d: delta(thisWeekWorkouts.length, lastWeekWorkouts.length), accent: 'from-violet-500 to-purple-500' },
+                { label: 'Volume', value: `${thisWeekVol.toLocaleString()}`, sub: 'kg', d: delta(thisWeekVol, lastWeekVol), accent: 'from-cyan-500 to-blue-500' },
+                { label: 'Avg', value: thisWeekWorkouts.length > 0 ? `${Math.round(thisWeekVol / thisWeekWorkouts.length)}` : '0', sub: 'kg/s', d: delta(thisWeekWorkouts.length > 0 ? Math.round(thisWeekVol / thisWeekWorkouts.length) : 0, lastWeekWorkouts.length > 0 ? Math.round(lastWeekVol / lastWeekWorkouts.length) : 0), accent: 'from-amber-500 to-orange-500' },
+                { label: 'Duration', value: thisWeekDur > 0 ? `${thisWeekDur}` : '--', sub: 'min', d: delta(thisWeekDur, lastWeekDur), accent: 'from-emerald-500 to-teal-500' },
+              ].map(({ label, value, sub, d, accent }) => (
+                <div key={label} className="text-center p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04] relative overflow-hidden">
+                  <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-12 h-[2px] bg-gradient-to-r ${accent} rounded-full`} />
                   <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium mb-1">{label}</p>
-                  <p className="text-2xl font-black text-white">{value}<span className="text-xs text-gray-500 font-normal ml-0.5">{sub}</span></p>
+                  <p className="text-xl font-black text-white">{value}<span className="text-[10px] text-gray-500 font-normal ml-0.5">{sub}</span></p>
                   {d.pct !== '--' && (
-                    <p className={`text-[10px] font-semibold mt-0.5 ${d.up ? 'text-emerald-400' : 'text-rose-400'}`}>{d.arrow} {d.pct}</p>
+                    <p className={`text-[10px] font-bold mt-0.5 ${d.up ? 'text-emerald-400' : 'text-rose-400'}`}>{d.arrow} {d.pct}</p>
                   )}
                 </div>
               ))}
             </div>
 
             {/* ═══ HEATMAP CALENDAR ═══ */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Heatmap</span>
-                <span className="text-[10px] text-gray-600">{dailyData.filter(d => d.count > 0).length}/7 active days</span>
+            <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-violet-500/[0.03] via-black/40 to-purple-500/[0.02] p-4 overflow-hidden relative">
+              <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-violet-500/8 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-center justify-between mb-3 relative z-10">
+                <span className="text-[10px] font-semibold text-violet-400/80 uppercase tracking-wider">Heatmap</span>
+                <span className="text-[10px] text-gray-500">{dailyData.filter(d => d.count > 0).length}/7 active</span>
               </div>
-              <div className="grid grid-cols-7 gap-1">
+              <div className="grid grid-cols-7 gap-1.5 relative z-10">
                 {['S','M','T','W','T','F','S'].map((d, i) => (
                   <span key={`hdr-${i}`} className="text-center text-[8px] text-gray-600 font-medium pb-1">{d}</span>
                 ))}
@@ -1472,17 +1500,17 @@ export function WorkoutLogger() {
                       transition={{ delay: i * 0.04, duration: 0.3 }}
                       onClick={() => setSelectedDay(isSelected ? null : i)}
                       className={`relative aspect-square rounded-xl flex flex-col items-center justify-center border transition-all cursor-pointer
-                        ${isSelected ? 'border-violet-500/40 bg-violet-500/10 shadow-lg shadow-violet-500/10' : 'border-white/[0.04] hover:border-white/10'}`}
+                        ${isSelected ? 'border-violet-500/40 bg-violet-500/15 shadow-lg shadow-violet-500/10 scale-105' : 'border-white/[0.04] hover:border-violet-500/20 hover:bg-violet-500/[0.04]'}`}
                       style={{
                         background: dayWorkouts.length > 0
-                          ? `rgba(168, 85, 247, ${0.05 + intensity * 0.35})`
-                          : 'rgba(255,255,255,0.01)'
+                          ? `linear-gradient(135deg, rgba(168,85,247,${0.1 + intensity * 0.3}), rgba(139,92,246,${0.05 + intensity * 0.2}))`
+                          : undefined
                       }}>
                       <span className={`text-[10px] font-bold ${dayWorkouts.length > 0 ? 'text-white' : 'text-gray-600'}`}>
                         {['S','M','T','W','T','F','S'][i]}
                       </span>
-                      {vol > 0 && <span className="text-[7px] text-violet-300/80 mt-0.5">{vol >= 1000 ? `${(vol/1000).toFixed(1)}k` : vol}</span>}
-                      {dayWorkouts.length > 0 && <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-violet-400" />}
+                      {vol > 0 && <span className="text-[7px] text-violet-300/80 mt-0.5 font-medium">{vol >= 1000 ? `${(vol/1000).toFixed(1)}k` : vol}</span>}
+                      {dayWorkouts.length > 0 && <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-violet-400 shadow-sm shadow-violet-400/50" />}
                     </motion.button>
                   )
                 })}
@@ -1497,11 +1525,11 @@ export function WorkoutLogger() {
                 return (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
                     className="overflow-hidden">
-                    <div className="rounded-2xl border border-violet-500/15 bg-violet-500/[0.03] p-4 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/[0.06] rounded-full blur-xl pointer-events-none" />
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-[11px] font-bold text-white">{dayName}</span>
-                        <button onClick={() => setSelectedDay(null)} className="text-[9px] text-gray-500 hover:text-gray-300 transition-colors">close</button>
+                    <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.06] via-black/60 to-purple-500/[0.03] p-4 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/[0.08] rounded-full blur-2xl pointer-events-none" />
+                      <div className="flex items-center justify-between mb-3 relative z-10">
+                        <span className="text-[11px] font-bold text-violet-300">{dayName}</span>
+                        <button onClick={() => setSelectedDay(null)} className="text-[9px] text-gray-500 hover:text-white transition-colors px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/10">close</button>
                       </div>
                       {dayWorkouts.length === 0 ? (
                         <p className="text-[10px] text-gray-600 italic">No workouts on {dayName}</p>
@@ -1550,22 +1578,30 @@ export function WorkoutLogger() {
 
               return (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-3">Muscle Radar</span>
-                    <div className="flex items-center justify-center">
+                  <div className="rounded-2xl border border-cyan-500/15 bg-gradient-to-br from-cyan-500/[0.05] via-black/60 to-blue-500/[0.03] p-4 relative overflow-hidden">
+                    <div className="absolute -top-8 -right-8 w-24 h-24 bg-cyan-500/8 rounded-full blur-2xl pointer-events-none" />
+                    <span className="text-[10px] font-semibold text-cyan-400/80 uppercase tracking-wider block mb-3 relative z-10">Muscle Radar</span>
+                    <div className="flex items-center justify-center relative z-10">
                       <svg width={radarSize} height={radarSize} viewBox={`0 0 ${radarSize} ${radarSize}`}>
+                        <defs>
+                          <linearGradient id="radarFill" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.3} />
+                            <stop offset="100%" stopColor="#06b6d4" stopOpacity={0.1} />
+                          </linearGradient>
+                          <filter id="radarGlow"><feGaussianBlur stdDeviation="2" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                        </defs>
                         {[0.33, 0.66, 1].map((s, i) => (
                           <polygon key={i} points={angles.map(a => `${cx + maxR * s * Math.cos(a)},${cy + maxR * s * Math.sin(a)}`).join(' ')}
-                            fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+                            fill="none" stroke="rgba(34,211,238,0.08)" strokeWidth="1" />
                         ))}
                         {angles.map((a, i) => (
-                          <line key={i} x1={cx} y1={cy} x2={cx + maxR * Math.cos(a)} y2={cy + maxR * Math.sin(a)} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+                          <line key={i} x1={cx} y1={cy} x2={cx + maxR * Math.cos(a)} y2={cy + maxR * Math.sin(a)} stroke="rgba(34,211,238,0.06)" strokeWidth="1" />
                         ))}
-                        <polygon points={radarPoints.map(p => `${p.x},${p.y}`).join(' ')} fill="rgba(168,85,247,0.15)" stroke="rgba(168,85,247,0.6)" strokeWidth="2" />
+                        <polygon points={radarPoints.map(p => `${p.x},${p.y}`).join(' ')} fill="url(#radarFill)" stroke="rgba(34,211,238,0.6)" strokeWidth="2" filter="url(#radarGlow)" />
                         {radarPoints.map((p, i) => (
                           <g key={i}>
-                            <circle cx={p.x} cy={p.y} r={3.5} fill="#a855f7" stroke="#0a0a0a" strokeWidth={1.5} />
-                            <text x={p.x} y={p.y - 10} textAnchor="middle" className="fill-gray-400 text-[7px] capitalize font-medium">
+                            <circle cx={p.x} cy={p.y} r={4} fill="#22d3ee" stroke="#0a0a0a" strokeWidth={2} filter="url(#radarGlow)" />
+                            <text x={p.x} y={p.y - 12} textAnchor="middle" className="fill-cyan-300/80 text-[7px] capitalize font-semibold">
                               {sortedMuscles[i].name}
                             </text>
                           </g>
@@ -1578,30 +1614,32 @@ export function WorkoutLogger() {
                   <div className="space-y-3">
                     {imbalanceWarning && (
                       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                        className="rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3 flex items-start gap-2.5">
-                        <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
-                        <div>
-                          <p className="text-[10px] font-semibold text-amber-300">Muscle Imbalance Detected</p>
-                          <p className="text-[9px] text-gray-400 mt-0.5">
-                            {topMuscle.name} volume ({topMuscle.total.toLocaleString()}kg) is significantly higher than {secondMuscle.name} ({secondMuscle.total.toLocaleString()}kg).
+                        className="rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/[0.08] via-black/60 to-orange-500/[0.03] p-4 flex items-start gap-3 relative overflow-hidden">
+                        <div className="absolute -top-8 -right-8 w-20 h-20 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-amber-500/25 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/10">
+                          <AlertTriangle className="w-4 h-4 text-amber-400" />
+                        </div>
+                        <div className="relative z-10">
+                          <p className="text-[11px] font-bold text-amber-300">Muscle Imbalance</p>
+                          <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">
+                            {topMuscle.name} ({topMuscle.total.toLocaleString()}kg) is {((topMuscle.total / secondMuscle.total)).toFixed(1)}x higher than {secondMuscle.name} ({secondMuscle.total.toLocaleString()}kg).
                           </p>
                         </div>
                       </motion.div>
                     )}
                     <div>
-                      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-2">Muscle Distribution</span>
-                      <div className="space-y-2">
+                      <span className="text-[10px] font-semibold text-cyan-400/80 uppercase tracking-wider block mb-2">Distribution</span>
+                      <div className="space-y-2.5">
                         {sortedMuscles.slice(0, 5).map((m, i) => (
                           <motion.div key={m.name} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 + i * 0.05 }}
                             className="flex items-center gap-2">
                             <span className="text-[10px] text-gray-400 w-14 capitalize truncate">{m.name}</span>
-                            <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                            <div className="flex-1 h-2 rounded-full bg-white/[0.04] overflow-hidden">
                               <motion.div initial={{ width: 0 }} animate={{ width: `${(m.total / maxMuscleVol) * 100}%` }}
                                 transition={{ duration: 0.8, delay: 0.3 + i * 0.05, ease: 'easeOut' }}
-                                className="h-full rounded-full"
-                                style={{ background: `linear-gradient(90deg, rgba(168,85,247,${0.4 + (m.total / maxMuscleVol) * 0.6}), rgba(192,132,252,${0.4 + (m.total / maxMuscleVol) * 0.6}))` }} />
+                                className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-400" />
                             </div>
-                            <span className="text-[10px] text-gray-500 w-12 text-right font-medium">{m.total.toLocaleString()}</span>
+                            <span className="text-[10px] text-cyan-400/70 w-12 text-right font-bold">{m.total.toLocaleString()}</span>
                           </motion.div>
                         ))}
                       </div>
@@ -1637,21 +1675,25 @@ export function WorkoutLogger() {
                 const typeColors: Record<string, string> = { strength: '#a855f7', cardio: '#ef4444', flexibility: '#22d3ee', hiit: '#f59e0b', crossfit: '#22c55e', default: '#6b7280' }
 
                 return (
-                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-3">Workout Types</span>
-                    <div className="flex items-center justify-center gap-6">
+                  <div className="rounded-2xl border border-violet-500/15 bg-gradient-to-br from-violet-500/[0.05] via-black/60 to-purple-500/[0.03] p-4 relative overflow-hidden">
+                    <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-violet-500/8 rounded-full blur-2xl pointer-events-none" />
+                    <span className="text-[10px] font-semibold text-violet-400/80 uppercase tracking-wider block mb-3 relative z-10">Workout Types</span>
+                    <div className="flex items-center justify-center gap-6 relative z-10">
                       <svg width={donutSize} height={donutSize} viewBox={`0 0 ${donutSize} ${donutSize}`}>
+                        <defs>
+                          <filter id="donutGlow"><feGaussianBlur stdDeviation="2" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                        </defs>
                         {segments.map((seg) => (
                           <g key={seg.type}>
-                            <path d={seg.d} fill={typeColors[seg.type] || typeColors.default} opacity={0.75} stroke="#0a0a0a" strokeWidth="1.5" />
+                            <path d={seg.d} fill={typeColors[seg.type] || typeColors.default} opacity={0.8} stroke="#0a0a0a" strokeWidth="2" filter="url(#donutGlow)" />
                             <text x={seg.labelX} y={seg.labelY} textAnchor="middle" dominantBaseline="middle" className="fill-white text-[8px] font-bold">
                               {Math.round((seg.count / total) * 100)}%
                             </text>
                           </g>
                         ))}
                         <circle cx={donutCx} cy={donutCy} r={innerR - 2} fill="#0a0a0a" />
-                        <text x={donutCx} y={donutCy - 3} textAnchor="middle" className="fill-white text-[14px] font-black">{total}</text>
-                        <text x={donutCx} y={donutCy + 10} textAnchor="middle" className="fill-gray-500 text-[7px] font-medium">TOTAL</text>
+                        <text x={donutCx} y={donutCy - 3} textAnchor="middle" className="fill-white text-[16px] font-black">{total}</text>
+                        <text x={donutCx} y={donutCy + 10} textAnchor="middle" className="fill-gray-500 text-[7px] font-medium uppercase tracking-wider">Total</text>
                       </svg>
                       <div className="space-y-2">
                         {segments.map(seg => (
@@ -1668,40 +1710,41 @@ export function WorkoutLogger() {
               })()}
 
               {/* Personal Records */}
-              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-3">Personal Records</span>
-                <div className="space-y-2.5">
+              <div className="rounded-2xl border border-amber-500/15 bg-gradient-to-br from-amber-500/[0.05] via-black/60 to-orange-500/[0.03] p-4 relative overflow-hidden">
+                <div className="absolute -top-8 -left-8 w-24 h-24 bg-amber-500/8 rounded-full blur-2xl pointer-events-none" />
+                <span className="text-[10px] font-semibold text-amber-400/80 uppercase tracking-wider block mb-3 relative z-10">Personal Records</span>
+                <div className="space-y-2.5 relative z-10">
                   {/* Best Volume */}
-                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-amber-500/[0.04] border border-amber-500/10">
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-gradient-to-r from-amber-500/[0.08] to-transparent border border-amber-500/15">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-amber-500/25 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/10">
                       <Trophy className="w-4 h-4 text-amber-400" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[9px] text-gray-500 uppercase tracking-wider">Best Volume</p>
+                      <p className="text-[9px] text-amber-400/60 uppercase tracking-wider">Best Volume</p>
                       <p className="text-[11px] text-white font-bold truncate">{bestWorkout ? bestWorkout.name : '—'}</p>
                     </div>
                     <span className="text-sm font-black text-amber-400">{bestVol.toLocaleString()}<span className="text-[9px] font-normal text-gray-500 ml-0.5">kg</span></span>
                   </div>
 
                   {/* Longest Session */}
-                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-cyan-500/[0.04] border border-cyan-500/10">
-                    <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-gradient-to-r from-cyan-500/[0.08] to-transparent border border-cyan-500/15">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/10 border border-cyan-500/25 flex items-center justify-center shrink-0 shadow-lg shadow-cyan-500/10">
                       <Timer className="w-4 h-4 text-cyan-400" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[9px] text-gray-500 uppercase tracking-wider">Longest Session</p>
+                      <p className="text-[9px] text-cyan-400/60 uppercase tracking-wider">Longest Session</p>
                       <p className="text-[11px] text-white font-bold truncate">{longestSession ? longestSession.name : '—'}</p>
                     </div>
                     <span className="text-sm font-black text-cyan-400">{longestSession ? longestSession.duration || 0 : 0}<span className="text-[9px] font-normal text-gray-500 ml-0.5">min</span></span>
                   </div>
 
                   {/* Most Exercises */}
-                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-violet-500/[0.04] border border-violet-500/10">
-                    <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-gradient-to-r from-violet-500/[0.08] to-transparent border border-violet-500/15">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-500/10 border border-violet-500/25 flex items-center justify-center shrink-0 shadow-lg shadow-violet-500/10">
                       <Dumbbell className="w-4 h-4 text-violet-400" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[9px] text-gray-500 uppercase tracking-wider">Most Exercises</p>
+                      <p className="text-[9px] text-violet-400/60 uppercase tracking-wider">Most Exercises</p>
                       <p className="text-[11px] text-white font-bold truncate">{mostExercises ? mostExercises.name : '—'}</p>
                     </div>
                     <span className="text-sm font-black text-violet-400">{mostExercises ? mostExercises.exercises.length : 0}<span className="text-[9px] font-normal text-gray-500 ml-0.5">ex</span></span>
@@ -1714,17 +1757,20 @@ export function WorkoutLogger() {
             {/* ═══ SMART INSIGHTS ═══ */}
             {weeklyTab === 'insights' && (
             <div className="space-y-3">
-              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Insights</span>
+              <span className="text-[10px] font-semibold text-amber-400/80 uppercase tracking-wider">Insights</span>
 
               {/* Overtraining Warning */}
               <AnimatePresence>
                 {overtrainingWarning && (
                   <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                    className="rounded-xl border border-rose-500/20 bg-rose-500/[0.05] p-3 flex items-start gap-2.5">
-                    <AlertTriangle className="w-4 h-4 text-rose-400 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-[10px] font-semibold text-rose-300">Overtraining Alert</p>
-                      <p className="text-[9px] text-gray-400 mt-0.5">
+                    className="rounded-2xl border border-rose-500/25 bg-gradient-to-br from-rose-500/[0.08] via-black/60 to-red-500/[0.03] p-4 flex items-start gap-3 relative overflow-hidden">
+                    <div className="absolute -top-8 -right-8 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl pointer-events-none" />
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500/20 to-red-500/10 border border-rose-500/25 flex items-center justify-center shrink-0 shadow-lg shadow-rose-500/10">
+                      <AlertTriangle className="w-4.5 h-4.5 text-rose-400" />
+                    </div>
+                    <div className="relative z-10">
+                      <p className="text-[11px] font-bold text-rose-300">Overtraining Alert</p>
+                      <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">
                         Volume jumped {volumeJump.toFixed(0)}% from last week ({lastWeekVol.toLocaleString()}kg → {thisWeekVol.toLocaleString()}kg). Consider deloading.
                       </p>
                     </div>
@@ -1733,30 +1779,50 @@ export function WorkoutLogger() {
               </AnimatePresence>
 
               {/* AI Summary */}
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-3.5 h-3.5 text-violet-400" />
-                  <span className="text-[10px] font-semibold text-violet-400">AI Weekly Summary</span>
+              <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.06] via-black/60 to-purple-500/[0.03] p-4 relative overflow-hidden">
+                <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-violet-500/8 rounded-full blur-2xl pointer-events-none" />
+                <div className="flex items-center gap-2 mb-2.5 relative z-10">
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-500/10 border border-violet-500/25 flex items-center justify-center shadow-lg shadow-violet-500/10">
+                    <Sparkles className="w-3 h-3 text-violet-400" />
+                  </div>
+                  <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">AI Weekly Summary</span>
                 </div>
-                <p className="text-[11px] text-gray-300 leading-relaxed">{aiSummary}</p>
+                <p className="text-[11px] text-gray-300 leading-relaxed relative z-10">{aiSummary}</p>
+              </div>
+
+              {/* Weekly Goal Progress */}
+              <div className="rounded-2xl border border-emerald-500/15 bg-gradient-to-br from-emerald-500/[0.05] via-black/60 to-green-500/[0.03] p-4 relative overflow-hidden">
+                <div className="absolute -top-8 -right-8 w-24 h-24 bg-emerald-500/8 rounded-full blur-2xl pointer-events-none" />
+                <div className="flex items-center justify-between mb-3 relative z-10">
+                  <span className="text-[10px] font-semibold text-emerald-400/80 uppercase tracking-wider">Weekly Goal</span>
+                  <span className="text-[10px] text-emerald-400 font-bold">{thisWeekWorkouts.length}/{weeklyGoal}</span>
+                </div>
+                <div className="w-full h-2.5 rounded-full bg-white/[0.04] overflow-hidden relative z-10">
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${goalPct}%` }} transition={{ duration: 1, ease: 'easeOut' }}
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400" />
+                </div>
+                <p className="text-[9px] text-gray-500 mt-2 relative z-10">{goalPct >= 100 ? 'Goal reached!' : `${weeklyGoal - thisWeekWorkouts.length} more session${weeklyGoal - thisWeekWorkouts.length !== 1 ? 's' : ''} to hit goal`}</p>
               </div>
 
               {/* Rest Days Grid */}
-              <div className="flex items-center gap-3">
-                <div className="flex gap-1">
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Rest Days</span>
+                  <span className="text-[10px] text-gray-500">
+                    <span className="text-emerald-400 font-bold">{7 - new Set(thisWeekWorkouts.map(w => new Date(w.date).toDateString())).size}</span> rest
+                  </span>
+                </div>
+                <div className="flex gap-1.5">
                   {Array.from({ length: 7 }, (_, i) => {
                     const dayWorkouts = thisWeekWorkouts.filter(w => new Date(w.date).getDay() === i)
                     const active = dayWorkouts.length > 0
                     return (
-                      <div key={i} className={`w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-bold ${active ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30' : 'bg-white/[0.02] text-gray-700 border border-white/[0.04]'}`}>
+                      <div key={i} className={`flex-1 h-8 rounded-lg flex items-center justify-center text-[9px] font-bold transition-all ${active ? 'bg-gradient-to-b from-violet-500/25 to-violet-500/10 text-violet-300 border border-violet-500/30 shadow-sm shadow-violet-500/10' : 'bg-white/[0.02] text-gray-600 border border-white/[0.04]'}`}>
                         {dayLabels[i]}
                       </div>
                     )
                   })}
                 </div>
-                <span className="text-[10px] text-gray-500">
-                  <span className="text-emerald-400 font-semibold">{7 - new Set(thisWeekWorkouts.map(w => new Date(w.date).toDateString())).size}</span> rest days
-                </span>
               </div>
             </div>
             )}
