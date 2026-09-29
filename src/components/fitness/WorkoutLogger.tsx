@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, Pencil, Dumbbell, Flame, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Check,
-  AlertTriangle, Copy, Search, Filter, RotateCcw, Calendar, X,
+  AlertTriangle, Copy, Search, Filter, RotateCcw, Calendar, X, Trophy, Sparkles,
   TrendingUp, TrendingDown, Minus, Layers,
   FileText, Activity, Zap, Wind, Settings2, Move, StretchHorizontal,
   PersonStanding, Gauge, Crosshair, Weight, Heart, Shield, Sword, Coffee,
@@ -654,6 +654,7 @@ export function WorkoutLogger() {
   const [showFilters, _setShowFilters] = useState(false)
   const [showWeeklyAnalytics, setShowWeeklyAnalytics] = useState(false)
   const [weeklyNavOffset, setWeeklyNavOffset] = useState(0)
+  const [selectedDay, setSelectedDay] = useState<number | null>(null)
   const [showTypeDropdown, setShowTypeDropdown] = useState(false)
   const fromDayRef = useRef<HTMLInputElement>(null)
   const fromMonthRef = useRef<HTMLInputElement>(null)
@@ -1199,7 +1200,6 @@ export function WorkoutLogger() {
         }))
         const sortedMuscles = [...muscleMap.entries()].map(([name, v]) => ({ name, ...v, total: v.primary + v.secondary })).sort((a,b) => b.total - a.total)
         const maxMuscleVol = sortedMuscles.length > 0 ? sortedMuscles[0].total : 1
-        const muscleCount = sortedMuscles.length
 
         const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
         const dayLabels = ['S','M','T','W','T','F','S']
@@ -1219,10 +1219,69 @@ export function WorkoutLogger() {
           return { pct: `${Math.abs(diff).toFixed(0)}%`, up: diff >= 0, arrow: diff >= 0 ? '\u2191' : '\u2193', label: diff >= 0 ? 'up' : 'down' }
         }
 
+        // Streak
+        let currentStreak = 0
+        let longestStreak = 0
+        let tempStreak = 0
+        const today = new Date(); today.setHours(0,0,0,0)
+        for (let i = 0; i < 365; i++) {
+          const d = new Date(today); d.setDate(d.getDate() - i)
+          const has = workouts.some(w => new Date(w.date).toDateString() === d.toDateString())
+          if (has) { tempStreak++; longestStreak = Math.max(longestStreak, tempStreak) }
+          else { tempStreak = 0 }
+        }
+        // Current streak from today backwards
+        for (let i = 0; i < 365; i++) {
+          const d = new Date(today); d.setDate(d.getDate() - i)
+          const has = workouts.some(w => new Date(w.date).toDateString() === d.toDateString())
+          if (has) currentStreak++
+          else if (i > 0) break
+        }
+
+        // Weekly goal
+        const weeklyGoal = 4
+        const goalPct = Math.min(100, Math.round((thisWeekWorkouts.length / weeklyGoal) * 100))
+
+        // Intensity score (0-100)
+        const volScore = thisWeekVol > 0 ? Math.min(40, (thisWeekVol / Math.max(thisWeekVol, lastWeekVol || 1)) * 40) : 0
+        const durScore = thisWeekDur > 0 ? Math.min(30, (thisWeekDur / Math.max(thisWeekDur, lastWeekDur || 1)) * 30) : 0
+        const freqScore = Math.min(30, (thisWeekWorkouts.length / 7) * 30)
+        const intensityScore = Math.round(volScore + durScore + freqScore)
+
+        // Consistency score (how evenly spaced workouts are)
+        const activeDays = thisWeekWorkouts.map(w => new Date(w.date).getDay()).sort((a,b) => a - b)
+        const consistencyScore = activeDays.length > 1
+          ? Math.round(Math.max(0, 100 - (activeDays[activeDays.length - 1] - activeDays[0]) * 5 + activeDays.length * 10))
+          : activeDays.length === 1 ? 50 : 0
+
+        // Overtraining warning
+        const volumeJump = lastWeekVol > 0 ? ((thisWeekVol - lastWeekVol) / lastWeekVol) * 100 : 0
+        const overtrainingWarning = volumeJump > 50
+
+        // Muscle imbalance
+        const topMuscle = sortedMuscles[0]
+        const secondMuscle = sortedMuscles[1]
+        const imbalanceWarning = topMuscle && secondMuscle && topMuscle.total > secondMuscle.total * 2.5
+
+        // Personal records this week
+        const longestSession = thisWeekWorkouts.length > 0 ? thisWeekWorkouts.reduce((best, w) => (w.duration || 0) > (best.duration || 0) ? w : best) : null
+        const mostExercises = thisWeekWorkouts.length > 0 ? thisWeekWorkouts.reduce((best, w) => w.exercises.length > best.exercises.length ? w : best) : null
+
+        // AI summary
+        const activeCount = dailyData.filter(d => d.count > 0).length
+        const peakDay = dailyData.reduce((a, b) => a.volume > b.volume ? a : b)
+        const aiSummary = thisWeekWorkouts.length === 0
+          ? 'No workouts logged this week. Time to get moving!'
+          : intensityScore >= 75
+            ? `Strong week with ${thisWeekWorkouts.length} sessions and ${thisWeekVol.toLocaleString()}kg total volume. ${activeCount >= 5 ? 'Great consistency across the week.' : 'Consider spreading workouts more evenly.'}`
+            : intensityScore >= 40
+              ? `Solid effort with ${thisWeekWorkouts.length} sessions. Peak day was ${peakDay.name} with ${peakDay.volume.toLocaleString()}kg. ${thisWeekWorkouts.length < weeklyGoal ? `Try to hit ${weeklyGoal} sessions next week.` : ''}`
+              : `Light week with ${thisWeekWorkouts.length} session${thisWeekWorkouts.length !== 1 ? 's' : ''}. Building consistency is key — aim for ${weeklyGoal} sessions next week.`
+
         return (
         <motion.div key="weekly-analytics" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
           <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl p-5 space-y-5 relative overflow-hidden">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-64 bg-violet-500/[0.04] rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-80 bg-violet-500/[0.04] rounded-full blur-[120px] pointer-events-none" />
 
             {/* ═══ WEEK NAV ═══ */}
             <div className="flex items-center gap-1 relative">
@@ -1240,8 +1299,71 @@ export function WorkoutLogger() {
               </button>
             </div>
 
+            {/* ═══ HERO: Progress Ring + Streak + Intensity + Consistency ═══ */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {/* Progress Ring */}
+              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] relative overflow-hidden">
+                <svg width="90" height="90" viewBox="0 0 100 100" className="drop-shadow-lg">
+                  <defs>
+                    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#a855f7" />
+                      <stop offset="100%" stopColor="#e879f9" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="7" />
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="url(#ringGrad)" strokeWidth="7" strokeLinecap="round"
+                    strokeDasharray={`${(goalPct / 100) * 251.2} 251.2`}
+                    transform="rotate(-90 50 50)" />
+                  <text x="50" y="44" textAnchor="middle" className="fill-white text-[18px] font-black">{goalPct}%</text>
+                  <text x="50" y="58" textAnchor="middle" className="fill-gray-500 text-[7px] font-medium">GOAL</text>
+                  <text x="50" y="67" textAnchor="middle" className="fill-violet-400 text-[8px] font-bold">{thisWeekWorkouts.length}/{weeklyGoal}</text>
+                </svg>
+                <span className="text-[9px] text-gray-500 mt-1 uppercase tracking-wider">Weekly Goal</span>
+              </div>
+
+              {/* Streak */}
+              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] relative overflow-hidden">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-2">
+                  <Zap className="w-7 h-7 text-amber-400" />
+                </div>
+                <p className="text-2xl font-black text-white">{currentStreak}</p>
+                <p className="text-[9px] text-gray-500 uppercase tracking-wider">Day Streak</p>
+                <p className="text-[9px] text-gray-600 mt-1">Best: {longestStreak}d</p>
+              </div>
+
+              {/* Intensity Score */}
+              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] relative overflow-hidden">
+                <div className="relative w-16 h-16 mb-2">
+                  <svg viewBox="0 0 60 60" className="w-16 h-16 -rotate-90">
+                    <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="5" />
+                    <circle cx="30" cy="30" r="25" fill="none" stroke={intensityScore >= 70 ? '#22c55e' : intensityScore >= 40 ? '#f59e0b' : '#ef4444'} strokeWidth="5" strokeLinecap="round"
+                      strokeDasharray={`${(intensityScore / 100) * 157} 157`} />
+                  </svg>
+                  <span className="absolute inset-0 flex items-center justify-center text-sm font-black text-white">{intensityScore}</span>
+                </div>
+                <p className="text-[9px] text-gray-500 uppercase tracking-wider">Intensity</p>
+                <p className={`text-[9px] mt-1 font-semibold ${intensityScore >= 70 ? 'text-emerald-400' : intensityScore >= 40 ? 'text-amber-400' : 'text-rose-400'}`}>
+                  {intensityScore >= 70 ? 'High' : intensityScore >= 40 ? 'Moderate' : 'Low'}
+                </p>
+              </div>
+
+              {/* Consistency Score */}
+              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] relative overflow-hidden">
+                <div className="relative w-16 h-16 mb-2">
+                  <svg viewBox="0 0 60 60" className="w-16 h-16 -rotate-90">
+                    <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="5" />
+                    <circle cx="30" cy="30" r="25" fill="none" stroke={consistencyScore >= 70 ? '#22d3ee' : consistencyScore >= 40 ? '#a78bfa' : '#f87171'} strokeWidth="5" strokeLinecap="round"
+                      strokeDasharray={`${(Math.min(100, consistencyScore) / 100) * 157} 157`} />
+                  </svg>
+                  <span className="absolute inset-0 flex items-center justify-center text-sm font-black text-white">{Math.min(100, consistencyScore)}</span>
+                </div>
+                <p className="text-[9px] text-gray-500 uppercase tracking-wider">Consistency</p>
+                <p className="text-[9px] text-gray-600 mt-1">{activeDays.length}d active</p>
+              </div>
+            </div>
+
             {/* ═══ COMBINED CHART: Volume Area + Workout Bars ═══ */}
-            <div className="relative h-60">
+            <div className="relative h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={fourWeekData} margin={{ top: 15, right: 15, bottom: 5, left: 5 }}>
                   <defs>
@@ -1302,120 +1424,309 @@ export function WorkoutLogger() {
               ))}
             </div>
 
-            {/* ═══ DAILY TIMELINE ═══ */}
+            {/* ═══ HEATMAP CALENDAR ═══ */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Daily</span>
-                <span className="text-[10px] text-gray-600">{dailyData.filter(d => d.count > 0).length}/7 active</span>
+                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Heatmap</span>
+                <span className="text-[10px] text-gray-600">{dailyData.filter(d => d.count > 0).length}/7 active days</span>
               </div>
-              <div className="space-y-1.5">
-                {dailyData.map((d, i) => (
-                  <motion.div key={d.name} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04, duration: 0.3 }} className="flex items-center gap-3">
-                    <span className={`text-[11px] w-7 font-semibold ${d.count > 0 ? 'text-white' : 'text-gray-600'}`}>{d.label}</span>
-                    <div className="flex-1 h-7 rounded-lg bg-white/[0.02] border border-white/[0.04] overflow-hidden relative">
-                      {d.volume > 0 ? (
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(8, (d.volume / maxDailyVol) * 100)}%` }} transition={{ duration: 0.6, delay: i * 0.04, ease: [0.25, 0.46, 0.45, 0.94] }}
-                          className="h-full rounded-lg bg-gradient-to-r from-violet-600/80 to-violet-500/60 flex items-center justify-end pr-2.5">
-                          <span className="text-[10px] text-white/90 font-semibold">{d.volume.toLocaleString()}kg</span>
-                        </motion.div>
-                      ) : (
-                        <span className="absolute inset-0 flex items-center pl-3 text-[10px] text-gray-700 italic">rest</span>
-                      )}
-                    </div>
-                    <div className="flex gap-0.5 w-16 justify-end">
-                      {d.types.map(t => {
-                        const tc = typeConfig[t] || typeConfig.strength
-                        return <span key={t} className={`text-[7px] px-1 py-0.5 rounded ${tc.bg} ${tc.color} font-bold uppercase`}>{t.charAt(0)}</span>
-                      })}
-                    </div>
-                  </motion.div>
+              <div className="grid grid-cols-7 gap-1">
+                {['S','M','T','W','T','F','S'].map((d, i) => (
+                  <span key={`hdr-${i}`} className="text-center text-[8px] text-gray-600 font-medium pb-1">{d}</span>
                 ))}
-              </div>
-            </div>
-
-            {/* ═══ MUSCLE + PEAK ═══ */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {/* Muscle Distribution */}
-              {sortedMuscles.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Muscles</span>
-                    <span className="text-[10px] text-gray-600">{muscleCount} groups</span>
-                  </div>
-                  <div className="space-y-2">
-                    {sortedMuscles.slice(0, 5).map((m, i) => (
-                      <motion.div key={m.name} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 + i * 0.05 }} className="flex items-center gap-2">
-                        <span className="text-[10px] text-gray-400 w-14 capitalize truncate">{m.name}</span>
-                        <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${(m.total / maxMuscleVol) * 100}%` }} transition={{ duration: 0.8, delay: 0.3 + i * 0.05, ease: 'easeOut' }}
-                            className="h-full rounded-full" style={{ background: `linear-gradient(90deg, rgba(168,85,247,${0.4 + (m.total / maxMuscleVol) * 0.6}), rgba(192,132,252,${0.4 + (m.total / maxMuscleVol) * 0.6}))` }} />
-                        </div>
-                        <span className="text-[10px] text-gray-500 w-12 text-right font-medium">{m.total.toLocaleString()}</span>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Peak + Rest */}
-              <div className="space-y-3">
-                {/* Peak Workout */}
-                <div>
-                  <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-2">Peak Workout</span>
-                  {bestWorkout ? (
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                      <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                        <span className="text-sm">🏆</span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] text-white font-semibold truncate">{bestWorkout.name}</p>
-                        <p className="text-[9px] text-gray-500">{bestVol.toLocaleString()}kg · {bestWorkout.exercises.length} exercises · {bestWorkout.duration || 0}min</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                      <p className="text-[10px] text-gray-600 italic">No workouts this week</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Rest Days */}
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-1">
-                    {Array.from({ length: 7 }, (_, i) => {
-                      const dayWorkouts = thisWeekWorkouts.filter(w => new Date(w.date).getDay() === i)
-                      const active = dayWorkouts.length > 0
-                      return (
-                        <div key={i} className={`w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-bold ${active ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30' : 'bg-white/[0.02] text-gray-700 border border-white/[0.04]'}`}>
-                          {dayLabels[i]}
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <span className="text-[10px] text-gray-500">
-                    <span className="text-emerald-400 font-semibold">{7 - new Set(thisWeekWorkouts.map(w => new Date(w.date).toDateString())).size}</span> rest days
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* ═══ TYPES ═══ */}
-            {sortedTypes.length > 0 && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] text-gray-500 uppercase tracking-wider font-medium mr-1">Types</span>
-                {sortedTypes.map(([type, count]) => {
-                  const tc = typeConfig[type] || typeConfig.strength
-                  const TypeIcon = tc.icon
+                {Array.from({ length: 7 }, (_, i) => {
+                  const dayWorkouts = thisWeekWorkouts.filter(w => new Date(w.date).getDay() === i)
+                  const vol = dayWorkouts.reduce((s,w) => s + calcVolume(w.exercises), 0)
+                  const intensity = maxDailyVol > 0 ? vol / maxDailyVol : 0
+                  const isSelected = selectedDay === i
                   return (
-                    <div key={type} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-semibold ${tc.bg} ${tc.color}`}>
-                      <TypeIcon className="w-3 h-3" />
-                      <span className="capitalize">{type.replace('_', ' ')}</span>
-                      <span className="opacity-50">×{count}</span>
-                    </div>
+                    <motion.button key={`heat-${i}`} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: i * 0.04, duration: 0.3 }}
+                      onClick={() => setSelectedDay(isSelected ? null : i)}
+                      className={`relative aspect-square rounded-xl flex flex-col items-center justify-center border transition-all cursor-pointer
+                        ${isSelected ? 'border-violet-500/40 bg-violet-500/10 shadow-lg shadow-violet-500/10' : 'border-white/[0.04] hover:border-white/10'}`}
+                      style={{
+                        background: dayWorkouts.length > 0
+                          ? `rgba(168, 85, 247, ${0.05 + intensity * 0.35})`
+                          : 'rgba(255,255,255,0.01)'
+                      }}>
+                      <span className={`text-[10px] font-bold ${dayWorkouts.length > 0 ? 'text-white' : 'text-gray-600'}`}>
+                        {['S','M','T','W','T','F','S'][i]}
+                      </span>
+                      {vol > 0 && <span className="text-[7px] text-violet-300/80 mt-0.5">{vol >= 1000 ? `${(vol/1000).toFixed(1)}k` : vol}</span>}
+                      {dayWorkouts.length > 0 && <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-violet-400" />}
+                    </motion.button>
                   )
                 })}
               </div>
-            )}
+            </div>
+
+            {/* ═══ SELECTED DAY DETAIL ═══ */}
+            <AnimatePresence>
+              {selectedDay !== null && (() => {
+                const dayWorkouts = thisWeekWorkouts.filter(w => new Date(w.date).getDay() === selectedDay)
+                const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][selectedDay]
+                return (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden">
+                    <div className="rounded-2xl border border-violet-500/15 bg-violet-500/[0.03] p-4 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/[0.06] rounded-full blur-xl pointer-events-none" />
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-[11px] font-bold text-white">{dayName}</span>
+                        <button onClick={() => setSelectedDay(null)} className="text-[9px] text-gray-500 hover:text-gray-300 transition-colors">close</button>
+                      </div>
+                      {dayWorkouts.length === 0 ? (
+                        <p className="text-[10px] text-gray-600 italic">No workouts on {dayName}</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {dayWorkouts.map((w, i) => (
+                            <motion.div key={w.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                              className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                              <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+                                <Dumbbell className="w-4 h-4 text-violet-400" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[11px] text-white font-semibold truncate">{w.name}</p>
+                                <p className="text-[9px] text-gray-500">{calcVolume(w.exercises).toLocaleString()}kg · {w.exercises.length} exercises · {w.duration || 0}min</p>
+                              </div>
+                              <div className="flex gap-0.5">
+                                {w.exercises.slice(0, 3).map((ex) => {
+                                  const def = getExerciseById(ex.exerciseId)
+                                  return def ? (
+                                    <span key={ex.exerciseId} className="text-[7px] px-1 py-0.5 rounded bg-white/5 text-gray-400 capitalize truncate max-w-[60px]">{def.primaryMuscles?.[0] || '?'}</span>
+                                  ) : null
+                                })}
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )
+              })()}
+            </AnimatePresence>
+
+            {/* ═══ MUSCLE RADAR + IMBALANCE ═══ */}
+            {sortedMuscles.length > 0 && (() => {
+              const radarSize = 140
+              const cx = radarSize / 2, cy = radarSize / 2
+              const maxR = 55
+              const angles = sortedMuscles.slice(0, 6).map((_, i) => (Math.PI * 2 * i / Math.min(sortedMuscles.length, 6)) - Math.PI / 2)
+              const radarPoints = sortedMuscles.slice(0, 6).map((m, i) => {
+                const r = (m.total / maxMuscleVol) * maxR
+                return { x: cx + r * Math.cos(angles[i]), y: cy + r * Math.sin(angles[i]) }
+              })
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-3">Muscle Radar</span>
+                    <div className="flex items-center justify-center">
+                      <svg width={radarSize} height={radarSize} viewBox={`0 0 ${radarSize} ${radarSize}`}>
+                        {[0.33, 0.66, 1].map((s, i) => (
+                          <polygon key={i} points={angles.map(a => `${cx + maxR * s * Math.cos(a)},${cy + maxR * s * Math.sin(a)}`).join(' ')}
+                            fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+                        ))}
+                        {angles.map((a, i) => (
+                          <line key={i} x1={cx} y1={cy} x2={cx + maxR * Math.cos(a)} y2={cy + maxR * Math.sin(a)} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+                        ))}
+                        <polygon points={radarPoints.map(p => `${p.x},${p.y}`).join(' ')} fill="rgba(168,85,247,0.15)" stroke="rgba(168,85,247,0.6)" strokeWidth="2" />
+                        {radarPoints.map((p, i) => (
+                          <g key={i}>
+                            <circle cx={p.x} cy={p.y} r={3.5} fill="#a855f7" stroke="#0a0a0a" strokeWidth={1.5} />
+                            <text x={p.x} y={p.y - 10} textAnchor="middle" className="fill-gray-400 text-[7px] capitalize font-medium">
+                              {sortedMuscles[i].name}
+                            </text>
+                          </g>
+                        ))}
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Imbalance Alert + Muscle Bars */}
+                  <div className="space-y-3">
+                    {imbalanceWarning && (
+                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                        className="rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3 flex items-start gap-2.5">
+                        <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-[10px] font-semibold text-amber-300">Muscle Imbalance Detected</p>
+                          <p className="text-[9px] text-gray-400 mt-0.5">
+                            {topMuscle.name} volume ({topMuscle.total.toLocaleString()}kg) is significantly higher than {secondMuscle.name} ({secondMuscle.total.toLocaleString()}kg).
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
+                    <div>
+                      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-2">Muscle Distribution</span>
+                      <div className="space-y-2">
+                        {sortedMuscles.slice(0, 5).map((m, i) => (
+                          <motion.div key={m.name} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 + i * 0.05 }}
+                            className="flex items-center gap-2">
+                            <span className="text-[10px] text-gray-400 w-14 capitalize truncate">{m.name}</span>
+                            <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                              <motion.div initial={{ width: 0 }} animate={{ width: `${(m.total / maxMuscleVol) * 100}%` }}
+                                transition={{ duration: 0.8, delay: 0.3 + i * 0.05, ease: 'easeOut' }}
+                                className="h-full rounded-full"
+                                style={{ background: `linear-gradient(90deg, rgba(168,85,247,${0.4 + (m.total / maxMuscleVol) * 0.6}), rgba(192,132,252,${0.4 + (m.total / maxMuscleVol) * 0.6}))` }} />
+                            </div>
+                            <span className="text-[10px] text-gray-500 w-12 text-right font-medium">{m.total.toLocaleString()}</span>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* ═══ DONUT CHART + PERSONAL RECORDS ═══ */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Workout Type Donut */}
+              {sortedTypes.length > 0 && (() => {
+                const donutSize = 120
+                const donutCx = donutSize / 2, donutCy = donutSize / 2
+                const outerR = 45, innerR = 30
+                const total = sortedTypes.reduce((s, [, c]) => s + c, 0)
+                let cumAngle = -Math.PI / 2
+                const segments = sortedTypes.map(([type, count]) => {
+                  const angle = (count / total) * Math.PI * 2
+                  const startAngle = cumAngle
+                  const endAngle = cumAngle + angle
+                  cumAngle = endAngle
+                  const largeArc = angle > Math.PI ? 1 : 0
+                  const midAngle = startAngle + angle / 2
+                  return {
+                    type, count,
+                    d: `M ${donutCx + outerR * Math.cos(startAngle)} ${donutCy + outerR * Math.sin(startAngle)} A ${outerR} ${outerR} 0 ${largeArc} 1 ${donutCx + outerR * Math.cos(endAngle)} ${donutCy + outerR * Math.sin(endAngle)} L ${donutCx + innerR * Math.cos(endAngle)} ${donutCy + innerR * Math.sin(endAngle)} A ${innerR} ${innerR} 0 ${largeArc} 0 ${donutCx + innerR * Math.cos(startAngle)} ${donutCy + innerR * Math.sin(startAngle)} Z`,
+                    labelX: donutCx + 38 * Math.cos(midAngle),
+                    labelY: donutCy + 38 * Math.sin(midAngle),
+                  }
+                })
+                const typeColors: Record<string, string> = { strength: '#a855f7', cardio: '#ef4444', flexibility: '#22d3ee', hiit: '#f59e0b', crossfit: '#22c55e', default: '#6b7280' }
+
+                return (
+                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-3">Workout Types</span>
+                    <div className="flex items-center justify-center gap-6">
+                      <svg width={donutSize} height={donutSize} viewBox={`0 0 ${donutSize} ${donutSize}`}>
+                        {segments.map((seg) => (
+                          <g key={seg.type}>
+                            <path d={seg.d} fill={typeColors[seg.type] || typeColors.default} opacity={0.75} stroke="#0a0a0a" strokeWidth="1.5" />
+                            <text x={seg.labelX} y={seg.labelY} textAnchor="middle" dominantBaseline="middle" className="fill-white text-[8px] font-bold">
+                              {Math.round((seg.count / total) * 100)}%
+                            </text>
+                          </g>
+                        ))}
+                        <circle cx={donutCx} cy={donutCy} r={innerR - 2} fill="#0a0a0a" />
+                        <text x={donutCx} y={donutCy - 3} textAnchor="middle" className="fill-white text-[14px] font-black">{total}</text>
+                        <text x={donutCx} y={donutCy + 10} textAnchor="middle" className="fill-gray-500 text-[7px] font-medium">TOTAL</text>
+                      </svg>
+                      <div className="space-y-2">
+                        {segments.map(seg => (
+                          <div key={seg.type} className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ background: typeColors[seg.type] || typeColors.default }} />
+                            <span className="text-[10px] text-gray-400 capitalize">{seg.type.replace('_', ' ')}</span>
+                            <span className="text-[10px] text-gray-600">×{seg.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Personal Records */}
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-3">Personal Records</span>
+                <div className="space-y-2.5">
+                  {/* Best Volume */}
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-amber-500/[0.04] border border-amber-500/10">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                      <Trophy className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[9px] text-gray-500 uppercase tracking-wider">Best Volume</p>
+                      <p className="text-[11px] text-white font-bold truncate">{bestWorkout ? bestWorkout.name : '—'}</p>
+                    </div>
+                    <span className="text-sm font-black text-amber-400">{bestVol.toLocaleString()}<span className="text-[9px] font-normal text-gray-500 ml-0.5">kg</span></span>
+                  </div>
+
+                  {/* Longest Session */}
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-cyan-500/[0.04] border border-cyan-500/10">
+                    <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
+                      <Timer className="w-4 h-4 text-cyan-400" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[9px] text-gray-500 uppercase tracking-wider">Longest Session</p>
+                      <p className="text-[11px] text-white font-bold truncate">{longestSession ? longestSession.name : '—'}</p>
+                    </div>
+                    <span className="text-sm font-black text-cyan-400">{longestSession ? longestSession.duration || 0 : 0}<span className="text-[9px] font-normal text-gray-500 ml-0.5">min</span></span>
+                  </div>
+
+                  {/* Most Exercises */}
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-violet-500/[0.04] border border-violet-500/10">
+                    <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+                      <Dumbbell className="w-4 h-4 text-violet-400" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[9px] text-gray-500 uppercase tracking-wider">Most Exercises</p>
+                      <p className="text-[11px] text-white font-bold truncate">{mostExercises ? mostExercises.name : '—'}</p>
+                    </div>
+                    <span className="text-sm font-black text-violet-400">{mostExercises ? mostExercises.exercises.length : 0}<span className="text-[9px] font-normal text-gray-500 ml-0.5">ex</span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ═══ SMART INSIGHTS ═══ */}
+            <div className="space-y-3">
+              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Insights</span>
+
+              {/* Overtraining Warning */}
+              <AnimatePresence>
+                {overtrainingWarning && (
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                    className="rounded-xl border border-rose-500/20 bg-rose-500/[0.05] p-3 flex items-start gap-2.5">
+                    <AlertTriangle className="w-4 h-4 text-rose-400 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-[10px] font-semibold text-rose-300">Overtraining Alert</p>
+                      <p className="text-[9px] text-gray-400 mt-0.5">
+                        Volume jumped {volumeJump.toFixed(0)}% from last week ({lastWeekVol.toLocaleString()}kg → {thisWeekVol.toLocaleString()}kg). Consider deloading.
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* AI Summary */}
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+                  <span className="text-[10px] font-semibold text-violet-400">AI Weekly Summary</span>
+                </div>
+                <p className="text-[11px] text-gray-300 leading-relaxed">{aiSummary}</p>
+              </div>
+
+              {/* Rest Days Grid */}
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1">
+                  {Array.from({ length: 7 }, (_, i) => {
+                    const dayWorkouts = thisWeekWorkouts.filter(w => new Date(w.date).getDay() === i)
+                    const active = dayWorkouts.length > 0
+                    return (
+                      <div key={i} className={`w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-bold ${active ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30' : 'bg-white/[0.02] text-gray-700 border border-white/[0.04]'}`}>
+                        {dayLabels[i]}
+                      </div>
+                    )
+                  })}
+                </div>
+                <span className="text-[10px] text-gray-500">
+                  <span className="text-emerald-400 font-semibold">{7 - new Set(thisWeekWorkouts.map(w => new Date(w.date).toDateString())).size}</span> rest days
+                </span>
+              </div>
+            </div>
           </div>
         </motion.div>
         )
