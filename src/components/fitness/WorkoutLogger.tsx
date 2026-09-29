@@ -13,7 +13,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { generateId, formatDuration } from '@/lib/utils'
 import { storage } from '@/lib/storage'
 import { exerciseLibrary, getExerciseById, getAllMuscleGroups, categoryLabels, muscleGroupColors } from '@/lib/exercises'
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
+import { ResponsiveContainer, ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 
@@ -654,7 +654,6 @@ export function WorkoutLogger() {
   const [showFilters, _setShowFilters] = useState(false)
   const [showWeeklyAnalytics, setShowWeeklyAnalytics] = useState(false)
   const [weeklyNavOffset, setWeeklyNavOffset] = useState(0)
-  const [chartMode, setChartMode] = useState<'volume' | 'workouts' | 'duration'>('volume')
   const [showTypeDropdown, setShowTypeDropdown] = useState(false)
   const fromDayRef = useRef<HTMLInputElement>(null)
   const fromMonthRef = useRef<HTMLInputElement>(null)
@@ -1177,9 +1176,6 @@ export function WorkoutLogger() {
         const lastWeekVol = lastWeekWorkouts.reduce((s,w) => s + calcVolume(w.exercises), 0)
         const thisWeekDur = thisWeekWorkouts.length > 0 ? Math.round(thisWeekWorkouts.reduce((s,w) => s + (w.duration||0), 0) / thisWeekWorkouts.length) : 0
         const lastWeekDur = lastWeekWorkouts.length > 0 ? Math.round(lastWeekWorkouts.reduce((s,w) => s + (w.duration||0), 0) / lastWeekWorkouts.length) : 0
-        const thisWeekExCount = thisWeekWorkouts.reduce((s,w) => s + w.exercises.length, 0)
-        const lastWeekExCount = lastWeekWorkouts.reduce((s,w) => s + w.exercises.length, 0)
-        const thisWeekTotalDur = thisWeekWorkouts.reduce((s,w) => s + (w.duration||0), 0)
 
         const fourWeekData = Array.from({ length: 4 }, (_, wi) => {
           const ws = new Date(weekStart); ws.setDate(ws.getDate() - (3 - wi) * 7)
@@ -1225,9 +1221,8 @@ export function WorkoutLogger() {
 
         return (
         <motion.div key="weekly-analytics" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-          <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl p-5 space-y-4 relative overflow-hidden">
-            {/* Ambient */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-48 bg-violet-500/[0.05] rounded-full blur-[100px] pointer-events-none" />
+          <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl p-5 space-y-5 relative overflow-hidden">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-64 bg-violet-500/[0.04] rounded-full blur-[120px] pointer-events-none" />
 
             {/* ═══ WEEK NAV ═══ */}
             <div className="flex items-center gap-1 relative">
@@ -1245,265 +1240,182 @@ export function WorkoutLogger() {
               </button>
             </div>
 
-            {/* ═══ HERO ═══ */}
-            <div className="relative flex items-end justify-between">
-              <div>
-                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1">Volume</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-black text-white tracking-tight">{thisWeekVol.toLocaleString()}</span>
-                  <span className="text-lg font-bold text-violet-400/50">kg</span>
-                </div>
-                <div className={`flex items-center gap-1 mt-1 text-xs ${delta(thisWeekVol, lastWeekVol).up ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  <span>{delta(thisWeekVol, lastWeekVol).arrow}</span>
-                  <span className="font-bold">{delta(thisWeekVol, lastWeekVol).pct}</span>
-                  <span className="text-gray-600">vs last week</span>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1">Workouts</p>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-3xl font-black text-white">{thisWeekWorkouts.length}</span>
-                  <span className="text-xs text-gray-500">/ 7 days</span>
-                </div>
-                <div className={`flex items-center gap-1 mt-1 text-[10px] justify-end ${delta(thisWeekWorkouts.length, lastWeekWorkouts.length).up ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  <span>{delta(thisWeekWorkouts.length, lastWeekWorkouts.length).arrow}</span>
-                  <span className="font-bold">{delta(thisWeekWorkouts.length, lastWeekWorkouts.length).pct}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* ═══ CHART MODE SWITCHER ═══ */}
-            <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
-              {([
-                { id: 'volume' as const, label: 'Volume', color: 'violet', unit: 'kg' },
-                { id: 'workouts' as const, label: 'Workouts', color: 'sky', unit: '' },
-                { id: 'duration' as const, label: 'Avg Duration', color: 'emerald', unit: 'min' },
-              ]).map(m => (
-                <button key={m.id} onClick={() => setChartMode(m.id)}
-                  className={`relative flex-1 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
-                    chartMode === m.id
-                      ? m.id === 'volume' ? 'text-violet-300 bg-gradient-to-b from-violet-500/20 to-violet-500/5 border border-violet-500/25 shadow-lg shadow-violet-500/10'
-                      : m.id === 'workouts' ? 'text-sky-300 bg-gradient-to-b from-sky-500/20 to-sky-500/5 border border-sky-500/25 shadow-lg shadow-sky-500/10'
-                      : 'text-emerald-300 bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border border-emerald-500/25 shadow-lg shadow-emerald-500/10'
-                      : 'text-gray-500 hover:text-white border border-transparent'
-                  }`}>
-                  {m.label}
-                </button>
-              ))}
-            </div>
-
-            {/* ═══ CHART ═══ */}
-            <div className="relative h-56">
+            {/* ═══ COMBINED CHART: Volume Area + Workout Bars ═══ */}
+            <div className="relative h-60">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={fourWeekData} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                <ComposedChart data={fourWeekData} margin={{ top: 15, right: 15, bottom: 5, left: 5 }}>
                   <defs>
-                    <linearGradient id="wGradV" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#a855f7" stopOpacity={0.35} /><stop offset="50%" stopColor="#7c3aed" stopOpacity={0.1} /><stop offset="100%" stopColor="#4c1d95" stopOpacity={0} />
+                    <linearGradient id="wAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#a855f7" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="#a855f7" stopOpacity={0} />
                     </linearGradient>
-                    <linearGradient id="wGradW" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.35} /><stop offset="50%" stopColor="#0284c7" stopOpacity={0.1} /><stop offset="100%" stopColor="#0c4a6e" stopOpacity={0} />
+                    <linearGradient id="wLineGrad" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#7c3aed" />
+                      <stop offset="100%" stopColor="#e879f9" />
                     </linearGradient>
-                    <linearGradient id="wGradD" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#34d399" stopOpacity={0.35} /><stop offset="50%" stopColor="#059669" stopOpacity={0.1} /><stop offset="100%" stopColor="#064e3b" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="wLineV" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#6d28d9" /><stop offset="50%" stopColor="#a855f7" /><stop offset="100%" stopColor="#e879f9" />
-                    </linearGradient>
-                    <linearGradient id="wLineW" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#0369a1" /><stop offset="50%" stopColor="#38bdf8" /><stop offset="100%" stopColor="#7dd3fc" />
-                    </linearGradient>
-                    <linearGradient id="wLineD" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#047857" /><stop offset="50%" stopColor="#34d399" /><stop offset="100%" stopColor="#6ee7b7" />
-                    </linearGradient>
-                    <filter id="wGlow"><feGaussianBlur stdDeviation="3.5" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                    <filter id="wGlow"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fill: '#4b5563', fontSize: 10 }} axisLine={false} tickLine={false} dy={6} />
-                  <YAxis tick={{ fill: '#4b5563', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 'auto']} width={35} />
+                  <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} dy={8} />
+                  <YAxis yAxisId="vol" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 'auto']} width={40} tickFormatter={(v: number) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : `${v}`} />
+                  <YAxis yAxisId="cnt" orientation="right" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 'auto']} width={20} />
                   <Tooltip
-                    contentStyle={{ background: 'rgba(7,7,7,0.95)', border: `1px solid ${chartMode === 'volume' ? 'rgba(168,85,247,0.2)' : chartMode === 'workouts' ? 'rgba(56,189,248,0.2)' : 'rgba(52,211,153,0.2)'}`, borderRadius: 14, fontSize: 12, backdropFilter: 'blur(16px)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
-                    labelStyle={{ color: chartMode === 'volume' ? '#c084fc' : chartMode === 'workouts' ? '#7dd3fc' : '#6ee7b7', fontWeight: 700, fontSize: 11 }}
-                    formatter={(v: number) => [`${v.toLocaleString()}${chartMode === 'volume' ? 'kg' : chartMode === 'duration' ? 'min' : ''}`, chartMode === 'volume' ? 'Volume' : chartMode === 'workouts' ? 'Workouts' : 'Avg Duration']}
-                    cursor={{ stroke: chartMode === 'volume' ? 'rgba(168,85,247,0.25)' : chartMode === 'workouts' ? 'rgba(56,189,248,0.25)' : 'rgba(52,211,153,0.25)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                    contentStyle={{ background: 'rgba(7,7,7,0.95)', border: '1px solid rgba(168,85,247,0.2)', borderRadius: 14, fontSize: 12, backdropFilter: 'blur(16px)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+                    labelStyle={{ color: '#c084fc', fontWeight: 700, fontSize: 11, marginBottom: 6 }}
+                    formatter={(value: number, name: string) => name === 'volume' ? [`${value.toLocaleString()}kg`, 'Volume'] : [`${value}`, 'Workouts']}
+                    cursor={{ stroke: 'rgba(168,85,247,0.15)', strokeWidth: 1, strokeDasharray: '4 4' }}
                   />
-                  <Area
-                    type="monotone"
-                    dataKey={chartMode}
-                    stroke={chartMode === 'volume' ? 'url(#wLineV)' : chartMode === 'workouts' ? 'url(#wLineW)' : 'url(#wLineD)'}
-                    strokeWidth={2.5}
-                    fill={chartMode === 'volume' ? 'url(#wGradV)' : chartMode === 'workouts' ? 'url(#wGradW)' : 'url(#wGradD)'}
+                  <Bar yAxisId="cnt" dataKey="workouts" fill="rgba(168,85,247,0.12)" radius={[4, 4, 0, 0]} barSize={20} />
+                  <Area yAxisId="vol" type="monotone" dataKey="volume" stroke="url(#wLineGrad)" strokeWidth={2.5} fill="url(#wAreaGrad)"
                     dot={(props: any) => {
                       const { cx, cy, payload } = props
-                      const vals = fourWeekData.map(d => d[chartMode])
-                      const isMax = payload[chartMode] === Math.max(...vals)
+                      const isMax = payload.volume === Math.max(...fourWeekData.map(d => d.volume))
                       const isThis = payload.label === 'This'
-                      const mainColor = chartMode === 'volume' ? '#a855f7' : chartMode === 'workouts' ? '#38bdf8' : '#34d399'
-                      const brightColor = chartMode === 'volume' ? '#e879f9' : chartMode === 'workouts' ? '#7dd3fc' : '#6ee7b7'
-                      const dimColor = chartMode === 'volume' ? '#581c87' : chartMode === 'workouts' ? '#0c4a6e' : '#064e3b'
                       return (
                         <g>
-                          {isMax && <circle cx={cx} cy={cy} r={14} fill={`${mainColor}10`} filter="url(#wGlow)" />}
-                          <circle cx={cx} cy={cy} r={isMax ? 6 : isThis ? 5 : 3} fill={isMax ? brightColor : isThis ? mainColor : dimColor} stroke="#0a0a0a" strokeWidth={2} filter={isMax ? 'url(#wGlow)' : undefined} />
-                          {isMax && <circle cx={cx} cy={cy} r={10} fill="none" stroke={`${mainColor}20`} strokeWidth={1} />}
+                          {isMax && <circle cx={cx} cy={cy} r={16} fill="rgba(168,85,247,0.06)" filter="url(#wGlow)" />}
+                          <circle cx={cx} cy={cy} r={isMax ? 6 : isThis ? 5 : 3} fill={isMax ? '#e879f9' : isThis ? '#a855f7' : '#581c87'} stroke="#0a0a0a" strokeWidth={2} filter={isMax ? 'url(#wGlow)' : undefined} />
                         </g>
                       )
                     }}
-                    activeDot={{ r: 7, fill: chartMode === 'volume' ? '#e879f9' : chartMode === 'workouts' ? '#7dd3fc' : '#6ee7b7', stroke: '#0a0a0a', strokeWidth: 2.5, filter: 'url(#wGlow)' }}
+                    activeDot={{ r: 7, fill: '#e879f9', stroke: '#0a0a0a', strokeWidth: 2.5, filter: 'url(#wGlow)' }}
                   />
-                </AreaChart>
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
 
-            {/* ═══ STAT CARDS ═══ */}
-            <div className="grid grid-cols-3 gap-2">
+            {/* ═══ STAT STRIP ═══ */}
+            <div className="grid grid-cols-4 gap-3">
               {[
-                { label: 'Duration', value: thisWeekDur > 0 ? `${thisWeekDur}` : '--', unit: 'min', d: delta(thisWeekDur, lastWeekDur), color: 'emerald' },
-                { label: 'Exercises', value: thisWeekExCount, unit: '', d: delta(thisWeekExCount, lastWeekExCount), color: 'amber' },
-                { label: 'Avg/Session', value: thisWeekWorkouts.length > 0 ? Math.round(thisWeekVol / thisWeekWorkouts.length).toLocaleString() : '0', unit: 'kg', d: { pct: '--', up: true, arrow: '', label: '' }, color: 'sky' },
-              ].map(({ label, value, unit, d, color }) => (
-                <div key={label} className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 flex flex-col justify-between">
-                  <span className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">{label}</span>
-                  <div className="mt-1">
-                    <span className={`text-xl font-black text-${color}-400`}>{value}</span>
-                    <span className="text-[10px] text-gray-600 ml-0.5">{unit}</span>
-                  </div>
+                { label: 'Workouts', value: `${thisWeekWorkouts.length}`, sub: `/ 7`, d: delta(thisWeekWorkouts.length, lastWeekWorkouts.length) },
+                { label: 'Volume', value: `${thisWeekVol.toLocaleString()}`, sub: 'kg', d: delta(thisWeekVol, lastWeekVol) },
+                { label: 'Avg', value: thisWeekWorkouts.length > 0 ? `${Math.round(thisWeekVol / thisWeekWorkouts.length)}` : '0', sub: 'kg/session', d: delta(thisWeekWorkouts.length > 0 ? Math.round(thisWeekVol / thisWeekWorkouts.length) : 0, lastWeekWorkouts.length > 0 ? Math.round(lastWeekVol / lastWeekWorkouts.length) : 0) },
+                { label: 'Duration', value: thisWeekDur > 0 ? `${thisWeekDur}` : '--', sub: 'min avg', d: delta(thisWeekDur, lastWeekDur) },
+              ].map(({ label, value, sub, d }) => (
+                <div key={label} className="text-center">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium mb-1">{label}</p>
+                  <p className="text-2xl font-black text-white">{value}<span className="text-xs text-gray-500 font-normal ml-0.5">{sub}</span></p>
                   {d.pct !== '--' && (
-                    <div className={`flex items-center gap-0.5 text-[9px] mt-0.5 ${d.up ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      <span>{d.arrow}</span><span className="font-bold">{d.pct}</span><span className="text-gray-600">vs lw</span>
-                    </div>
+                    <p className={`text-[10px] font-semibold mt-0.5 ${d.up ? 'text-emerald-400' : 'text-rose-400'}`}>{d.arrow} {d.pct}</p>
                   )}
                 </div>
               ))}
             </div>
 
-            {/* ═══ DAILY HEATMAP ═══ */}
-            <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3">
-              <div className="flex items-center justify-between mb-2.5">
-                <span className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">Daily Volume</span>
-                <span className="text-[9px] text-gray-600">{dailyData.filter(d => d.count > 0).length}/7 active</span>
+            {/* ═══ DAILY TIMELINE ═══ */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Daily</span>
+                <span className="text-[10px] text-gray-600">{dailyData.filter(d => d.count > 0).length}/7 active</span>
               </div>
-              <div className="grid grid-cols-7 gap-1.5">
-                {dailyData.map((d, i) => {
-                  const intensity = maxDailyVol > 0 ? d.volume / maxDailyVol : 0
-                  return (
-                    <motion.div key={d.name} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: i * 0.05 }}
-                      className="aspect-square rounded-lg flex flex-col items-center justify-center relative group cursor-default"
-                      style={{
-                        background: d.volume > 0
-                          ? `rgba(168,85,247,${0.08 + intensity * 0.35})`
-                          : 'rgba(255,255,255,0.02)',
-                        border: `1px solid ${d.volume > 0 ? `rgba(168,85,247,${0.1 + intensity * 0.2})` : 'rgba(255,255,255,0.04)'}`,
-                      }}>
-                      <span className="text-[9px] font-bold text-gray-400">{d.label}</span>
+              <div className="space-y-1.5">
+                {dailyData.map((d, i) => (
+                  <motion.div key={d.name} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04, duration: 0.3 }} className="flex items-center gap-3">
+                    <span className={`text-[11px] w-7 font-semibold ${d.count > 0 ? 'text-white' : 'text-gray-600'}`}>{d.label}</span>
+                    <div className="flex-1 h-7 rounded-lg bg-white/[0.02] border border-white/[0.04] overflow-hidden relative">
                       {d.volume > 0 ? (
-                        <span className="text-[8px] text-violet-300/80 font-semibold mt-0.5">{d.volume.toLocaleString()}</span>
+                        <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(8, (d.volume / maxDailyVol) * 100)}%` }} transition={{ duration: 0.6, delay: i * 0.04, ease: [0.25, 0.46, 0.45, 0.94] }}
+                          className="h-full rounded-lg bg-gradient-to-r from-violet-600/80 to-violet-500/60 flex items-center justify-end pr-2.5">
+                          <span className="text-[10px] text-white/90 font-semibold">{d.volume.toLocaleString()}kg</span>
+                        </motion.div>
                       ) : (
-                        <span className="text-[7px] text-gray-600 mt-0.5">—</span>
+                        <span className="absolute inset-0 flex items-center pl-3 text-[10px] text-gray-700 italic">rest</span>
                       )}
-                      {/* Tooltip on hover */}
-                      <div className="absolute -top-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                        <div className="bg-[#0a0a0a] border border-white/10 rounded-lg px-2.5 py-1.5 text-center whitespace-nowrap shadow-xl">
-                          <p className="text-[9px] text-white font-semibold">{d.name}</p>
-                          <p className="text-[8px] text-violet-300">{d.volume > 0 ? `${d.volume.toLocaleString()}kg · ${d.count} workout${d.count > 1 ? 's' : ''}` : 'Rest day'}</p>
+                    </div>
+                    <div className="flex gap-0.5 w-16 justify-end">
+                      {d.types.map(t => {
+                        const tc = typeConfig[t] || typeConfig.strength
+                        return <span key={t} className={`text-[7px] px-1 py-0.5 rounded ${tc.bg} ${tc.color} font-bold uppercase`}>{t.charAt(0)}</span>
+                      })}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            {/* ═══ MUSCLE + PEAK ═══ */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Muscle Distribution */}
+              {sortedMuscles.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Muscles</span>
+                    <span className="text-[10px] text-gray-600">{muscleCount} groups</span>
+                  </div>
+                  <div className="space-y-2">
+                    {sortedMuscles.slice(0, 5).map((m, i) => (
+                      <motion.div key={m.name} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 + i * 0.05 }} className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 w-14 capitalize truncate">{m.name}</span>
+                        <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${(m.total / maxMuscleVol) * 100}%` }} transition={{ duration: 0.8, delay: 0.3 + i * 0.05, ease: 'easeOut' }}
+                            className="h-full rounded-full" style={{ background: `linear-gradient(90deg, rgba(168,85,247,${0.4 + (m.total / maxMuscleVol) * 0.6}), rgba(192,132,252,${0.4 + (m.total / maxMuscleVol) * 0.6}))` }} />
                         </div>
+                        <span className="text-[10px] text-gray-500 w-12 text-right font-medium">{m.total.toLocaleString()}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Peak + Rest */}
+              <div className="space-y-3">
+                {/* Peak Workout */}
+                <div>
+                  <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-2">Peak Workout</span>
+                  {bestWorkout ? (
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                      <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                        <span className="text-sm">🏆</span>
                       </div>
-                    </motion.div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] text-white font-semibold truncate">{bestWorkout.name}</p>
+                        <p className="text-[9px] text-gray-500">{bestVol.toLocaleString()}kg · {bestWorkout.exercises.length} exercises · {bestWorkout.duration || 0}min</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                      <p className="text-[10px] text-gray-600 italic">No workouts this week</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Rest Days */}
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-1">
+                    {Array.from({ length: 7 }, (_, i) => {
+                      const dayWorkouts = thisWeekWorkouts.filter(w => new Date(w.date).getDay() === i)
+                      const active = dayWorkouts.length > 0
+                      return (
+                        <div key={i} className={`w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-bold ${active ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30' : 'bg-white/[0.02] text-gray-700 border border-white/[0.04]'}`}>
+                          {dayLabels[i]}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <span className="text-[10px] text-gray-500">
+                    <span className="text-emerald-400 font-semibold">{7 - new Set(thisWeekWorkouts.map(w => new Date(w.date).toDateString())).size}</span> rest days
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* ═══ TYPES ═══ */}
+            {sortedTypes.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] text-gray-500 uppercase tracking-wider font-medium mr-1">Types</span>
+                {sortedTypes.map(([type, count]) => {
+                  const tc = typeConfig[type] || typeConfig.strength
+                  const TypeIcon = tc.icon
+                  return (
+                    <div key={type} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-semibold ${tc.bg} ${tc.color}`}>
+                      <TypeIcon className="w-3 h-3" />
+                      <span className="capitalize">{type.replace('_', ' ')}</span>
+                      <span className="opacity-50">×{count}</span>
+                    </div>
                   )
                 })}
               </div>
-            </div>
-
-            {/* ═══ MUSCLE BREAKDOWN ═══ */}
-            {sortedMuscles.length > 0 && (
-              <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3">
-                <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">Muscle Groups</span>
-                  <span className="text-[9px] text-gray-600">{muscleCount} hit</span>
-                </div>
-                <div className="space-y-2">
-                  {sortedMuscles.slice(0, 6).map((m, i) => (
-                    <motion.div key={m.name} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }} className="flex items-center gap-2.5">
-                      <span className="text-[9px] text-gray-500 w-3 text-center font-mono">{i + 1}</span>
-                      <span className="text-[10px] text-gray-300 w-16 capitalize truncate font-medium">{m.name}</span>
-                      <div className="flex-1 h-2 rounded-full bg-white/[0.04] overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${(m.total / maxMuscleVol) * 100}%` }} transition={{ duration: 0.8, delay: i * 0.06, ease: 'easeOut' }}
-                          className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400" />
-                      </div>
-                      <span className="text-[9px] text-gray-400 w-12 text-right font-medium">{m.total.toLocaleString()}kg</span>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
             )}
-
-            {/* ═══ PEAK + REST + TYPES ═══ */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              {/* Peak Performance */}
-              <div className="rounded-xl bg-gradient-to-br from-amber-500/[0.08] to-orange-500/[0.04] border border-amber-500/15 p-3.5 flex gap-3 items-center">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                  <span className="text-lg">🏆</span>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[9px] font-bold text-amber-400/80 uppercase tracking-wider mb-0.5">Peak</p>
-                  {bestWorkout ? (
-                    <>
-                      <p className="text-xs text-white font-semibold truncate">{bestWorkout.name}</p>
-                      <p className="text-[10px] text-gray-500">{bestVol.toLocaleString()}kg · {bestWorkout.duration || 0}min</p>
-                    </>
-                  ) : (
-                    <p className="text-[10px] text-gray-600 italic">No workouts</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Rest Days */}
-              <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3.5 flex gap-3 items-center">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                  <Coffee className="w-5 h-5 text-emerald-400" />
-                </div>
-                <div>
-                  <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Rest Days</p>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-xl font-black text-emerald-400">{7 - new Set(thisWeekWorkouts.map(w => new Date(w.date).toDateString())).size}</span>
-                    <span className="text-[10px] text-gray-600">/ 7</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Workout Types */}
-              <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3.5">
-                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-2">Types</p>
-                <div className="flex flex-wrap gap-1">
-                  {sortedTypes.length > 0 ? sortedTypes.map(([type, count]) => {
-                    const tc = typeConfig[type] || typeConfig.strength
-                    const TypeIcon = tc.icon
-                    return (
-                      <div key={type} className={`flex items-center gap-1 px-2 py-1 rounded-md border text-[9px] font-semibold ${tc.bg} ${tc.color}`}>
-                        <TypeIcon className="w-2.5 h-2.5" />
-                        <span className="capitalize">{type.replace('_', ' ')}</span>
-                        <span className="opacity-50">x{count}</span>
-                      </div>
-                    )
-                  }) : <span className="text-[10px] text-gray-600 italic">None</span>}
-                </div>
-              </div>
-            </div>
-
-            {/* ═══ TIME PROGRESS ═══ */}
-            <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">Total Time</span>
-                <span className="text-xs font-bold text-emerald-400">{thisWeekTotalDur}min</span>
-              </div>
-              <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(100, (thisWeekTotalDur / (7 * 60)) * 100)}%` }} transition={{ duration: 1, ease: 'easeOut' }}
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400" />
-              </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-[8px] text-gray-600">0</span>
-                <span className="text-[8px] text-gray-600">7h goal</span>
-              </div>
-            </div>
           </div>
         </motion.div>
         )
