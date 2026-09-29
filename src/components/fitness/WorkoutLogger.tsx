@@ -1173,8 +1173,9 @@ export function WorkoutLogger() {
         const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 6); weekEnd.setHours(23,59,59,999)
         const lastWeekEnd = new Date(weekStart); lastWeekEnd.setDate(lastWeekEnd.getDate() - 1)
         const lastWeekStart = new Date(lastWeekEnd); lastWeekStart.setDate(lastWeekStart.getDate() - 6); lastWeekStart.setHours(0,0,0,0)
-        const thisWeekWorkouts = workouts.filter(w => { const d = new Date(w.date); return d >= weekStart && d <= weekEnd })
-        const lastWeekWorkouts = workouts.filter(w => { const d = new Date(w.date); return d >= lastWeekStart && d <= lastWeekEnd })
+        const toDateOnly = (s: string) => { const d = new Date(s); return new Date(d.getFullYear(), d.getMonth(), d.getDate()) }
+        const thisWeekWorkouts = workouts.filter(w => { const d = toDateOnly(w.date); return d >= weekStart && d <= weekEnd })
+        const lastWeekWorkouts = workouts.filter(w => { const d = toDateOnly(w.date); return d >= lastWeekStart && d <= lastWeekEnd })
         const thisWeekVol = thisWeekWorkouts.reduce((s,w) => s + calcVolume(w.exercises), 0)
         const lastWeekVol = lastWeekWorkouts.reduce((s,w) => s + calcVolume(w.exercises), 0)
         const thisWeekDur = thisWeekWorkouts.length > 0 ? Math.round(thisWeekWorkouts.reduce((s,w) => s + (w.duration||0), 0) / thisWeekWorkouts.length) : 0
@@ -1210,17 +1211,18 @@ export function WorkoutLogger() {
         let currentStreak = 0
         let longestStreak = 0
         let tempStreak = 0
-        const today = new Date(); today.setHours(0,0,0,0)
+        const toLocalDate = (s: string) => { const d = new Date(s); return new Date(d.getFullYear(), d.getMonth(), d.getDate()) }
+        const today = toLocalDate(new Date().toISOString())
         for (let i = 0; i < 365; i++) {
           const d = new Date(today); d.setDate(d.getDate() - i)
-          const has = workouts.some(w => new Date(w.date).toDateString() === d.toDateString())
+          const has = workouts.some(w => toLocalDate(w.date).getTime() === d.getTime())
           if (has) { tempStreak++; longestStreak = Math.max(longestStreak, tempStreak) }
           else { tempStreak = 0 }
         }
         // Current streak from today backwards
         for (let i = 0; i < 365; i++) {
           const d = new Date(today); d.setDate(d.getDate() - i)
-          const has = workouts.some(w => new Date(w.date).toDateString() === d.toDateString())
+          const has = workouts.some(w => toLocalDate(w.date).getTime() === d.getTime())
           if (has) currentStreak++
           else if (i > 0) break
         }
@@ -1653,30 +1655,6 @@ export function WorkoutLogger() {
               })()}
             </AnimatePresence>
 
-            {/* ═══ SESSION TYPES ═══ */}
-            {sortedTypes.length > 0 && (
-              <div className="rounded-2xl border border-violet-500/15 bg-gradient-to-br from-violet-500/[0.05] via-black/60 to-purple-500/[0.03] p-4 relative overflow-hidden">
-                <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-violet-500/[0.05] rounded-full blur-2xl pointer-events-none" />
-                <span className="text-[10px] font-semibold text-violet-400/80 uppercase tracking-wider block mb-3 relative z-10">Session Types</span>
-                <div className="flex gap-2 flex-wrap relative z-10">
-                  {sortedTypes.map(([type, count]) => {
-                    const tc = typeConfig[type] || typeConfig.strength
-                    const pct = Math.round((count / thisWeekWorkouts.length) * 100)
-                    return (
-                      <div key={type} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] flex-1 min-w-[120px]">
-                        <div className={`w-7 h-7 rounded-lg ${tc.bg} flex items-center justify-center shrink-0`}>
-                          <tc.icon className="w-3.5 h-3.5" />
-                        </div>
-                        <div className="min-w-0">
-                          <span className="text-[10px] text-gray-300 capitalize font-semibold block">{type.replace('_', ' ')}</span>
-                          <span className="text-[9px] text-gray-500">{count}× · {pct}%</span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
             </>)}
 
             {/* ═══ MUSCLE RADAR + IMBALANCE ═══ */}
