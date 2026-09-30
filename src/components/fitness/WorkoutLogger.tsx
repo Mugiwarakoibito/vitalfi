@@ -1585,82 +1585,139 @@ export function WorkoutLogger() {
                 </div>
                 {trainedMuscles.length > 0 ? (
                   <div className="relative">
-                    <div className="absolute -top-4 -right-4 w-16 h-16 bg-cyan-500/[0.06] rounded-full blur-xl pointer-events-none" />
+                    <div className="absolute -top-6 -right-6 w-20 h-20 bg-cyan-500/[0.07] rounded-full blur-2xl pointer-events-none" />
+                    <div className="absolute -bottom-4 -left-4 w-14 h-14 bg-violet-500/[0.05] rounded-full blur-xl pointer-events-none" />
                     {(() => {
-                      const W = 320, H = 300, cx = W / 2, cy = H / 2
-                      const maxR = 105
+                      const W = 340, H = 320, cx = W / 2, cy = H / 2
+                      const maxR = 110
                       const n = trainedMuscles.length
                       const angles = Array.from({ length: n }, (_, i) => (Math.PI * 2 * i / n) - Math.PI / 2)
                       const pt = (r: number, i: number) => ({ x: cx + r * Math.cos(angles[i]), y: cy + r * Math.sin(angles[i]) })
 
+                      // Color map for muscles
+                      const muscleColorMap: Record<string, { hex: string; rgb: string }> = {
+                        chest: { hex: '#fb7185', rgb: '251,113,133' },
+                        back: { hex: '#34d399', rgb: '52,211,153' },
+                        shoulders: { hex: '#fbbf24', rgb: '251,191,36' },
+                        biceps: { hex: '#38bdf8', rgb: '56,189,248' },
+                        triceps: { hex: '#a78bfa', rgb: '167,139,250' },
+                        abs: { hex: '#fb923c', rgb: '251,146,60' },
+                        obliques: { hex: '#fbbf24', rgb: '251,191,36' },
+                        quads: { hex: '#818cf8', rgb: '129,140,248' },
+                        hamstrings: { hex: '#2dd4bf', rgb: '45,212,191' },
+                        glutes: { hex: '#f472b6', rgb: '244,114,182' },
+                        calves: { hex: '#22d3ee', rgb: '34,211,238' },
+                        forearms: { hex: '#a3e635', rgb: '163,230,53' },
+                        traps: { hex: '#facc15', rgb: '250,204,21' },
+                        lats: { hex: '#e879f9', rgb: '232,121,249' },
+                        core: { hex: '#f97316', rgb: '249,115,22' },
+                        neck: { hex: '#9ca3af', rgb: '156,163,175' },
+                        hip_flexors: { hex: '#60a5fa', rgb: '96,165,250' },
+                        rear_delts: { hex: '#c084fc', rgb: '192,132,252' },
+                        full_body: { hex: '#f472b6', rgb: '244,114,182' },
+                      }
+                      const getColor = (name: string) => muscleColorMap[name] || { hex: '#22d3ee', rgb: '34,211,238' }
+
                       const dataPts = trainedMuscles.map((m, i) => {
-                        const r = m.volume > 0 ? Math.max((m.volume / radarMaxVol) * maxR, 4) : 2
+                        const r = m.volume > 0 ? Math.max((m.volume / radarMaxVol) * maxR, 6) : 2
                         return pt(r, i)
                       })
 
                       const trainedIdx = trainedMuscles.map((m, i) => ({ m, i })).filter(x => x.m.volume > 0)
 
+                      // Build gradient stops for the fill polygon
+                      const gradientStops = trainedIdx.map(({ m }, gi) => {
+                        const pct = gi / Math.max(trainedIdx.length - 1, 1)
+                        const c = getColor(m.name)
+                        return `<stop offset="${(pct * 100).toFixed(0)}%" stop-color="${c.hex}" stop-opacity="0.3"/>`
+                      }).join('')
+
                       return (
                         <div className="flex justify-center">
                           <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
                             <defs>
-                              <radialGradient id="radarCenter" cx="50%" cy="50%" r="50%">
-                                <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.08} />
-                                <stop offset="100%" stopColor="#22d3ee" stopOpacity={0} />
+                              {/* Background radial glow */}
+                              <radialGradient id="rdBg" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.06} />
+                                <stop offset="60%" stopColor="#6366f1" stopOpacity={0.02} />
+                                <stop offset="100%" stopColor="#0a0a0a" stopOpacity={0} />
                               </radialGradient>
-                              <linearGradient id="radarFill" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.25} />
-                                <stop offset="50%" stopColor="#0ea5e9" stopOpacity={0.12} />
-                                <stop offset="100%" stopColor="#6366f1" stopOpacity={0.08} />
+                              {/* Multi-color fill gradient */}
+                              <linearGradient id="rdFill" x1="0%" y1="0%" x2="100%" y2="100%">
+                                {gradientStops || '<stop offset="0%" stop-color="#22d3ee" stop-opacity="0.2"/>'}
                               </linearGradient>
-                              <filter id="radarGlow"><feGaussianBlur stdDeviation="4" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                              <filter id="radarPointGlow"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              {/* Stroke gradient */}
+                              <linearGradient id="rdStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.9} />
+                                <stop offset="50%" stopColor="#818cf8" stopOpacity={0.7} />
+                                <stop offset="100%" stopColor="#e879f9" stopOpacity={0.6} />
+                              </linearGradient>
+                              {/* Filters */}
+                              <filter id="rdGlow" x="-30%" y="-30%" width="160%" height="160%">
+                                <feGaussianBlur stdDeviation="5" result="blur" />
+                                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                              </filter>
+                              <filter id="rdPointGlow" x="-50%" y="-50%" width="200%" height="200%">
+                                <feGaussianBlur stdDeviation="4" result="blur" />
+                                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                              </filter>
+                              <filter id="rdSoftGlow" x="-50%" y="-50%" width="200%" height="200%">
+                                <feGaussianBlur stdDeviation="8" />
+                              </filter>
                             </defs>
 
-                            {/* Center glow */}
-                            <circle cx={cx} cy={cy} r={maxR + 10} fill="url(#radarCenter)" />
+                            {/* Background glow disc */}
+                            <circle cx={cx} cy={cy} r={maxR + 25} fill="url(#rdBg)" />
 
                             {/* Concentric polygon rings */}
-                            {[0.2, 0.4, 0.6, 0.8, 1].map((s, ri) => (
+                            {[0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 1].map((s, ri) => (
                               <polygon key={ri}
                                 points={angles.map(a => `${cx + maxR * s * Math.cos(a)},${cy + maxR * s * Math.sin(a)}`).join(' ')}
                                 fill="none"
-                                stroke={s === 1 ? 'rgba(34,211,238,0.18)' : 'rgba(34,211,238,0.06)'}
-                                strokeWidth={s === 1 ? 1.5 : 1}
-                                strokeDasharray={s < 1 ? '3,4' : undefined} />
+                                stroke={s === 1 ? 'rgba(34,211,238,0.2)' : 'rgba(255,255,255,0.04)'}
+                                strokeWidth={s === 1 ? 1.5 : 0.8}
+                                strokeDasharray={s < 1 ? '2,5' : undefined} />
                             ))}
 
-                            {/* Spokes to each axis */}
+                            {/* Spokes */}
                             {angles.map((_a, i) => {
                               const end = pt(maxR, i)
                               return (
                                 <line key={i} x1={cx} y1={cy} x2={end.x} y2={end.y}
-                                  stroke="rgba(34,211,238,0.08)" strokeWidth="1" />
+                                  stroke="rgba(255,255,255,0.04)" strokeWidth="0.8" />
                               )
                             })}
 
-                            {/* Scale label */}
-                            <text x={cx + 5} y={cy - maxR + 4} className="fill-gray-700 text-[7px] font-medium">
-                              {radarMaxVol >= 1000 ? `${(radarMaxVol / 1000).toFixed(1)}k` : radarMaxVol}kg
+                            {/* Scale marker */}
+                            <text x={cx + 6} y={cy - maxR + 5} className="fill-gray-600 text-[7px] font-medium">
+                              {radarMaxVol >= 1000 ? `${(radarMaxVol / 1000).toFixed(1)}k kg` : `${radarMaxVol} kg`}
                             </text>
 
-                            {/* Data polygon — connect all points */}
+                            {/* Outer glow ring behind polygon */}
                             {n >= 3 && (
-                              <motion.polygon
-                                initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                                style={{ transformOrigin: `${cx}px ${cy}px` }}
+                              <polygon
                                 points={dataPts.map(p => `${p.x},${p.y}`).join(' ')}
-                                fill="url(#radarFill)" stroke="rgba(34,211,238,0.7)" strokeWidth="2"
-                                filter="url(#radarGlow)" />
+                                fill="none" stroke="url(#rdStroke)" strokeWidth="6"
+                                opacity={0.15} filter="url(#rdSoftGlow)" />
                             )}
 
-                            {/* For n < 3: draw lines from center to each point */}
+                            {/* Data polygon */}
+                            {n >= 3 && (
+                              <motion.polygon
+                                initial={{ opacity: 0, scale: 0.2 }} animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                                style={{ transformOrigin: `${cx}px ${cy}px` }}
+                                points={dataPts.map(p => `${p.x},${p.y}`).join(' ')}
+                                fill="url(#rdFill)" stroke="url(#rdStroke)" strokeWidth="2.5"
+                                strokeLinejoin="round" filter="url(#rdGlow)" />
+                            )}
+
+                            {/* Lines from center for n < 3 */}
                             {n < 3 && dataPts.map((p, i) => (
                               <motion.line key={i}
                                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 + i * 0.1 }}
                                 x1={cx} y1={cy} x2={p.x} y2={p.y}
-                                stroke="rgba(34,211,238,0.6)" strokeWidth="2" filter="url(#radarGlow)" />
+                                stroke="url(#rdStroke)" strokeWidth="2.5" filter="url(#rdGlow)" />
                             ))}
 
                             {/* Data points + labels for trained muscles */}
@@ -1669,29 +1726,39 @@ export function WorkoutLogger() {
                               const angle = angles[i]
                               const cosA = Math.cos(angle)
                               const sinA = Math.sin(angle)
-                              const labelR = maxR + 16
+                              const labelR = maxR + 18
                               const lx = cx + labelR * cosA
                               const ly = cy + labelR * sinA
-                              const anchor = cosA > 0.2 ? 'start' : cosA < -0.2 ? 'end' : 'middle'
+                              const anchor = cosA > 0.25 ? 'start' : cosA < -0.25 ? 'end' : 'middle'
+                              const c = getColor(m.name)
                               return (
                                 <motion.g key={m.name}
                                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                                  transition={{ delay: 0.4 + i * 0.06 }}>
-                                  <circle cx={p.x} cy={p.y} r={4.5}
-                                    fill="#22d3ee" stroke="#0a0a0a" strokeWidth={2}
-                                    filter="url(#radarPointGlow)" />
-                                  <text x={lx} y={ly - 4} textAnchor={anchor} dominantBaseline="middle"
-                                    className="fill-cyan-300 text-[8px] capitalize font-bold"
-                                    style={{ textShadow: '0 0 4px rgba(0,0,0,0.8)' }}>
+                                  transition={{ delay: 0.5 + i * 0.07 }}>
+                                  {/* Outer glow point */}
+                                  <circle cx={p.x} cy={p.y} r={7} fill={c.hex} opacity={0.2} filter="url(#rdPointGlow)" />
+                                  {/* Main point */}
+                                  <circle cx={p.x} cy={p.y} r={4.5} fill={c.hex} stroke="#0a0a0a" strokeWidth={2} />
+                                  {/* Inner highlight */}
+                                  <circle cx={p.x - 1} cy={p.y - 1} r={1.5} fill="white" opacity={0.4} />
+                                  {/* Label with background */}
+                                  <rect x={anchor === 'start' ? lx - 2 : anchor === 'end' ? lx - 52 : lx - 27}
+                                    y={ly - 12} width={anchor === 'middle' ? 54 : 54} height={28} rx={6}
+                                    fill="rgba(10,10,12,0.7)" stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
+                                  <text x={anchor === 'start' ? lx + 2 : anchor === 'end' ? lx - 2 : lx}
+                                    y={ly - 4} textAnchor={anchor === 'middle' ? 'middle' : anchor} dominantBaseline="middle"
+                                    fill={c.hex} fontSize="8" fontWeight="700" fontFamily="Inter, sans-serif">
                                     {m.name.replace(/_/g, ' ')}
                                   </text>
-                                  <text x={lx} y={ly + 5} textAnchor={anchor} dominantBaseline="middle"
-                                    className="fill-gray-400 text-[7px] font-semibold">
-                                    {m.volume >= 1000 ? `${(m.volume / 1000).toFixed(1)}k` : m.volume}kg · {m.sets}sets
+                                  <text x={anchor === 'start' ? lx + 2 : anchor === 'end' ? lx - 2 : lx}
+                                    y={ly + 5} textAnchor={anchor === 'middle' ? 'middle' : anchor} dominantBaseline="middle"
+                                    fill="#9ca3af" fontSize="7" fontWeight="600" fontFamily="Inter, sans-serif">
+                                    {m.volume >= 1000 ? `${(m.volume / 1000).toFixed(1)}k` : m.volume}kg
                                   </text>
                                   {m.dates.length > 0 && (
-                                    <text x={lx} y={ly + 12} textAnchor={anchor} dominantBaseline="middle"
-                                      className="fill-gray-600 text-[6px]">
+                                    <text x={anchor === 'start' ? lx + 2 : anchor === 'end' ? lx - 2 : lx}
+                                      y={ly + 12} textAnchor={anchor === 'middle' ? 'middle' : anchor} dominantBaseline="middle"
+                                      fill="#6b7280" fontSize="5.5" fontFamily="Inter, sans-serif">
                                       {m.dates.length <= 2 ? m.dates.join(' · ') : `${m.dates[0]} +${m.dates.length - 1}`}
                                     </text>
                                   )}
@@ -1708,10 +1775,10 @@ export function WorkoutLogger() {
                               const labelR = maxR + 16
                               const lx = cx + labelR * cosA
                               const ly = cy + labelR * sinA
-                              const anchor = cosA > 0.2 ? 'start' : cosA < -0.2 ? 'end' : 'middle'
+                              const anchor = cosA > 0.25 ? 'start' : cosA < -0.25 ? 'end' : 'middle'
                               return (
                                 <text key={`dim-${m.name}`} x={lx} y={ly} textAnchor={anchor} dominantBaseline="middle"
-                                  className="fill-gray-700 text-[7px] capitalize">
+                                  fill="#374151" fontSize="7" fontFamily="Inter, sans-serif">
                                   {m.name.replace(/_/g, ' ')}
                                 </text>
                               )
