@@ -1226,8 +1226,6 @@ export function WorkoutLogger() {
         })
         const trainedMuscles = [...muscleStats.entries()].map(([name, s]) => ({ name, ...s }))
           .sort((a, b) => b.volume - a.volume)
-        const maxRadarVol = trainedMuscles.length > 0 ? trainedMuscles[0].volume : 1
-        const radarMax = Math.ceil(maxRadarVol / 500) * 500 || 500
 
         // Streak
         let currentStreak = 0
@@ -1570,164 +1568,251 @@ export function WorkoutLogger() {
                 </ResponsiveContainer>
               </div>
 
-              {/* Bottom: Muscle Radar */}
+              {/* Bottom: Muscle Load — Premium Radial Dashboard */}
               <div className="relative z-10 px-4 pb-4 pt-1">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Muscle Radar</span>
-                  <div className="flex-1 h-px bg-white/[0.04]" />
-                  <span className="text-[8px] text-gray-600">{trainedMuscles.length} muscles · full week data</span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.6)]" />
+                  <span className="text-[9px] text-gray-400 uppercase tracking-[0.15em] font-semibold">Muscle Load</span>
+                  <div className="flex-1 h-px bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent" />
+                  <span className="text-[8px] text-gray-600">{trainedMuscles.length} muscles</span>
                 </div>
                 {trainedMuscles.length > 0 ? (
                   <div className="relative">
-                    <div className="absolute -top-6 -right-6 w-24 h-24 bg-cyan-500/[0.06] rounded-full blur-2xl pointer-events-none" />
-                    <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-blue-500/[0.05] rounded-full blur-xl pointer-events-none" />
+                    <div className="absolute -top-6 -right-6 w-20 h-20 bg-cyan-500/[0.07] rounded-full blur-2xl pointer-events-none" />
+                    <div className="absolute -bottom-4 -left-4 w-14 h-14 bg-violet-500/[0.05] rounded-full blur-xl pointer-events-none" />
                     {(() => {
-                      const W = 340, H = 300, cx = W / 2, cy = H / 2 - 5
-                      const maxR = 105
+                      const totalVol = trainedMuscles.reduce((s, m) => s + m.volume, 0)
+                      const totalSets = trainedMuscles.reduce((s, m) => s + m.sets, 0)
+                      const totalReps = trainedMuscles.reduce((s, m) => s + m.reps, 0)
+                      const totalSessions = new Set(thisWeekWorkouts.map(w => w.date)).size
+
+                      const W = 320, H = 260, cx = W / 2, cy = H / 2
+                      const innerR = 38, outerR = 100
                       const n = trainedMuscles.length
-                      const angles = Array.from({ length: n }, (_, i) => (Math.PI * 2 * i / n) - Math.PI / 2)
-                      const pt = (r: number, i: number) => ({ x: cx + r * Math.cos(angles[i]), y: cy + r * Math.sin(angles[i]) })
-                      const volPts = trainedMuscles.map((m, i) => pt((m.volume / radarMax) * maxR, i))
-                      const setPts = trainedMuscles.map((m, i) => pt((m.sets / Math.max(...trainedMuscles.map(t => t.sets), 1)) * maxR * 0.85, i))
+                      const gap = 0.035
+                      const arcSpan = (Math.PI * 2 - gap * n) / n
+                      const startOffset = -Math.PI / 2 - Math.PI / n
+
+                      const muscleColors = [
+                        { from: '#22d3ee', to: '#0e7490', glow: 'rgba(34,211,238,' },
+                        { from: '#a78bfa', to: '#6d28d9', glow: 'rgba(167,139,250,' },
+                        { from: '#f472b6', to: '#be185d', glow: 'rgba(244,114,182,' },
+                        { from: '#34d399', to: '#047857', glow: 'rgba(52,211,153,' },
+                        { from: '#fbbf24', to: '#b45309', glow: 'rgba(251,191,36,' },
+                        { from: '#60a5fa', to: '#1d4ed8', glow: 'rgba(96,165,250,' },
+                        { from: '#f87171', to: '#b91c1c', glow: 'rgba(248,113,113,' },
+                        { from: '#c084fc', to: '#7e22ce', glow: 'rgba(192,132,252,' },
+                      ]
+
+                      // Per-muscle daily volume for mini sparkline
+                      const muscleDaily = new Map<string, number[]>()
+                      trainedMuscles.forEach(m => {
+                        const arr = new Array(7).fill(0)
+                        thisWeekWorkouts.forEach(w => {
+                          const di = new Date(w.date).getDay()
+                          w.exercises.forEach(ex => {
+                            const def = getExerciseById(ex.exerciseId)
+                            if (def && def.primaryMuscles.includes(m.name as MuscleGroup)) {
+                              arr[di] += calcVolume([ex])
+                            }
+                          })
+                        })
+                        muscleDaily.set(m.name, arr)
+                      })
+
+                      const arcs = trainedMuscles.map((m, i) => {
+                        const pct = totalVol > 0 ? m.volume / totalVol : 0
+                        const angleSpan = Math.max(arcSpan * (0.25 + pct * 0.75), 0.05)
+                        const startA = startOffset + i * (arcSpan + gap)
+                        const endA = startA + angleSpan
+                        const r = innerR + 6 + pct * (outerR - innerR - 6)
+                        const largeArc = angleSpan > Math.PI ? 1 : 0
+                        const x1 = cx + innerR * Math.cos(startA), y1 = cy + innerR * Math.sin(startA)
+                        const x2 = cx + r * Math.cos(startA), y2 = cy + r * Math.sin(startA)
+                        const x3 = cx + r * Math.cos(endA), y3 = cy + r * Math.sin(endA)
+                        const x4 = cx + innerR * Math.cos(endA), y4 = cy + innerR * Math.sin(endA)
+                        const midA = (startA + endA) / 2
+                        const labelR = r + 12
+                        const lx = cx + labelR * Math.cos(midA)
+                        const ly = cy + labelR * Math.sin(midA)
+                        const anchor = Math.cos(midA) > 0.2 ? 'start' as const : Math.cos(midA) < -0.2 ? 'end' as const : 'middle' as const
+                        return { m, i, path: `M${x1},${y1} L${x2},${y2} A${r},${r} 0 ${largeArc} 1 ${x3},${y3} L${x4},${y4} A${innerR},${innerR} 0 ${largeArc} 0 ${x1},${y1} Z`, lx, ly, anchor, pct, r, startA, endA, midA }
+                      })
+
                       return (
-                        <div className="flex justify-center">
-                          <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+                        <div className="relative">
+                          <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="mx-auto block">
                             <defs>
-                              <radialGradient id="radarBg" cx="50%" cy="50%" r="50%">
-                                <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.06} />
-                                <stop offset="70%" stopColor="#06b6d4" stopOpacity={0.02} />
-                                <stop offset="100%" stopColor="#0a0a0a" stopOpacity={0} />
+                              <filter id="mlGlow"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <filter id="mlCenterGlow"><feGaussianBlur stdDeviation="10" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <filter id="mlPointGlow"><feGaussianBlur stdDeviation="2" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <radialGradient id="mlCenterBg" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.08} />
+                                <stop offset="80%" stopColor="#0a0a0a" stopOpacity={0.9} />
+                                <stop offset="100%" stopColor="#0a0a0a" stopOpacity={1} />
                               </radialGradient>
-                              <linearGradient id="radarVolFill" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.3} />
-                                <stop offset="50%" stopColor="#0ea5e9" stopOpacity={0.15} />
-                                <stop offset="100%" stopColor="#6366f1" stopOpacity={0.1} />
-                              </linearGradient>
-                              <linearGradient id="radarSetFill" x1="100%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.2} />
-                                <stop offset="100%" stopColor="#6366f1" stopOpacity={0.05} />
-                              </linearGradient>
-                              <filter id="radarGlowSm"><feGaussianBlur stdDeviation="2.5" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                              <filter id="radarGlowLg"><feGaussianBlur stdDeviation="6" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                              <filter id="pointGlow"><feGaussianBlur stdDeviation="4" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              {muscleColors.map((c, i) => (
+                                <linearGradient key={i} id={`mlG${i}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                                  <stop offset="0%" stopColor={c.from} stopOpacity={0.95} />
+                                  <stop offset="60%" stopColor={c.from} stopOpacity={0.6} />
+                                  <stop offset="100%" stopColor={c.to} stopOpacity={0.4} />
+                                </linearGradient>
+                              ))}
+                              {muscleColors.map((c, i) => (
+                                <radialGradient key={`r${i}`} id={`mlRG${i}`} cx="50%" cy="50%" r="50%">
+                                  <stop offset="0%" stopColor={c.from} stopOpacity={0.3} />
+                                  <stop offset="100%" stopColor={c.to} stopOpacity={0.05} />
+                                </radialGradient>
+                              ))}
                             </defs>
 
-                            {/* Background glow */}
-                            <circle cx={cx} cy={cy} r={maxR + 20} fill="url(#radarBg)" />
-
-                            {/* Concentric grid rings */}
-                            {[0.2, 0.4, 0.6, 0.8, 1].map((s, i) => (
-                              <polygon key={i}
-                                points={angles.map(a => `${cx + maxR * s * Math.cos(a)},${cy + maxR * s * Math.sin(a)}`).join(' ')}
-                                fill="none"
-                                stroke={s === 1 ? 'rgba(34,211,238,0.15)' : 'rgba(34,211,238,0.05)'}
-                                strokeWidth={s === 1 ? 1.5 : 1}
-                                strokeDasharray={s < 1 ? '3,4' : undefined} />
+                            {/* Ambient rings */}
+                            {[0.3, 0.55, 0.8, 1].map((s, i) => (
+                              <circle key={i} cx={cx} cy={cy} r={innerR + s * (outerR - innerR)}
+                                fill="none" stroke="rgba(255,255,255,0.025)" strokeWidth="1" />
                             ))}
 
-                            {/* Axis lines */}
-                            {angles.map((_a, i) => {
-                              const end = pt(maxR, i)
+                            {/* Tick marks around outer ring */}
+                            {Array.from({ length: 60 }, (_, i) => {
+                              const a = (i / 60) * Math.PI * 2 - Math.PI / 2
+                              const r1 = outerR + 2, r2 = outerR + (i % 5 === 0 ? 6 : 3)
                               return (
-                                <line key={i} x1={cx} y1={cy} x2={end.x} y2={end.y}
-                                  stroke="rgba(34,211,238,0.07)" strokeWidth="1" />
+                                <line key={i}
+                                  x1={cx + r1 * Math.cos(a)} y1={cy + r1 * Math.sin(a)}
+                                  x2={cx + r2 * Math.cos(a)} y2={cy + r2 * Math.sin(a)}
+                                  stroke={i % 5 === 0 ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)'}
+                                  strokeWidth="1" />
                               )
                             })}
 
-                            {/* Scale labels */}
-                            {[0.25, 0.5, 0.75, 1].map((s, i) => (
-                              <text key={i} x={cx + 4} y={cy - maxR * s + 3}
-                                className="fill-gray-700 text-[6px] font-medium">
-                                {s === 1 ? `${(radarMax / 1000).toFixed(radarMax >= 1000 ? 1 : 0)}k` : ''}
+                            {/* Muscle arcs with glow */}
+                            {arcs.map((a, i) => (
+                              <motion.g key={a.m.name}
+                                initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.6, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                                style={{ transformOrigin: `${cx}px ${cy}px` }}>
+                                <path d={a.path} fill={`url(#mlRG${i})`} filter="url(#mlGlow)" opacity={0.4} />
+                                <path d={a.path} fill={`url(#mlG${i})`} stroke={muscleColors[i].from} strokeWidth={1} strokeOpacity={0.4} />
+                                <path d={a.path} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth={0.5} />
+                                <circle
+                                  cx={cx + a.r * Math.cos(a.midA)} cy={cy + a.r * Math.sin(a.midA)}
+                                  r={3.5} fill={muscleColors[i].from} filter="url(#mlPointGlow)"
+                                  stroke="#0a0a0a" strokeWidth={1.5} />
+                              </motion.g>
+                            ))}
+
+                            {/* Labels */}
+                            {arcs.map((a, i) => (
+                              <motion.g key={`lbl-${a.m.name}`}
+                                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                                transition={{ delay: 0.5 + i * 0.08 }}>
+                                <text x={a.lx} y={a.ly - 3} textAnchor={a.anchor} dominantBaseline="middle"
+                                  className="fill-white/90 text-[8px] capitalize font-bold"
+                                  style={{ textShadow: '0 0 4px rgba(0,0,0,0.8)' }}>
+                                  {a.m.name.replace(/_/g, ' ')}
+                                </text>
+                                <text x={a.lx} y={a.ly + 6} textAnchor={a.anchor} dominantBaseline="middle"
+                                  className="fill-gray-400 text-[7px] font-semibold">
+                                  {a.m.volume >= 1000 ? `${(a.m.volume / 1000).toFixed(1)}k` : a.m.volume}kg
+                                  <tspan fill={muscleColors[i].from} opacity={0.8}> · {(a.pct * 100).toFixed(0)}%</tspan>
+                                </text>
+                                <text x={a.lx} y={a.ly + 13} textAnchor={a.anchor} dominantBaseline="middle"
+                                  className="fill-gray-600 text-[6px]">
+                                  {a.m.dates.length <= 2 ? a.m.dates.join(' · ') : `${a.m.dates[0]} +${a.m.dates.length - 1} more`}
+                                </text>
+                              </motion.g>
+                            ))}
+
+                            {/* Center hub */}
+                            <motion.g initial={{ opacity: 0, scale: 0.4 }} animate={{ opacity: 1, scale: 1 }}
+                              transition={{ duration: 0.6, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                              style={{ transformOrigin: `${cx}px ${cy}px` }}>
+                              <circle cx={cx} cy={cy} r={innerR - 2} fill="url(#mlCenterBg)" filter="url(#mlCenterGlow)" />
+                              <circle cx={cx} cy={cy} r={innerR - 2} fill="none" stroke="rgba(34,211,238,0.25)" strokeWidth="1" />
+                              <circle cx={cx} cy={cy} r={innerR - 6} fill="none" stroke="rgba(34,211,238,0.1)" strokeWidth="0.5" strokeDasharray="2,3" />
+                              <text x={cx} y={cy - 16} textAnchor="middle" className="fill-gray-500 text-[6.5px] uppercase tracking-[0.2em] font-semibold">Total Volume</text>
+                              <text x={cx} y={cy + 2} textAnchor="middle" className="fill-cyan-400 text-[18px] font-bold" style={{ textShadow: '0 0 12px rgba(34,211,238,0.4)' }}>
+                                {totalVol >= 1000 ? `${(totalVol / 1000).toFixed(1)}k` : totalVol}
                               </text>
-                            ))}
+                              <text x={cx} y={cy + 13} textAnchor="middle" className="fill-gray-500 text-[7px] font-medium">kg lifted</text>
+                              <line x1={cx - 14} y1={cy + 18} x2={cx + 14} y2={cy + 18} stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
+                              <text x={cx} y={cy + 27} textAnchor="middle" className="fill-gray-600 text-[6px]">
+                                {totalSets} sets · {totalReps} reps · {totalSessions} days
+                              </text>
+                            </motion.g>
+                          </svg>
 
-                            {/* Sets layer (behind) */}
-                            {n >= 3 && (
-                              <motion.polygon
-                                initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
-                                style={{ transformOrigin: `${cx}px ${cy}px` }}
-                                points={setPts.map(p => `${p.x},${p.y}`).join(' ')}
-                                fill="url(#radarSetFill)" stroke="rgba(139,92,246,0.4)" strokeWidth="1.5"
-                                strokeDasharray="4,3" />
-                            )}
-
-                            {/* Volume layer (front) */}
-                            {n >= 3 && (
-                              <motion.polygon
-                                initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.8, ease: 'easeOut' }}
-                                style={{ transformOrigin: `${cx}px ${cy}px` }}
-                                points={volPts.map(p => `${p.x},${p.y}`).join(' ')}
-                                fill="url(#radarVolFill)" stroke="rgba(34,211,238,0.75)" strokeWidth="2"
-                                filter="url(#radarGlowSm)" />
-                            )}
-
-                            {/* For n < 3: draw lines from center */}
-                            {n < 3 && (
-                              <>
-                                {volPts.map((p, i) => (
-                                  <motion.line key={i}
-                                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 + i * 0.1 }}
-                                    x1={cx} y1={cy} x2={p.x} y2={p.y}
-                                    stroke="rgba(34,211,238,0.6)" strokeWidth="2" filter="url(#radarGlowSm)" />
-                                ))}
-                              </>
-                            )}
-
-                            {/* Data points + labels */}
+                          {/* Muscle detail cards with sparklines */}
+                          <div className="space-y-1.5 mt-3">
                             {trainedMuscles.map((m, i) => {
-                              const volP = volPts[i]
-                              const setP = setPts[i]
-                              const angle = angles[i]
-                              const cosA = Math.cos(angle)
-                              const sinA = Math.sin(angle)
-                              const labelR = maxR + 18
-                              const lx = cx + labelR * cosA
-                              const ly = cy + labelR * sinA
-                              const anchor = cosA > 0.2 ? 'start' : cosA < -0.2 ? 'end' : 'middle'
+                              const daily = muscleDaily.get(m.name) || new Array(7).fill(0)
+                              const maxDaily = Math.max(...daily, 1)
+                              const pct = totalVol > 0 ? (m.volume / totalVol) * 100 : 0
                               return (
-                                <motion.g key={m.name}
-                                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                                  transition={{ delay: 0.4 + i * 0.08 }}>
-                                  {/* Volume point */}
-                                  <circle cx={volP.x} cy={volP.y} r={5}
-                                    fill="#22d3ee" stroke="#0a0a0a" strokeWidth={2}
-                                    filter="url(#pointGlow)" />
-                                  {/* Sets point */}
-                                  <circle cx={setP.x} cy={setP.y} r={3}
-                                    fill="#8b5cf6" stroke="#0a0a0a" strokeWidth={1.5} />
-                                  {/* Connector to label */}
-                                  <line x1={volP.x} y1={volP.y} x2={lx - (anchor === 'start' ? 2 : anchor === 'end' ? -2 : 0)} y2={ly - 6}
-                                    stroke="rgba(34,211,238,0.2)" strokeWidth="1" strokeDasharray="2,2" />
-                                  {/* Muscle name */}
-                                  <text x={lx} y={ly - 4} textAnchor={anchor} dominantBaseline="middle"
-                                    className="fill-cyan-300 text-[8px] capitalize font-bold">
-                                    {m.name.replace(/_/g, ' ')}
-                                  </text>
-                                  {/* Volume */}
-                                  <text x={lx} y={ly + 5} textAnchor={anchor} dominantBaseline="middle"
-                                    className="fill-gray-400 text-[7px] font-medium">
-                                    {m.volume >= 1000 ? `${(m.volume / 1000).toFixed(1)}k` : m.volume}kg · {m.sets}sets
-                                  </text>
-                                  {/* Dates */}
-                                  <text x={lx} y={ly + 13} textAnchor={anchor} dominantBaseline="middle"
-                                    className="fill-gray-600 text-[6px] font-medium">
-                                    {m.dates.join(' · ')}
-                                  </text>
-                                </motion.g>
+                                <motion.div key={m.name}
+                                  initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: 0.5 + i * 0.06, ease: [0.16, 1, 0.3, 1] }}
+                                  className="group relative rounded-xl bg-gradient-to-r from-white/[0.04] via-white/[0.02] to-transparent border border-white/[0.06] p-2.5 hover:border-white/[0.12] transition-all overflow-hidden">
+                                  <div className="absolute left-0 top-0 bottom-0 w-[2px] rounded-l-xl"
+                                    style={{ background: `linear-gradient(to bottom, ${muscleColors[i % muscleColors.length].from}, ${muscleColors[i % muscleColors.length].to})` }} />
+                                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                                    style={{ background: `radial-gradient(ellipse at left center, ${muscleColors[i % muscleColors.length].glow}0.06), transparent)` }} />
+
+                                  <div className="relative flex items-center gap-2.5 pl-2">
+                                    <div className="w-2 h-2 rounded-full shrink-0"
+                                      style={{ background: muscleColors[i % muscleColors.length].from, boxShadow: `0 0 6px ${muscleColors[i % muscleColors.length].glow}0.5)` }} />
+
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-baseline gap-1.5">
+                                        <span className="text-[9px] text-white font-bold capitalize truncate">{m.name.replace(/_/g, ' ')}</span>
+                                        <span className="text-[8px] text-gray-500 font-medium">{m.volume >= 1000 ? `${(m.volume / 1000).toFixed(1)}k` : m.volume}kg</span>
+                                        <span className="text-[7px] text-gray-600">·</span>
+                                        <span className="text-[7px] text-gray-500">{m.sets} sets</span>
+                                      </div>
+                                      <div className="mt-1 h-[3px] rounded-full bg-white/[0.04] overflow-hidden">
+                                        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                                          transition={{ duration: 0.8, delay: 0.6 + i * 0.06, ease: [0.16, 1, 0.3, 1] }}
+                                          className="h-full rounded-full"
+                                          style={{ background: `linear-gradient(to right, ${muscleColors[i % muscleColors.length].from}, ${muscleColors[i % muscleColors.length].to})` }} />
+                                      </div>
+                                      <div className="flex items-center gap-1 mt-1">
+                                        <Calendar className="w-2.5 h-2.5 text-gray-600 shrink-0" />
+                                        <span className="text-[7px] text-gray-500 truncate">{m.dates.join(' · ')}</span>
+                                      </div>
+                                    </div>
+
+                                    <div className="shrink-0 w-14 h-8">
+                                      <svg width="56" height="32" viewBox="0 0 56 32">
+                                        <defs>
+                                          <linearGradient id={`spark${i}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                                            <stop offset="0%" stopColor={muscleColors[i % muscleColors.length].from} stopOpacity={0.4} />
+                                            <stop offset="100%" stopColor={muscleColors[i % muscleColors.length].to} stopOpacity={0.02} />
+                                          </linearGradient>
+                                        </defs>
+                                        {daily.map((v: number, di: number) => {
+                                          const bh = v > 0 ? Math.max((v / maxDaily) * 22, 2) : 0
+                                          const bx = di * 8 + 2
+                                          return (
+                                            <g key={di}>
+                                              {bh > 0 && (
+                                                <>
+                                                  <rect x={bx} y={28 - bh} width={5} height={bh} rx={1.5}
+                                                    fill={muscleColors[i % muscleColors.length].from} opacity={0.7} />
+                                                  <rect x={bx} y={28 - bh} width={5} height={1} rx={0.5}
+                                                    fill="white" opacity={0.3} />
+                                                </>
+                                              )}
+                                              <rect x={bx} y={27} width={5} height={1} rx={0.5} fill="rgba(255,255,255,0.06)" />
+                                            </g>
+                                          )
+                                        })}
+                                      </svg>
+                                    </div>
+                                  </div>
+                                </motion.div>
                               )
                             })}
-
-                            {/* Legend */}
-                            <g transform={`translate(${cx}, ${H - 8})`}>
-                              <circle cx={-40} cy={0} r={4} fill="#22d3ee" />
-                              <text x={-32} y={3} className="fill-gray-500 text-[7px] font-medium">Volume</text>
-                              <circle cx={10} cy={0} r={3} fill="#8b5cf6" />
-                              <text x={18} y={3} className="fill-gray-500 text-[7px] font-medium">Sets</text>
-                            </g>
-                          </svg>
+                          </div>
                         </div>
                       )
                     })()}
