@@ -13,7 +13,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { generateId, formatDuration } from '@/lib/utils'
 import { storage } from '@/lib/storage'
 import { exerciseLibrary, getExerciseById, getAllMuscleGroups, categoryLabels, muscleGroupColors } from '@/lib/exercises'
-import { ResponsiveContainer, ComposedChart, Area, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
+import { ResponsiveContainer, ComposedChart, Area, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 
@@ -1206,7 +1206,7 @@ export function WorkoutLogger() {
         thisWeekWorkouts.forEach(w => { const t = w.type || w.category || 'strength'; typeMap.set(t, (typeMap.get(t)||0) + 1) })
         const sortedTypes = [...typeMap.entries()].sort((a,b) => b[1] - a[1])
 
-        // Trained muscles radar data — comprehensive
+        // Trained muscles + all muscle groups for full radar shape
         const muscleStats = new Map<string, { volume: number; sets: number; reps: number; sessions: number; dates: string[] }>()
         thisWeekWorkouts.forEach(w => {
           const dateStr = `${new Date(w.date).toLocaleString('en', { month: 'short' })} ${new Date(w.date).getDate()}`
@@ -1224,14 +1224,15 @@ export function WorkoutLogger() {
             }
           })
         })
-        const trainedMuscles = [...muscleStats.entries()].map(([name, s]) => ({ name, ...s }))
-          .sort((a, b) => b.volume - a.volume)
-        const maxSetsForRadar = trainedMuscles.length > 0 ? Math.max(...trainedMuscles.map(t => t.sets), 1) : 1
-        const maxVolForRadar = trainedMuscles.length > 0 ? trainedMuscles[0].volume : 1
-        const trainedMusclesWithScaled = trainedMuscles.map(m => ({
-          ...m,
-          setsScaled: Math.round((m.sets / maxSetsForRadar) * maxVolForRadar)
-        }))
+        // All muscle groups as axes for full radar shape
+        const allMuscleAxes = Array.from(new Set(
+          exerciseLibrary.flatMap(ex => ex.primaryMuscles)
+        )).sort()
+        const trainedMuscles = allMuscleAxes.map(name => {
+          const s = muscleStats.get(name)
+          return { name, volume: s?.volume || 0, sets: s?.sets || 0, reps: s?.reps || 0, sessions: s?.sessions || 0, dates: s?.dates || [] }
+        }).filter(m => m.volume > 0 || allMuscleAxes.length <= 12)
+        const radarMaxVol = trainedMuscles.length > 0 ? Math.max(...trainedMuscles.map(t => t.volume), 1) : 1
 
         // Streak
         let currentStreak = 0
@@ -1574,155 +1575,151 @@ export function WorkoutLogger() {
                 </ResponsiveContainer>
               </div>
 
-              {/* Bottom: Muscle Radar — BodyScope style */}
+              {/* Bottom: Muscle Radar */}
               <div className="relative z-10 px-4 pb-4 pt-1">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.6)]" />
                   <span className="text-[9px] text-gray-400 uppercase tracking-[0.15em] font-semibold">Muscle Radar</span>
                   <div className="flex-1 h-px bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent" />
-                  <span className="text-[8px] text-gray-600">{trainedMusclesWithScaled.length} muscles trained</span>
+                  <span className="text-[8px] text-gray-600">{muscleStats.size} muscles trained</span>
                 </div>
-                {trainedMusclesWithScaled.length >= 3 ? (
-                  <div className="relative h-[260px]">
+                {trainedMuscles.length > 0 ? (
+                  <div className="relative">
                     <div className="absolute -top-4 -right-4 w-16 h-16 bg-cyan-500/[0.06] rounded-full blur-xl pointer-events-none" />
-                    <div className="absolute -bottom-2 -left-2 w-12 h-12 bg-violet-500/[0.04] rounded-full blur-lg pointer-events-none" />
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart data={trainedMusclesWithScaled} cx="50%" cy="50%" outerRadius="68%">
-                        <defs>
-                          <filter id="muscleRadarGlow" x="-20%" y="-20%" width="140%" height="140%">
-                            <feGaussianBlur stdDeviation="3" result="blur" />
-                            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                          </filter>
-                          <linearGradient id="muscleRadarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.35} />
-                            <stop offset="50%" stopColor="#06b6d4" stopOpacity={0.15} />
-                            <stop offset="100%" stopColor="#6366f1" stopOpacity={0.08} />
-                          </linearGradient>
-                        </defs>
-                        <PolarGrid stroke="rgba(255,255,255,0.06)" gridType="polygon" />
-                        <PolarAngleAxis
-                          dataKey="name"
-                          tick={({ x, y, payload }: any) => {
-                            const m = trainedMusclesWithScaled.find(t => t.name === payload.value)
-                            return (
-                              <g transform={`translate(${x},${y})`}>
-                                <text x={0} y={-2} textAnchor="middle" dominantBaseline="middle"
-                                  className="fill-cyan-300/90 text-[9px] capitalize font-semibold">
-                                  {payload.value.replace(/_/g, ' ')}
-                                </text>
-                                {m && m.dates.length > 0 && (
-                                  <text x={0} y={10} textAnchor="middle" dominantBaseline="middle"
-                                    className="fill-gray-500 text-[6.5px] font-medium">
-                                    {m.dates.length <= 2 ? m.dates.join(' · ') : `${m.dates[0]} +${m.dates.length - 1}`}
-                                  </text>
-                                )}
-                              </g>
-                            )
-                          }}
-                          axisLine={false} tickLine={false}
-                        />
-                        <PolarRadiusAxis
-                          angle={90} domain={[0, 'dataMax']}
-                          tick={{ fill: '#4b5563', fontSize: 7 }}
-                          axisLine={false} tickCount={4}
-                        />
-                        <Tooltip
-                          cursor={{ stroke: 'rgba(34,211,238,0.3)', strokeWidth: 1, strokeDasharray: '3 3' }}
-                          content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null
-                            const d = payload[0].payload
-                            return (
-                              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                                className="relative bg-gray-900/95 backdrop-blur-xl border border-cyan-500/15 rounded-2xl px-3.5 py-2.5 shadow-2xl shadow-cyan-500/5 min-w-[130px]">
-                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500/[0.08] via-transparent to-violet-500/[0.04] pointer-events-none" />
-                                <div className="relative">
-                                  <p className="text-white font-bold text-xs capitalize flex items-center gap-1.5">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_4px_rgba(34,211,238,0.6)]" />
-                                    {String(d.name).replace(/_/g, ' ')}
-                                  </p>
-                                  <div className="mt-1.5 space-y-1">
-                                    <div className="flex items-center justify-between gap-3">
-                                      <span className="text-gray-500 text-[10px]">Volume</span>
-                                      <span className="text-cyan-400 font-bold text-[11px]">
-                                        {Number(d.volume).toLocaleString()} kg
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-3">
-                                      <span className="text-gray-500 text-[10px]">Sets</span>
-                                      <span className="text-violet-400 font-semibold text-[11px]">{d.sets}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-3">
-                                      <span className="text-gray-500 text-[10px]">Reps</span>
-                                      <span className="text-gray-300 font-medium text-[11px]">{d.reps}</span>
-                                    </div>
-                                    {d.dates && d.dates.length > 0 && (
-                                      <div className="pt-1.5 mt-1.5 border-t border-white/[0.06]">
-                                        <p className="text-gray-500 text-[9px] flex items-center gap-1">
-                                          <Calendar className="w-2.5 h-2.5" />
-                                          {d.dates.join(' · ')}
-                                        </p>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </motion.div>
-                            )
-                          }}
-                        />
-                        {/* Volume layer */}
-                        <Radar
-                          name="Volume" dataKey="volume"
-                          stroke="#22d3ee" strokeWidth={2}
-                          fill="url(#muscleRadarGrad)"
-                          fillOpacity={1}
-                          animationDuration={900} animationEasing="ease-out"
-                          filter="url(#muscleRadarGlow)"
-                          activeDot={{ r: 4, fill: '#22d3ee', strokeWidth: 2, stroke: '#0a0a0a' }}
-                        />
-                        {/* Sets layer (dashed, behind visual depth) */}
-                        <Radar
-                          name="Sets" dataKey="setsScaled"
-                          stroke="rgba(139,92,246,0.45)" strokeWidth={1.5}
-                          strokeDasharray="4 3"
-                          fill="rgba(139,92,246,0.06)"
-                          fillOpacity={1}
-                          animationDuration={1100} animationEasing="ease-out"
-                        />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : trainedMusclesWithScaled.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-2 py-2">
-                    {trainedMusclesWithScaled.map((m, i) => (
-                      <motion.div key={m.name}
-                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
-                        className="group relative rounded-xl bg-gradient-to-r from-white/[0.04] via-white/[0.02] to-transparent border border-white/[0.06] p-3 hover:border-cyan-500/20 transition-all overflow-hidden">
-                        <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-cyan-400 to-violet-500 rounded-l-xl" />
-                        <div className="absolute -right-4 -top-4 w-12 h-12 bg-cyan-500/[0.05] rounded-full blur-lg pointer-events-none" />
-                        <div className="relative flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/15 to-violet-500/10 border border-cyan-500/20 flex items-center justify-center shadow-lg shadow-cyan-500/10 shrink-0">
-                            <Dumbbell className="w-4 h-4 text-cyan-400" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[11px] text-white font-bold capitalize">{m.name.replace(/_/g, ' ')}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] text-cyan-400 font-semibold">{m.volume.toLocaleString()}kg</span>
-                              <span className="text-[9px] text-gray-600">·</span>
-                              <span className="text-[9px] text-gray-400">{m.sets} sets</span>
-                              <span className="text-[9px] text-gray-600">·</span>
-                              <span className="text-[9px] text-gray-400">{m.reps} reps</span>
-                            </div>
-                            {m.dates.length > 0 && (
-                              <p className="text-[8px] text-gray-500 mt-1 flex items-center gap-1">
-                                <Calendar className="w-2.5 h-2.5 text-gray-600" />
-                                {m.dates.join(' · ')}
-                              </p>
+                    {(() => {
+                      const W = 320, H = 300, cx = W / 2, cy = H / 2
+                      const maxR = 105
+                      const n = trainedMuscles.length
+                      const angles = Array.from({ length: n }, (_, i) => (Math.PI * 2 * i / n) - Math.PI / 2)
+                      const pt = (r: number, i: number) => ({ x: cx + r * Math.cos(angles[i]), y: cy + r * Math.sin(angles[i]) })
+
+                      const dataPts = trainedMuscles.map((m, i) => {
+                        const r = m.volume > 0 ? Math.max((m.volume / radarMaxVol) * maxR, 4) : 2
+                        return pt(r, i)
+                      })
+
+                      const trainedIdx = trainedMuscles.map((m, i) => ({ m, i })).filter(x => x.m.volume > 0)
+
+                      return (
+                        <div className="flex justify-center">
+                          <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+                            <defs>
+                              <radialGradient id="radarCenter" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.08} />
+                                <stop offset="100%" stopColor="#22d3ee" stopOpacity={0} />
+                              </radialGradient>
+                              <linearGradient id="radarFill" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.25} />
+                                <stop offset="50%" stopColor="#0ea5e9" stopOpacity={0.12} />
+                                <stop offset="100%" stopColor="#6366f1" stopOpacity={0.08} />
+                              </linearGradient>
+                              <filter id="radarGlow"><feGaussianBlur stdDeviation="4" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                              <filter id="radarPointGlow"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                            </defs>
+
+                            {/* Center glow */}
+                            <circle cx={cx} cy={cy} r={maxR + 10} fill="url(#radarCenter)" />
+
+                            {/* Concentric polygon rings */}
+                            {[0.2, 0.4, 0.6, 0.8, 1].map((s, ri) => (
+                              <polygon key={ri}
+                                points={angles.map(a => `${cx + maxR * s * Math.cos(a)},${cy + maxR * s * Math.sin(a)}`).join(' ')}
+                                fill="none"
+                                stroke={s === 1 ? 'rgba(34,211,238,0.18)' : 'rgba(34,211,238,0.06)'}
+                                strokeWidth={s === 1 ? 1.5 : 1}
+                                strokeDasharray={s < 1 ? '3,4' : undefined} />
+                            ))}
+
+                            {/* Spokes to each axis */}
+                            {angles.map((_a, i) => {
+                              const end = pt(maxR, i)
+                              return (
+                                <line key={i} x1={cx} y1={cy} x2={end.x} y2={end.y}
+                                  stroke="rgba(34,211,238,0.08)" strokeWidth="1" />
+                              )
+                            })}
+
+                            {/* Scale label */}
+                            <text x={cx + 5} y={cy - maxR + 4} className="fill-gray-700 text-[7px] font-medium">
+                              {radarMaxVol >= 1000 ? `${(radarMaxVol / 1000).toFixed(1)}k` : radarMaxVol}kg
+                            </text>
+
+                            {/* Data polygon — connect all points */}
+                            {n >= 3 && (
+                              <motion.polygon
+                                initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                                style={{ transformOrigin: `${cx}px ${cy}px` }}
+                                points={dataPts.map(p => `${p.x},${p.y}`).join(' ')}
+                                fill="url(#radarFill)" stroke="rgba(34,211,238,0.7)" strokeWidth="2"
+                                filter="url(#radarGlow)" />
                             )}
-                          </div>
+
+                            {/* For n < 3: draw lines from center to each point */}
+                            {n < 3 && dataPts.map((p, i) => (
+                              <motion.line key={i}
+                                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 + i * 0.1 }}
+                                x1={cx} y1={cy} x2={p.x} y2={p.y}
+                                stroke="rgba(34,211,238,0.6)" strokeWidth="2" filter="url(#radarGlow)" />
+                            ))}
+
+                            {/* Data points + labels for trained muscles */}
+                            {trainedIdx.map(({ m, i }) => {
+                              const p = dataPts[i]
+                              const angle = angles[i]
+                              const cosA = Math.cos(angle)
+                              const sinA = Math.sin(angle)
+                              const labelR = maxR + 16
+                              const lx = cx + labelR * cosA
+                              const ly = cy + labelR * sinA
+                              const anchor = cosA > 0.2 ? 'start' : cosA < -0.2 ? 'end' : 'middle'
+                              return (
+                                <motion.g key={m.name}
+                                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                                  transition={{ delay: 0.4 + i * 0.06 }}>
+                                  <circle cx={p.x} cy={p.y} r={4.5}
+                                    fill="#22d3ee" stroke="#0a0a0a" strokeWidth={2}
+                                    filter="url(#radarPointGlow)" />
+                                  <text x={lx} y={ly - 4} textAnchor={anchor} dominantBaseline="middle"
+                                    className="fill-cyan-300 text-[8px] capitalize font-bold"
+                                    style={{ textShadow: '0 0 4px rgba(0,0,0,0.8)' }}>
+                                    {m.name.replace(/_/g, ' ')}
+                                  </text>
+                                  <text x={lx} y={ly + 5} textAnchor={anchor} dominantBaseline="middle"
+                                    className="fill-gray-400 text-[7px] font-semibold">
+                                    {m.volume >= 1000 ? `${(m.volume / 1000).toFixed(1)}k` : m.volume}kg · {m.sets}sets
+                                  </text>
+                                  {m.dates.length > 0 && (
+                                    <text x={lx} y={ly + 12} textAnchor={anchor} dominantBaseline="middle"
+                                      className="fill-gray-600 text-[6px]">
+                                      {m.dates.length <= 2 ? m.dates.join(' · ') : `${m.dates[0]} +${m.dates.length - 1}`}
+                                    </text>
+                                  )}
+                                </motion.g>
+                              )
+                            })}
+
+                            {/* Dim labels for untrained axes */}
+                            {trainedMuscles.filter(m => m.volume === 0).map((m) => {
+                              const i = trainedMuscles.indexOf(m)
+                              const angle = angles[i]
+                              const cosA = Math.cos(angle)
+                              const sinA = Math.sin(angle)
+                              const labelR = maxR + 16
+                              const lx = cx + labelR * cosA
+                              const ly = cy + labelR * sinA
+                              const anchor = cosA > 0.2 ? 'start' : cosA < -0.2 ? 'end' : 'middle'
+                              return (
+                                <text key={`dim-${m.name}`} x={lx} y={ly} textAnchor={anchor} dominantBaseline="middle"
+                                  className="fill-gray-700 text-[7px] capitalize">
+                                  {m.name.replace(/_/g, ' ')}
+                                </text>
+                              )
+                            })}
+                          </svg>
                         </div>
-                      </motion.div>
-                    ))}
+                      )
+                    })()}
                   </div>
                 ) : (
                   <div className="text-center py-6">
