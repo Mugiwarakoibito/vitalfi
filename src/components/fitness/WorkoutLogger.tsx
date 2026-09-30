@@ -1567,63 +1567,52 @@ export function WorkoutLogger() {
                 </ResponsiveContainer>
               </div>
 
-              {/* Bottom: Muscle x Day Heatmap */}
-              <div className="relative z-10 px-5 pb-5 pt-2">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Muscle Heatmap</span>
+              {/* Bottom: Muscle Heatmap */}
+              <div className="relative z-10 px-4 pb-4 pt-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Muscles</span>
                   <div className="flex-1 h-px bg-white/[0.04]" />
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[8px] text-gray-600">Low</span>
-                    {[0.08, 0.2, 0.35, 0.5, 0.7].map((s, i) => (
-                      <div key={i} className="w-3 h-3 rounded-sm" style={{ background: `rgba(34,211,238,${s})` }} />
+                  <div className="flex items-center gap-1">
+                    {[0.08, 0.2, 0.35, 0.55].map((s, i) => (
+                      <div key={i} className="w-2.5 h-2.5 rounded-sm" style={{ background: `rgba(34,211,238,${s})` }} />
                     ))}
-                    <span className="text-[8px] text-gray-600">High</span>
                   </div>
                 </div>
                 {heatmapMuscles.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr>
-                          <th className="text-left pb-2" />
-                          {['S','M','T','W','T','F','S'].map((d, i) => (
-                            <th key={i} className="text-center pb-2 text-[9px] text-gray-600 font-semibold w-[calc(100%/8)]">{d}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {heatmapMuscles.map((muscle, mi) => (
-                          <motion.tr key={muscle} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: mi * 0.05 }}>
-                            <td className="text-[10px] text-gray-400 capitalize pr-2 pb-1.5 font-medium whitespace-nowrap">{muscle}</td>
-                            {Array.from({ length: 7 }, (_, di) => {
-                              const vol = muscleDayVol.get(muscle)?.get(di) || 0
-                              const intensity = vol > 0 ? vol / maxMuscleDayVol : 0
-                              const hasData = vol > 0
-                              return (
-                                <td key={di} className="pb-1.5">
-                                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
-                                    transition={{ delay: mi * 0.05 + di * 0.02 }}
-                                    className={`aspect-square rounded-lg flex items-center justify-center transition-all mx-auto
-                                      ${hasData ? 'cursor-default' : 'bg-white/[0.02]'}`}
-                                    style={hasData ? {
-                                      background: `rgba(34,211,238,${0.1 + intensity * 0.55})`,
-                                      boxShadow: intensity > 0.5 ? `0 0 12px rgba(34,211,238,${intensity * 0.3})` : undefined
-                                    } : undefined}>
-                                    {hasData && (
-                                      <span className="text-[8px] font-bold text-cyan-300">{vol >= 1000 ? `${(vol/1000).toFixed(1)}k` : vol}</span>
-                                    )}
-                                  </motion.div>
-                                </td>
-                              )
-                            })}
-                          </motion.tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="space-y-1">
+                    {/* Day headers */}
+                    <div className="flex items-center gap-1">
+                      <div className="w-16 shrink-0" />
+                      {['S','M','T','W','T','F','S'].map((d, i) => (
+                        <span key={i} className="flex-1 text-center text-[7px] text-gray-700 font-semibold">{d}</span>
+                      ))}
+                    </div>
+                    {/* Rows */}
+                    {heatmapMuscles.map((muscle, mi) => (
+                      <motion.div key={muscle} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        transition={{ delay: mi * 0.04 }}
+                        className="flex items-center gap-1">
+                        <span className="w-16 shrink-0 text-[9px] text-gray-500 capitalize truncate pr-1">{muscle}</span>
+                        {Array.from({ length: 7 }, (_, di) => {
+                          const vol = muscleDayVol.get(muscle)?.get(di) || 0
+                          const intensity = vol > 0 ? vol / maxMuscleDayVol : 0
+                          return (
+                            <motion.div key={di} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                              transition={{ delay: mi * 0.04 + di * 0.02 }}
+                              className="flex-1 h-6 rounded-md flex items-center justify-center transition-all hover:scale-105"
+                              style={vol > 0 ? {
+                                background: `rgba(34,211,238,${0.1 + intensity * 0.55})`,
+                                boxShadow: intensity > 0.6 ? `0 0 8px rgba(34,211,238,${intensity * 0.25})` : undefined
+                              } : { background: 'rgba(255,255,255,0.02)' }}>
+                              {vol > 0 && <span className="text-[7px] font-bold text-cyan-300/90">{vol >= 1000 ? `${(vol/1000).toFixed(1)}k` : vol}</span>}
+                            </motion.div>
+                          )
+                        })}
+                      </motion.div>
+                    ))}
                   </div>
                 ) : (
-                  <p className="text-[10px] text-gray-600 italic text-center py-4">No muscle data this week</p>
+                  <p className="text-[9px] text-gray-700 italic text-center py-2">No muscle data</p>
                 )}
               </div>
             </div>
