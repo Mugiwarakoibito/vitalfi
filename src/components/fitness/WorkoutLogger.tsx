@@ -656,6 +656,7 @@ export function WorkoutLogger() {
   const [weeklyNavOffset, setWeeklyNavOffset] = useState(0)
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
   const [weeklyTab, setWeeklyTab] = useState<'trends' | 'performance' | 'insights'>('trends')
+  const [heatmapView, setHeatmapView] = useState<'grid' | 'bars'>('grid')
   const [showTypeDropdown, setShowTypeDropdown] = useState(false)
   const fromDayRef = useRef<HTMLInputElement>(null)
   const fromMonthRef = useRef<HTMLInputElement>(null)
@@ -1206,8 +1207,8 @@ export function WorkoutLogger() {
         thisWeekWorkouts.forEach(w => { const t = w.type || w.category || 'strength'; typeMap.set(t, (typeMap.get(t)||0) + 1) })
         const sortedTypes = [...typeMap.entries()].sort((a,b) => b[1] - a[1])
 
-        // Muscle x Day heatmap data
-        const heatmapMuscles = sortedMuscles.slice(0, 6).map(m => m.name)
+        // Muscle x Day heatmap data — all muscle groups
+        const heatmapMuscles = getAllMuscleGroups().map(g => g.value)
         const muscleDayVol = new Map<string, Map<number, number>>()
         heatmapMuscles.forEach(m => { muscleDayVol.set(m, new Map()) })
         thisWeekWorkouts.forEach(w => {
@@ -1225,6 +1226,10 @@ export function WorkoutLogger() {
           })
         })
         const maxMuscleDayVol = Math.max(...[...muscleDayVol.values()].flatMap(m => [...m.values()]), 1)
+        const muscleTotals = heatmapMuscles.map(m => ({
+          name: m,
+          total: [...(muscleDayVol.get(m)?.values() || [])].reduce((s, v) => s + v, 0)
+        })).sort((a, b) => b.total - a.total)
 
         // Streak
         let currentStreak = 0
@@ -1569,50 +1574,98 @@ export function WorkoutLogger() {
 
               {/* Bottom: Muscle Heatmap */}
               <div className="relative z-10 px-4 pb-4 pt-1">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-3">
                   <span className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Muscles</span>
                   <div className="flex-1 h-px bg-white/[0.04]" />
-                  <div className="flex items-center gap-1">
-                    {[0.08, 0.2, 0.35, 0.55].map((s, i) => (
-                      <div key={i} className="w-2.5 h-2.5 rounded-sm" style={{ background: `rgba(34,211,238,${s})` }} />
-                    ))}
+                  {/* View Toggle */}
+                  <div className="flex items-center gap-0.5 bg-white/[0.04] rounded-lg p-0.5 border border-white/[0.06]">
+                    <button onClick={() => setHeatmapView('grid')}
+                      className={`px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-wider transition-all ${heatmapView === 'grid' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/25' : 'text-gray-500 hover:text-gray-300 border border-transparent'}`}>
+                      Grid
+                    </button>
+                    <button onClick={() => setHeatmapView('bars')}
+                      className={`px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-wider transition-all ${heatmapView === 'bars' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/25' : 'text-gray-500 hover:text-gray-300 border border-transparent'}`}>
+                      Bars
+                    </button>
                   </div>
+                  {heatmapView === 'grid' && (
+                    <div className="flex items-center gap-1 ml-1">
+                      {[0.08, 0.2, 0.35, 0.55].map((s, i) => (
+                        <div key={i} className="w-2.5 h-2.5 rounded-sm" style={{ background: `rgba(34,211,238,${s})` }} />
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {heatmapMuscles.length > 0 ? (
+
+                {heatmapMuscles.length === 0 ? (
+                  <p className="text-[9px] text-gray-700 italic text-center py-2">No muscle data</p>
+                ) : heatmapView === 'grid' ? (
+                  /* ═══ GRID VIEW ═══ */
                   <div className="space-y-1">
-                    {/* Day headers */}
                     <div className="flex items-center gap-1">
                       <div className="w-16 shrink-0" />
                       {['S','M','T','W','T','F','S'].map((d, i) => (
                         <span key={i} className="flex-1 text-center text-[7px] text-gray-700 font-semibold">{d}</span>
                       ))}
                     </div>
-                    {/* Rows */}
-                    {heatmapMuscles.map((muscle, mi) => (
-                      <motion.div key={muscle} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                        transition={{ delay: mi * 0.04 }}
-                        className="flex items-center gap-1">
-                        <span className="w-16 shrink-0 text-[9px] text-gray-500 capitalize truncate pr-1">{muscle}</span>
-                        {Array.from({ length: 7 }, (_, di) => {
-                          const vol = muscleDayVol.get(muscle)?.get(di) || 0
-                          const intensity = vol > 0 ? vol / maxMuscleDayVol : 0
-                          return (
-                            <motion.div key={di} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                              transition={{ delay: mi * 0.04 + di * 0.02 }}
-                              className="flex-1 h-6 rounded-md flex items-center justify-center transition-all hover:scale-105"
-                              style={vol > 0 ? {
-                                background: `rgba(34,211,238,${0.1 + intensity * 0.55})`,
-                                boxShadow: intensity > 0.6 ? `0 0 8px rgba(34,211,238,${intensity * 0.25})` : undefined
-                              } : { background: 'rgba(255,255,255,0.02)' }}>
-                              {vol > 0 && <span className="text-[7px] font-bold text-cyan-300/90">{vol >= 1000 ? `${(vol/1000).toFixed(1)}k` : vol}</span>}
-                            </motion.div>
-                          )
-                        })}
-                      </motion.div>
-                    ))}
+                    {heatmapMuscles.map((muscle, mi) => {
+                      const total = muscleTotals.find(mt => mt.name === muscle)?.total || 0
+                      return (
+                        <motion.div key={muscle} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                          transition={{ delay: mi * 0.02 }}
+                          className="flex items-center gap-1">
+                          <span className={`w-16 shrink-0 text-[9px] truncate pr-1 ${total > 0 ? 'text-gray-300' : 'text-gray-700'}`}>{muscle.replace(/_/g, ' ')}</span>
+                          {Array.from({ length: 7 }, (_, di) => {
+                            const vol = muscleDayVol.get(muscle)?.get(di) || 0
+                            const intensity = vol > 0 ? vol / maxMuscleDayVol : 0
+                            return (
+                              <motion.div key={di} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                                transition={{ delay: mi * 0.02 + di * 0.015 }}
+                                className="flex-1 h-5 rounded-md flex items-center justify-center transition-all hover:scale-105"
+                                style={vol > 0 ? {
+                                  background: `linear-gradient(135deg, rgba(34,211,238,${0.15 + intensity * 0.55}), rgba(6,182,212,${0.1 + intensity * 0.4}))`,
+                                  boxShadow: intensity > 0.6 ? `0 0 8px rgba(34,211,238,${intensity * 0.25})` : undefined
+                                } : { background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.02)' }}>
+                                {vol > 0 && <span className="text-[7px] font-bold text-cyan-300/90">{vol >= 1000 ? `${(vol/1000).toFixed(1)}k` : vol}</span>}
+                              </motion.div>
+                            )
+                          })}
+                        </motion.div>
+                      )
+                    })}
                   </div>
                 ) : (
-                  <p className="text-[9px] text-gray-700 italic text-center py-2">No muscle data</p>
+                  /* ═══ BARS VIEW ═══ */
+                  <div className="space-y-1.5 max-h-[280px] overflow-y-auto pr-1">
+                    {muscleTotals.map((m, i) => {
+                      const pct = maxMuscleDayVol > 0 ? (m.total / maxMuscleDayVol) * 100 : 0
+                      const daysTrained = [...(muscleDayVol.get(m.name)?.keys() || [])].length
+                      return (
+                        <motion.div key={m.name} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.03 }}
+                          className="flex items-center gap-2 group">
+                          <span className={`text-[9px] w-16 truncate shrink-0 capitalize ${m.total > 0 ? 'text-gray-300' : 'text-gray-700'}`}>{m.name.replace(/_/g, ' ')}</span>
+                          <div className="flex-1 h-4 rounded-full bg-white/[0.03] overflow-hidden relative">
+                            {m.total > 0 ? (
+                              <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                                transition={{ duration: 0.7, delay: 0.1 + i * 0.03, ease: 'easeOut' }}
+                                className="h-full rounded-full bg-gradient-to-r from-cyan-600/80 via-cyan-500/70 to-cyan-400/60 group-hover:from-cyan-500 group-hover:to-cyan-300 transition-all">
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                              </motion.div>
+                            ) : (
+                              <div className="h-full rounded-full" />
+                            )}
+                          </div>
+                          <span className={`text-[8px] w-14 text-right shrink-0 font-medium ${m.total > 0 ? 'text-cyan-400/80' : 'text-gray-700'}`}>
+                            {m.total > 0 ? `${m.total.toLocaleString()}kg` : '—'}
+                          </span>
+                          <span className={`text-[7px] w-8 text-right shrink-0 ${daysTrained > 0 ? 'text-gray-500' : 'text-gray-700'}`}>
+                            {daysTrained > 0 ? `${daysTrained}d` : ''}
+                          </span>
+                        </motion.div>
+                      )
+                    })}
+                  </div>
                 )}
               </div>
             </div>
