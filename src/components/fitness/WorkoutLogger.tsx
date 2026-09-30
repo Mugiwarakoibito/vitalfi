@@ -13,7 +13,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { generateId, formatDuration } from '@/lib/utils'
 import { storage } from '@/lib/storage'
 import { exerciseLibrary, getExerciseById, getAllMuscleGroups, categoryLabels, muscleGroupColors } from '@/lib/exercises'
-import { ResponsiveContainer, ComposedChart, Area, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
+import { ResponsiveContainer, ComposedChart, Area, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 
@@ -1226,6 +1226,12 @@ export function WorkoutLogger() {
         })
         const trainedMuscles = [...muscleStats.entries()].map(([name, s]) => ({ name, ...s }))
           .sort((a, b) => b.volume - a.volume)
+        const maxSetsForRadar = trainedMuscles.length > 0 ? Math.max(...trainedMuscles.map(t => t.sets), 1) : 1
+        const maxVolForRadar = trainedMuscles.length > 0 ? trainedMuscles[0].volume : 1
+        const trainedMusclesWithScaled = trainedMuscles.map(m => ({
+          ...m,
+          setsScaled: Math.round((m.sets / maxSetsForRadar) * maxVolForRadar)
+        }))
 
         // Streak
         let currentStreak = 0
@@ -1568,257 +1574,164 @@ export function WorkoutLogger() {
                 </ResponsiveContainer>
               </div>
 
-              {/* Bottom: Muscle Load — Premium Radial Dashboard */}
+              {/* Bottom: Muscle Radar — BodyScope style */}
               <div className="relative z-10 px-4 pb-4 pt-1">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.6)]" />
-                  <span className="text-[9px] text-gray-400 uppercase tracking-[0.15em] font-semibold">Muscle Load</span>
+                  <span className="text-[9px] text-gray-400 uppercase tracking-[0.15em] font-semibold">Muscle Radar</span>
                   <div className="flex-1 h-px bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent" />
-                  <span className="text-[8px] text-gray-600">{trainedMuscles.length} muscles</span>
+                  <span className="text-[8px] text-gray-600">{trainedMusclesWithScaled.length} muscles trained</span>
                 </div>
-                {trainedMuscles.length > 0 ? (
-                  <div className="relative">
-                    <div className="absolute -top-6 -right-6 w-20 h-20 bg-cyan-500/[0.07] rounded-full blur-2xl pointer-events-none" />
-                    <div className="absolute -bottom-4 -left-4 w-14 h-14 bg-violet-500/[0.05] rounded-full blur-xl pointer-events-none" />
-                    {(() => {
-                      const totalVol = trainedMuscles.reduce((s, m) => s + m.volume, 0)
-                      const totalSets = trainedMuscles.reduce((s, m) => s + m.sets, 0)
-                      const totalReps = trainedMuscles.reduce((s, m) => s + m.reps, 0)
-                      const totalSessions = new Set(thisWeekWorkouts.map(w => w.date)).size
-
-                      const W = 320, H = 260, cx = W / 2, cy = H / 2
-                      const innerR = 38, outerR = 100
-                      const n = trainedMuscles.length
-                      const gap = 0.035
-                      const arcSpan = (Math.PI * 2 - gap * n) / n
-                      const startOffset = -Math.PI / 2 - Math.PI / n
-
-                      const muscleColors = [
-                        { from: '#22d3ee', to: '#0e7490', glow: 'rgba(34,211,238,' },
-                        { from: '#a78bfa', to: '#6d28d9', glow: 'rgba(167,139,250,' },
-                        { from: '#f472b6', to: '#be185d', glow: 'rgba(244,114,182,' },
-                        { from: '#34d399', to: '#047857', glow: 'rgba(52,211,153,' },
-                        { from: '#fbbf24', to: '#b45309', glow: 'rgba(251,191,36,' },
-                        { from: '#60a5fa', to: '#1d4ed8', glow: 'rgba(96,165,250,' },
-                        { from: '#f87171', to: '#b91c1c', glow: 'rgba(248,113,113,' },
-                        { from: '#c084fc', to: '#7e22ce', glow: 'rgba(192,132,252,' },
-                      ]
-
-                      // Per-muscle daily volume for mini sparkline
-                      const muscleDaily = new Map<string, number[]>()
-                      trainedMuscles.forEach(m => {
-                        const arr = new Array(7).fill(0)
-                        thisWeekWorkouts.forEach(w => {
-                          const di = new Date(w.date).getDay()
-                          w.exercises.forEach(ex => {
-                            const def = getExerciseById(ex.exerciseId)
-                            if (def && def.primaryMuscles.includes(m.name as MuscleGroup)) {
-                              arr[di] += calcVolume([ex])
-                            }
-                          })
-                        })
-                        muscleDaily.set(m.name, arr)
-                      })
-
-                      const arcs = trainedMuscles.map((m, i) => {
-                        const pct = totalVol > 0 ? m.volume / totalVol : 0
-                        const angleSpan = Math.max(arcSpan * (0.25 + pct * 0.75), 0.05)
-                        const startA = startOffset + i * (arcSpan + gap)
-                        const endA = startA + angleSpan
-                        const r = innerR + 6 + pct * (outerR - innerR - 6)
-                        const largeArc = angleSpan > Math.PI ? 1 : 0
-                        const x1 = cx + innerR * Math.cos(startA), y1 = cy + innerR * Math.sin(startA)
-                        const x2 = cx + r * Math.cos(startA), y2 = cy + r * Math.sin(startA)
-                        const x3 = cx + r * Math.cos(endA), y3 = cy + r * Math.sin(endA)
-                        const x4 = cx + innerR * Math.cos(endA), y4 = cy + innerR * Math.sin(endA)
-                        const midA = (startA + endA) / 2
-                        const labelR = r + 12
-                        const lx = cx + labelR * Math.cos(midA)
-                        const ly = cy + labelR * Math.sin(midA)
-                        const anchor = Math.cos(midA) > 0.2 ? 'start' as const : Math.cos(midA) < -0.2 ? 'end' as const : 'middle' as const
-                        return { m, i, path: `M${x1},${y1} L${x2},${y2} A${r},${r} 0 ${largeArc} 1 ${x3},${y3} L${x4},${y4} A${innerR},${innerR} 0 ${largeArc} 0 ${x1},${y1} Z`, lx, ly, anchor, pct, r, startA, endA, midA }
-                      })
-
-                      return (
-                        <div className="relative">
-                          <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="mx-auto block">
-                            <defs>
-                              <filter id="mlGlow"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                              <filter id="mlCenterGlow"><feGaussianBlur stdDeviation="10" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                              <filter id="mlPointGlow"><feGaussianBlur stdDeviation="2" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                              <radialGradient id="mlCenterBg" cx="50%" cy="50%" r="50%">
-                                <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.08} />
-                                <stop offset="80%" stopColor="#0a0a0a" stopOpacity={0.9} />
-                                <stop offset="100%" stopColor="#0a0a0a" stopOpacity={1} />
-                              </radialGradient>
-                              {muscleColors.map((c, i) => (
-                                <linearGradient key={i} id={`mlG${i}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                                  <stop offset="0%" stopColor={c.from} stopOpacity={0.95} />
-                                  <stop offset="60%" stopColor={c.from} stopOpacity={0.6} />
-                                  <stop offset="100%" stopColor={c.to} stopOpacity={0.4} />
-                                </linearGradient>
-                              ))}
-                              {muscleColors.map((c, i) => (
-                                <radialGradient key={`r${i}`} id={`mlRG${i}`} cx="50%" cy="50%" r="50%">
-                                  <stop offset="0%" stopColor={c.from} stopOpacity={0.3} />
-                                  <stop offset="100%" stopColor={c.to} stopOpacity={0.05} />
-                                </radialGradient>
-                              ))}
-                            </defs>
-
-                            {/* Ambient rings */}
-                            {[0.3, 0.55, 0.8, 1].map((s, i) => (
-                              <circle key={i} cx={cx} cy={cy} r={innerR + s * (outerR - innerR)}
-                                fill="none" stroke="rgba(255,255,255,0.025)" strokeWidth="1" />
-                            ))}
-
-                            {/* Tick marks around outer ring */}
-                            {Array.from({ length: 60 }, (_, i) => {
-                              const a = (i / 60) * Math.PI * 2 - Math.PI / 2
-                              const r1 = outerR + 2, r2 = outerR + (i % 5 === 0 ? 6 : 3)
-                              return (
-                                <line key={i}
-                                  x1={cx + r1 * Math.cos(a)} y1={cy + r1 * Math.sin(a)}
-                                  x2={cx + r2 * Math.cos(a)} y2={cy + r2 * Math.sin(a)}
-                                  stroke={i % 5 === 0 ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)'}
-                                  strokeWidth="1" />
-                              )
-                            })}
-
-                            {/* Muscle arcs with glow */}
-                            {arcs.map((a, i) => (
-                              <motion.g key={a.m.name}
-                                initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.6, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
-                                style={{ transformOrigin: `${cx}px ${cy}px` }}>
-                                <path d={a.path} fill={`url(#mlRG${i})`} filter="url(#mlGlow)" opacity={0.4} />
-                                <path d={a.path} fill={`url(#mlG${i})`} stroke={muscleColors[i].from} strokeWidth={1} strokeOpacity={0.4} />
-                                <path d={a.path} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth={0.5} />
-                                <circle
-                                  cx={cx + a.r * Math.cos(a.midA)} cy={cy + a.r * Math.sin(a.midA)}
-                                  r={3.5} fill={muscleColors[i].from} filter="url(#mlPointGlow)"
-                                  stroke="#0a0a0a" strokeWidth={1.5} />
-                              </motion.g>
-                            ))}
-
-                            {/* Labels */}
-                            {arcs.map((a, i) => (
-                              <motion.g key={`lbl-${a.m.name}`}
-                                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                                transition={{ delay: 0.5 + i * 0.08 }}>
-                                <text x={a.lx} y={a.ly - 3} textAnchor={a.anchor} dominantBaseline="middle"
-                                  className="fill-white/90 text-[8px] capitalize font-bold"
-                                  style={{ textShadow: '0 0 4px rgba(0,0,0,0.8)' }}>
-                                  {a.m.name.replace(/_/g, ' ')}
+                {trainedMusclesWithScaled.length >= 3 ? (
+                  <div className="relative h-[260px]">
+                    <div className="absolute -top-4 -right-4 w-16 h-16 bg-cyan-500/[0.06] rounded-full blur-xl pointer-events-none" />
+                    <div className="absolute -bottom-2 -left-2 w-12 h-12 bg-violet-500/[0.04] rounded-full blur-lg pointer-events-none" />
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart data={trainedMusclesWithScaled} cx="50%" cy="50%" outerRadius="68%">
+                        <defs>
+                          <filter id="muscleRadarGlow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feGaussianBlur stdDeviation="3" result="blur" />
+                            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                          </filter>
+                          <linearGradient id="muscleRadarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.35} />
+                            <stop offset="50%" stopColor="#06b6d4" stopOpacity={0.15} />
+                            <stop offset="100%" stopColor="#6366f1" stopOpacity={0.08} />
+                          </linearGradient>
+                        </defs>
+                        <PolarGrid stroke="rgba(255,255,255,0.06)" gridType="polygon" />
+                        <PolarAngleAxis
+                          dataKey="name"
+                          tick={({ x, y, payload }: any) => {
+                            const m = trainedMusclesWithScaled.find(t => t.name === payload.value)
+                            return (
+                              <g transform={`translate(${x},${y})`}>
+                                <text x={0} y={-2} textAnchor="middle" dominantBaseline="middle"
+                                  className="fill-cyan-300/90 text-[9px] capitalize font-semibold">
+                                  {payload.value.replace(/_/g, ' ')}
                                 </text>
-                                <text x={a.lx} y={a.ly + 6} textAnchor={a.anchor} dominantBaseline="middle"
-                                  className="fill-gray-400 text-[7px] font-semibold">
-                                  {a.m.volume >= 1000 ? `${(a.m.volume / 1000).toFixed(1)}k` : a.m.volume}kg
-                                  <tspan fill={muscleColors[i].from} opacity={0.8}> · {(a.pct * 100).toFixed(0)}%</tspan>
-                                </text>
-                                <text x={a.lx} y={a.ly + 13} textAnchor={a.anchor} dominantBaseline="middle"
-                                  className="fill-gray-600 text-[6px]">
-                                  {a.m.dates.length <= 2 ? a.m.dates.join(' · ') : `${a.m.dates[0]} +${a.m.dates.length - 1} more`}
-                                </text>
-                              </motion.g>
-                            ))}
-
-                            {/* Center hub */}
-                            <motion.g initial={{ opacity: 0, scale: 0.4 }} animate={{ opacity: 1, scale: 1 }}
-                              transition={{ duration: 0.6, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                              style={{ transformOrigin: `${cx}px ${cy}px` }}>
-                              <circle cx={cx} cy={cy} r={innerR - 2} fill="url(#mlCenterBg)" filter="url(#mlCenterGlow)" />
-                              <circle cx={cx} cy={cy} r={innerR - 2} fill="none" stroke="rgba(34,211,238,0.25)" strokeWidth="1" />
-                              <circle cx={cx} cy={cy} r={innerR - 6} fill="none" stroke="rgba(34,211,238,0.1)" strokeWidth="0.5" strokeDasharray="2,3" />
-                              <text x={cx} y={cy - 16} textAnchor="middle" className="fill-gray-500 text-[6.5px] uppercase tracking-[0.2em] font-semibold">Total Volume</text>
-                              <text x={cx} y={cy + 2} textAnchor="middle" className="fill-cyan-400 text-[18px] font-bold" style={{ textShadow: '0 0 12px rgba(34,211,238,0.4)' }}>
-                                {totalVol >= 1000 ? `${(totalVol / 1000).toFixed(1)}k` : totalVol}
-                              </text>
-                              <text x={cx} y={cy + 13} textAnchor="middle" className="fill-gray-500 text-[7px] font-medium">kg lifted</text>
-                              <line x1={cx - 14} y1={cy + 18} x2={cx + 14} y2={cy + 18} stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
-                              <text x={cx} y={cy + 27} textAnchor="middle" className="fill-gray-600 text-[6px]">
-                                {totalSets} sets · {totalReps} reps · {totalSessions} days
-                              </text>
-                            </motion.g>
-                          </svg>
-
-                          {/* Muscle detail cards with sparklines */}
-                          <div className="space-y-1.5 mt-3">
-                            {trainedMuscles.map((m, i) => {
-                              const daily = muscleDaily.get(m.name) || new Array(7).fill(0)
-                              const maxDaily = Math.max(...daily, 1)
-                              const pct = totalVol > 0 ? (m.volume / totalVol) * 100 : 0
-                              return (
-                                <motion.div key={m.name}
-                                  initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                                  transition={{ delay: 0.5 + i * 0.06, ease: [0.16, 1, 0.3, 1] }}
-                                  className="group relative rounded-xl bg-gradient-to-r from-white/[0.04] via-white/[0.02] to-transparent border border-white/[0.06] p-2.5 hover:border-white/[0.12] transition-all overflow-hidden">
-                                  <div className="absolute left-0 top-0 bottom-0 w-[2px] rounded-l-xl"
-                                    style={{ background: `linear-gradient(to bottom, ${muscleColors[i % muscleColors.length].from}, ${muscleColors[i % muscleColors.length].to})` }} />
-                                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                                    style={{ background: `radial-gradient(ellipse at left center, ${muscleColors[i % muscleColors.length].glow}0.06), transparent)` }} />
-
-                                  <div className="relative flex items-center gap-2.5 pl-2">
-                                    <div className="w-2 h-2 rounded-full shrink-0"
-                                      style={{ background: muscleColors[i % muscleColors.length].from, boxShadow: `0 0 6px ${muscleColors[i % muscleColors.length].glow}0.5)` }} />
-
-                                    <div className="min-w-0 flex-1">
-                                      <div className="flex items-baseline gap-1.5">
-                                        <span className="text-[9px] text-white font-bold capitalize truncate">{m.name.replace(/_/g, ' ')}</span>
-                                        <span className="text-[8px] text-gray-500 font-medium">{m.volume >= 1000 ? `${(m.volume / 1000).toFixed(1)}k` : m.volume}kg</span>
-                                        <span className="text-[7px] text-gray-600">·</span>
-                                        <span className="text-[7px] text-gray-500">{m.sets} sets</span>
-                                      </div>
-                                      <div className="mt-1 h-[3px] rounded-full bg-white/[0.04] overflow-hidden">
-                                        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                                          transition={{ duration: 0.8, delay: 0.6 + i * 0.06, ease: [0.16, 1, 0.3, 1] }}
-                                          className="h-full rounded-full"
-                                          style={{ background: `linear-gradient(to right, ${muscleColors[i % muscleColors.length].from}, ${muscleColors[i % muscleColors.length].to})` }} />
-                                      </div>
-                                      <div className="flex items-center gap-1 mt-1">
-                                        <Calendar className="w-2.5 h-2.5 text-gray-600 shrink-0" />
-                                        <span className="text-[7px] text-gray-500 truncate">{m.dates.join(' · ')}</span>
-                                      </div>
+                                {m && m.dates.length > 0 && (
+                                  <text x={0} y={10} textAnchor="middle" dominantBaseline="middle"
+                                    className="fill-gray-500 text-[6.5px] font-medium">
+                                    {m.dates.length <= 2 ? m.dates.join(' · ') : `${m.dates[0]} +${m.dates.length - 1}`}
+                                  </text>
+                                )}
+                              </g>
+                            )
+                          }}
+                          axisLine={false} tickLine={false}
+                        />
+                        <PolarRadiusAxis
+                          angle={90} domain={[0, 'dataMax']}
+                          tick={{ fill: '#4b5563', fontSize: 7 }}
+                          axisLine={false} tickCount={4}
+                        />
+                        <Tooltip
+                          cursor={{ stroke: 'rgba(34,211,238,0.3)', strokeWidth: 1, strokeDasharray: '3 3' }}
+                          content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null
+                            const d = payload[0].payload
+                            return (
+                              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                                className="relative bg-gray-900/95 backdrop-blur-xl border border-cyan-500/15 rounded-2xl px-3.5 py-2.5 shadow-2xl shadow-cyan-500/5 min-w-[130px]">
+                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500/[0.08] via-transparent to-violet-500/[0.04] pointer-events-none" />
+                                <div className="relative">
+                                  <p className="text-white font-bold text-xs capitalize flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_4px_rgba(34,211,238,0.6)]" />
+                                    {String(d.name).replace(/_/g, ' ')}
+                                  </p>
+                                  <div className="mt-1.5 space-y-1">
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span className="text-gray-500 text-[10px]">Volume</span>
+                                      <span className="text-cyan-400 font-bold text-[11px]">
+                                        {Number(d.volume).toLocaleString()} kg
+                                      </span>
                                     </div>
-
-                                    <div className="shrink-0 w-14 h-8">
-                                      <svg width="56" height="32" viewBox="0 0 56 32">
-                                        <defs>
-                                          <linearGradient id={`spark${i}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                                            <stop offset="0%" stopColor={muscleColors[i % muscleColors.length].from} stopOpacity={0.4} />
-                                            <stop offset="100%" stopColor={muscleColors[i % muscleColors.length].to} stopOpacity={0.02} />
-                                          </linearGradient>
-                                        </defs>
-                                        {daily.map((v: number, di: number) => {
-                                          const bh = v > 0 ? Math.max((v / maxDaily) * 22, 2) : 0
-                                          const bx = di * 8 + 2
-                                          return (
-                                            <g key={di}>
-                                              {bh > 0 && (
-                                                <>
-                                                  <rect x={bx} y={28 - bh} width={5} height={bh} rx={1.5}
-                                                    fill={muscleColors[i % muscleColors.length].from} opacity={0.7} />
-                                                  <rect x={bx} y={28 - bh} width={5} height={1} rx={0.5}
-                                                    fill="white" opacity={0.3} />
-                                                </>
-                                              )}
-                                              <rect x={bx} y={27} width={5} height={1} rx={0.5} fill="rgba(255,255,255,0.06)" />
-                                            </g>
-                                          )
-                                        })}
-                                      </svg>
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span className="text-gray-500 text-[10px]">Sets</span>
+                                      <span className="text-violet-400 font-semibold text-[11px]">{d.sets}</span>
                                     </div>
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span className="text-gray-500 text-[10px]">Reps</span>
+                                      <span className="text-gray-300 font-medium text-[11px]">{d.reps}</span>
+                                    </div>
+                                    {d.dates && d.dates.length > 0 && (
+                                      <div className="pt-1.5 mt-1.5 border-t border-white/[0.06]">
+                                        <p className="text-gray-500 text-[9px] flex items-center gap-1">
+                                          <Calendar className="w-2.5 h-2.5" />
+                                          {d.dates.join(' · ')}
+                                        </p>
+                                      </div>
+                                    )}
                                   </div>
-                                </motion.div>
-                              )
-                            })}
+                                </div>
+                              </motion.div>
+                            )
+                          }}
+                        />
+                        {/* Volume layer */}
+                        <Radar
+                          name="Volume" dataKey="volume"
+                          stroke="#22d3ee" strokeWidth={2}
+                          fill="url(#muscleRadarGrad)"
+                          fillOpacity={1}
+                          animationDuration={900} animationEasing="ease-out"
+                          filter="url(#muscleRadarGlow)"
+                          activeDot={{ r: 4, fill: '#22d3ee', strokeWidth: 2, stroke: '#0a0a0a' }}
+                        />
+                        {/* Sets layer (dashed, behind visual depth) */}
+                        <Radar
+                          name="Sets" dataKey="setsScaled"
+                          stroke="rgba(139,92,246,0.45)" strokeWidth={1.5}
+                          strokeDasharray="4 3"
+                          fill="rgba(139,92,246,0.06)"
+                          fillOpacity={1}
+                          animationDuration={1100} animationEasing="ease-out"
+                        />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : trainedMusclesWithScaled.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-2 py-2">
+                    {trainedMusclesWithScaled.map((m, i) => (
+                      <motion.div key={m.name}
+                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                        className="group relative rounded-xl bg-gradient-to-r from-white/[0.04] via-white/[0.02] to-transparent border border-white/[0.06] p-3 hover:border-cyan-500/20 transition-all overflow-hidden">
+                        <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-cyan-400 to-violet-500 rounded-l-xl" />
+                        <div className="absolute -right-4 -top-4 w-12 h-12 bg-cyan-500/[0.05] rounded-full blur-lg pointer-events-none" />
+                        <div className="relative flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/15 to-violet-500/10 border border-cyan-500/20 flex items-center justify-center shadow-lg shadow-cyan-500/10 shrink-0">
+                            <Dumbbell className="w-4 h-4 text-cyan-400" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] text-white font-bold capitalize">{m.name.replace(/_/g, ' ')}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] text-cyan-400 font-semibold">{m.volume.toLocaleString()}kg</span>
+                              <span className="text-[9px] text-gray-600">·</span>
+                              <span className="text-[9px] text-gray-400">{m.sets} sets</span>
+                              <span className="text-[9px] text-gray-600">·</span>
+                              <span className="text-[9px] text-gray-400">{m.reps} reps</span>
+                            </div>
+                            {m.dates.length > 0 && (
+                              <p className="text-[8px] text-gray-500 mt-1 flex items-center gap-1">
+                                <Calendar className="w-2.5 h-2.5 text-gray-600" />
+                                {m.dates.join(' · ')}
+                              </p>
+                            )}
                           </div>
                         </div>
-                      )
-                    })()}
+                      </motion.div>
+                    ))}
                   </div>
                 ) : (
-                  <p className="text-[9px] text-gray-700 italic text-center py-4">No muscle data this week</p>
+                  <div className="text-center py-6">
+                    <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-2">
+                      <Activity className="w-5 h-5 text-gray-700" />
+                    </div>
+                    <p className="text-[10px] text-gray-600">No muscle data this week</p>
+                    <p className="text-[8px] text-gray-700 mt-0.5">Log a workout to see your muscle radar</p>
+                  </div>
                 )}
               </div>
             </div>
